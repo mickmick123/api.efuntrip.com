@@ -24,4 +24,21 @@ class UserController extends Controller{
             return response()->json($user,200);
         }
     }
+    public function modifyCurrentUserInformation(Request $request){
+        if(Auth::user()['identity']=='admin'){
+            $validator=Validator::make($request->all(),[
+                'id'        =>'required',
+            ]);
+            if($validator->fails()) {
+                return response()->json(['error'=>$validator->errors()]);
+            }
+            return User::where('id',$request->id)
+                ->update([
+                    'name'=>$request->name,
+                    'number'=>$request->number,
+                    'email'=>$request->email,
+                    'rate'=>$request->rate,
+                ]);
+        }
+    }
 }

@@ -33,4 +33,6 @@ Route::group(['middleware'=>'auth:api'],function(){
     Route::post('addTheTransactionLog','Api\CashflowController@addTheTransactionLog');
     //得到所有的用户
     Route::post('getAllUserInfo','Api\CashflowController@getAllUserInfo');
+    //修改当前用户的信息
+    Route::post('modifyCurrentUserInformation','Api\UserController@modifyCurrentUserInformation');
 });

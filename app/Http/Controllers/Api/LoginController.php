@@ -74,7 +74,8 @@ class LoginController extends Controller{
             "password"=>bcrypt($request->pass),
             "number"=>$request->number,
             "email"=>$request->email,
-            "identity"=>'user',
+            "identity"=>$request->identity,
+            "rate"=>$request->rate,
         ]);
         $data['code']=200;
         $data['msg']='用户注册成功';
