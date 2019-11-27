@@ -18,9 +18,9 @@ use Illuminate\Http\Request;
 });*/
 //login   登录
 Route::post('login','Api\LoginController@login');
-//register   注册
-Route::post('register','Api\LoginController@register');
 Route::group(['middleware'=>'auth:api'],function(){
+    //register   注册
+    Route::post('register','Api\LoginController@register');
     //得到当前的user信息
     Route::post('getCurrentUser','Api\UserController@getCurrentUser');
     //得到所有的user信息
@@ -31,8 +31,6 @@ Route::group(['middleware'=>'auth:api'],function(){
     Route::post('getServiceFeeFlowLog','Api\CashflowController@getServiceFeeFlowLog');
     //添加交易日志
     Route::post('addTheTransactionLog','Api\CashflowController@addTheTransactionLog');
-    //得到所有的用户
-    Route::post('getAllUserInfo','Api\CashflowController@getAllUserInfo');
     //修改当前用户的信息
     Route::post('modifyCurrentUserInformation','Api\UserController@modifyCurrentUserInformation');
 });

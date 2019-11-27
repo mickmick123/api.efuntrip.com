@@ -24,15 +24,13 @@ class LoginController extends Controller{
                     'scope' => config('api.scope'),//授权应用程序支持的所有范围的令牌
                 ],
             ]);
-            $data['code']=200;
-            $data['msg']='用户登录成功';
             $data['name']=$user->name;
             $data['number']=$user->number;
             $data['identity']=$user->identity;
             $data['img']=$user->img;
             $data['balance']=$user->balance;
             $data['token']=json_decode( (string) $response->getBody());
-            return response()->json($data);
+            return $this->jsonReturn(200,'User login succeeded/用户登录成功',$data);
         }
         if(Auth::attempt(['email'=>$request->email,'password'=>$request->pass])){
             $user=Auth::user();
@@ -47,39 +45,43 @@ class LoginController extends Controller{
                     'scope' =>config('api.scope'),//授权应用程序支持的所有范围的令牌
                 ],
             ]);
-            $data['code']=200;
-            $data['msg']='用户登录成功';
             $data['name']=$user->name;
             $data['number']=$user->number;
             $data['identity']=$user->identity;
             $data['img']=$user->img;
             $data['balance']=$user->balance;
             $data['token']=json_decode( (string) $response->getBody());
-            return response()->json($data);
+            return $this->jsonReturn(200,'User login succeeded/用户登录成功',$data);
+        }else{
+            return $this->jsonReturn(402,'wrong password/密码错误','wrong password/密码错误');
         }
     }
     public function register(Request $request){
-        $validator =Validator::make($request->all(),[
-            'nickName'       =>'required',
-            'email'          =>'required|email|unique:users',
-            'pass'           =>'required',
-            'checkPass'      =>'required|same:pass',
-            'number'         =>'required',
-        ]);
-        if($validator->fails()) {
-            return response()->json(['error'=>$validator->errors()]);
+        if(Auth::user()['identity']=='administrator'){
+            $validator =Validator::make($request->all(),[
+                'nickName'       =>'required',
+                'email'          =>'required|email|unique:users',
+                'pass'           =>'required',
+                'checkPass'      =>'required|same:pass',
+                'number'         =>'required',
+            ]);
+            if($validator->fails()) {
+                return response()->json(['error'=>$validator->errors()]);
+            }
+            if($request->identity=='administrator'){
+                return $this->jsonReturn('401','Insufficient permissions/权限不足','Insufficient permissions/权限不足');
+            }
+            $user=User::create([
+                "name"=>$request->nickName,
+                "password"=>bcrypt($request->pass),
+                "number"=>$request->number,
+                "email"=>$request->email,
+                "identity"=>$request->identity,
+                "rate"=>$request->rate,
+            ]);
+            return $this->jsonReturn('200','User registration is successful/用户注册成功',$user);
+        }else{
+            return $this->jsonReturn('401','Insufficient permissions/权限不足','Insufficient permissions/权限不足');
         }
-        $user=User::create([
-            "name"=>$request->nickName,
-            "password"=>bcrypt($request->pass),
-            "number"=>$request->number,
-            "email"=>$request->email,
-            "identity"=>$request->identity,
-            "rate"=>$request->rate,
-        ]);
-        $data['code']=200;
-        $data['msg']='用户注册成功';
-        $data['data']=$user;
-        return response()->json($data);
     }
 }

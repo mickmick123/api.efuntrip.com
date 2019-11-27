@@ -17,26 +17,36 @@ class CashflowController extends Controller
 {
     //
     public function getTheTransactionLog(Request $request){
-        if($request->identity=='admin'){
-            return response()->json(Cashflow::where('currencies',$request->currency)->orderBy('id','desc')->get());
+        if($request->identity=='administrator'){
+            $data=Cashflow::where('currencies',$request->currency)->orderby('id','desc')->get();
+            return $this->jsonReturn('200','Get The Transaction Log/获取交易日志',$data);
+        }elseif($request->identity=='admin'){
+            $data=Cashflow::where('currencies',$request->currency)->orderby('id','desc')->get(['id','user_id','action','transfer_role','currencies','amount','rate','profit','total_balance','created_at','balance','operator']);
+            return $this->jsonReturn('200','Get The Transaction Log/获取交易日志',$data);
         }elseif($request->identity=='user'){
-            $cashflow=Cashflow::where('currencies',$request->currency)
-                ->where('user_id',$request->id)
-                ->orderBy('id','desc')
-                ->get(['id','user_id','action','transfer_role','currencies','amount','rate','profit','source','created_at','updated_at','balance','nickname','operator','number']);
-            return response()->json($cashflow);
+            $cashflow=Cashflow::where('currencies',$request->currency)->where('user_id',$request->id)->orderBy('id','desc')->get(['id','user_id','action','transfer_role','currencies','amount','rate','profit','source','created_at','updated_at','balance','nickname','operator','number']);
+            return $this->jsonReturn('200','Get The Transaction Log/获取交易日志',$cashflow);
+        }else{
+            return $this->jsonReturn('401','Insufficient permissions/权限不足','Insufficient permissions/权限不足');
         }
     }
     public function getServiceFeeFlowLog(Request $request){
-        return response()->json(ServiceFee::where('currencies',$request->currency)->orderBy('id','desc')->get());
-    }
-    public function getAllUserInfo(){
-        $otherInfo=User::where('id','!=',Auth::user()->id)->get();
-        return response()->json($otherInfo);
+        if(Auth::user()['identity']=='administrator'){
+            $serviceFee=ServiceFee::where('currencies',$request->currency)->orderBy('id','desc')->get();
+            return $this->jsonReturn(200,'Successfully obtained service fee log/成功获取服务费日志',$serviceFee);
+        }elseif(Auth::user()['identity']=='admin'){
+            $serviceFee=ServiceFee::where('currencies',$request->currency)->orderby('id','desc')->get(['id','user_id','action','currencies','amount','rate','profit','total_ServiceFee','created_at','operator']);
+            return $this->jsonReturn('200','Get The Transaction Log/获取交易日志',$serviceFee);
+        }else{
+            return $this->jsonReturn('401','Insufficient permissions/权限不足','Insufficient permissions/权限不足');
+        }
     }
     public function addTheTransactionLog(Request $request){
         //radio = currency Translation error. Causes the field name to be incorrect. Sorry
         //radio = currency 翻译错误。导致字段名称不正确。抱歉
+        if($request->identity=='admin'){
+            return $this->jsonReturn(401,'Insufficient permissions/权限不足','Insufficient permissions/权限不足');
+        }
         $validator=Validator::make($request->all(),[
             'id'        =>'required_if:action,deposit|required_if:action,withdraw',
             'action'    =>'required',
@@ -49,9 +59,11 @@ class CashflowController extends Controller
             return response()->json(['error'=>$validator->errors()]);
         }
         $sources=[];
-        foreach($request->source as $source){
-            $sources[]=$source['value'];
-        };
+        if($request->source!=''){
+            foreach($request->source as $source){
+                $sources[]=$source['value'];
+            };
+        }
         $sources=implode("---",$sources);
         if($request->action!='withdraw service fee'){
             $user=User::where('id',$request->id)->first();
@@ -59,7 +71,7 @@ class CashflowController extends Controller
             if(empty($user1)){
                 $user1=$user;
             }
-            $admin=User::where('identity','admin')->first();
+            $admin=User::where('identity','administrator')->first();
             if($request->radio=='cn'){
                 $currencies='cn';
                 $currenciesprofit='cnprofit';
@@ -83,7 +95,7 @@ class CashflowController extends Controller
                 $balanceAdmin=$admin->us;
             }
         }else{
-            $admin=User::where('identity','admin')->first();
+            $admin=User::where('identity','administrator')->first();
             if($request->radio=='cn'){
                 $currenciesprofit='cnprofit';
                 $profit=$admin->cnprofit;
@@ -129,18 +141,19 @@ class CashflowController extends Controller
                     ->update([
                         $currencies=>$balance+$request->amount-$request->profit,
                     ]);
-                User::where('identity','admin')
+                User::where('identity','administrator')
                     ->update([
                         $currenciesprofit=>$request->profit+$profit,
                         $currencies=>$balanceAdmin+$request->amount-$request->profit,
                     ]);
                 DB::commit();
+                return $this->jsonReturn(200,'Deposit successful/存款成功','Deposit successful/存款成功');
             }catch(\Exception $e){
                 DB::rollBack();
             }
         }elseif($request->action=='withdraw'){
             if($balance<$request->amount){
-                return response()->json('金额不足');
+                return $this->jsonReturn('402','Insufficient amount/金额不足','Insufficient amount/金额不足');
             }
             DB::beginTransaction();
             try{
@@ -162,17 +175,18 @@ class CashflowController extends Controller
                     ->update([
                         $currencies=>$balance-$request->amount,
                     ]);
-                User::where('identity','admin')
+                User::where('identity','administrator')
                     ->update([
                         $currencies=>$balanceAdmin-$request->amount,
                     ]);
                 DB::commit();
+                return $this->jsonReturn(200,'Withdrawal successful/取款成功','Withdrawal successful/取款成功');
             }catch(\Exception $e){
                 DB::rollBack();
             }
         }elseif($request->action=='withdraw service fee'){
             if($profit<$request->amount){
-                return response()->json('服务费不足');
+                return $this->jsonReturn('402','Insufficient service fee/服务费不足','Insufficient service fee/服务费不足');
             }
             DB::beginTransaction();
             try{
@@ -189,17 +203,18 @@ class CashflowController extends Controller
                     'operator'     =>Auth::user()->name,
                     'number'       =>Auth::user()->number,
                 ]);
-                User::where('identity','admin')
+                User::where('identity','administrator')
                     ->update([
                         $currenciesprofit=>$profit-$request->amount,
                     ]);
                 DB::commit();
+                return $this->jsonReturn(200,'Successfully withdrawn fee/提取手续费成功','Successfully withdrawn fee/提取手续费成功');
             }catch(\Exception $e){
                 DB::rollBack();
             }
         }elseif($request->action=='transfer'){
             if($balance<$request->amount){
-                return response()->json('余额不足');
+                return $this->jsonReturn('402','Insufficient balance/余额不足','Insufficient balance/余额不足');
             }
             $source=$user->name.'转账给用户'.$user1->name.'---金额'.$request->amount.$request->radio.'---'.$user1->name.'余额增加'.$request->amount.$request->radio;
             $sources=$source.'---'.$sources;
@@ -246,11 +261,12 @@ class CashflowController extends Controller
                                 $currencies=>$balance1+$request->amount,
                             ]);
                         DB::commit();
+                        return $this->jsonReturn('200','Successful transfer/转账成功','Successful transfer/转账成功');
                     }catch(\Exception $e){
                         DB::rollBack();
                     }
                 }else{
-                    return "密码错误";
+                    return $this->jsonReturn('402','wrong password/密码错误','wrong password/密码错误');
                 }
             }else{
                 DB::beginTransaction();
@@ -294,6 +310,7 @@ class CashflowController extends Controller
                             $currencies=>$balance1+$request->amount,
                         ]);
                     DB::commit();
+                    return $this->jsonReturn('200','Successful transfer/转账成功','Successful transfer/转账成功');
                 }catch(\Exception $e){
                     DB::rollBack();
                 }
