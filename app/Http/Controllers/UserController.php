@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Device;
 use App\User;
 
 use Auth, Hash, Response, Validator;
@@ -14,7 +15,10 @@ class UserController extends Controller
 	public function login(Request $request) {
 		$validator = Validator::make($request->all(), [ 
             'email' => 'required|email',
-            'password' => 'required'
+            'password' => 'required',
+            'source' => 'required',
+            'device_type' => 'required_if:source,mobile',
+            'device_token' => 'required_if:source,mobile'
         ]);
 
         if($validator->fails()) {       
@@ -26,12 +30,18 @@ class UserController extends Controller
 
         	if( $user ) {
         		if( Hash::check($request->password, $user->password) ) {
+        			if( $request->source == 'mobile' ) {
+        				Device::updateOrCreate(
+        					['user_id' => $user->id, 'device_type' => $request->device_type, 'device_token' => $request->device_token],
+        					[]
+        				);
+        			}
+
 		            $token = $user->createToken('WYC Visa')->accessToken;
 
 		            $response['status'] = 'Success';
 		            $response['data'] = [
-		            	'token' => $token,
-		            	'user' => $user
+		            	'token' => $token
 		            ];
 		            $response['code'] = 200;
 		        } else {
@@ -61,7 +71,9 @@ class UserController extends Controller
 
 	public function userInformation() {
 		$response['status'] = 'Success';
-		$response['data'] = Auth::user();
+		$response['data'] = [
+			'information' => Auth::user()
+		];
 		$response['code'] = 200;
 
 		return Response::json($response);
