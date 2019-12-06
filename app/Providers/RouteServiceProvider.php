@@ -39,7 +39,15 @@ class RouteServiceProvider extends ServiceProvider
 
         $this->mapWebRoutes();
 
-        //
+        // Custom routes
+
+            $this->mapBranchRoutes();
+
+            $this->mapCountryRoutes();
+
+            $this->mapNationalityRoutes();
+
+            $this->mapUserRoutes();
     }
 
     /**
@@ -70,4 +78,38 @@ class RouteServiceProvider extends ServiceProvider
              ->namespace($this->namespace)
              ->group(base_path('routes/api.php'));
     }
+
+    // Custom routes
+
+        protected function mapBranchRoutes()
+        {
+            Route::prefix('api/v1/branches')
+                 ->middleware('api')
+                 ->namespace($this->namespace)
+                 ->group(base_path('routes/api/branch.php'));
+        }
+
+        protected function mapCountryRoutes()
+        {
+            Route::prefix('api/v1/countries')
+                 ->middleware('api')
+                 ->namespace($this->namespace)
+                 ->group(base_path('routes/api/country.php'));
+        }
+
+        protected function mapNationalityRoutes()
+        {
+            Route::prefix('api/v1/nationalities')
+                 ->middleware('api')
+                 ->namespace($this->namespace)
+                 ->group(base_path('routes/api/nationality.php'));
+        }
+
+        protected function mapUserRoutes()
+        {
+            Route::prefix('api/v1')
+                 ->middleware('api')
+                 ->namespace($this->namespace)
+                 ->group(base_path('routes/api/user.php'));
+        }
 }
