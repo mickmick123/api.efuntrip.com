@@ -8,6 +8,6 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('user-information', 'UserController@userInformation');
 
-	Route::get('logout', 'UserController@logout');
+	Route::post('logout', 'UserController@logout');
 
 });

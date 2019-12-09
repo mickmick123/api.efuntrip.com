@@ -59,12 +59,28 @@ class UserController extends Controller
         return Response::json($response);
 	}
 
-	public function logout() {
-		$user = Auth::guard('api')->user()->token();
-		$user->revoke();
+	public function logout(Request $request) {
+		$validator = Validator::make($request->all(), [ 
+            'source' => 'required',
+            'device_type' => 'required_if:source,mobile',
+            'device_token' => 'required_if:source,mobile'
+        ]);
 
-	    $response['status'] = 'Success';
-		$response['code'] = 200;
+        if($validator->fails()) {       
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;   
+        } else {
+        	if( $request->source == 'mobile' ) {
+        		Device::where('user_id', Auth::user()->id)->where('device_type', $request->device_type)->where('device_token', $request->device_token)->delete();
+        	}
+
+        	$user = Auth::guard('api')->user()->token();
+			$user->revoke();
+
+		    $response['status'] = 'Success';
+			$response['code'] = 200;
+        }
 
 		return Response::json($response);
 	}
