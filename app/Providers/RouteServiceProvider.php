@@ -43,7 +43,11 @@ class RouteServiceProvider extends ServiceProvider
 
             $this->mapBranchRoutes();
 
+            $this->mapClientRoutes();
+
             $this->mapCountryRoutes();
+
+            $this->mapGroupRoutes();
 
             $this->mapNationalityRoutes();
 
@@ -89,12 +93,28 @@ class RouteServiceProvider extends ServiceProvider
                  ->group(base_path('routes/api/branch.php'));
         }
 
+        protected function mapClientRoutes()
+        {
+            Route::prefix('api/v1/clients')
+                 ->middleware('api')
+                 ->namespace($this->namespace)
+                 ->group(base_path('routes/api/client.php'));
+        }
+
         protected function mapCountryRoutes()
         {
             Route::prefix('api/v1/countries')
                  ->middleware('api')
                  ->namespace($this->namespace)
                  ->group(base_path('routes/api/country.php'));
+        }
+
+        protected function mapGroupRoutes()
+        {
+            Route::prefix('api/v1/groups')
+                 ->middleware('api')
+                 ->namespace($this->namespace)
+                 ->group(base_path('routes/api/group.php'));
         }
 
         protected function mapNationalityRoutes()
