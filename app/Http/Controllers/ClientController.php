@@ -39,6 +39,28 @@ class ClientController extends Controller
 		return Response::json($response);
 	}
 
+
+    public function manageClientsPaginate() {
+        $clients = DB::table('users as u')
+            ->select(DB::raw('u.id, u.first_name, u.last_name,balance, collectable, NULL as latest_package, NULL as latest_service'))
+            ->leftjoin(
+                DB::raw('
+                    (
+                        Select *
+                        from role_user as r
+                        where r.role_id = 2
+                    ) as role
+                '),
+                'role.user_id', '=', 'u.id'
+            )
+            ->where('role.role_id', '2')
+            ->paginate(20);
+
+        $response = $clients;
+
+        return Response::json($response);
+    }
+
 	public function store(Request $request) {
 		$validator = Validator::make($request->all(), [
             'first_name' => 'required',
