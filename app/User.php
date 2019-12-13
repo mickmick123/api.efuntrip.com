@@ -18,10 +18,6 @@ class User extends Authenticatable
         'password', 'verification_token', 'remember_token',
     ];
 
-    public function agentComs() {
-        return $this->hasMany('App\User', 'agent_com_id', 'id');
-    }
-
     public function birthCountry() {
         return $this->belongsTo('App\Country', 'birth_country_id', 'id');
     }
@@ -30,8 +26,16 @@ class User extends Authenticatable
         return $this->belongsToMany('App\Branch', 'branch_user', 'user_id', 'branch_id');
     }
 
-    public function clientComs() {
-        return $this->hasMany('App\User', 'client_com_id', 'id');
+    public function clientServices() {
+        return $this->hasMany('App\ClientService', 'client_id', 'id');
+    }
+
+    public function clientServiceAgentComs() {
+        return $this->hasMany('App\ClientService', 'agent_com_id', 'id');
+    }
+
+    public function clientServiceClientComs() {
+        return $this->hasMany('App\ClientService', 'client_com_id', 'id');
     }
 
     public function contactNumbers() {
@@ -43,11 +47,19 @@ class User extends Authenticatable
     }
 
     public function groups() {
-        return $this->belongsToMany('App\Group', 'group_user', 'user_id', 'group_id')->withPivot('total_service_cost');
+        return $this->belongsToMany('App\Group', 'group_user', 'user_id', 'group_id')->withPivot('is_vice_leader', 'total_service_cost');
+    }
+
+    public function groupAgentComs() {
+        return $this->hasMany('App\Group', 'agent_com_id', 'id');
+    }
+
+    public function groupClientComs() {
+        return $this->hasMany('App\Group', 'client_com_id', 'id');
     }
 
     public function leaders() {
-        return $this->hasMany('App\User', 'leader_id', 'id');
+        return $this->hasMany('App\Group', 'leader_id', 'id');
     }
 
     public function nationalities() {
@@ -56,10 +68,6 @@ class User extends Authenticatable
 
     public function roles() {
         return $this->belongsToMany('App\Role', 'role_user', 'user_id', 'role_id');
-    }
-
-    public function viceLeaders() {
-        return $this->hasMany('App\User', 'vice_leader_id', 'id');
     }
 
 }
