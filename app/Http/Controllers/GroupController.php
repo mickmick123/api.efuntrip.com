@@ -44,6 +44,43 @@ class GroupController extends Controller
 		return Response::json($response);
 	}
 
+    public function assignRole(Request $request) {
+        $validator = Validator::make($request->all(), [
+            'group_id' => 'required',
+            'client_id' => 'required',
+            'role' => 'required'
+        ]);
+
+        if($validator->fails()) {       
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;   
+        } else {
+            if( $request->role == 'leader' ) {
+                $group = Group::findOrFail($request->group_id);
+
+                $oldLeaderId = $group->leader_id;
+
+                $group->update(['leader_id' => $request->client_id]);
+
+                DB::table('group_user')->where('group_id', $request->group_id)
+                    ->whereIn('user_id', [$oldLeaderId, $request->client_id])
+                    ->update(['is_vice_leader' => 0]);
+            } elseif( $request->role == 'vice-leader' ) {
+                DB::table('group_user')->where('group_id', $request->group_id)->where('user_id', $request->client_id)
+                    ->update(['is_vice_leader' => 1]);
+            } elseif( $request->role == 'member' ) {
+                DB::table('group_user')->where('group_id', $request->group_id)->where('user_id', $request->client_id)
+                    ->update(['is_vice_leader' => 0]);
+            }
+
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+        }
+
+        return Response::json($response);
+    }
+
 	public function store(Request $request) {
 		$validator = Validator::make($request->all(), [
             'group_name' => 'required|unique:groups,name',
