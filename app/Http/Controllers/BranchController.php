@@ -22,11 +22,19 @@ class BranchController extends Controller
 	}
 
 	public function show($id) {
-		$response['status'] = 'Success';
-		$response['data'] = [
-		    'branch' => Branch::findOrFail($id)
-		];
-		$response['code'] = 200;
+		$branch = Branch::find($id);
+
+		if( $branch ) {
+			$response['status'] = 'Success';
+			$response['data'] = [
+			    'branch' => $branch
+			];
+			$response['code'] = 200;
+		} else {
+			$response['status'] = 'Failed';
+        	$response['errors'] = 'No query results.';
+			$response['code'] = 404;
+		}
 
 		return Response::json($response);
 	}
