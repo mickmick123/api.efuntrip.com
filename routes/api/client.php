@@ -10,6 +10,8 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::post('/', 'ClientController@store');
 
+	Route::get('/profile/{id}', 'ClientController@show');
+
 	Route::patch('{id}', 'ClientController@update');
 
 });

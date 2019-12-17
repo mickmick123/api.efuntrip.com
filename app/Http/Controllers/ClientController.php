@@ -61,6 +61,11 @@ class ClientController extends Controller
         return Response::json($response);
     }
 
+    public function show($id){
+        $selectedUser = User::where('id',$id)->first();
+        return Response::json($selectedUser);
+    }
+
 	public function store(Request $request) {
 		$validator = Validator::make($request->all(), [
             'first_name' => 'required',
