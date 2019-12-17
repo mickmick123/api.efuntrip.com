@@ -10,6 +10,8 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::post('/', 'GroupController@store');
 
+	Route::get('{id}', 'GroupController@show');
+
 	Route::patch('{id}', 'GroupController@update');
 
 });

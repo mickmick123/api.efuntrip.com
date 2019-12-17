@@ -23,6 +23,10 @@ class ClientService extends Model
     	return $this->belongsTo('App\User', 'client_com_id', 'id');
     }
 
+    public function clientTransactions() {
+        return $this->hasMany('App\ClientTransaction', 'client_service_id', 'id');
+    }
+
     public function group() {
     	return $this->belongsTo('App\Group', 'group_id', 'id');
     }

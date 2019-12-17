@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\ClientService;
+
+use App\ClientTransaction;
+
 use App\ContactNumber;
 
 use App\Group;
@@ -26,6 +30,69 @@ class GroupController extends Controller
     	} while( Group::where('tracking', $tracking)->count() > 0 );
 
         return $tracking;
+    }
+
+    private function getGroupDeposit($id) {
+        return ClientTransaction::where('group_id', $id)->where('type', 'Deposit')->sum('amount');
+    }
+
+    private function getGroupPayment($id) {
+        return ClientTransaction::where('group_id', $id)->where('type', 'Payment')->sum('amount');
+    }
+
+    private function getGroupTotalDiscount($id) {
+        return ClientTransaction::where('group_id', $id)->where('type', 'Discount')->sum('amount');
+    }
+
+    private function getGroupTotalRefund($id) {
+        return ClientTransaction::where('group_id', $id)->where('type', 'Refund')->sum('amount');
+    }
+
+    private function getGroupTotalCost($id) {
+        $groupTotalCost = ClientService::where('group_id', $id)
+            ->where('active', 1)
+            ->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
+
+        return ($groupTotalCost) ? $groupTotalCost : 0;
+    }
+
+    private function getGroupTotalCompleteServiceCost($id) {
+        $groupTotalCompleteServiceCost = ClientService::where('group_id', $id)
+            ->where('active', 1)
+            ->where('status', 'complete')
+            ->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
+
+        return ($groupTotalCompleteServiceCost) ? $groupTotalCompleteServiceCost : 0;
+    }
+
+    private function getGroupTotalBalance($id) {
+        return  (
+                    (
+                        $this->getGroupDeposit($id)
+                        + $this->getGroupPayment($id)
+                        +$this->getGroupTotalDiscount($id)
+                    )
+                    -
+                    (
+                        $this->getGroupTotalRefund($id)
+                        + $this->getGroupTotalCost($id)
+                    )
+                );
+    }
+
+    private function getGroupTotalCollectables($id) {
+        return  (
+                    (
+                        $this->getGroupDeposit($id)
+                        + $this->getGroupPayment($id)
+                        + $this->getGroupTotalDiscount($id)
+                    )
+                    -
+                    (
+                        $this->getGroupTotalRefund($id)
+                        + $this->getGroupTotalCompleteServiceCost($id)
+                    )
+                );
     }
 
 	public function manageGroups() {
@@ -112,6 +179,38 @@ class GroupController extends Controller
 
         return Response::json($response);
 	}
+
+    public function show($id) {
+        $group = Group::with('branches', 'contactNumbers', 'serviceProfile')
+            ->select(array('id', 'name', 'leader_id', 'tracking', 'address'))
+            ->find($id);
+
+        if( $group ) {
+            $group->leader = DB::table('users')->where('id', $group->leader_id)
+                ->select(array('first_name', 'last_name'))->first();
+
+            $group->total_complete_service_cost = $this->getGroupTotalCompleteServiceCost($id);
+            $group->total_cost = $this->getGroupTotalCost($id);
+            $group->total_payment = $this->getGroupDeposit($id) + $this->getGroupPayment($id);
+
+            $group->total_discount = $this->getGroupTotalDiscount($id);
+            $group->total_refund = $this->getGroupTotalRefund($id);
+            $group->total_balance = $this->getGroupTotalBalance($id);
+            $group->total_collectables = $this->getGroupTotalCollectables($id);
+
+            $response['status'] = 'Success';
+            $response['data'] = [
+                'group' => $group
+            ];
+            $response['code'] = 200;
+        } else {
+            $response['status'] = 'Failed';
+            $response['errors'] = 'No query results.';
+            $response['code'] = 404;
+        }
+
+        return Response::json($response);
+    }
 
 	public function update(Request $request, $id) {
 		$validator = Validator::make($request->all(), [

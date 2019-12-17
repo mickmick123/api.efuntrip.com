@@ -38,6 +38,10 @@ class User extends Authenticatable
         return $this->hasMany('App\ClientService', 'client_com_id', 'id');
     }
 
+    public function clientTransactions() {
+        return $this->hasMany('App\ClientTransaction', 'client_id', 'id');
+    }
+
     public function contactNumbers() {
         return $this->hasMany('App\ContactNumber', 'user_id', 'id');
     }

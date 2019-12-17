@@ -31,6 +31,10 @@ class Group extends Model
         return $this->hasMany('App\ClientService', 'group_id', 'id');
     }
 
+    public function clientTransactions() {
+        return $this->hasMany('App\ClientTransaction', 'group_id', 'id');
+    }
+
     public function contactNumbers() {
         return $this->hasMany('App\ContactNumber', 'group_id', 'id');
     }
