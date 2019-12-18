@@ -62,8 +62,21 @@ class ClientController extends Controller
     }
 
     public function show($id){
-        $selectedUser = User::where('id',$id)->first();
-        return Response::json($selectedUser);
+        $client = User::find($id);
+
+        if( $client ) {
+            $response['status'] = 'Success';
+            $response['data'] = [
+                'client' => $client
+            ];
+            $response['code'] = 200;
+        } else {
+            $response['status'] = 'Failed';
+            $response['errors'] = 'No query results.';
+            $response['code'] = 404;
+        }
+
+        return Response::json($response);
     }
 
 	public function store(Request $request) {
