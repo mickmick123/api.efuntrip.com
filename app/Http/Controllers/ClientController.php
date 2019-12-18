@@ -71,7 +71,24 @@ class ClientController extends Controller
         $client = User::find($id);
 
         if( $client ) {
+            $client->contact = DB::table('contact_numbers')->where('user_id', $id)->where('is_primary',1)
+                ->select(array('number'))->first();
 
+            $client->birth_country = DB::table('countries')->where('id', $client->birth_country_id)
+                ->select(array('name'))->first();
+
+            $client->nationality = DB::table('nationalities')->where('id', $client->birth_country_id)
+                ->select(array('name'))->first();
+
+            $branch = DB::table('branch_user')->where('user_id', $id)
+                ->select(array('branch_id'))->first();
+
+            if($branch){
+                $client->branch = DB::table('branches')->where('id', $branch->branch_id)
+                ->select(array('name'))->first();
+            }
+
+            $client->total_points_earned = $this->getClientTotalPointsEarned($id);
             $client->total_complete_service_cost = $this->getClientTotalCompleteServiceCost($id);
             $client->total_cost = $this->getClientTotalCost($id);
             $client->total_payment = $this->getClientDeposit($id) + $this->getClientPayment($id);
@@ -333,6 +350,11 @@ class ClientController extends Controller
 
 
     /**** Computations ****/
+
+    private function getClientTotalPointsEarned($id) {
+        return ClientService::where('agent_com_id', $id)->where('status','complete')->sum('com_agent') + 
+                ClientService::where('client_com_id', $id)->where('status','complete')->sum('com_client');
+    }
 
     private function getClientDeposit($id) {
         return ClientTransaction::where('client_id', $id)->where('group_id', null)->where('type', 'Deposit')->sum('amount');
