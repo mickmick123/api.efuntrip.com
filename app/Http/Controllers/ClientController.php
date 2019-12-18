@@ -6,6 +6,12 @@ use App\ContactNumber;
 
 use App\User;
 
+use App\ClientService;
+
+use App\ClientTransaction;
+
+use App\Group;
+
 use DB, Response, Validator;
 
 use Illuminate\Http\Request;
@@ -314,5 +320,73 @@ class ClientController extends Controller
 
         return Response::json($response);
 	}
+
+
+    /**** Computations ****/
+
+    private function getClientDeposit($id) {
+        return ClientTransaction::where('client_id', $id)->where('group_id', 0)->where('type', 'Deposit')->sum('amount');
+    }
+
+    private function getClientPayment($id) {
+        return ClientTransaction::where('client_id', $id)->where('group_id', 0)->where('type', 'Payment')->sum('amount');
+    }
+
+    private function getClientTotalDiscount($id) {
+        return ClientTransaction::where('client_id', $id)->where('group_id', 0)->where('type', 'Discount')->sum('amount');
+    }
+
+    private function getClientTotalRefund($id) {
+        return ClientTransaction::where('client_id', $id)->where('group_id', 0)->where('type', 'Refund')->sum('amount');
+    }
+
+    private function getClientTotalCost($id) {
+        $clientTotalCost = ClientService::where('client_id', $id)
+            ->where('active', 1)->where('group_id', 0)
+            ->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
+
+        return ($clientTotalCost) ? $clientTotalCost : 0;
+    }
+
+    private function getClientTotalCompleteServiceCost($id) {
+        $clientTotalCompleteServiceCost = ClientService::where('client_id', $id)
+            ->where('active', 1)->where('group_id', 0)
+            ->where('status', 'complete')
+            ->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
+
+        return ($clientTotalCompleteServiceCost) ? $clientTotalCompleteServiceCost : 0;
+    }
+
+    private function getClientTotalBalance($id) {
+        return  (
+                    (
+                        $this->getClientDeposit($id)
+                        + $this->getClientPayment($id)
+                        +$this->getClientTotalDiscount($id)
+                    )
+                    -
+                    (
+                        $this->getClientTotalRefund($id)
+                        + $this->getClientTotalCost($id)
+                    )
+                );
+    }
+
+    private function getClientTotalCollectables($id) {
+        return  (
+                    (
+                        $this->getClientDeposit($id)
+                        + $this->getClientPayment($id)
+                        + $this->getClientTotalDiscount($id)
+                    )
+                    -
+                    (
+                        $this->getClientTotalRefund($id)
+                        + $this->getClientTotalCompleteServiceCost($id)
+                    )
+                );
+    }
+
+    /**** END Computations ****/
 
 }
