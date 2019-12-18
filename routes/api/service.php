@@ -6,7 +6,7 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('manage-services', 'ServiceController@manageServices');
 
-	Route::get('getParentServices', 'ServiceController@getParentServices');
+	Route::get('manage-parent-services', 'ServiceController@manageParentServices');
 
 	Route::post('/', 'ServiceController@store');
 

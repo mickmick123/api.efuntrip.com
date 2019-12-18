@@ -42,17 +42,19 @@ class ServiceController extends Controller
 		return Response::json($response);
 	}
 
-	public function getParentServices(){
-		$parents = Service::where('parent_id', 0)->where('is_active', 1)->orderBy('detail')
+	public function manageParentServices(){
+		$parentServices = Service::where('parent_id', 0)->where('is_active', 1)->orderBy('detail')
 			->select(array('id', 'parent_id', 'detail', DB::raw('SUM(cost + charge + tip + com_agent + com_client) as total_service_charge')))
 			->groupBy('id')
 			->get();
 
-		
-		$response['data'] = $parents;
+		$response['status'] = 'Success';
+		$response['data'] = [
+		    'parent_services' => $parentServices
+		];
+		$response['code'] = 200;
 
 		return Response::json($response);
-
 	}
 
 	public function store(Request $request) {
