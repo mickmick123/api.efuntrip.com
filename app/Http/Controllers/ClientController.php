@@ -71,6 +71,16 @@ class ClientController extends Controller
         $client = User::find($id);
 
         if( $client ) {
+
+            $client->total_complete_service_cost = $this->getClientTotalCompleteServiceCost($id);
+            $client->total_cost = $this->getClientTotalCost($id);
+            $client->total_payment = $this->getClientDeposit($id) + $this->getClientPayment($id);
+
+            $client->total_discount = $this->getClientTotalDiscount($id);
+            $client->total_refund = $this->getClientTotalRefund($id);
+            $client->total_balance = $this->getClientTotalBalance($id);
+            $client->total_collectables = $this->getClientTotalCollectables($id);
+
             $response['status'] = 'Success';
             $response['data'] = [
                 'client' => $client
@@ -325,32 +335,32 @@ class ClientController extends Controller
     /**** Computations ****/
 
     private function getClientDeposit($id) {
-        return ClientTransaction::where('client_id', $id)->where('group_id', 0)->where('type', 'Deposit')->sum('amount');
+        return ClientTransaction::where('client_id', $id)->where('group_id', null)->where('type', 'Deposit')->sum('amount');
     }
 
     private function getClientPayment($id) {
-        return ClientTransaction::where('client_id', $id)->where('group_id', 0)->where('type', 'Payment')->sum('amount');
+        return ClientTransaction::where('client_id', $id)->where('group_id', null)->where('type', 'Payment')->sum('amount');
     }
 
     private function getClientTotalDiscount($id) {
-        return ClientTransaction::where('client_id', $id)->where('group_id', 0)->where('type', 'Discount')->sum('amount');
+        return ClientTransaction::where('client_id', $id)->where('group_id', null)->where('type', 'Discount')->sum('amount');
     }
 
     private function getClientTotalRefund($id) {
-        return ClientTransaction::where('client_id', $id)->where('group_id', 0)->where('type', 'Refund')->sum('amount');
+        return ClientTransaction::where('client_id', $id)->where('group_id', null)->where('type', 'Refund')->sum('amount');
     }
 
     private function getClientTotalCost($id) {
         $clientTotalCost = ClientService::where('client_id', $id)
-            ->where('active', 1)->where('group_id', 0)
+            ->where('active', 1)->where('group_id', null)
             ->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
 
-        return ($clientTotalCost) ? $clientTotalCost : 0;
+        return ($clientTotalCost) ? $clientTotalCost : null;
     }
 
     private function getClientTotalCompleteServiceCost($id) {
         $clientTotalCompleteServiceCost = ClientService::where('client_id', $id)
-            ->where('active', 1)->where('group_id', 0)
+            ->where('active', 1)->where('group_id', null)
             ->where('status', 'complete')
             ->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
 
