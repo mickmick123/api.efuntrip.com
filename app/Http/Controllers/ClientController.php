@@ -355,7 +355,7 @@ class ClientController extends Controller
             ->where('active', 1)->where('group_id', null)
             ->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
 
-        return ($clientTotalCost) ? $clientTotalCost : null;
+        return ($clientTotalCost) ? $clientTotalCost : 0;
     }
 
     private function getClientTotalCompleteServiceCost($id) {
