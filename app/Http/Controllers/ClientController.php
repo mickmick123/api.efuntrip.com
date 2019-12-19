@@ -23,7 +23,20 @@ class ClientController extends Controller
     
 	public function manageClients() {
 		$clients = DB::table('users as u')
-			->select(DB::raw('u.id, u.first_name, u.last_name, NULL as balance, NULL as collectables, p.latest_package, srv.latest_service as latest_service'))
+			->select(DB::raw('u.id, u.first_name, u.last_name, 
+                (
+                    (IFNULL(transactions.total_deposit, 0) + IFNULL(transactions.total_payment, 0) + IFNULL(transactions.total_discount,0))
+                    -
+                    (IFNULL(transactions.total_refund, 0) + IFNULL(totalCost.amount, 0))
+                ) as balance,
+
+                (
+                    (IFNULL(transactions.total_deposit, 0) + IFNULL(transactions.total_payment, 0) + IFNULL(transactions.total_discount,0))
+                    -
+                    (IFNULL(transactions.total_refund, 0) + IFNULL(totalCompleteServiceCost.amount, 0))
+                ) as collectables, 
+
+                p.latest_package, srv.latest_service as latest_service'))
             ->leftjoin(
             	DB::raw('
                     (
@@ -34,6 +47,65 @@ class ClientController extends Controller
                 '),
                 'role.user_id', '=', 'u.id'
             )
+            ->leftjoin(DB::raw('
+                    (
+                        Select 
+                            IFNULL(
+                                sum(b.cost) + sum(b.charge) + sum(b.tip) + sum(b.com_client) + sum(b.com_agent),
+                            0) as amount,
+                            b.client_id
+
+                        from 
+                            client_services as b
+
+                        where 
+                            b.active = 1
+                            and b.group_id is null
+
+                        group by 
+                            b.client_id
+                    ) as totalCost'),
+                    'totalCost.client_id', '=', 'u.id')
+            ->leftjoin(DB::raw('
+                    (
+                        Select 
+                            IFNULL(
+                                sum(b.cost) + sum(b.charge) + sum(b.tip) + sum(b.com_client) + sum(b.com_agent)
+                            ,0) as amount,
+                            b.client_id
+
+                        from 
+                            client_services as b
+
+                        where 
+                            b.active = 1
+                            and b.group_id is null
+                            and b.status = "complete"
+
+                        group by 
+                            b.client_id
+                    ) as totalCompleteServiceCost'),
+                    'totalCompleteServiceCost.client_id', '=', 'u.id')
+            ->leftjoin(DB::raw('
+                    (
+                        Select 
+                            SUM(IF(c.type = "Deposit", c.amount, 0)) as total_deposit,
+                            SUM(IF(c.type = "Refund", c.amount, 0)) as total_refund,
+                            SUM(IF(c.type = "Payment", c.amount, 0)) as total_payment,
+                            SUM(IF(c.type = "Discount", c.amount, 0)) as total_discount,
+                            c.client_id
+
+                        from 
+                            client_transactions as c
+
+                        where 
+                            c.group_id is null
+                            and c.deleted_at is null
+
+                        group by 
+                            c.client_id
+                    ) as transactions'),
+                    'transactions.client_id', '=', 'u.id')
             ->leftjoin(DB::raw('
                     (
                         Select date_format(max(x.dates),"%M %e, %Y, %l:%i %p") as latest_package, x.client_id
@@ -71,7 +143,20 @@ class ClientController extends Controller
 
     public function manageClientsPaginate() {
         $clients = DB::table('users as u')
-            ->select(DB::raw('u.id, u.first_name, u.last_name, NULL as balance, NULL as collectable, p.latest_package, srv.latest_service as latest_service'))
+            ->select(DB::raw('u.id, u.first_name, u.last_name, 
+                (
+                    (IFNULL(transactions.total_deposit, 0) + IFNULL(transactions.total_payment, 0) + IFNULL(transactions.total_discount,0))
+                    -
+                    (IFNULL(transactions.total_refund, 0) + IFNULL(totalCost.amount, 0))
+                ) as balance,
+
+                (
+                    (IFNULL(transactions.total_deposit, 0) + IFNULL(transactions.total_payment, 0) + IFNULL(transactions.total_discount,0))
+                    -
+                    (IFNULL(transactions.total_refund, 0) + IFNULL(totalCompleteServiceCost.amount, 0))
+                ) as collectables, 
+
+                p.latest_package, srv.latest_service as latest_service'))
             ->leftjoin(
                 DB::raw('
                     (
@@ -82,6 +167,65 @@ class ClientController extends Controller
                 '),
                 'role.user_id', '=', 'u.id'
             )
+            ->leftjoin(DB::raw('
+                    (
+                        Select 
+                            IFNULL(
+                                sum(b.cost) + sum(b.charge) + sum(b.tip) + sum(b.com_client) + sum(b.com_agent),
+                            0) as amount,
+                            b.client_id
+
+                        from 
+                            client_services as b
+
+                        where 
+                            b.active = 1
+                            and b.group_id is null
+
+                        group by 
+                            b.client_id
+                    ) as totalCost'),
+                    'totalCost.client_id', '=', 'u.id')
+            ->leftjoin(DB::raw('
+                    (
+                        Select 
+                            IFNULL(
+                                sum(b.cost) + sum(b.charge) + sum(b.tip) + sum(b.com_client) + sum(b.com_agent)
+                            ,0) as amount,
+                            b.client_id
+
+                        from 
+                            client_services as b
+
+                        where 
+                            b.active = 1
+                            and b.group_id is null
+                            and b.status = "complete"
+
+                        group by 
+                            b.client_id
+                    ) as totalCompleteServiceCost'),
+                    'totalCompleteServiceCost.client_id', '=', 'u.id')
+            ->leftjoin(DB::raw('
+                    (
+                        Select 
+                            SUM(IF(c.type = "Deposit", c.amount, 0)) as total_deposit,
+                            SUM(IF(c.type = "Refund", c.amount, 0)) as total_refund,
+                            SUM(IF(c.type = "Payment", c.amount, 0)) as total_payment,
+                            SUM(IF(c.type = "Discount", c.amount, 0)) as total_discount,
+                            c.client_id
+
+                        from 
+                            client_transactions as c
+
+                        where 
+                            c.group_id is null
+                            and c.deleted_at is null
+
+                        group by 
+                            c.client_id
+                    ) as transactions'),
+                    'transactions.client_id', '=', 'u.id')
             ->leftjoin(DB::raw('
                     (
                         Select date_format(max(x.dates),"%M %e, %Y, %l:%i %p") as latest_package, x.client_id
