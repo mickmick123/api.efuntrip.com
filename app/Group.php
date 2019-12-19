@@ -43,6 +43,10 @@ class Group extends Model
     	return $this->belongsTo('App\User', 'leader_id', 'id');
     }
 
+    public function packages() {
+        return $this->hasMany('App\Package', 'group_id', 'id');
+    }
+
     public function serviceProfile() {
         return $this->belongsTo('App\ServiceProfile', 'service_profile_id', 'id');
     }

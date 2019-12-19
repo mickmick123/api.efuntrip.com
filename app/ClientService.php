@@ -31,6 +31,10 @@ class ClientService extends Model
     	return $this->belongsTo('App\Group', 'group_id', 'id');
     }
 
+    public function package() {
+        return $this->belongsTo('App\Package', 'tracking', 'tracking');
+    }
+
     public function service() {
     	return $this->belongsTo('App\Service', 'service_id', 'id');
     }

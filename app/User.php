@@ -70,6 +70,10 @@ class User extends Authenticatable
         return $this->belongsToMany('App\Nationality', 'nationality_user', 'user_id', 'nationality_id');
     }
 
+    public function packages() {
+        return $this->hasMany('App\Package', 'client_id', 'id');
+    }
+
     public function roles() {
         return $this->belongsToMany('App\Role', 'role_user', 'user_id', 'role_id');
     }
