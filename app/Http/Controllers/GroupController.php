@@ -99,8 +99,29 @@ class GroupController extends Controller
 
 	public function manageGroups() {
 		$groups = DB::table('groups as g')
-			->select(DB::raw('g.id, g.name, CONCAT(u.first_name, " ", u.last_name) as leader, NULL as balance, NULL as collectables, NULL as latest_package, NULL as latest_service'))
+			->select(DB::raw('g.id, g.name, CONCAT(u.first_name, " ", u.last_name) as leader, g.balance, g.collectables, p.latest_package as latest_package, srv.latest_service as latest_service'))
             ->leftjoin(DB::raw('(select * from users) as u'),'u.id','=','g.leader_id')
+            ->leftjoin(DB::raw('
+                    (
+                        Select date_format(max(x.dates),"%M %e, %Y, %l:%i %p") as latest_package, x.group_id
+                        from( SELECT STR_TO_DATE(created_at, "%Y-%m-%d %H:%i:%s") as dates,
+                            group_id, status
+                            FROM packages
+                            ORDER BY dates desc
+                        ) as x
+                        group by x.group_id) as p'),
+                    'p.group_id', '=', 'g.id')
+            ->leftjoin(DB::raw('
+                    (
+                        Select date_format(max(cs.servdates),"%M %e, %Y") as latest_service,cs.client_id,cs.group_id
+                        from( SELECT STR_TO_DATE(created_at, "%Y-%m-%d") as servdates,
+                            group_id, active,client_id
+                            FROM client_services
+                            ORDER BY servdates desc
+                        ) as cs
+                        where cs.active = 1
+                        group by cs.group_id) as srv'),
+                    'srv.group_id', '=', 'g.id')
             ->orderBy('g.id', 'desc')
             ->get();
 
@@ -138,6 +159,7 @@ class GroupController extends Controller
                         where cs.active = 1
                         group by cs.group_id) as srv'),
                     'srv.group_id', '=', 'g.id')
+            ->orderBy('g.id', 'desc')
             ->paginate(20);
 
         $response = $groups;

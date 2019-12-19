@@ -23,7 +23,7 @@ class ClientController extends Controller
     
 	public function manageClients() {
 		$clients = DB::table('users as u')
-			->select(DB::raw('u.id, u.first_name, u.last_name, NULL as balance, NULL as collectables, NULL as latest_package, NULL as latest_service'))
+			->select(DB::raw('u.id, u.first_name, u.last_name, NULL as balance, NULL as collectables, p.latest_package, srv.latest_service as latest_service'))
             ->leftjoin(
             	DB::raw('
                     (
@@ -34,6 +34,27 @@ class ClientController extends Controller
                 '),
                 'role.user_id', '=', 'u.id'
             )
+            ->leftjoin(DB::raw('
+                    (
+                        Select date_format(max(x.dates),"%M %e, %Y, %l:%i %p") as latest_package, x.client_id
+                        from( SELECT STR_TO_DATE(created_at, "%Y-%m-%d %H:%i:%s") as dates,
+                            client_id, status
+                            FROM packages
+                            ORDER BY dates desc
+                        ) as x
+                        group by x.client_id) as p'),
+                    'p.client_id', '=', 'u.id')
+            ->leftjoin(DB::raw('
+                    (
+                        Select date_format(max(cs.servdates),"%M %e, %Y") as latest_service, cs.client_id
+                        from( SELECT STR_TO_DATE(created_at, "%Y-%m-%d") as servdates,
+                            group_id, active,client_id
+                            FROM client_services
+                            ORDER BY servdates desc
+                        ) as cs
+                        where cs.active = 1
+                        group by cs.client_id) as srv'),
+                    'srv.client_id', '=', 'u.id')
             ->where('role.role_id', '2')
             ->orderBy('u.id', 'desc')
             ->get();
@@ -50,7 +71,7 @@ class ClientController extends Controller
 
     public function manageClientsPaginate() {
         $clients = DB::table('users as u')
-            ->select(DB::raw('u.id, u.first_name, u.last_name,balance, collectable, p.latest_package, srv.latest_service as latest_service'))
+            ->select(DB::raw('u.id, u.first_name, u.last_name, NULL as balance, NULL as collectable, p.latest_package, srv.latest_service as latest_service'))
             ->leftjoin(
                 DB::raw('
                     (
@@ -83,6 +104,7 @@ class ClientController extends Controller
                         group by cs.client_id) as srv'),
                     'srv.client_id', '=', 'u.id')
             ->where('role.role_id', '2')
+            ->orderBy('u.id', 'desc')
             ->paginate(20);
 
         $response = $clients;
