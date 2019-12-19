@@ -12,6 +12,8 @@ use App\Group;
 
 use App\User;
 
+use App\Package;
+
 use DB, Response, Validator;
 
 use Illuminate\Http\Request;
@@ -110,6 +112,38 @@ class GroupController extends Controller
 
 		return Response::json($response);
 	}
+
+    public function manageGroupsPaginate() {
+        $groups = DB::table('groups as g')
+            ->select(DB::raw('g.id, g.name, CONCAT(u.first_name, " ", u.last_name) as leader, g.balance, g.collectables, p.latest_package as latest_package, srv.latest_service as latest_service'))
+            ->leftjoin(DB::raw('(select * from users) as u'),'u.id','=','g.leader_id')
+            ->leftjoin(DB::raw('
+                    (
+                        Select date_format(max(x.dates),"%M %e, %Y, %l:%i %p") as latest_package, x.group_id
+                        from( SELECT STR_TO_DATE(created_at, "%Y-%m-%d %H:%i:%s") as dates,
+                            group_id, status
+                            FROM packages
+                            ORDER BY dates desc
+                        ) as x
+                        group by x.group_id) as p'),
+                    'p.group_id', '=', 'g.id')
+            ->leftjoin(DB::raw('
+                    (
+                        Select date_format(max(cs.servdates),"%M %e, %Y") as latest_service,cs.client_id,cs.group_id
+                        from( SELECT STR_TO_DATE(created_at, "%Y-%m-%d") as servdates,
+                            group_id, active,client_id
+                            FROM client_services
+                            ORDER BY servdates desc
+                        ) as cs
+                        where cs.active = 1
+                        group by cs.group_id) as srv'),
+                    'srv.group_id', '=', 'g.id')
+            ->paginate(20);
+
+        $response = $groups;
+
+        return Response::json($response);
+    }
 
     public function assignRole(Request $request) {
         $validator = Validator::make($request->all(), [
