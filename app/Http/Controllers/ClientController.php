@@ -141,7 +141,7 @@ class ClientController extends Controller
 	}
 
 
-    public function manageClientsPaginate() {
+    public function manageClientsPaginate(Request $request) {
         $clients = DB::table('users as u')
             ->select(DB::raw('u.id, u.first_name, u.last_name, 
                 (
@@ -249,7 +249,7 @@ class ClientController extends Controller
                     'srv.client_id', '=', 'u.id')
             ->where('role.role_id', '2')
             ->orderBy('u.id', 'desc')
-            ->paginate(20);
+            ->paginate( ($request->per_page) ? $request->per_page : 20 );
 
         $response = $clients;
 
