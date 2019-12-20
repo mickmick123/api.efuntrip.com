@@ -6,7 +6,7 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('manage-groups', 'GroupController@manageGroups');
 
-	Route::get('manage-groups-paginate', 'GroupController@manageGroupsPaginate');
+	Route::get('manage-groups-paginate/{perPage?}', 'GroupController@manageGroupsPaginate');
 
 	Route::post('assign-role', 'GroupController@assignRole');
 

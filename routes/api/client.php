@@ -6,7 +6,7 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('manage-clients', 'ClientController@manageClients');
 
-	Route::get('manage-clients-paginate', 'ClientController@manageClientsPaginate');
+	Route::get('manage-clients-paginate/{perPage?}', 'ClientController@manageClientsPaginate');
 
 	Route::post('/', 'ClientController@store');
 
