@@ -156,7 +156,7 @@ class ClientController extends Controller
                     (IFNULL(transactions.total_refund, 0) + IFNULL(totalCompleteServiceCost.amount, 0))
                 ) as collectables, 
 
-                p.latest_package, srv.latest_service as latest_service'))
+                p.latest_package, srv.latest_service'))
             ->leftjoin(
                 DB::raw('
                     (
@@ -537,6 +537,52 @@ class ClientController extends Controller
         return Response::json($response);
 	}
 
+
+    public function getClientServices($id, $tracking = 0) {
+        if($tracking == 0){        
+            $services = DB::table('client_services as cs')
+                ->select(DB::raw('cs.*,g.name as group_name'))
+                ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','cs.group_id')
+                ->where('client_id',$id)
+                ->orderBy('cs.id', 'desc')
+                ->get();
+        }
+        else{
+            $services = DB::table('client_services as cs')
+                ->select(DB::raw('cs.*,g.name as group_name'))
+                ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','cs.group_id')
+                ->where('cs.client_id',$id)->where('cs.tracking',$tracking)
+                ->orderBy('cs.id', 'desc')
+                ->get();
+        }
+
+        $response['status'] = 'Success';
+        $response['data'] = $services;
+        $response['code'] = 200;
+
+        return Response::json($response);
+    }
+
+    public function getClientPackages($id, $tracking = 0) {    
+        $packs = DB::table('packages as p')->select(DB::raw('p.*,g.name as group_name'))
+                    ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','p.group_id')
+                    ->where('client_id', $id)
+                    ->orderBy('id', 'desc')
+                    ->get();
+
+        foreach($packs as $p){
+            $package_cost = ClientService::where('tracking', $p->tracking)
+                            ->where('active', 1)
+                            ->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
+            $p->package_cost = ($package_cost > 0 ? $package_cost : 0);
+        }
+
+        $response['status'] = 'Success';
+        $response['data'] = $packs;
+        $response['code'] = 200;
+
+        return Response::json($response);
+    }
 
     /**** Computations ****/
 
