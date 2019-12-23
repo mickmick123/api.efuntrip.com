@@ -14,6 +14,8 @@ use App\Group;
 
 use App\Package;
 
+use App\Branch;
+
 use DB, Response, Validator;
 
 use Illuminate\Http\Request;
@@ -305,7 +307,127 @@ class ClientController extends Controller
         return Response::json($response);
     }
 
-	public function store(Request $request) {
+	public function clientSearch(Request $request) {
+        $keyword = $request->input('search');
+        $cids = ContactNumber::where("number",'LIKE', '%' . $keyword .'%')->pluck('id');
+        if(preg_match('/\s/',$keyword)){
+            $q = explode(" ", $keyword);
+            $q1 = '';
+            $q2 = '';
+            $spaces = substr_count($keyword, ' ');
+            if($spaces == 2){
+                $q1 = $q[0]." ".$q[1];
+                $q2 = $q[2];
+            }
+            if($spaces == 1){
+                $q1 = $q[0];
+                $q2 = $q[1];
+            }
+            $prods = DB::connection()
+            ->table('users as a')
+            ->select(DB::raw('
+                a.id,a.first_name,a.last_name,a.created_at,srv.sdates,srv.sdates2, srv.checkyear'))
+                ->leftjoin(DB::raw('
+                    (
+                        Select date_format(max(cs.servdates),"%m/%d/%Y") as sdates, date_format(max(cs.servdates),"%Y%m%d") as sdates2 ,date_format(max(cs.servdates),"%Y") as checkyear ,cs.client_id
+                        from( SELECT STR_TO_DATE(created_at, "%Y-%m-%d %H:%i:%s") as servdates,
+                            group_id, active,client_id
+                            FROM client_services
+                            ORDER BY servdates desc
+                        ) as cs
+                        where cs.active = 1
+                        group by cs.client_id
+                        order by cs.servdates) as srv'),
+                    'srv.client_id', '=', 'a.id')
+                ->orwhere(function ($query) use($q1,$q2) {
+                        $query->where('first_name', '=', $q1)
+                              ->Where('last_name', '=', $q2);
+                    })->orwhere(function ($query) use($q1,$q2) {
+                        $query->where('last_name', '=', $q1)
+                              ->Where('first_name', '=', $q2);
+                    })
+                ->orderBy('sdates2','DESC')    
+                ->get();
+        }
+        else{
+            $prods = DB::connection()
+            ->table('users as a')
+            ->select(DB::raw('
+                a.id,a.first_name,a.last_name,a.created_at,srv.sdates,srv.sdates2, srv.checkyear'))
+                ->leftjoin(DB::raw('
+                    (
+                        Select date_format(max(cs.servdates),"%m/%d/%Y") as sdates, date_format(max(cs.servdates),"%Y%m%d") as sdates2, date_format(max(cs.servdates),"%Y") as checkyear ,cs.client_id
+                        from( SELECT STR_TO_DATE(created_at, "%Y-%m-%d %H:%i:%s") as servdates,
+                            group_id, active,client_id
+                            FROM client_services
+                            ORDER BY servdates desc
+                        ) as cs
+                        where cs.active = 1
+                        group by cs.client_id) as srv'),
+                    'srv.client_id', '=', 'a.id')
+                ->orwhereIn('id',$cids)
+                ->orwhere('first_name','=',$keyword)
+                ->orwhere('last_name','=',$keyword)
+                ->orderBy('sdates2','DESC')    
+                ->get();
+
+            if($prods->count() == 0){
+                preg_match_all('!\d+!', $keyword, $matches);
+                $keyword = implode("", $matches[0]);
+                $keyword = ltrim($keyword,"0");
+                $keyword = ltrim($keyword,'+');
+                $keyword = ltrim($keyword,'63');
+                $cids = ContactNumber::where("number",'LIKE', '%' . $keyword .'%')->pluck('id');
+
+                $prods = DB::connection()
+                    ->table('users as a')
+                    ->select(DB::raw('
+                        a.id,a.first_name,a.last_name,a.created_at,srv.sdates,srv.sdates2, srv.checkyear'))
+                        ->leftjoin(DB::raw('
+                            (
+                                Select date_format(max(cs.servdates),"%m/%d/%Y") as sdates, date_format(max(cs.servdates),"%Y%m%d") as sdates2, date_format(max(cs.servdates),"%Y") as checkyear ,cs.client_id
+                                from( SELECT STR_TO_DATE(service_date, "%Y-%m-%d %H:%i:%s") as servdates,
+                                    group_id, active,client_id
+                                    FROM visa.client_services
+                                    ORDER BY servdates desc
+                                ) as cs
+                                where cs.active = 1
+                                group by cs.client_id) as srv'),
+                            'srv.client_id', '=', 'a.id')
+                        ->orwhereIn('id',$cids)
+                        ->orwhere('first_name','=',$keyword)
+                        ->orwhere('last_name','=',$keyword)
+                        ->orderBy('sdates2','DESC')    
+                        ->get();
+            }
+        }
+
+        $json = [];
+        foreach($prods as $p){
+            $br = 1;
+            $branch = DB::connection()->table('branch_user as a')->where('user_id',$p->id)->first()->branch_id;
+            if($branch){
+                $br = $branch;
+            }
+           if($p->checkyear >= 2016){
+              $br = Branch::where('id',$br)->first()->name;
+              $json[] = array(
+                  'id' => $p->id,
+                  'name' => $p->first_name." ".$p->last_name." -- [".$br."] -- ".$p->sdates."",
+              );
+           }
+           if($p->checkyear == null){
+              $br = Branch::where('id',$br)->first()->name;
+              $json[] = array(
+                  'id' => $p->id,
+                  'name' => $p->first_name." ".$p->last_name." -- [".$br."] -- No Service",
+              );
+           } 
+        }
+        return json_encode($json);
+    }
+
+    public function store(Request $request) {
 		$validator = Validator::make($request->all(), [
             'first_name' => 'required',
             'middle_name' => 'nullable',
