@@ -409,6 +409,33 @@ class ClientController extends Controller
         return Response::json($response);
 	}
 
+    public function updateRisk(Request $request, $id) {
+        $validator = Validator::make($request->all(), [
+            'risk' => 'required'
+        ]);
+
+        if($validator->fails()) {       
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;   
+        } else {
+            $client = User::find($id);
+
+            if( $client ) {
+                $client->update(['risk' => $request->risk]);
+
+                $response['status'] = 'Success';
+                $response['code'] = 200;
+            } else {
+                $response['status'] = 'Failed';
+                $response['errors'] = 'No query results.';
+                $response['code'] = 404;
+            }
+        }
+
+        return Response::json($response);
+    }
+
 	public function update(Request $request, $id) {
 		$validator = Validator::make($request->all(), [
             'first_name' => 'required',
@@ -540,7 +567,6 @@ class ClientController extends Controller
 
         return Response::json($response);
 	}
-
 
     public function getClientServices($id, $tracking = 0) {
         if($tracking == 0){        

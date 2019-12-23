@@ -18,6 +18,8 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('{id}', 'ClientController@show');
 
+	Route::patch('{id}/update-risk', 'ClientController@updateRisk');
+
 	Route::patch('{id}', 'ClientController@update');
 
 });
