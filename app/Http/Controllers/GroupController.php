@@ -268,6 +268,33 @@ class GroupController extends Controller
         return Response::json($response);
     }
 
+    public function updateRisk(Request $request, $id) {
+        $validator = Validator::make($request->all(), [
+            'risk' => 'required'
+        ]);
+
+        if($validator->fails()) {       
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;   
+        } else {
+            $group = Group::find($id);
+
+            if( $group ) {
+                $group->update(['risk' => $request->risk]);
+
+                $response['status'] = 'Success';
+                $response['code'] = 200;
+            } else {
+                $response['status'] = 'Failed';
+                $response['errors'] = 'No query results.';
+                $response['code'] = 404;
+            }
+        }
+
+        return Response::json($response);
+    }
+
 	public function update(Request $request, $id) {
 		$validator = Validator::make($request->all(), [
             'group_name' => 'required|unique:groups,name,'.$id,

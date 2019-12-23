@@ -14,6 +14,8 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('{id}', 'GroupController@show');
 
+	Route::patch('{id}/update-risk', 'GroupController@updateRisk');
+	
 	Route::patch('{id}', 'GroupController@update');
 
 });
