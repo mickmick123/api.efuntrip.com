@@ -14,6 +14,8 @@ use App\User;
 
 use App\Package;
 
+use App\Branch;
+
 use DB, Response, Validator;
 
 use Illuminate\Http\Request;
@@ -221,8 +223,12 @@ class GroupController extends Controller
 
         $json = [];
         foreach($grps as $p){
-            $br = '';
-          //$br = Branch::where('id',$p->branch_id)->first()->name;
+            $br = 1;
+            $branch = DB::connection()->table('branch_group as a')->where('group_id',$p->id)->first()->branch_id;
+            if($branch){
+                $br = $branch;
+            }
+          $br = Branch::where('id',$br)->first()->name;
           $json[] = array(
               'id' => $p->id,
               'name' => $p->name." [".$br."]",
