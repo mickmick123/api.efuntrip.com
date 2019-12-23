@@ -234,7 +234,11 @@ class GroupController extends Controller
               'name' => $p->name." [".$br."]",
           );
         }
-        return json_encode($json);
+        $response['status'] = 'Success';
+        $response['data'] =  $json;
+        $response['code'] = 200;
+
+        return Response::json($response);
     }
 
     public function assignRole(Request $request) {

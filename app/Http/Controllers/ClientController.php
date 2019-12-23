@@ -424,7 +424,11 @@ class ClientController extends Controller
               );
            } 
         }
-        return json_encode($json);
+        $response['status'] = 'Success';
+        $response['data'] =  $json;
+        $response['code'] = 200;
+
+        return Response::json($response);
     }
 
     public function store(Request $request) {
