@@ -8,7 +8,7 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('manage-clients-paginate/{perPage?}', 'ClientController@manageClientsPaginate');
 
-	Route::get('get-clients-services/{id}/{tracking}', 'ClientController@getClientServices');
+	Route::get('get-clients-services/{id}/{tracking?}', 'ClientController@getClientServices');
 
 	Route::get('get-clients-packages/{id}', 'ClientController@getClientPackages');
 

@@ -563,7 +563,7 @@ class ClientController extends Controller
         return Response::json($response);
     }
 
-    public function getClientPackages($id, $tracking = 0) {    
+    public function getClientPackages($id) {    
         $packs = DB::table('packages as p')->select(DB::raw('p.*,g.name as group_name'))
                     ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','p.group_id')
                     ->where('client_id', $id)
@@ -604,7 +604,7 @@ class ClientController extends Controller
 
             if( $client ) {
                 $response['status'] = 'Failed';
-                $response['errors'] = 'The contact_number has already been taken.';
+                $response['errors'] = 'The contact number has already been taken.';
                 $response['code'] = 422;
             } else {
                 $client = User::create([
