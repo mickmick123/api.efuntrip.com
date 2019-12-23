@@ -167,6 +167,70 @@ class GroupController extends Controller
         return Response::json($response);
     }
 
+    public function groupSearch(Request $request){
+        $keyword = $request->input('search');
+        $users = '';
+        if(preg_match('/\s/',$keyword)){
+            $q = explode(" ", $keyword);
+            $q1 = '';
+            $q2 = '';
+            $spaces = substr_count($keyword, ' ');
+            if($spaces == 2){
+                $q1 = $q[0]." ".$q[1];
+                $q2 = $q[2];
+            }
+            if($spaces == 1){
+                $q1 = $q[0];
+                $q2 = $q[1];
+            }
+            $users = DB::connection()
+            ->table('users as a')
+            ->select(DB::raw('
+                a.id,a.first_name,a.last_name,a.created_at'))
+                ->orwhere(function ($query) use($q1,$q2) {
+                        $query->where('first_name', '=', $q1)
+                              ->Where('last_name', '=', $q2);
+                    })->orwhere(function ($query) use($q1,$q2) {
+                        $query->where('last_name', '=', $q1)
+                              ->Where('first_name', '=', $q2);
+                    })
+                ->pluck('id');
+        }
+         else{
+            $users = DB::connection()
+            ->table('users as a')
+            ->select(DB::raw('
+                a.id,a.first_name,a.last_name,a.created_at'))
+                ->orwhere('first_name','=',$keyword)
+                ->orwhere('last_name','=',$keyword)
+                ->pluck('id');
+        }
+
+        $getLeaderIds = Group::pluck('leader_id');
+        $cids = ContactNumber::whereIn('user_id',$getLeaderIds)->where("number",'LIKE', '%' . $keyword .'%')->pluck('user_id');
+            $grps = DB::connection()
+            ->table('groups as a')
+            ->select(DB::raw('
+                a.id,a.name'))
+                //->orwhere('a.id','LIKE', '%' . $keyword .'%')
+                ->orwhere('name','LIKE', '%' . $keyword .'%')
+                ->orwhereIn('leader_id',$cids)
+                ->orwhereIn('leader_id',$users)
+                ->get();
+
+
+        $json = [];
+        foreach($grps as $p){
+            $br = '';
+          //$br = Branch::where('id',$p->branch_id)->first()->name;
+          $json[] = array(
+              'id' => $p->id,
+              'name' => $p->name." [".$br."]",
+          );
+        }
+        return json_encode($json);
+    }
+
     public function assignRole(Request $request) {
         $validator = Validator::make($request->all(), [
             'group_id' => 'required',

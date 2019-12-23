@@ -8,6 +8,8 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('manage-groups-paginate/{perPage?}', 'GroupController@manageGroupsPaginate');
 
+	Route::get('search', 'GroupController@groupSearch');
+
 	Route::post('assign-role', 'GroupController@assignRole');
 
 	Route::post('/', 'GroupController@store');
