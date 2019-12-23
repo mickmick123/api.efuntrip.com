@@ -141,7 +141,8 @@ class ClientController extends Controller
 	}
 
 
-    public function manageClientsPaginate($perPage = 20) {
+    public function manageClientsPaginate(Request $request, $perPage = 20) {
+        $sort = $request->input('sort');
         $clients = DB::table('users as u')
             ->select(DB::raw('u.id, u.first_name, u.last_name, 
                 (
@@ -154,7 +155,7 @@ class ClientController extends Controller
                     (IFNULL(transactions.total_deposit, 0) + IFNULL(transactions.total_payment, 0) + IFNULL(transactions.total_discount,0))
                     -
                     (IFNULL(transactions.total_refund, 0) + IFNULL(totalCompleteServiceCost.amount, 0))
-                ) as collectables, 
+                ) as collectable, 
 
                 p.latest_package, srv.latest_service'))
             ->leftjoin(
@@ -248,8 +249,11 @@ class ClientController extends Controller
                         group by cs.client_id) as srv'),
                     'srv.client_id', '=', 'u.id')
             ->where('role.role_id', '2')
-            ->orderBy('u.id', 'desc')
-            ->paginate($perPage);
+            ->when($sort != '', function ($q) use($sort){
+                $sort = explode('-' , $sort);
+                return $q->orderBy($sort[0], $sort[1]);
+            })
+            ->paginate($perPage);            
 
         $response = $clients;
 
