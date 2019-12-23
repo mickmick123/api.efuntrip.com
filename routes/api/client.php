@@ -12,6 +12,8 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('get-clients-packages/{id}', 'ClientController@getClientPackages');
 
+	Route::post('add-temporary-client', 'ClientController@addTemporaryClient');
+
 	Route::post('/', 'ClientController@store');
 
 	Route::get('{id}', 'ClientController@show');

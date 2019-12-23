@@ -584,6 +584,54 @@ class ClientController extends Controller
         return Response::json($response);
     }
 
+    public function addTemporaryClient(Request $request) {
+        $validator = Validator::make($request->all(), [
+            'contact_number' => 'required|min:11|max:11',
+            'branch' => 'required',
+            'birthdate' => 'nullable|date',
+            'passport' => 'nullable|unique:users,passport'
+        ]);
+
+        if($validator->fails()) {       
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;   
+        } else {
+            $contactNumber = $request->contact_number;
+            $client = User::whereHas('contactNumbers', function($query) use($contactNumber) {
+                $query->where('number', $contactNumber);
+            })->first();
+
+            if( $client ) {
+                $response['status'] = 'Failed';
+                $response['errors'] = 'The contact_number has already been taken.';
+                $response['code'] = 422;
+            } else {
+                $client = User::create([
+                    'first_name' => ($request->first_name) ? $request->first_name : $contactNumber,
+                    'last_name' => ($request->last_name) ? $request->last_name : $contactNumber,
+                    'birth_date' => ($request->birthdate) ? $request->birthdate : null,
+                    'passport' => ($request->passport) ? $request->passport : null,
+                    'gender' => ($request->gender) ? $request->gender : null
+                ]);
+
+                $client->update(['email' => $client->id]);
+
+                ContactNumber::create([
+                    'user_id' => $client->id,
+                    'number' => $contactNumber
+                ]);
+
+                $client->branches()->attach($request->branch);
+
+                $response['status'] = 'Success';
+                $response['code'] = 200;
+            }
+        }
+
+        return Response::json($response);
+    }
+
     /**** Computations ****/
 
     private function getClientTotalPointsEarned($id) {
