@@ -8,51 +8,59 @@ use App\ServiceProfile;
 
 use App\ServiceProfileCost;
 
+use DB;
+
 use Illuminate\Http\Request;
 
 class ServiceProfileCostController extends Controller
 {
     
-    public static function createData($serviceId, $costs = []) {
+    public static function createData($serviceIds = null, $costs = []) {
     	$serviceProfiles = ServiceProfile::where('is_active', 1)->get();
     	$branches = Branch::where('name', '<>', 'Both')->get();
 
-    	foreach($serviceProfiles as $serviceProfile) {
-    		foreach($branches as $branch) {
-    			$branchId = $branch->id;
-				$cost = 0;
-				$charge = 0;
-				$tip = 0;
-				$comAgent = 0;
-				$comClient = 0;
+    	if( !$serviceIds ) {
+			$serviceIds = DB::table('services')->pluck('id');
+		}
 
-				foreach($costs as $c) {
-					if( $c['branch_id'] == $branch->id ) {
-						$branchId = $c['branch_id'];
-						$cost = $c['cost'];
-						$charge = $c['charge'];
-						$tip = $c['tip'];
-						$comAgent = $c['com_agent'];
-						$comClient = $c['com_client'];
+		foreach( $serviceIds as $serviceId ) {
+			foreach($serviceProfiles as $serviceProfile) {
+	    		foreach($branches as $branch) {
+	    			$branchId = $branch->id;
+					$cost = 0;
+					$charge = 0;
+					$tip = 0;
+					$comAgent = 0;
+					$comClient = 0;
+
+					foreach($costs as $c) {
+						if( $c['branch_id'] == $branch->id ) {
+							$branchId = $c['branch_id'];
+							$cost = $c['cost'];
+							$charge = $c['charge'];
+							$tip = $c['tip'];
+							$comAgent = $c['com_agent'];
+							$comClient = $c['com_client'];
+						}
 					}
-				}
 
-    			ServiceProfileCost::updateOrCreate(
-    				[
-    					'service_id' => $serviceId, 
-    					'profile_id' => $serviceProfile->id, 
-    					'branch_id' => $branchId
-    				],
-    				[
-    					'cost' => $cost, 
-						'charge' => $charge,
-						'tip' => $tip,
-						'com_agent' => $comAgent,
-						'com_client' => $comClient
-    				]
-    			);
-    		}
-    	}
+	    			ServiceProfileCost::updateOrCreate(
+	    				[
+	    					'service_id' => $serviceId, 
+	    					'profile_id' => $serviceProfile->id, 
+	    					'branch_id' => $branchId
+	    				],
+	    				[
+	    					'cost' => $cost, 
+							'charge' => $charge,
+							'tip' => $tip,
+							'com_agent' => $comAgent,
+							'com_client' => $comClient
+	    				]
+	    			);
+	    		}
+	    	}
+		}
     }
 
     public static function updateData($serviceId, $costs, $serviceProfileId) {

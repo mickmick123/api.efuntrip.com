@@ -4,6 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Branch;
 
+use App\Http\Controllers\ServiceBranchCostController;
+
+use App\Http\Controllers\ServiceProfileCostController;
+
 use Response, Validator;
 
 use Illuminate\Http\Request;
@@ -77,6 +81,9 @@ class BranchController extends Controller
             $response['code'] = 422;   
         } else {
         	Branch::create(['name' => $request->name]);
+
+        	ServiceBranchCostController::createData();
+        	ServiceProfileCostController::createData();
 
         	$response['status'] = 'Success';
 			$response['code'] = 200;

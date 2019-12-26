@@ -83,7 +83,7 @@ class ServiceController extends Controller
         			'description_cn' => ($request->description_chinese) ? $request->description_chinese : null
         		]);
 
-        		ServiceBranchCostController::createData($service->id);
+        		ServiceBranchCostController::createData([$service->id]);
         	} elseif( $request->type == 'child' ) {
         		$service = Service::create([
         			'parent_id' => $request->parent_id,
@@ -105,10 +105,10 @@ class ServiceController extends Controller
         			}
         		}
 
-        		ServiceBranchCostController::createData($service->id, $request->costs);
+        		ServiceBranchCostController::createData([$service->id], $request->costs);
         	}
 
-        	ServiceProfileCostController::createData($service->id);
+        	ServiceProfileCostController::createData([$service->id]);
 
         	$response['status'] = 'Success';
 			$response['code'] = 200;

@@ -4,45 +4,55 @@ namespace App\Http\Controllers;
 
 use App\Branch;
 
+use App\Service;
+
 use App\ServiceBranchCost;
+
+use DB;
 
 use Illuminate\Http\Request;
 
 class ServiceBranchCostController extends Controller
 {
     
-	public static function createData($serviceId, $costs = []) {
-		$branches = Branch::where('name', '<>', 'Manila')->where('name', '<>', 'Both')->get();
+	public static function createData($serviceIds = null, $costs = []) {
+		if( !$serviceIds ) {
+			$serviceIds = DB::table('services')->pluck('id');
+		}
 
-		foreach($branches as $branch) {
-			$branchId = $branch->id;
-			$cost = 0;
-			$charge = 0;
-			$tip = 0;
-			$comAgent = 0;
-			$comClient = 0;
+		foreach( $serviceIds as $serviceId ) {
+			$branches = Branch::where('name', '<>', 'Manila')->where('name', '<>', 'Both')->get();
 
-			foreach($costs as $c) {
-				if( $c['branch_id'] == $branch->id ) {
-					$branchId = $c['branch_id'];
-					$cost = $c['cost'];
-					$charge = $c['charge'];
-					$tip = $c['tip'];
-					$comAgent = $c['com_agent'];
-					$comClient = $c['com_client'];
+			foreach($branches as $branch) {
+				$branchId = $branch->id;
+				$cost = 0;
+				$charge = 0;
+				$tip = 0;
+				$comAgent = 0;
+				$comClient = 0;
+
+				foreach($costs as $c) {
+					if( $c['branch_id'] == $branch->id ) {
+						$branchId = $c['branch_id'];
+						$cost = $c['cost'];
+						$charge = $c['charge'];
+						$tip = $c['tip'];
+						$comAgent = $c['com_agent'];
+						$comClient = $c['com_client'];
+					}
 				}
-			}
 
-			ServiceBranchCost::updateOrCreate(
-				['service_id' => $serviceId, 'branch_id' => $branchId],
-				[
-					'cost' => $cost, 
-					'charge' => $charge,
-					'tip' => $tip,
-					'com_agent' => $comAgent,
-					'com_client' => $comClient
-				]
-			);
+				ServiceBranchCost::updateOrCreate(
+					['service_id' => $serviceId, 'branch_id' => $branchId],
+					[
+						'cost' => $cost, 
+						'charge' => $charge,
+						'tip' => $tip,
+						'com_agent' => $comAgent,
+						'com_client' => $comClient
+					]
+				);
+			}
 		}
 	}
 
