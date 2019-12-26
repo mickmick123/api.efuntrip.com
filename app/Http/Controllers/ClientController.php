@@ -386,9 +386,9 @@ class ClientController extends Controller
                         ->leftjoin(DB::raw('
                             (
                                 Select date_format(max(cs.servdates),"%m/%d/%Y") as sdates, date_format(max(cs.servdates),"%Y%m%d") as sdates2, date_format(max(cs.servdates),"%Y") as checkyear ,cs.client_id
-                                from( SELECT STR_TO_DATE(service_date, "%Y-%m-%d %H:%i:%s") as servdates,
+                                from( SELECT STR_TO_DATE(created_at, "%Y-%m-%d %H:%i:%s") as servdates,
                                     group_id, active,client_id
-                                    FROM visa.client_services
+                                    FROM client_services
                                     ORDER BY servdates desc
                                 ) as cs
                                 where cs.active = 1
