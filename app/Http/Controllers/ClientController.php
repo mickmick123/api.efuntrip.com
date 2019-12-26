@@ -740,6 +740,25 @@ class ClientController extends Controller
         return Response::json($response);
     }
 
+    public function getClientGroups($id) {    
+        $group_ids = DB::table('group_user')->where('user_id',$id)->pluck('group_id');
+
+        $groups = Group::with('branches', 'contactNumbers')
+            ->select(array('id', 'name', 'leader_id', 'tracking', 'address'))
+            ->whereIn('id',$group_ids)->get();
+
+        foreach($groups as $g){
+            $g->leader = DB::table('users')->where('id', $g->leader_id)
+                ->select(array('first_name', 'last_name'))->first();
+        }
+
+        $response['status'] = 'Success';
+        $response['data'] = $groups;
+        $response['code'] = 200;
+
+        return Response::json($response);
+    }
+
     public function addTemporaryClient(Request $request) {
         $validator = Validator::make($request->all(), [
             'contact_number' => 'required|min:11|max:11',
