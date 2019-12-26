@@ -695,7 +695,8 @@ class ClientController extends Controller
 	}
 
     public function getClientServices($id, $tracking = 0) {
-        if($tracking == 0){        
+        if($tracking == 0 && strlen($tracking) == 1){  
+             
             $services = DB::table('client_services as cs')
                 ->select(DB::raw('cs.*,g.name as group_name'))
                 ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','cs.group_id')
