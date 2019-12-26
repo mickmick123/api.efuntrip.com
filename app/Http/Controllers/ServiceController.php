@@ -6,6 +6,10 @@ use App\Service;
 
 use App\ServiceBranchCost;
 
+use App\Http\Controllers\ServiceBranchCostController;
+
+use App\Http\Controllers\ServiceProfileCostController;
+
 use DB, Response, Validator;
 
 use Illuminate\Http\Request;
@@ -62,7 +66,7 @@ class ServiceController extends Controller
             'type' => 'required',
             'service_name' => 'required|unique:services,detail',
             'parent_id' => 'required_if:type,child',
-            'pricing' => 'required_if:type,child|array'
+            'costs' => 'required_if:type,child|array'
         ]);
 
         if($validator->fails()) {       
@@ -71,13 +75,15 @@ class ServiceController extends Controller
             $response['code'] = 422;   
         } else {
         	if( $request->type == 'parent' ) {
-        		Service::create([
+        		$service = Service::create([
         			'parent_id' => 0,
         			'detail' => $request->service_name,
         			'detail_cn' => ($request->service_name_chinese) ? $request->service_name_chinese : null,
         			'description' => ($request->description) ? $request->description : null,
         			'description_cn' => ($request->description_chinese) ? $request->description_chinese : null
         		]);
+
+        		ServiceBranchCostController::createData($service->id);
         	} elseif( $request->type == 'child' ) {
         		$service = Service::create([
         			'parent_id' => $request->parent_id,
@@ -87,28 +93,22 @@ class ServiceController extends Controller
         			'description_cn' => ($request->description_chinese) ? $request->description_chinese : null
         		]);
 
-        		foreach($request->pricing as $pricing) {
-        			if( $pricing['branch_id'] == 1 ) {
+        		foreach($request->costs as $cost) {
+        			if( $cost['branch_id'] == 1 ) {
         				$service->update([
-        					'cost' => $pricing['cost'],
-        					'charge' => $pricing['charge'],
-        					'tip' => $pricing['tip'],
-        					'com_agent' => $pricing['com_agent'],
-        					'com_client' => $pricing['com_client']
-        				]);
-        			} else {
-        				ServiceBranchCost::create([
-        					'service_id' => $service->id,
-        					'branch_id' => $pricing['branch_id'],
-        					'cost' => $pricing['cost'],
-        					'charge' => $pricing['charge'],
-        					'tip' => $pricing['tip'],
-        					'com_agent' => $pricing['com_agent'],
-        					'com_client' => $pricing['com_client']
+        					'cost' => $cost['cost'],
+        					'charge' => $cost['charge'],
+        					'tip' => $cost['tip'],
+        					'com_agent' => $cost['com_agent'],
+        					'com_client' => $cost['com_client']
         				]);
         			}
         		}
+
+        		ServiceBranchCostController::createData($service->id, $request->costs);
         	}
+
+        	ServiceProfileCostController::createData($service->id);
 
         	$response['status'] = 'Success';
 			$response['code'] = 200;
@@ -118,7 +118,7 @@ class ServiceController extends Controller
 	}
 
 	public function show($id) {
-		$service = Service::with('serviceBranchCosts')->find($id);
+		$service = Service::with('serviceBranchCosts', 'serviceProfileCosts')->find($id);
 
 		if( $service ) {
 			$response['status'] = 'Success';
@@ -139,8 +139,9 @@ class ServiceController extends Controller
 		$validator = Validator::make($request->all(), [ 
 			'type' => 'required',
             'service_name' => 'required|unique:services,detail,'.$id,
+            'service_profile' => 'required',
             'parent_id' => 'required_if:type,child',
-            'pricing' => 'required_if:type,child|array'
+            'costs' => 'required_if:type,child|array'
         ]);
 
         if($validator->fails()) {       
@@ -167,27 +168,22 @@ class ServiceController extends Controller
 	        			'description_cn' => ($request->description_chinese) ? $request->description_chinese : null
 	        		]);
 
-	        		foreach($request->pricing as $pricing) {
-	        			if( $pricing['branch_id'] == 1 ) {
-	        				$service->update([
-	        					'cost' => $pricing['cost'],
-	        					'charge' => $pricing['charge'],
-	        					'tip' => $pricing['tip'],
-	        					'com_agent' => $pricing['com_agent'],
-	        					'com_client' => $pricing['com_client']
-	        				]);
-	        			} else {
-		        			ServiceBranchCost::updateOrCreate(
-		        				['service_id' => $service->id, 'branch_id' => $pricing['branch_id']],
-		        				[
-		        					'cost' => $pricing['cost'],
-		        					'charge' => $pricing['charge'],
-		        					'tip' => $pricing['tip'],
-		        					'com_agent' => $pricing['com_agent'],
-		        					'com_client' => $pricing['com_client']
-		        				]
-		        			);
-	        			}
+        			if( $request->service_profile == 0 ) {
+		        		foreach($request->costs as $cost) {
+		        			if( $cost['branch_id'] == 1 ) {
+		        				$service->update([
+		        					'cost' => $cost['cost'],
+		        					'charge' => $cost['charge'],
+		        					'tip' => $cost['tip'],
+		        					'com_agent' => $cost['com_agent'],
+		        					'com_client' => $cost['com_client']
+		        				]);
+		        			}
+		        		}
+
+		        		ServiceBranchCostController::updateData($service->id, $request->costs);
+	        		} else {
+	        			ServiceProfileCostController::updateData($service->id, $request->costs, $request->service_profile);
 	        		}
         		}
 
