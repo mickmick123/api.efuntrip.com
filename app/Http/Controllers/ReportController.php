@@ -10,7 +10,9 @@ class ReportController extends Controller
 {
     
 	public function clientsServices(Request $request) {
-		$clientIds = ($request->client_ids) ? $request->client_ids : [];
+		$clientIds = $request->input("client_ids") ? $request->client_ids : [];
+		$clientIds = explode("," , $clientIds);
+		//dd($clientIds);
 
         $clientsServices = [];
         foreach($clientIds as $clientId) {
@@ -42,7 +44,8 @@ class ReportController extends Controller
         		$clientsServices[] = [
 	        		'id' => $client->id,
 	        		'name' => $client->first_name . ' ' . $client->last_name,
-	        		'services' => $services
+	        		'services' => $services,
+	        		
 	        	];
         	}
         }
@@ -52,7 +55,6 @@ class ReportController extends Controller
 		    'clientsServices' => $clientsServices
 		];
 		$response['code'] = 200;
-
 		return Response::json($response);
 	}
 
