@@ -522,7 +522,7 @@ class ClientController extends Controller
             'birth_country' => 'required',
             'address' => 'required',
             'contact_numbers' => 'required|array',
-            'contact_numbers.*.number' => 'required',
+            'contact_numbers.*.number' => 'required|unique:contact_numbers,number',
             'contact_numbers.*.is_primary' => 'required',
             'contact_numbers.*.is_mobile' => 'required',
             'branches' => 'required|array',
