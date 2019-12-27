@@ -263,16 +263,13 @@ class ClientController extends Controller
     }
 
     public function show($id){
-        $client = User::find($id);
+        $client = User::with('nationalities')->find($id);
 
         if( $client ) {
             $client->contact = DB::table('contact_numbers')->where('user_id', $id)->where('is_primary',1)
                 ->select(array('number'))->first();
 
             $client->birth_country = DB::table('countries')->where('id', $client->birth_country_id)
-                ->select(array('name'))->first();
-
-            $client->nationality = DB::table('nationalities')->where('id', $client->birth_country_id)
                 ->select(array('name'))->first();
 
             $branch = DB::table('branch_user')->where('user_id', $id)
