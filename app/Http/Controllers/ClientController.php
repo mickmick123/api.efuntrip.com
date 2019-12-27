@@ -328,7 +328,7 @@ class ClientController extends Controller
             $results = DB::connection()
             ->table('users as a')
             ->select(DB::raw('
-                a.id,a.first_name,a.last_name,a.created_at,srv.sdates,srv.sdates2, srv.checkyear'))
+                a.id,a.first_name,a.last_name,a.created_at,srv.sdates,srv.sdates2, srv.checkyear, bu.branch_id'))
                 ->leftjoin(DB::raw('
                     (
                         Select date_format(max(cs.servdates),"%m/%d/%Y") as sdates, date_format(max(cs.servdates),"%Y%m%d") as sdates2 ,date_format(max(cs.servdates),"%Y") as checkyear ,cs.client_id
@@ -372,7 +372,7 @@ class ClientController extends Controller
             $results = DB::connection()
             ->table('users as a')
             ->select(DB::raw('
-                a.id,a.first_name,a.last_name,a.created_at,srv.sdates,srv.sdates2, srv.checkyear'))
+                a.id,a.first_name,a.last_name,a.created_at,srv.sdates,srv.sdates2, srv.checkyear, bu.branch_id'))
                 ->leftjoin(DB::raw('
                     (
                         Select date_format(max(cs.servdates),"%m/%d/%Y") as sdates, date_format(max(cs.servdates),"%Y%m%d") as sdates2, date_format(max(cs.servdates),"%Y") as checkyear ,cs.client_id
@@ -417,7 +417,7 @@ class ClientController extends Controller
                 $results = DB::connection()
                     ->table('users as a')
                     ->select(DB::raw('
-                        a.id,a.first_name,a.last_name,a.created_at,srv.sdates,srv.sdates2, srv.checkyear'))
+                        a.id,a.first_name,a.last_name,a.created_at,srv.sdates,srv.sdates2, srv.checkyear, bu.branch_id'))
                         ->leftjoin(DB::raw('
                             (
                                 Select date_format(max(cs.servdates),"%m/%d/%Y") as sdates, date_format(max(cs.servdates),"%Y%m%d") as sdates2, date_format(max(cs.servdates),"%Y") as checkyear ,cs.client_id
@@ -455,23 +455,19 @@ class ClientController extends Controller
 
         $json = [];
         foreach($results as $p){
-            $br = 1;
-            $branch = DB::connection()->table('branch_user as a')->where('user_id',$p->id)->first()->branch_id;
-            if($branch){
-                $br = $branch;
-            }
+           $br = Branch::where('id',$p->branch_id)->first()->name;
            if($p->checkyear >= 2016){
-              $br = Branch::where('id',$br)->first()->name;
               $json[] = array(
                   'id' => $p->id,
                   'name' => $p->first_name." ".$p->last_name." -- [".$br."] -- ".$p->sdates."",
+                  'full_name' => $p->first_name." ".$p->last_name,
               );
            }
            if($p->checkyear == null){
-              $br = Branch::where('id',$br)->first()->name;
               $json[] = array(
                   'id' => $p->id,
                   'name' => $p->first_name." ".$p->last_name." -- [".$br."] -- No Service",
+                  'full_name' => $p->first_name." ".$p->last_name,
               );
            } 
         }
