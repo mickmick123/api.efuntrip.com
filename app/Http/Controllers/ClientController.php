@@ -306,6 +306,8 @@ class ClientController extends Controller
 
 	public function clientSearch(Request $request) {
         $keyword = $request->input('search');
+        $branch_id = $request->input('branch_id');
+
         $cids = ContactNumber::where("number",'LIKE', '%' . $keyword .'%')->pluck('id');
         if(preg_match('/\s/',$keyword)){
             $q = explode(" ", $keyword);
@@ -320,7 +322,7 @@ class ClientController extends Controller
                 $q1 = $q[0];
                 $q2 = $q[1];
             }
-            $prods = DB::connection()
+            $results = DB::connection()
             ->table('users as a')
             ->select(DB::raw('
                 a.id,a.first_name,a.last_name,a.created_at,srv.sdates,srv.sdates2, srv.checkyear'))
@@ -336,20 +338,35 @@ class ClientController extends Controller
                         group by cs.client_id
                         order by cs.servdates) as srv'),
                     'srv.client_id', '=', 'a.id')
-                ->orwhere(function ($query) use($q1,$q2) {
-                        $query->where('first_name', '=', $q1)
-                              ->Where('last_name', '=', $q2);
-                    })->orwhere(function ($query) use($q1,$q2) {
-                        $query->where('last_name', '=', $q1)
-                              ->Where('first_name', '=', $q2);
-                    })
-                ->orWhere('id',$keyword)
+                ->leftjoin(
+                    DB::raw('
+                        (
+                            Select *
+                            from branch_user
+                        ) as bu
+                    '),
+                    'bu.user_id', '=', 'a.id'
+                )
+                ->when($branch_id != '', function ($q) use($branch_id){
+                    return $q->where('bu.branch_id', $branch_id);
+                })
+                ->where(function ($query) use($q1, $q2, $keyword) {
+                    $query->orwhere('a.id',$keyword)
+                          ->orwhere(function ($query) use($q1,$q2) {
+                                $query->where('first_name', '=', $q1)
+                                      ->Where('last_name', '=', $q2);
+                            })->orwhere(function ($query) use($q1,$q2) {
+                                $query->where('last_name', '=', $q1)
+                                      ->Where('first_name', '=', $q2);
+                            });
+                })
+                
                 ->orderBy('sdates2','DESC') 
                 ->limit(10)     
                 ->get();
         }
         else{
-            $prods = DB::connection()
+            $results = DB::connection()
             ->table('users as a')
             ->select(DB::raw('
                 a.id,a.first_name,a.last_name,a.created_at,srv.sdates,srv.sdates2, srv.checkyear'))
@@ -364,15 +381,29 @@ class ClientController extends Controller
                         where cs.active = 1
                         group by cs.client_id) as srv'),
                     'srv.client_id', '=', 'a.id')
-                ->orwhereIn('id',$cids)
-                ->orwhere('id',$keyword)
-                ->orwhere('first_name','=',$keyword)
-                ->orwhere('last_name','=',$keyword)
+                ->leftjoin(
+                    DB::raw('
+                        (
+                            Select *
+                            from branch_user
+                        ) as bu
+                    '),
+                    'bu.user_id', '=', 'a.id'
+                )
+                ->when($branch_id != '', function ($q) use($branch_id){
+                    return $q->where('bu.branch_id', $branch_id);
+                })
+                ->where(function ($query) use($cids, $keyword) {
+                        $query->orwhereIn('a.id',$cids)
+                              ->orwhere('a.id',$keyword)
+                              ->orwhere('first_name','=',$keyword)
+                              ->orwhere('last_name','=',$keyword);
+                    })
                 ->orderBy('sdates2','DESC') 
                 ->limit(10)     
                 ->get();
 
-            if($prods->count() == 0){
+            if($results->count() == 0){
                 preg_match_all('!\d+!', $keyword, $matches);
                 $keyword = implode("", $matches[0]);
                 $keyword = ltrim($keyword,"0");
@@ -380,7 +411,7 @@ class ClientController extends Controller
                 $keyword = ltrim($keyword,'63');
                 $cids = ContactNumber::where("number",'LIKE', '%' . $keyword .'%')->pluck('id');
 
-                $prods = DB::connection()
+                $results = DB::connection()
                     ->table('users as a')
                     ->select(DB::raw('
                         a.id,a.first_name,a.last_name,a.created_at,srv.sdates,srv.sdates2, srv.checkyear'))
@@ -395,10 +426,24 @@ class ClientController extends Controller
                                 where cs.active = 1
                                 group by cs.client_id) as srv'),
                             'srv.client_id', '=', 'a.id')
-                        ->orwhereIn('id',$cids)
-                        ->orwhere('id',$keyword)
-                        ->orwhere('first_name','=',$keyword)
-                        ->orwhere('last_name','=',$keyword)
+                        ->leftjoin(
+                            DB::raw('
+                                (
+                                    Select *
+                                    from branch_user
+                                ) as bu
+                            '),
+                            'bu.user_id', '=', 'a.id'
+                        )
+                        ->when($branch_id != '', function ($q) use($branch_id){
+                            return $q->where('bu.branch_id', $branch_id);
+                        })
+                        ->where(function ($query) use($cids, $keyword) {
+                            $query->orwhereIn('a.id',$cids)
+                                  ->orwhere('a.id',$keyword)
+                                  ->orwhere('first_name','=',$keyword)
+                                  ->orwhere('last_name','=',$keyword);
+                        })
                         ->orderBy('sdates2','DESC')  
                         ->limit(10)  
                         ->get();
@@ -406,7 +451,7 @@ class ClientController extends Controller
         }
 
         $json = [];
-        foreach($prods as $p){
+        foreach($results as $p){
             $br = 1;
             $branch = DB::connection()->table('branch_user as a')->where('user_id',$p->id)->first()->branch_id;
             if($branch){
