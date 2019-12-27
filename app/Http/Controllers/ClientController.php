@@ -346,7 +346,9 @@ class ClientController extends Controller
                         $query->where('last_name', '=', $q1)
                               ->Where('first_name', '=', $q2);
                     })
-                ->orderBy('sdates2','DESC')    
+                ->orWhere('id',$keyword)
+                ->orderBy('sdates2','DESC') 
+                ->limit(10)     
                 ->get();
         }
         else{
@@ -366,9 +368,11 @@ class ClientController extends Controller
                         group by cs.client_id) as srv'),
                     'srv.client_id', '=', 'a.id')
                 ->orwhereIn('id',$cids)
+                ->orwhere('id',$keyword)
                 ->orwhere('first_name','=',$keyword)
                 ->orwhere('last_name','=',$keyword)
-                ->orderBy('sdates2','DESC')    
+                ->orderBy('sdates2','DESC') 
+                ->limit(10)     
                 ->get();
 
             if($prods->count() == 0){
@@ -395,9 +399,11 @@ class ClientController extends Controller
                                 group by cs.client_id) as srv'),
                             'srv.client_id', '=', 'a.id')
                         ->orwhereIn('id',$cids)
+                        ->orwhere('id',$keyword)
                         ->orwhere('first_name','=',$keyword)
                         ->orwhere('last_name','=',$keyword)
-                        ->orderBy('sdates2','DESC')    
+                        ->orderBy('sdates2','DESC')  
+                        ->limit(10)  
                         ->get();
             }
         }
