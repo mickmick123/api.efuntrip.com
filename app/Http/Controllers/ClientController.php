@@ -342,11 +342,22 @@ class ClientController extends Controller
                     DB::raw('
                         (
                             Select *
+                            from role_user as r
+                            where r.role_id = 2
+                        ) as role
+                    '),
+                    'role.user_id', '=', 'a.id'
+                )
+                ->leftjoin(
+                    DB::raw('
+                        (
+                            Select *
                             from branch_user
                         ) as bu
                     '),
                     'bu.user_id', '=', 'a.id'
                 )
+                ->where('role.role_id', '2')
                 ->when($branch_id != '', function ($q) use($branch_id){
                     return $q->where('bu.branch_id', $branch_id);
                 })
@@ -385,11 +396,22 @@ class ClientController extends Controller
                     DB::raw('
                         (
                             Select *
+                            from role_user as r
+                            where r.role_id = 2
+                        ) as role
+                    '),
+                    'role.user_id', '=', 'a.id'
+                )
+                ->leftjoin(
+                    DB::raw('
+                        (
+                            Select *
                             from branch_user
                         ) as bu
                     '),
                     'bu.user_id', '=', 'a.id'
                 )
+                ->where('role.role_id', '2')
                 ->when($branch_id != '', function ($q) use($branch_id){
                     return $q->where('bu.branch_id', $branch_id);
                 })
@@ -430,11 +452,22 @@ class ClientController extends Controller
                             DB::raw('
                                 (
                                     Select *
+                                    from role_user as r
+                                    where r.role_id = 2
+                                ) as role
+                            '),
+                            'role.user_id', '=', 'a.id'
+                        )
+                        ->leftjoin(
+                            DB::raw('
+                                (
+                                    Select *
                                     from branch_user
                                 ) as bu
                             '),
                             'bu.user_id', '=', 'a.id'
                         )
+                        ->where('role.role_id', '2')
                         ->when($branch_id != '', function ($q) use($branch_id){
                             return $q->where('bu.branch_id', $branch_id);
                         })
