@@ -12,6 +12,8 @@ use App\Group;
 
 use App\User;
 
+use App\GroupUser;
+
 use App\Package;
 
 use App\Branch;
@@ -22,7 +24,7 @@ use Illuminate\Http\Request;
 
 class GroupController extends Controller
 {
-    
+
     private function generateGroupTracking() {
     	$numeric = '0123456789';
 
@@ -248,10 +250,10 @@ class GroupController extends Controller
             'role' => 'required'
         ]);
 
-        if($validator->fails()) {       
+        if($validator->fails()) {
             $response['status'] = 'Failed';
             $response['errors'] = $validator->errors();
-            $response['code'] = 422;   
+            $response['code'] = 422;
         } else {
             if( $request->role == 'leader' ) {
                 $group = Group::findOrFail($request->group_id);
@@ -285,10 +287,10 @@ class GroupController extends Controller
             'leader' => 'required'
         ]);
 
-        if($validator->fails()) {       
+        if($validator->fails()) {
             $response['status'] = 'Failed';
             $response['errors'] = $validator->errors();
-            $response['code'] = 422;   
+            $response['code'] = 422;
         } else {
         	$group = Group::create([
         		'name' => $request->group_name,
@@ -347,10 +349,10 @@ class GroupController extends Controller
             'risk' => 'required'
         ]);
 
-        if($validator->fails()) {       
+        if($validator->fails()) {
             $response['status'] = 'Failed';
             $response['errors'] = $validator->errors();
-            $response['code'] = 422;   
+            $response['code'] = 422;
         } else {
             $group = Group::find($id);
 
@@ -376,10 +378,10 @@ class GroupController extends Controller
             'address' => 'required'
         ]);
 
-        if($validator->fails()) {       
+        if($validator->fails()) {
             $response['status'] = 'Failed';
             $response['errors'] = $validator->errors();
-            $response['code'] = 422;   
+            $response['code'] = 422;
         } else {
         	$group = Group::find($id);
 
@@ -402,11 +404,110 @@ class GroupController extends Controller
         	} else {
         		$response['status'] = 'Failed';
         		$response['errors'] = 'No query results.';
-				$response['code'] = 404;
+				    $response['code'] = 404;
         	}
         }
 
         return Response::json($response);
 	}
+
+
+
+
+  public function addMembers(Request $request) {
+
+      $validator = Validator::make($request->all(), [
+          'id' => 'required'
+      ]);
+
+
+      if($validator){
+        foreach($request->clientIds as $clientId) {
+            GroupUser::create([
+                'group_id' => $request->id,
+                'user_id' => $clientId,
+                'is_vice_leader' => 0,
+                'total_service_cost' => 0
+            ]);
+        }
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $request->id;
+
+      }else{
+        $response['status'] = 'Error';
+        $response['code'] = 404;
+      }
+
+      return Response::json($response);
+  }
+
+
+public function members($id, $page = 20) {
+
+    $groups = DB::table('group_user as g_u')
+        ->select(DB::raw('g_u.id, CONCAT(u.first_name, " ", u.last_name) as name,  g_u.is_vice_leader, g_u.total_service_cost'))
+        ->leftjoin(DB::raw('(select * from users) as u'),'u.id','=','g_u.user_id')
+        ->orderBy('g_u.id', 'desc')
+        ->where('group_id', $id)
+        ->paginate($page);
+
+      $response = $groups;
+
+      $ctr=0;
+      $temp = [];
+      foreach($groups->items() as $g){
+         $packs = DB::table('packages as p')->select(DB::raw('p.*,g.name as group_name'))
+                    ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','p.group_id')
+                     ->where('client_id', $g->id)
+                    ->orderBy('id', 'desc')
+                    ->get();
+
+        foreach($packs as $p){
+            $services = DB::table('client_services as cs')
+                ->select(DB::raw('cs.*'))
+                ->where('tracking',$p->tracking)
+                ->get();
+
+            $p->package_cost = $services[0]->cost+ $services[0]->charge + $services[0]->tip + $services[0]->com_agent + $services[0]->com_client;
+            $p->detail =  $services[0]->detail;
+        }
+
+        $temp['packages'] = $packs;
+        $temp['id'] = $g->id;
+        $temp['name'] = $g->name;
+        $temp['is_vice_leader'] = $g->is_vice_leader;
+        $temp['total_service_cost'] = $g->total_service_cost;
+        $response[$ctr] =  $temp;
+        $ctr++;
+      }
+
+      return Response::json($response);
+}
+
+
+public function getClientPackagesByGroup($client_id, $group_id){
+
+      $packs = DB::table('packages as p')->select(DB::raw('p.*,g.name as group_name'))
+                  ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','p.group_id')
+                   ->where([['client_id', '=' , $client_id], ['p.group_id', '=', $group_id]])
+                  ->orderBy('id', 'desc')
+                  ->get();
+
+      foreach($packs as $p){
+          $package_cost = ClientService::where('tracking', $p->tracking)
+                          ->where('active', 1)
+                          ->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
+          $p->package_cost = ($package_cost > 0 ? $package_cost : 0);
+      }
+
+      $response['status'] = 'Success';
+      $response['data'] = $packs;
+      $response['code'] = 200;
+
+      return Response::json($response);
+
+}
+
 
 }

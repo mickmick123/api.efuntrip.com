@@ -14,10 +14,16 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::post('/', 'GroupController@store');
 
+	Route::post('add-members', 'GroupController@addMembers'); //Adding members using member ids and group id
+
+	Route::get('member-packages/{client_id}/{group_id?}', 'GroupController@getClientPackagesByGroup');
+
+	Route::get('members/{id}/{page?}', 'GroupController@members');
+
 	Route::get('{id}', 'GroupController@show');
 
 	Route::patch('{id}/update-risk', 'GroupController@updateRisk');
-	
+
 	Route::patch('{id}', 'GroupController@update');
 
 });
