@@ -6,6 +6,10 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('manage-clients', 'ClientController@manageClients');
 
+	Route::get('get-pending-services', 'ClientController@getPendingServices');
+
+	Route::get('get-on-process-services', 'ClientController@getOnProcessServices');
+
 	Route::get('manage-clients-paginate/{perPage?}', 'ClientController@manageClientsPaginate');
 
 	Route::get('get-clients-services/{id}/{tracking?}', 'ClientController@getClientServices');
@@ -25,5 +29,7 @@ Route::middleware('auth:api')->group(function() {
 	Route::patch('{id}/update-risk', 'ClientController@updateRisk');
 
 	Route::patch('{id}', 'ClientController@update');
+
+
 
 });

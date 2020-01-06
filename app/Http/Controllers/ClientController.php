@@ -876,6 +876,43 @@ class ClientController extends Controller
         return Response::json($response);
     }
 
+
+    //List of Pending Services
+    public function getPendingServices(){
+        $services = ClientService::where('client_services.status','pending')->where('client_services.active', '1')
+        ->where(function($query) {
+            return $query->where('checked', '0')
+                ->orWhere('checked', NULL);
+        })->leftJoin('services','services.id','=','client_services.service_id')->where('services.parent_id','!=',0)
+          ->join('users', 'client_services.client_id', '=', 'users.id')
+          ->get();
+
+
+        $response['status'] = 'Success';
+        $response['data'] = $services;
+        $response['code'] = 200;
+        return Response::json($response);
+
+    }
+
+    //List of On Process Services
+    public function getOnProcessServices(){
+
+        $services = ClientService::where('client_services.status','on process')->where('client_services.active', '1')
+                ->where(function($query) {
+                    return $query->where('checked', '0')
+                        ->orWhere('checked', NULL);
+                })->leftJoin('services','services.id','=','client_services.service_id')->where('services.parent_id','!=',0)
+                  ->join('users', 'client_services.client_id', '=', 'users.id')
+                  ->get();
+
+        $response['status'] = 'Success';
+        $response['data'] = $services;
+        $response['code'] = 200;
+        return Response::json($response);
+
+    }
+
     /**** Computations ****/
 
     private function getClientTotalPointsEarned($id) {
