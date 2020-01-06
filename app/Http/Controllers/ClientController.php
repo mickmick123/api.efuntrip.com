@@ -16,7 +16,7 @@ use App\Package;
 
 use App\Branch;
 
-use DB, Response, Validator;
+use Auth, DB, Response, Validator;
 
 use Illuminate\Http\Request;
 
@@ -876,16 +876,24 @@ class ClientController extends Controller
         return Response::json($response);
     }
 
+    //get branch of current user
+    public function getBranchAuth(){
+        $branch = DB::table('branch_user')->where('user_id', Auth::User()->id)
+                ->pluck('branch_id')[0];
+        return $branch;
+    }
 
     //List of Pending Services
     public function getPendingServices(){
-        $services = ClientService::where('client_services.status','pending')->where('client_services.active', '1')
-        ->where(function($query) {
-            return $query->where('checked', '0')
-                ->orWhere('checked', NULL);
-        })->leftJoin('services','services.id','=','client_services.service_id')->where('services.parent_id','!=',0)
-          ->join('users', 'client_services.client_id', '=', 'users.id')
-          ->get();
+        $auth_branch =  $this->getBranchAuth();
+        $services = ClientService::with('client')->whereHas('client.branches', function ($query) use ($auth_branch) {
+                $query->where('branches.id', '=', $auth_branch);
+                })->where('client_services.status','pending')->where('client_services.active', '1')
+                ->where(function($query) {
+                    return $query->where('checked', '0')->orWhere('checked', NULL);
+                })->leftJoin('services','services.id','=','client_services.service_id')->where('services.parent_id','!=',0)
+                ->join('users', 'client_services.client_id', '=', 'users.id')
+                ->get();
 
 
         $response['status'] = 'Success';
@@ -897,8 +905,10 @@ class ClientController extends Controller
 
     //List of On Process Services
     public function getOnProcessServices(){
-
-        $services = ClientService::where('client_services.status','on process')->where('client_services.active', '1')
+        $auth_branch =  $this->getBranchAuth();
+        $services = ClientService::with('client')->whereHas('client.branches', function ($query) use ($auth_branch) {
+                $query->where('branches.id', '=', $auth_branch);
+                })->where('client_services.status','on process')->where('client_services.active', '1')
                 ->where(function($query) {
                     return $query->where('checked', '0')
                         ->orWhere('checked', NULL);

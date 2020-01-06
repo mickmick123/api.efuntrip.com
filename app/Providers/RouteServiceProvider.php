@@ -47,6 +47,8 @@ class RouteServiceProvider extends ServiceProvider
 
             $this->mapCountryRoutes();
 
+            $this->mapDashboardRoutes();
+
             $this->mapDocumentRoutes();
 
             $this->mapGroupRoutes();
@@ -115,6 +117,14 @@ class RouteServiceProvider extends ServiceProvider
                  ->middleware('api')
                  ->namespace($this->namespace)
                  ->group(base_path('routes/api/country.php'));
+        }
+
+        protected function mapDashboardRoutes()
+        {
+            Route::prefix('api/v1/dashboard')
+                 ->middleware('api')
+                 ->namespace($this->namespace)
+                 ->group(base_path('routes/api/dashboard.php'));
         }
 
         protected function mapDocumentRoutes()
