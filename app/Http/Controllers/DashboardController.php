@@ -37,15 +37,15 @@ class DashboardController extends Controller
                 $query->where('branches.id', '=', $auth_branch)->orWhere('branches.id', '=', $both_branch);
 	 	 	 	})->count();
 
-	 	$totals['total_services'] = ClientService::with('client')->whereHas('client.branches', function ($query) use ($auth_branch, $both_branch) {
+	 	$totals['total_services'] = ClientService::whereHas('client.branches', function ($query) use ($auth_branch, $both_branch) {
                 $query->where('branches.id', '=', $auth_branch)->orWhere('branches.id', '=', $both_branch);
 	 	 	 	})->where('active',1)->count();
 
-	 	$totals['total_services_today'] = ClientService::with('client')->whereHas('client.branches', function ($query) use ($auth_branch, $both_branch) {
+	 	$totals['total_services_today'] = ClientService::whereHas('client.branches', function ($query) use ($auth_branch, $both_branch) {
                 $query->where('branches.id', '=', $auth_branch)->orWhere('branches.id', '=', $both_branch);
 	 	 	 	})->whereDate('created_at', Carbon::today())->where('active',1)->count();
 
-	 	$totals['total_services_yesterday'] = ClientService::with('client')->whereHas('client.branches', function ($query) use ($auth_branch, $both_branch) {
+	 	$totals['total_services_yesterday'] = ClientService::whereHas('client.branches', function ($query) use ($auth_branch, $both_branch) {
                 $query->where('branches.id', '=', $auth_branch)->orWhere('branches.id', '=', $both_branch);
 	 	 	 	})->whereDate('created_at', Carbon::yesterday())->where('active',1)->count();
 	
