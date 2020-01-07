@@ -891,9 +891,9 @@ class ClientController extends Controller
                 })->where('client_services.status','pending')->where('client_services.active', '1')
                 ->where(function($query) {
                     return $query->where('checked', '0')->orWhere('checked', NULL);
-                })->leftJoin('services','services.id','=','client_services.service_id')->where('services.parent_id','!=',0)
-                ->join('users', 'client_services.client_id', '=', 'users.id')
-                ->get();
+                })->with(array('client.groups' => function($query){
+                    $query->select('name');
+                }))->leftJoin('services','services.id','=','client_services.service_id')->where('services.parent_id','!=',0)->get();
 
 
         $response['status'] = 'Success';
@@ -912,8 +912,9 @@ class ClientController extends Controller
                 ->where(function($query) {
                     return $query->where('checked', '0')
                         ->orWhere('checked', NULL);
-                })->leftJoin('services','services.id','=','client_services.service_id')->where('services.parent_id','!=',0)
-                  ->join('users', 'client_services.client_id', '=', 'users.id')
+                })->with(array('client.groups' => function($query){
+                    $query->select('name');
+                }))->leftJoin('services','services.id','=','client_services.service_id')->where('services.parent_id','!=',0)
                   ->get();
 
         $response['status'] = 'Success';
