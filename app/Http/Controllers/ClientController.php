@@ -893,7 +893,8 @@ class ClientController extends Controller
                     return $query->where('checked', '0')->orWhere('checked', NULL);
                 })->with(array('client.groups' => function($query){
                     $query->select('name');
-                }))->leftJoin('services','services.id','=','client_services.service_id')->where('services.parent_id','!=',0)->get();
+                }))->leftJoin('services','services.id','=','client_services.service_id')->where('services.parent_id','!=',0)
+                ->paginate(20);
 
 
         $response['status'] = 'Success';
