@@ -899,7 +899,7 @@ class ClientController extends Controller
                 }))
                 ->when($sort != '', function ($q) use($sort){
                     $sort = explode('-' , $sort);
-                    return $q->orderBy('client_services.' . $sort[0], 'client_services.' . $sort[1]);
+                    return $q->orderBy('client_services.' . $sort[0], $sort[1]);
                 })
                 ->paginate($perPage);
 
@@ -928,7 +928,7 @@ class ClientController extends Controller
                 }))
                 ->when($sort != '', function ($q) use($sort){
                     $sort = explode('-' , $sort);
-                    return $q->orderBy('client_services.' . $sort[0], 'client_services.' . $sort[1]);
+                    return $q->orderBy('client_services.' . $sort[0], $sort[1]);
                 })
                 ->paginate($perPage);
 
