@@ -896,10 +896,10 @@ class ClientController extends Controller
                     return $query->where('checked', '0')->orWhere('checked', NULL);
                 })->with(array('client.groups' => function($query){
                     $query->select('name');
-                }))->leftJoin('services','services.id','=','client_services.service_id')->where('services.parent_id','!=',0)
+                }))
                 ->when($sort != '', function ($q) use($sort){
                     $sort = explode('-' , $sort);
-                    return $q->orderBy($sort[0], $sort[1]);
+                    return $q->orderBy('client_services.' . $sort[0], $sort[1]);
                 })
                 ->paginate($perPage);
 
@@ -925,10 +925,10 @@ class ClientController extends Controller
                         ->orWhere('checked', NULL);
                 })->with(array('client.groups' => function($query){
                     $query->select('name');
-                }))->leftJoin('services','services.id','=','client_services.service_id')->where('services.parent_id','!=',0)
+                }))
                 ->when($sort != '', function ($q) use($sort){
                     $sort = explode('-' , $sort);
-                    return $q->orderBy($sort[0], $sort[1]);
+                    return $q->orderBy('client_services.' . $sort[0], $sort[1]);
                 })
                 ->paginate($perPage);
 
