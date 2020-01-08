@@ -16,8 +16,8 @@ class ServiceProfileCostController extends Controller
 {
     
     public static function createData($serviceIds = null, $costs = []) {
-    	$serviceProfiles = ServiceProfile::where('is_active', 1)->get();
-    	$branches = Branch::where('name', '<>', 'Both')->get();
+    	$serviceProfiles = DB::table('service_profiles')->where('is_active', 1)->get();
+    	$branches = DB::table('branches')->where('name', '<>', 'Both')->get();
 
     	if( !$serviceIds ) {
 			$serviceIds = DB::table('services')->pluck('id');

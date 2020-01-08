@@ -4,8 +4,6 @@ namespace App\Http\Controllers;
 
 use App\ServiceProfile;
 
-use App\Http\Controllers\ServiceProfileCostController;
-
 use Response, Validator;
 
 use Illuminate\Support\Str;
@@ -41,8 +39,6 @@ class ServiceProfileController extends Controller
         		'slug' => Str::slug($request->name, '-'),
         		'is_active' => $request->is_active
         	]);
-
-            ServiceProfileCostController::createData();
 
         	$response['status'] = 'Success';
 			$response['code'] = 200;
@@ -82,7 +78,10 @@ class ServiceProfileController extends Controller
         	$serviceProfile = ServiceProfile::find($id);
 
         	if( $serviceProfile ) {
-        		$serviceProfile->update(['name' => $request->name]);
+        		$serviceProfile->update([
+                    'name' => $request->name,
+                    'slug' => Str::slug($request->name, '-')
+                ]);
 
         		$response['status'] = 'Success';
         		$response['code'] = 200;
