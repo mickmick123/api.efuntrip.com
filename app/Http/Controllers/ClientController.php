@@ -884,8 +884,11 @@ class ClientController extends Controller
     }
 
     //List of Pending Services
-    public function getPendingServices($perPage = 20){
+    public function getPendingServices(Request $request, $perPage = 20){
         $auth_branch =  $this->getBranchAuth();
+
+        $sort = $request->input('sort');
+
         $services = ClientService::with('client')->whereHas('client.branches', function ($query) use ($auth_branch) {
                 $query->where('branches.id', '=', $auth_branch);
                 })->where('client_services.status','pending')->where('client_services.active', '1')
@@ -894,6 +897,10 @@ class ClientController extends Controller
                 })->with(array('client.groups' => function($query){
                     $query->select('name');
                 }))->leftJoin('services','services.id','=','client_services.service_id')->where('services.parent_id','!=',0)
+                ->when($sort != '', function ($q) use($sort){
+                    $sort = explode('-' , $sort);
+                    return $q->orderBy($sort[0], $sort[1]);
+                })
                 ->paginate($perPage);
 
 
@@ -905,8 +912,11 @@ class ClientController extends Controller
     }
 
     //List of On Process Services
-    public function getOnProcessServices($perPage = 20){
+    public function getOnProcessServices(Request $request, $perPage = 20){
         $auth_branch =  $this->getBranchAuth();
+
+        $sort = $request->input('sort');
+
         $services = ClientService::with('client')->whereHas('client.branches', function ($query) use ($auth_branch) {
                 $query->where('branches.id', '=', $auth_branch);
                 })->where('client_services.status','on process')->where('client_services.active', '1')
@@ -916,6 +926,10 @@ class ClientController extends Controller
                 })->with(array('client.groups' => function($query){
                     $query->select('name');
                 }))->leftJoin('services','services.id','=','client_services.service_id')->where('services.parent_id','!=',0)
+                ->when($sort != '', function ($q) use($sort){
+                    $sort = explode('-' , $sort);
+                    return $q->orderBy($sort[0], $sort[1]);
+                })
                 ->paginate($perPage);
 
         $response['status'] = 'Success';
