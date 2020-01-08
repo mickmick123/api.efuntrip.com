@@ -884,7 +884,7 @@ class ClientController extends Controller
     }
 
     //List of Pending Services
-    public function getPendingServices(){
+    public function getPendingServices($perPage = 20){
         $auth_branch =  $this->getBranchAuth();
         $services = ClientService::with('client')->whereHas('client.branches', function ($query) use ($auth_branch) {
                 $query->where('branches.id', '=', $auth_branch);
@@ -894,7 +894,7 @@ class ClientController extends Controller
                 })->with(array('client.groups' => function($query){
                     $query->select('name');
                 }))->leftJoin('services','services.id','=','client_services.service_id')->where('services.parent_id','!=',0)
-                ->paginate(20);
+                ->paginate($perPage);
 
 
         $response['status'] = 'Success';
@@ -905,7 +905,7 @@ class ClientController extends Controller
     }
 
     //List of On Process Services
-    public function getOnProcessServices(){
+    public function getOnProcessServices($perPage = 20){
         $auth_branch =  $this->getBranchAuth();
         $services = ClientService::with('client')->whereHas('client.branches', function ($query) use ($auth_branch) {
                 $query->where('branches.id', '=', $auth_branch);
@@ -916,7 +916,7 @@ class ClientController extends Controller
                 })->with(array('client.groups' => function($query){
                     $query->select('name');
                 }))->leftJoin('services','services.id','=','client_services.service_id')->where('services.parent_id','!=',0)
-                ->paginate(20);
+                ->paginate($perPage);
 
         $response['status'] = 'Success';
         $response['data'] = $services;
