@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Branch;
 
+use App\User;
+
 use Response, Validator;
 
 use Illuminate\Http\Request;
@@ -12,9 +14,28 @@ class BranchController extends Controller
 {
     
 	public function index() {
+		$data = Branch::all();
+
+		$branches = [];
+		foreach($data as $index => $d) {
+			$branchId = $d->id;
+
+			$numberOfClients = User::whereHas('roles', function($query) {
+					$query->where('roles.name', 'visa-client');
+				})
+				->whereHas('branches', function($query) use($branchId) {
+					$query->where('branches.id', $branchId);
+				})
+				->count();
+
+			$branches[$index] = $d;
+
+			$branches[$index]['number_of_clients'] = $numberOfClients;
+		}
+
 		$response['status'] = 'Success';
 		$response['data'] = [
-		    'branches' => Branch::all()
+		    'branches' => $branches
 		];
 		$response['code'] = 200;
 
