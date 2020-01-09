@@ -272,12 +272,18 @@ class ClientController extends Controller
             $client->birth_country = DB::table('countries')->where('id', $client->birth_country_id)
                 ->select(array('name'))->first();
 
+            $client->contact_numbers = DB::table('contact_numbers')->where('user_id', $id)
+                ->select(array('number', 'is_primary', 'is_mobile'))->get();
+
+            $client->groups = DB::table('group_user')->where('user_id', $id)
+                ->select(array('group_id'))->get();
+
             $branch = DB::table('branch_user')->where('user_id', $id)
                 ->select(array('branch_id'))->first();
 
             if($branch){
                 $client->branch = DB::table('branches')->where('id', $branch->branch_id)
-                ->select(array('name'))->first();
+                ->select(array('id', 'name'))->first();
             }
 
             $client->total_points_earned = $this->getClientTotalPointsEarned($id);
