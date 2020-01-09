@@ -593,6 +593,7 @@ class ClientController extends Controller
         		}
         	}
 
+            $client->branches()->detach();
         	foreach($request->branches as $branch) {
         		$client->branches()->attach($branch);
         	}
