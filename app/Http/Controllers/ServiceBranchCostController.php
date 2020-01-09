@@ -21,7 +21,7 @@ class ServiceBranchCostController extends Controller
 		}
 
 		foreach( $serviceIds as $serviceId ) {
-			$branches = Branch::where('name', '<>', 'Manila')->where('name', '<>', 'Both')->get();
+			$branches = DB::table('branches')->where('name', '<>', 'Manila')->where('name', '<>', 'Both')->get();
 
 			foreach($branches as $branch) {
 				$branchId = $branch->id;

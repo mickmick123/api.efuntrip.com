@@ -2,6 +2,10 @@
 
 namespace App;
 
+use App\Http\Controllers\ServiceBranchCostController;
+
+use App\Http\Controllers\ServiceProfileCostController;
+
 use Illuminate\Database\Eloquent\Model;
 
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -14,6 +18,16 @@ class Branch extends Model
     protected $table = 'branches';
 
     protected $fillable = ['name'];
+
+    public static function boot() {
+        parent::boot();
+
+        self::created(function($model) {
+            ServiceBranchCostController::createData();
+
+            ServiceProfileCostController::createData();
+        });
+    }
 
     public function groups() {
     	return $this->belongsToMany('App\Group', 'branch_group', 'branch_id', 'group_id');
