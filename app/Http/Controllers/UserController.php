@@ -88,7 +88,7 @@ class UserController extends Controller
 	public function userInformation() {
 		$response['status'] = 'Success';
 		$response['data'] = [
-			'information' => Auth::user()
+			'information' => User::with('branches')->findorfail(Auth::user()->id)
 		];
 		$response['code'] = 200;
 

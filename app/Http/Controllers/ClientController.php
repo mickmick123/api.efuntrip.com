@@ -16,6 +16,8 @@ use App\Package;
 
 use App\Branch;
 
+use App\Service;
+
 use Auth, DB, Response, Validator;
 
 use Illuminate\Http\Request;
@@ -145,6 +147,7 @@ class ClientController extends Controller
 
     public function manageClientsPaginate(Request $request, $perPage = 20) {
         $sort = $request->input('sort');
+        $search = $request->input('search');
         $clients = DB::table('users as u')
             ->select(DB::raw('u.id, u.first_name, u.last_name, 
                 (
@@ -254,6 +257,10 @@ class ClientController extends Controller
             ->when($sort != '', function ($q) use($sort){
                 $sort = explode('-' , $sort);
                 return $q->orderBy($sort[0], $sort[1]);
+            })
+            ->when($search != '', function ($q) use($search){
+                // $search = explode('-' , $sort);
+                return $q->where('u.id','LIKE','%'.$search.'%');
             })
             ->paginate($perPage);            
 
@@ -844,6 +851,78 @@ class ClientController extends Controller
         return Response::json($response);
     }
 
+    public function addClientService(Request $request) {
+        $validator = Validator::make($request->all(), [
+            'tracking' => 'required',
+            'client_id' => 'required',
+        ]);
+
+        if($validator->fails()) {       
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;   
+        } else {
+            for($i=0; $i<count($request->services); $i++) {
+                $service = Service::findorfail($request->services[$i]);
+
+                if($request->note != '') {
+                    $remarks = $request->note.' - '. Auth::user()->first_name.' <small>('.date('Y-m-d H:i:s').')</small>';
+                } else {
+                    $remarks = '';
+                }
+
+                $client = ClientService::create([
+                    'client_id' => $request->client_id,
+                    'service_id' => $request->services[$i],
+                    'detail' => $service->detail,
+                    'cost' => $request->cost,
+                    'charge' => $request->charge,
+                    'tip' => $request->tip,
+                    'tracking' => $request->tracking,
+                    'remarks' => $remarks,
+                    'active' => 1,
+                ]);
+
+                $this->updatePackageStatus($request->tracking); //update package status
+            }
+
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+        }
+
+        return Response::json($response);
+    }
+
+    public function addClientPackage(Request $request){
+        $client_id = $request->client_id;
+        Repack:
+        $tracking = $this->generateIndividualTrackingNumber(7);
+        $check_package = Package::where('tracking', $tracking)->count();
+
+        if($check_package > 0) :
+            goto Repack;
+        endif;
+
+        $new_package_data = array(
+            'client_id' => $client_id,
+            'tracking' => $tracking,
+        );
+
+        $new_package = Package::insert($new_package_data);
+
+
+        if ($new_package) :
+            $response['status'] = 'Success';
+            $response['tracking'] = $tracking;
+            $response['code'] = 200;
+        else :
+            $response['status'] = 'Failed';
+            $response['code'] = 200;
+        endif;
+
+        return json_encode($response);
+    }
+
     public function addTemporaryClient(Request $request) {
         $validator = Validator::make($request->all(), [
             'contact_number' => 'required|min:11|max:11|unique:contact_numbers,number',
@@ -945,6 +1024,63 @@ class ClientController extends Controller
         return Response::json($response);
 
     }
+
+    /**** Private Functions ****/
+
+    private function generateIndividualTrackingNumber($length = 7) {
+        $characters = '0123456789';
+        $charactersLength = strlen($characters);
+        $randomString = '';
+        for ($i = 0; $i < $length; $i++) {
+            $randomString .= $characters[rand(0, $charactersLength - 1)];
+        }
+        return $randomString;
+    }
+
+
+    private function updatePackageStatus($tracking){
+        $status = null; // empty
+
+        $countCompleteServices = DB::table('client_services')
+            ->select('*')
+            ->where('tracking', $tracking)
+            ->where('active', 1)
+            ->where('status', 'complete')
+            ->count();
+
+        $countOnProcessServices = DB::table('client_services')
+            ->select('*')
+            ->where('tracking', $tracking)
+            ->where('active', 1)
+            ->where('status', 'on process')
+            ->count();
+
+        $countPendingServices = DB::table('client_services')
+            ->select('*')
+            ->where('tracking', $tracking)
+            ->where('active', 1)
+            ->where('status', 'pending')
+            ->count();
+
+        if($countCompleteServices > 0){
+            $status = "complete"; 
+        }
+        if($countOnProcessServices > 0){
+            $status = "on process";
+        }
+        if($countPendingServices > 0){
+            $status = "pending";
+        }
+
+        $data = array('status' => $status);
+
+        DB::table('packages')
+            ->where('tracking', $tracking)
+            ->update($data);
+    }
+
+    /**** END Private Functions ****/
+
 
     /**** Computations ****/
 
