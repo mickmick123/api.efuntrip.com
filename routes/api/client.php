@@ -24,6 +24,8 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::post('add-client-service', 'ClientController@addClientService');
 
+	Route::post('edit-client-service', 'ClientController@editClientService');
+
 	Route::post('add-client-package', 'ClientController@addClientPackage');
 
 	Route::post('/', 'ClientController@store');

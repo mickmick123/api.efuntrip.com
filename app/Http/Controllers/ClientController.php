@@ -893,6 +893,52 @@ class ClientController extends Controller
         return Response::json($response);
     }
 
+    public function editClientService(Request $request) {
+        $validator = Validator::make($request->all(), [
+            'cs_id' => 'required',
+        ]);
+
+        if($validator->fails()) {       
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;   
+        } else {
+
+                $cs = ClientService::findorfail($request->cs_id);
+
+                $remarks = $request->note.' - '. Auth::user()->first_name.' <small>('.date('Y-m-d H:i:s').')</small>';
+                if($request->note==''){
+                    $remarks = '';
+                }
+                $note = $cs->remarks;
+                if($note!=''){
+                    if($request->note!=''){
+                        $remarks = $note.'</br>'.$remarks;
+                    }
+                }
+                else{
+                    $note = $remarks;
+                }
+
+
+                $cs->remarks = $remarks;
+                $cs->cost = $request->cost;
+                $cs->tip = $request->tip;
+                $cs->status = $request->status;
+                $cs->active = $request->active;
+                $cs->save();
+
+                $this->updatePackageStatus($cs->tracking); //update package status
+            
+
+            $response['tracking'] = $cs->tracking;
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+        }
+
+        return Response::json($response);
+    }
+
     public function addClientPackage(Request $request){
         $client_id = $request->client_id;
         Repack:
