@@ -16,11 +16,14 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::post('add-members', 'GroupController@addMembers'); //Adding members using member ids and group id
 
+	Route::post('add-group-services', 'GroupController@addGroupServices'); //Adding members using member ids and group id
+
+
 	Route::get('member-packages/{client_id}/{group_id?}', 'GroupController@getClientPackagesByGroup');
 
 	Route::get('members/{id}/{page?}', 'GroupController@members');
 	Route::get('packages-bybatch/{group_id}/{page?}', 'GroupController@getClientPackagesByBatch');
-
+	Route::get('packages-byservice/{group_id}/{page?}', 'GroupController@getClientPackagesByService');
 
 	Route::get('{id}', 'GroupController@show');
 
