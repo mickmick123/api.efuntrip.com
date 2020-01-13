@@ -1071,6 +1071,41 @@ class ClientController extends Controller
 
     }
 
+    //List of Today's Services
+    public function getTodayServices(Request $request, $perPage = 20){
+        $auth_branch =  $this->getBranchAuth();
+
+        $date = $request->input('date');
+
+        $sort = $request->input('sort');
+
+        $services = ClientService::with('client')->whereHas('client.branches', function ($query) use ($auth_branch) {
+                $query->where('branches.id', '=', $auth_branch);
+                })
+                ->where('client_services.status','complete')
+                ->where('client_services.active', '1')
+                ->where('client_services.created_at', $date)
+                // ->where('client_services.created_at','LIKE','%'.$date.'%')
+                ->where(function($query) {
+                    return $query->where('checked', '0')->orWhere('checked', NULL);
+                })->with(array('client.groups' => function($query){
+                    $query->select('name');
+                }))
+                ->when($sort != '', function ($q) use($sort){
+                    $sort = explode('-' , $sort);
+                    return $q->orderBy('client_services.' . $sort[0], $sort[1]);
+                })
+                ->paginate($perPage);
+
+
+        $response['status'] = 'Success';
+        $response['data'] = $services;
+        $response['code'] = 200;
+        $response['date'] = $request->input('date');
+        return Response::json($response);
+
+    }
+
     /**** Private Functions ****/
 
     private function generateIndividualTrackingNumber($length = 7) {

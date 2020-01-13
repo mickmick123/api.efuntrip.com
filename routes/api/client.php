@@ -10,6 +10,8 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('get-on-process-services/{perPage?}', 'ClientController@getOnProcessServices');
 
+	Route::get('get-today-services/{perPage?}', 'ClientController@getTodayServices');
+
 	Route::get('manage-clients-paginate/{perPage?}', 'ClientController@manageClientsPaginate');
 
 	Route::get('get-clients-services/{id}/{tracking?}', 'ClientController@getClientServices');
