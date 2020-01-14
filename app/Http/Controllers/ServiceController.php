@@ -139,7 +139,7 @@ class ServiceController extends Controller
 		$validator = Validator::make($request->all(), [ 
 			'type' => 'required',
             'service_name' => 'required|unique:services,detail,'.$id,
-            'service_profile' => 'required',
+            'service_profile' => 'required_if:type,child',
             'parent_id' => 'required_if:type,child',
             'costs' => 'required_if:type,child|array'
         ]);
