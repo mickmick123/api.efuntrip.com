@@ -57,6 +57,7 @@ class DashboardController extends Controller
         foreach ($get_today_services as $serv) {
             $today_services_discount = DB::table('client_transactions')
                 ->join('client_services', 'client_transactions.client_service_id', 'client_services.id')
+                ->where('client_transactions.type', 'Discount')
                 ->where('client_services.id', $serv->id)
                 ->sum('client_transactions.amount');
             $total_cost_today += ($serv->cost + $serv->charge + $serv->tip);
@@ -66,6 +67,7 @@ class DashboardController extends Controller
         foreach ($get_yesterday_services as $serv) {
             $yesterday_services_discount = DB::table('client_transactions')
                 ->join('client_services', 'client_transactions.client_service_id', 'client_services.id')
+                ->where('client_transactions.type', 'Discount')
                 ->where('client_services.id', $serv->id)
                 ->sum('client_transactions.amount');
             $total_cost_yesterday += ($serv->cost + $serv->charge + $serv->tip);
