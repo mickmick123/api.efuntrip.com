@@ -18,6 +18,7 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::post('add-group-services', 'GroupController@addGroupServices'); //Adding members using member ids and group id
 
+	Route::get('members-packages/{group_id}/{page?}', 'GroupController@getMembersPackages');
 
 	Route::get('member-packages/{client_id}/{group_id?}', 'GroupController@getClientPackagesByGroup');
 

@@ -481,8 +481,6 @@ public function members($id, $page = 20) {
         }
 
 
-
-
         $temp['id'] = $g->id;
         $temp['name'] = $g->name;
         $temp['is_vice_leader'] = $g->is_vice_leader;
@@ -535,34 +533,13 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
         foreach($clientServices->items() as $s){
 
+          $query = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->where('active', 1);
 
-            $query = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->where('active', 1);
-
-            $temp['total_service_cost'] = $query->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)"));
-            $temp['detail'] = $s->detail;
-            $temp['service_date'] = $s->sdate;
-            $temp['sdate'] = $s->sdate;
-            $temp['group_id'] = $groupId;
-
-
-            // $queryClients = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->orderBy('created_at','DESC')->orderBy('client_id')->groupBy('client_id')->get();
-            //
-            // $ctr2 = 0;
-            // $client = [];
-            // foreach($queryClients as $m){
-            //
-            //     $ss =  ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->where('client_id',$m->client_id)->get();
-            //
-            //     if(count($ss)){
-            //         $client[$ctr2] = User::where('id',$m->client_id)->select('first_name','last_name')->first();
-            //         $client[$ctr2]['tcost'] = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->where('client_id',$m->client_id)->value(DB::raw("SUM(cost + charge + tip +com_client + com_agent)"));
-            //         $client[$ctr2]['services'] = $ss;
-            //     }
-            //     $ctr2++;
-            // }
-            //
-            // $temp['clients'] = $client;
-
+          $temp['total_service_cost'] = $query->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)"));
+          $temp['detail'] = $s->detail;
+          $temp['service_date'] = $s->sdate;
+          $temp['sdate'] = $s->sdate;
+          $temp['group_id'] = $groupId;
 
           $queryMembers = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->orderBy('created_at','DESC')->orderBy('client_id')->groupBy('client_id')->get();
 
@@ -603,7 +580,6 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
      foreach($clientServices->items() as $s){
 
-
          $query = ClientService::where('service_id', $s->service_id)->where('group_id', $groupId)->where('active', 1);
 
          $temp['total_service_cost'] = $query->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)"));
@@ -637,9 +613,32 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
    }
 
+
+   public function getMembersPackages($groupId, $page = 20) {
+
+          $arr = [];
+          $group_members = GroupUser::where('group_id', $groupId)->get();
+          //$arr[] = $group_members;
+          $ctr=0;
+          foreach($group_members as $gm){
+              $usr =  User::where('id',$gm->user_id)->select('id','first_name','last_name')->limit(1)->get();
+              if($usr){
+                  $arr[$ctr] = $gm;
+                  $arr[$ctr]['client'] =$usr[0];
+                  $arr[$ctr]['client']['packages'] = Package::where('client_id',$gm->user_id)->where('group_id',$gm->group_id)->get();
+                //  $arr[$ctr]['client']['uniqueDocumentsOnHand'] = $this->uniqueDocumentsOnHand($gm->client_id);
+                  $ctr++;
+              }
+          }
+          return Response::json($arr);
+
+  }
+
+
+
    public function addGroupServices(){
 
-     
+
    }
 
 
