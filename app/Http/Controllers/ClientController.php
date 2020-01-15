@@ -789,16 +789,18 @@ class ClientController extends Controller
         if($tracking == 0 && strlen($tracking) == 1){  
              
             $services = DB::table('client_services as cs')
-                ->select(DB::raw('cs.*,g.name as group_name'))
+                ->select(DB::raw('cs.*,g.name as group_name, ct.amount as discount_amount,ct.reason as discount_reason'))
                 ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','cs.group_id')
-                ->where('client_id',$id)
+                ->leftjoin(DB::raw('(select * from client_transactions) as ct'),'ct.client_service_id','=','cs.id')
+                ->where('cs.client_id',$id)
                 ->orderBy('cs.id', 'desc')
                 ->get();
         }
         else{
             $services = DB::table('client_services as cs')
-                ->select(DB::raw('cs.*,g.name as group_name'))
+                ->select(DB::raw('cs.*,g.name as group_name, ct.amount as discount_amount,ct.reason as discount_reason'))
                 ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','cs.group_id')
+                ->leftjoin(DB::raw('(select * from client_transactions) as ct'),'ct.client_service_id','=','cs.id')
                 ->where('cs.client_id',$id)->where('cs.tracking',$tracking)
                 ->orderBy('cs.id', 'desc')
                 ->get();
@@ -903,8 +905,40 @@ class ClientController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;   
         } else {
-
                 $cs = ClientService::findorfail($request->cs_id);
+
+                if($request->discount > 0) {
+
+                    $__oldDiscount = null;
+
+                    $discountExist = ClientTransaction::where("client_service_id",$cs->id)->where('type','Discount')->withTrashed()->first();
+
+                    if($discountExist){ //update discount if existing
+                        $__oldDiscount = $discountExist->amount;
+                        $discountExist->amount =  $request->discount;
+                        $discountExist->reason =  $request->reason;
+                        $discountExist->deleted_at = null;
+                        $discountExist->save();
+                    } else { // if not exist, create new discount
+                        ClientTransaction::create([
+                            'client_id' => $cs->client_id,
+                            'type' => 'Discount',
+                            'amount' => $request->discount,
+                            'group_id' => $cs->group_id,
+                            'client_service_id' => $cs->id,
+                            'reason' => $request->reason,
+                            'tracking' => $cs->tracking,
+                        ]);
+                    }
+                    $dcflag = true;
+
+                } else {
+                    $discountExist = ClientTransaction::where('client_service_id', $cs->id)->where('type','Discount')->first();
+                    if($discountExist){
+                        // Delete from client_transactions
+                        $discountExist->forceDelete();
+                    }
+                }
 
                 $remarks = $request->note.' - '. Auth::user()->first_name.' <small>('.date('Y-m-d H:i:s').')</small>';
                 if($request->note==''){
@@ -920,7 +954,6 @@ class ClientController extends Controller
                     $note = $remarks;
                 }
 
-
                 $cs->remarks = $remarks;
                 $cs->cost = $request->cost;
                 $cs->tip = $request->tip;
@@ -929,7 +962,6 @@ class ClientController extends Controller
                 $cs->save();
 
                 $this->updatePackageStatus($cs->tracking); //update package status
-            
 
             $response['tracking'] = $cs->tracking;
             $response['status'] = 'Success';
