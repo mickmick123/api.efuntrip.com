@@ -1027,10 +1027,27 @@ class ClientController extends Controller
             $response['code'] = 200;
         else :
             $response['status'] = 'Failed';
-            $response['code'] = 200;
         endif;
 
         return json_encode($response);
+    }
+
+    public function deleteClientPackage(Request $request){
+        $tracking = $request->get('tracking');
+        $check_registered_service = ClientService::where('tracking', $tracking)->count();
+        $package = Package::where('tracking', $tracking)->first();
+
+        if ($check_registered_service < 1) :
+            $delete_package = Package::where('tracking', $tracking)->delete();
+            if($delete_package) :
+                $result = array('status' => 'success', 'log' => 'Deleted Package', 'code' => 200);
+            else :
+                $result = array('status' => 'failed', 'log' => 'Error Deleting Package');
+            endif;
+        else :
+            $result = array('status' => 'failed', 'log' => 'Unable to delete, package contains services.');
+        endif;
+        return json_encode($result);
     }
 
     public function addTemporaryClient(Request $request) {

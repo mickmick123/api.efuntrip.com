@@ -30,6 +30,8 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::post('add-client-package', 'ClientController@addClientPackage');
 
+	Route::post('delete-client-package', 'ClientController@deleteClientPackage');
+
 	Route::post('/', 'ClientController@store');
 
 	Route::get('{id}', 'ClientController@show');
