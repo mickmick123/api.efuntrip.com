@@ -15,4 +15,8 @@ class Category extends Model
     	return $this->belongsToMany('App\Action', 'action_category', 'category_id', 'action_id');
     }
 
+    public function serviceProcedures() {
+        return $this->hasMany('App\ServiceProcedure', 'category_id', 'id');
+    }
+
 }

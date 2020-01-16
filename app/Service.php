@@ -25,4 +25,8 @@ class Service extends Model
     	return $this->hasMany('App\ServiceProfileCost', 'service_id', 'id');
     }
 
+    public function serviceProcedures() {
+        return $this->hasMany('App\ServiceProcedure', 'service_id', 'id');
+    }
+
 }
