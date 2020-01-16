@@ -11,11 +11,14 @@ use Illuminate\Http\Request;
 class ClientDocumentTypeController extends Controller
 {
     
-	public function index() {
+	public function index(Request $request, $perPage = 20) {
+		$sort = $request->input('sort');
 		$response['status'] = 'Success';
-		$response['data'] = [
-		    'clientDocumentTypes' => ClientDocumentType::orderBy('name')->get()
-		];
+		$response['data'] = ClientDocumentType::when($sort != '', function ($q) use($sort){
+			$sort = explode('-' , $sort);
+			return $q->orderBy($sort[0], $sort[1]);
+		})
+		->paginate($perPage);
 		$response['code'] = 200;
 
 		return Response::json($response);
@@ -26,9 +29,7 @@ class ClientDocumentTypeController extends Controller
 
 		if( $clientDocumentType ) {
 			$response['status'] = 'Success';
-			$response['data'] = [
-			    'clientDocumentType' => $clientDocumentType
-			];
+			$response['data'] = $clientDocumentType;
 			$response['code'] = 200;
 		} else {
 			$response['status'] = 'Failed';
