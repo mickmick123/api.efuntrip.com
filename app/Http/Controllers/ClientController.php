@@ -789,18 +789,22 @@ class ClientController extends Controller
         if($tracking == 0 && strlen($tracking) == 1){  
              
             $services = DB::table('client_services as cs')
-                ->select(DB::raw('cs.*,g.name as group_name, ct.amount as discount_amount,ct.reason as discount_reason'))
+                ->select(DB::raw('cs.*,g.name as group_name, ct.amount as discount_amount,ct.reason as discount_reason,s.parent_id, u.arrival_date, u.first_expiration_date, u.extended_expiration_date, u.expiration_date, u.icard_issue_date, u.icard_expiration_date'))
                 ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','cs.group_id')
                 ->leftjoin(DB::raw('(select * from client_transactions) as ct'),'ct.client_service_id','=','cs.id')
+                ->leftjoin(DB::raw('(select * from services) as s'),'s.id','=','cs.service_id')
+                ->leftjoin(DB::raw('(select * from users) as u'),'u.id','=','cs.client_id')
                 ->where('cs.client_id',$id)
                 ->orderBy('cs.id', 'desc')
                 ->get();
         }
         else{
             $services = DB::table('client_services as cs')
-                ->select(DB::raw('cs.*,g.name as group_name, ct.amount as discount_amount,ct.reason as discount_reason'))
+                ->select(DB::raw('cs.*,g.name as group_name, ct.amount as discount_amount,ct.reason as discount_reason,s.parent_id, u.arrival_date, u.first_expiration_date, u.extended_expiration_date, u.expiration_date, u.icard_issue_date, u.icard_expiration_date'))
                 ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','cs.group_id')
                 ->leftjoin(DB::raw('(select * from client_transactions) as ct'),'ct.client_service_id','=','cs.id')
+                ->leftjoin(DB::raw('(select * from services) as s'),'s.id','=','cs.service_id')
+                ->leftjoin(DB::raw('(select * from users) as u'),'u.id','=','cs.client_id')
                 ->where('cs.client_id',$id)->where('cs.tracking',$tracking)
                 ->orderBy('cs.id', 'desc')
                 ->get();
@@ -962,6 +966,34 @@ class ClientController extends Controller
                 $cs->save();
 
                 $this->updatePackageStatus($cs->tracking); //update package status
+
+                //update user expirys
+                $client_user = User::findorfail($cs->client_id);
+                if($request->status == 'complete' && $request->active==1){
+                    if($request->parent_id == 114 || $request->parent_id == 63){
+                        $client_user->visa_type = '9A';
+                        $client_user->arrival_date = $request->arrival_date;
+                        $client_user->first_expiration_date = $request->first_exp_date;
+                        $client_user->extended_expiration_date = $request->exp_date;
+                    }
+                    else if($request->parent_id == 70 || $request->parent_id == 148){
+                        if($request->parent_id == 70){
+                            $client_user->visa_type = '9G';
+                        }
+                        else{
+                            $client_user->visa_type = 'TRV';
+                        }
+                        $client_user->icard_expiration_date = $request->icard_exp_date;
+                        $client_user->icard_issue_date = $request->icard_issue_date;
+                        $client_user->expiration_date = $request->exp_date;
+                    }
+                    else{
+                        $client_user->visa_type = 'CWV';
+                        $client_user->expiration_date = $request->exp_date;
+                    }
+
+                    $client_user->save();
+                }
 
             $response['tracking'] = $cs->tracking;
             $response['status'] = 'Success';
