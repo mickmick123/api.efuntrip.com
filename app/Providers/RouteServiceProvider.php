@@ -42,6 +42,8 @@ class RouteServiceProvider extends ServiceProvider
         // Custom routes
             $this->mapAccountsRoutes();
 
+            $this->mapActionRoutes();
+
             $this->mapBranchRoutes();
 
             $this->mapClientDocumentTypeRoutes();
@@ -104,6 +106,14 @@ class RouteServiceProvider extends ServiceProvider
                  ->middleware('api')
                  ->namespace($this->namespace)
                  ->group(base_path('routes/api/accounts.php'));
+        }
+
+        protected function mapActionRoutes()
+        {
+            Route::prefix('api/v1/actions')
+                 ->middleware('api')
+                 ->namespace($this->namespace)
+                 ->group(base_path('routes/api/actions.php'));
         }
 
         protected function mapBranchRoutes()
