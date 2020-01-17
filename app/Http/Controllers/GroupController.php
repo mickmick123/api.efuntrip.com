@@ -314,7 +314,7 @@ class GroupController extends Controller
 
     public function show($id) {
         $group = Group::with('branches', 'contactNumbers', 'serviceProfile')
-            ->select(array('id', 'name', 'leader_id', 'tracking', 'address'))
+            ->select(array('id', 'name', 'leader_id', 'tracking', 'address','client_com_id', 'agent_com_id', 'service_profile_id'))
             ->find($id);
 
         if( $group ) {
@@ -343,6 +343,41 @@ class GroupController extends Controller
 
         return Response::json($response);
     }
+
+
+    public function updateGroupCommission(Request $request, $id){
+
+      $validator = Validator::make($request->all(), [
+          'com_type' => 'required'
+      ]);
+
+      if($validator->fails()) {
+          $response['status'] = 'Failed';
+          $response['errors'] = $validator->errors();
+          $response['code'] = 422;
+      } else {
+
+        $group = Group::find($id);
+
+        if($group) {
+          if($request->com_type == 'agent'){
+             $group->update(['agent_com_id' => $request->com_id]);
+          }else{
+             $group->update(['client_com_id' => $request->com_id]);
+          }
+          $response['status'] = 'Success';
+          $response['code'] = 200;
+        }else {
+            $response['status'] = 'Failed';
+            $response['errors'] = 'No query results.';
+            $response['code'] = 404;
+        }
+
+      }
+
+      return Response::json($response);
+    }
+
 
     public function updateRisk(Request $request, $id) {
         $validator = Validator::make($request->all(), [

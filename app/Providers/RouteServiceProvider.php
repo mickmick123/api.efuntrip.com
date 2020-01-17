@@ -58,6 +58,8 @@ class RouteServiceProvider extends ServiceProvider
 
             $this->mapGroupRoutes();
 
+            $this->mapGroupServiceProfileRoutes();
+
             $this->mapNationalityRoutes();
 
             $this->mapReportRoutes();
@@ -173,6 +175,14 @@ class RouteServiceProvider extends ServiceProvider
                  ->namespace($this->namespace)
                  ->group(base_path('routes/api/group.php'));
         }
+
+        protected function mapGroupServiceProfileRoutes() {
+            Route::prefix('api/v1/group-service-profile')
+                 ->middleware('api')
+                 ->namespace($this->namespace)
+                 ->group(base_path('routes/api/group-service-profile.php'));
+        }
+
 
         protected function mapNationalityRoutes()
         {
