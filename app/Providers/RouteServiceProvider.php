@@ -64,6 +64,8 @@ class RouteServiceProvider extends ServiceProvider
 
             $this->mapServiceRoutes();
 
+            $this->mapServiceProcedureRoutes();
+
             $this->mapServiceProfileRoutes();
 
             $this->mapUserRoutes();
@@ -192,6 +194,14 @@ class RouteServiceProvider extends ServiceProvider
                  ->middleware('api')
                  ->namespace($this->namespace)
                  ->group(base_path('routes/api/service.php'));
+        }
+
+        protected function mapServiceProcedureRoutes()
+        {
+            Route::prefix('api/v1/service-procedures')
+                 ->middleware('api')
+                 ->namespace($this->namespace)
+                 ->group(base_path('routes/api/service-procedure.php'));
         }
 
         protected function mapServiceProfileRoutes() {
