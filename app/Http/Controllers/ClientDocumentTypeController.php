@@ -13,13 +13,17 @@ class ClientDocumentTypeController extends Controller
     
 	public function index(Request $request, $perPage = 20) {
 		$sort = $request->input('sort');
+		$search = $request->input('search');
 		$response['status'] = 'Success';
-		$response['data'] = ClientDocumentType::when($sort != '', function ($q) use($sort){
+		// $response['data'] = ClientDocumentType::where('name','LIKE','%'.$request->name.'%')
+		$response['data'] = ClientDocumentType::where('name','LIKE','%'.$search.'%')
+		->when($sort != '', function ($q) use($sort){
 			$sort = explode('-' , $sort);
 			return $q->orderBy($sort[0], $sort[1]);
 		})
 		->paginate($perPage);
 		$response['code'] = 200;
+		$response['name'] = $search;
 
 		return Response::json($response);
 	}
