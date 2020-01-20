@@ -18,13 +18,14 @@ class ServiceProcedureController extends Controller
 
 		if( $service ) {
 			$serviceProcedures = ServiceProcedure::where('service_id', $serviceId)
-				->select(array('id', 'name', 'step', 'is_required'))
+                ->select(array('id', 'name', 'step', 'is_required'))
 				->orderBy('step')
 				->get();
 
 			$response['status'] = 'Success';
 			$response['data'] = [
-			    'serviceProcedures' => $serviceProcedures
+			    'serviceProcedures' => $serviceProcedures,
+                'serviceName' => $service->detail
 			];
 			$response['code'] = 200;
 		} else {
