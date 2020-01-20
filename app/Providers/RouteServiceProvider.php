@@ -46,6 +46,8 @@ class RouteServiceProvider extends ServiceProvider
 
             $this->mapBranchRoutes();
 
+            $this->mapClientDocuments();
+
             $this->mapClientDocumentTypeRoutes();
 
             $this->mapClientRoutes();
@@ -126,6 +128,14 @@ class RouteServiceProvider extends ServiceProvider
                  ->middleware('api')
                  ->namespace($this->namespace)
                  ->group(base_path('routes/api/branch.php'));
+        }
+
+        protected function mapClientDocuments()
+        {
+            Route::prefix('api/v1/client-documents')
+                 ->middleware('api')
+                 ->namespace($this->namespace)
+                 ->group(base_path('routes/api/client-documents.php'));
         }
 
         protected function mapClientDocumentTypeRoutes()

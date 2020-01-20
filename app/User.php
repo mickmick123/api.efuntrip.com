@@ -26,6 +26,10 @@ class User extends Authenticatable
         return $this->belongsToMany('App\Branch', 'branch_user', 'user_id', 'branch_id');
     }
 
+    public function clientDocuments() {
+        return $this->hasMany('App\ClientDocument', 'client_id', 'id');
+    }
+
     public function clientServices() {
         return $this->hasMany('App\ClientService', 'client_id', 'id');
     }
