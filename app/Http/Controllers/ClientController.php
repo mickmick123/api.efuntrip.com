@@ -20,6 +20,8 @@ use App\Service;
 
 use Auth, DB, Response, Validator;
 
+use App\Http\Controllers\LogController;
+
 use Illuminate\Http\Request;
 
 class ClientController extends Controller
@@ -877,7 +879,7 @@ class ClientController extends Controller
                     $remarks = '';
                 }
 
-                $client = ClientService::create([
+                $cs = ClientService::create([
                     'client_id' => $request->client_id,
                     'service_id' => $request->services[$i],
                     'detail' => $service->detail,
@@ -890,6 +892,20 @@ class ClientController extends Controller
                 ]);
 
                 $this->updatePackageStatus($request->tracking); //update package status
+
+                // save transaction logs
+                $detail = 'Added a service. Service status is pending.';
+                $detail_cn = '已添加服务. 服务状态为 待办。';
+                $log_data = array(
+                    'client_service_id' => $cs->id,
+                    'client_id' => $cs->client_id,
+                    'group_id' => $cs->group_id,
+                    'log_type' => 'Transaction',
+                    'log_group' => 'service',
+                    'detail'=> $detail,
+                    'detail_cn'=> $detail_cn,
+                );
+                 LogController::save($log_data);
             }
 
             $response['status'] = 'Success';
@@ -996,6 +1012,129 @@ class ClientController extends Controller
                 }
 
             $response['tracking'] = $cs->tracking;
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+        }
+
+        return Response::json($response);
+    }
+
+    public function addClientFunds(Request $request) {
+        $validator = Validator::make($request->all(), [
+            'tracking' => 'required',
+            'client_id' => 'required',
+        ]);
+
+        if($validator->fails()) {       
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;   
+        } else {
+            $tracking = $request->get('tracking');
+            $client_id = $request->get('client_id');
+            $type = $request->get('type');
+            $storage = $request->get('storage');
+            $amount = $request->get('amount');
+            $reason = $request->get('reason');
+            $branch_id = $request->get('branch_id');
+            $bank = $request->get('bank');
+            $alipay_reference = $request->get('alipay_reference');
+            $selected_client = $request->get('selected_client');
+            $selected_group = $request->get('selected_group');
+            $transfer_to = $request->get('transfer_to');
+
+            if ($type == "Deposit") {
+                $depo = new ClientTransaction;
+                $depo->client_id = $client_id;
+                $depo->tracking = $tracking;
+                $depo->type = 'Deposit';
+                $depo->group_id = null;
+                if($storage=='Bank'){
+                    $depo->storage_type = $bank;
+                }
+                if($storage=='Alipay'){
+                    $amount = $amount-($amount*0.0175);
+                    $depo->storage_type = $bank;
+                    $depo->alipay_reference = $alipay_reference;
+                }
+                $depo->amount = $amount;
+                $depo->save();
+            }
+
+            else if($type == "Payment") {
+                $payment = new ClientTransaction;
+                $payment->client_id = $client_id;
+                $payment->tracking = $tracking;
+                $payment->type = 'Payment';
+                $payment->group_id = null;
+                if($storage=='Bank'){
+                    $payment->storage_type = $bank;
+                }
+                if($storage=='Alipay'){
+                    $payment->storage_type = $bank;
+                    $payment->alipay_reference = $alipay_reference;
+                    $amount = $amount-($amount*0.0175);
+                }
+                $payment->amount = $amount;
+                $payment->save();
+            }
+
+            else if($type == "Refund") {
+                    $refund = new ClientTransaction;
+                    $refund->client_id = $client_id;
+                    $refund->tracking = $tracking;
+                    $refund->type = 'Refund';
+                    $refund->amount = $amount;
+                    $refund->group_id = null;
+                    $refund->reason = $reason;
+                    if($storage=='Bank'){
+                        $refund->storage_type = $bank;
+                    }
+                    $refund->save();
+            }
+
+            else if($type == "Discount"){
+                $discount = new ClientTransaction;
+                $discount->client_id = $client_id;
+                $discount->tracking = $tracking;
+                $discount->type = 'Discount';
+                $discount->amount = $amount;
+                $discount->group_id = null;
+                $discount->reason = $reason;
+                if($storage=='bank'){
+                    $discount->storage_type = $bank_type;
+                }
+                $discount->save();
+            }
+
+            else if($type == "Balance Transfer"){
+                // Refund amount to client
+                $refund = new ClientTransaction;
+                $refund->client_id = $client_id;
+                $refund->tracking = $tracking;
+                $refund->type = 'Refund';
+                $refund->amount = $amount;
+                $refund->group_id = null;
+                $refund->reason = $reason;
+                $refund->save();
+
+                $transTo = $selected_client;
+                $grid = null;
+                if($request->transfer_to == 'Group'){
+                    $transTo = Group::where('id',$selected_group)->first()->leader_id;
+                    $grid = $selected_group;
+                }
+                
+                // Deposit amount to client or group selected
+                $depo = new ClientTransaction;
+                $depo->client_id = $transTo;
+                $depo->type = 'Deposit';
+                $depo->amount = $amount;
+                $depo->group_id = $grid;
+                $depo->tracking = null;
+                $depo->save();
+            }
+
             $response['status'] = 'Success';
             $response['code'] = 200;
         }
