@@ -111,7 +111,7 @@ class ServiceProcedureController extends Controller
     public function store(Request $request) {
     	$validator = Validator::make($request->all(), [
     		'service_id' => 'required',
-            'name' => 'required|unique:service_procedures,name',
+            'name' => 'required',
             'action_id' => 'required',
             'category_id' => 'required',
             'is_required' => 'required',
