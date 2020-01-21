@@ -58,6 +58,7 @@ class ServiceProcedureController extends Controller
     public function update(Request $request, $id) {
     	$validator = Validator::make($request->all(), [
             'name' => 'required',
+            'preposition' => 'required',
             'action_id' => 'required',
             'category_id' => 'required',
             'is_required' => 'required',
@@ -75,6 +76,7 @@ class ServiceProcedureController extends Controller
         	if( $serviceProcedure ) {
         		$serviceProcedure->update([
         			'name' => $request->name,
+                    'preposition' => $request->preposition,
         			'action_id' => $request->action_id,
         			'category_id' => $request->category_id,
         			'is_required' => $request->is_required
@@ -112,6 +114,7 @@ class ServiceProcedureController extends Controller
     	$validator = Validator::make($request->all(), [
     		'service_id' => 'required',
             'name' => 'required',
+            'preposition' => 'required',
             'action_id' => 'required',
             'category_id' => 'required',
             'is_required' => 'required',
@@ -129,6 +132,7 @@ class ServiceProcedureController extends Controller
         	$serviceProcedure = ServiceProcedure::create([
         		'service_id' => $request->service_id,
         		'name' => $request->name,
+                'preposition' => $request->preposition,
         		'step' => $stepsCount + 1,
         		'action_id' => $request->action_id,
         		'category_id' => $request->category_id,
