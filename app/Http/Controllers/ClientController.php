@@ -26,10 +26,10 @@ use Illuminate\Http\Request;
 
 class ClientController extends Controller
 {
-    
+
 	public function manageClients() {
 		$clients = DB::table('users as u')
-			->select(DB::raw('u.id, u.first_name, u.last_name, 
+			->select(DB::raw('u.id, u.first_name, u.last_name,
                 (
                     (IFNULL(transactions.total_deposit, 0) + IFNULL(transactions.total_payment, 0) + IFNULL(transactions.total_discount,0))
                     -
@@ -40,7 +40,7 @@ class ClientController extends Controller
                     (IFNULL(transactions.total_deposit, 0) + IFNULL(transactions.total_payment, 0) + IFNULL(transactions.total_discount,0))
                     -
                     (IFNULL(transactions.total_refund, 0) + IFNULL(totalCompleteServiceCost.amount, 0))
-                ) as collectables, 
+                ) as collectables,
 
                 p.latest_package, srv.latest_service as latest_service'))
             ->leftjoin(
@@ -55,60 +55,60 @@ class ClientController extends Controller
             )
             ->leftjoin(DB::raw('
                     (
-                        Select 
+                        Select
                             IFNULL(
                                 sum(b.cost) + sum(b.charge) + sum(b.tip) + sum(b.com_client) + sum(b.com_agent),
                             0) as amount,
                             b.client_id
 
-                        from 
+                        from
                             client_services as b
 
-                        where 
+                        where
                             b.active = 1
                             and b.group_id is null
 
-                        group by 
+                        group by
                             b.client_id
                     ) as totalCost'),
                     'totalCost.client_id', '=', 'u.id')
             ->leftjoin(DB::raw('
                     (
-                        Select 
+                        Select
                             IFNULL(
                                 sum(b.cost) + sum(b.charge) + sum(b.tip) + sum(b.com_client) + sum(b.com_agent)
                             ,0) as amount,
                             b.client_id
 
-                        from 
+                        from
                             client_services as b
 
-                        where 
+                        where
                             b.active = 1
                             and b.group_id is null
                             and b.status = "complete"
 
-                        group by 
+                        group by
                             b.client_id
                     ) as totalCompleteServiceCost'),
                     'totalCompleteServiceCost.client_id', '=', 'u.id')
             ->leftjoin(DB::raw('
                     (
-                        Select 
+                        Select
                             SUM(IF(c.type = "Deposit", c.amount, 0)) as total_deposit,
                             SUM(IF(c.type = "Refund", c.amount, 0)) as total_refund,
                             SUM(IF(c.type = "Payment", c.amount, 0)) as total_payment,
                             SUM(IF(c.type = "Discount", c.amount, 0)) as total_discount,
                             c.client_id
 
-                        from 
+                        from
                             client_transactions as c
 
-                        where 
+                        where
                             c.group_id is null
                             and c.deleted_at is null
 
-                        group by 
+                        group by
                             c.client_id
                     ) as transactions'),
                     'transactions.client_id', '=', 'u.id')
@@ -151,7 +151,7 @@ class ClientController extends Controller
         $sort = $request->input('sort');
         $search = $request->input('search');
         $clients = DB::table('users as u')
-            ->select(DB::raw('u.id, u.first_name, u.last_name, 
+            ->select(DB::raw('u.id, u.first_name, u.last_name,
                 (
                     (IFNULL(transactions.total_deposit, 0) + IFNULL(transactions.total_payment, 0) + IFNULL(transactions.total_discount,0))
                     -
@@ -162,7 +162,7 @@ class ClientController extends Controller
                     (IFNULL(transactions.total_deposit, 0) + IFNULL(transactions.total_payment, 0) + IFNULL(transactions.total_discount,0))
                     -
                     (IFNULL(transactions.total_refund, 0) + IFNULL(totalCompleteServiceCost.amount, 0))
-                ) as collectable, 
+                ) as collectable,
 
                 p.latest_package, srv.latest_service'))
             ->leftjoin(
@@ -177,60 +177,60 @@ class ClientController extends Controller
             )
             ->leftjoin(DB::raw('
                     (
-                        Select 
+                        Select
                             IFNULL(
                                 sum(b.cost) + sum(b.charge) + sum(b.tip) + sum(b.com_client) + sum(b.com_agent),
                             0) as amount,
                             b.client_id
 
-                        from 
+                        from
                             client_services as b
 
-                        where 
+                        where
                             b.active = 1
                             and b.group_id is null
 
-                        group by 
+                        group by
                             b.client_id
                     ) as totalCost'),
                     'totalCost.client_id', '=', 'u.id')
             ->leftjoin(DB::raw('
                     (
-                        Select 
+                        Select
                             IFNULL(
                                 sum(b.cost) + sum(b.charge) + sum(b.tip) + sum(b.com_client) + sum(b.com_agent)
                             ,0) as amount,
                             b.client_id
 
-                        from 
+                        from
                             client_services as b
 
-                        where 
+                        where
                             b.active = 1
                             and b.group_id is null
                             and b.status = "complete"
 
-                        group by 
+                        group by
                             b.client_id
                     ) as totalCompleteServiceCost'),
                     'totalCompleteServiceCost.client_id', '=', 'u.id')
             ->leftjoin(DB::raw('
                     (
-                        Select 
+                        Select
                             SUM(IF(c.type = "Deposit", c.amount, 0)) as total_deposit,
                             SUM(IF(c.type = "Refund", c.amount, 0)) as total_refund,
                             SUM(IF(c.type = "Payment", c.amount, 0)) as total_payment,
                             SUM(IF(c.type = "Discount", c.amount, 0)) as total_discount,
                             c.client_id
 
-                        from 
+                        from
                             client_transactions as c
 
-                        where 
+                        where
                             c.group_id is null
                             and c.deleted_at is null
 
-                        group by 
+                        group by
                             c.client_id
                     ) as transactions'),
                     'transactions.client_id', '=', 'u.id')
@@ -264,7 +264,7 @@ class ClientController extends Controller
                 // $search = explode('-' , $sort);
                 return $q->where('u.id','LIKE','%'.$search.'%');
             })
-            ->paginate($perPage);            
+            ->paginate($perPage);
 
         $response = $clients;
 
@@ -386,9 +386,9 @@ class ClientController extends Controller
                                       ->Where('first_name', '=', $q2);
                             });
                 })
-                
-                ->orderBy('sdates2','DESC') 
-                ->limit(10)     
+
+                ->orderBy('sdates2','DESC')
+                ->limit(10)
                 ->get();
         }
         else{
@@ -436,8 +436,8 @@ class ClientController extends Controller
                               ->orwhere('first_name','=',$keyword)
                               ->orwhere('last_name','=',$keyword);
                     })
-                ->orderBy('sdates2','DESC') 
-                ->limit(10)     
+                ->orderBy('sdates2','DESC')
+                ->limit(10)
                 ->get();
 
             if($results->count() == 0){
@@ -492,8 +492,8 @@ class ClientController extends Controller
                                   ->orwhere('first_name','=',$keyword)
                                   ->orwhere('last_name','=',$keyword);
                         })
-                        ->orderBy('sdates2','DESC')  
-                        ->limit(10)  
+                        ->orderBy('sdates2','DESC')
+                        ->limit(10)
                         ->get();
             }
         }
@@ -514,7 +514,7 @@ class ClientController extends Controller
                   'name' => $p->first_name." ".$p->last_name." -- [".$br."] -- No Service",
                   'full_name' => $p->first_name." ".$p->last_name,
               );
-           } 
+           }
         }
         $response['status'] = 'Success';
         $response['data'] =  $json;
@@ -554,10 +554,10 @@ class ClientController extends Controller
             'icard_expiration_date' => 'nullable|date',
         ]);
 
-        if($validator->fails()) {       
+        if($validator->fails()) {
             $response['status'] = 'Failed';
             $response['errors'] = $validator->errors();
-            $response['code'] = 422;   
+            $response['code'] = 422;
         } else {
         	$client = new User;
         	$client->first_name = $request->first_name;
@@ -633,10 +633,10 @@ class ClientController extends Controller
             'risk' => 'required'
         ]);
 
-        if($validator->fails()) {       
+        if($validator->fails()) {
             $response['status'] = 'Failed';
             $response['errors'] = $validator->errors();
-            $response['code'] = 422;   
+            $response['code'] = 422;
         } else {
             $client = User::find($id);
 
@@ -686,10 +686,10 @@ class ClientController extends Controller
             'icard_expiration_date' => 'nullable|date',
         ]);
 
-        if($validator->fails()) {       
+        if($validator->fails()) {
             $response['status'] = 'Failed';
             $response['errors'] = $validator->errors();
-            $response['code'] = 422;   
+            $response['code'] = 422;
         } else {
         	$client = User::find($id);
 
@@ -788,8 +788,8 @@ class ClientController extends Controller
 	}
 
     public function getClientServices($id, $tracking = 0) {
-        if($tracking == 0 && strlen($tracking) == 1){  
-             
+        if($tracking == 0 && strlen($tracking) == 1){
+
             $services = DB::table('client_services as cs')
                 ->select(DB::raw('cs.*,g.name as group_name, ct.amount as discount_amount,ct.reason as discount_reason,s.parent_id, u.arrival_date, u.first_expiration_date, u.extended_expiration_date, u.expiration_date, u.icard_issue_date, u.icard_expiration_date'))
                 ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','cs.group_id')
@@ -819,7 +819,7 @@ class ClientController extends Controller
         return Response::json($response);
     }
 
-    public function getClientPackages($id) {    
+    public function getClientPackages($id) {
         $packs = DB::table('packages as p')->select(DB::raw('p.*,g.name as group_name'))
                     ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','p.group_id')
                     ->where('client_id', $id)
@@ -840,7 +840,7 @@ class ClientController extends Controller
         return Response::json($response);
     }
 
-    public function getClientGroups($id) {    
+    public function getClientGroups($id) {
         $group_ids = DB::table('group_user')->where('user_id',$id)->pluck('group_id');
 
         $groups = Group::with('branches', 'contactNumbers')
@@ -865,10 +865,10 @@ class ClientController extends Controller
             'client_id' => 'required',
         ]);
 
-        if($validator->fails()) {       
+        if($validator->fails()) {
             $response['status'] = 'Failed';
             $response['errors'] = $validator->errors();
-            $response['code'] = 422;   
+            $response['code'] = 422;
         } else {
             for($i=0; $i<count($request->services); $i++) {
                 $service = Service::findorfail($request->services[$i]);
@@ -920,10 +920,10 @@ class ClientController extends Controller
             'cs_id' => 'required',
         ]);
 
-        if($validator->fails()) {       
+        if($validator->fails()) {
             $response['status'] = 'Failed';
             $response['errors'] = $validator->errors();
-            $response['code'] = 422;   
+            $response['code'] = 422;
         } else {
                 $cs = ClientService::findorfail($request->cs_id);
 
@@ -1197,10 +1197,10 @@ class ClientController extends Controller
             'passport' => 'nullable|unique:users,passport'
         ]);
 
-        if($validator->fails()) {       
+        if($validator->fails()) {
             $response['status'] = 'Failed';
             $response['errors'] = $validator->errors();
-            $response['code'] = 422;   
+            $response['code'] = 422;
         } else {
             $contactNumber = $request->contact_number;
 
@@ -1364,7 +1364,7 @@ class ClientController extends Controller
             ->count();
 
         if($countCompleteServices > 0){
-            $status = "complete"; 
+            $status = "complete";
         }
         if($countOnProcessServices > 0){
             $status = "on process";
@@ -1386,7 +1386,7 @@ class ClientController extends Controller
     /**** Computations ****/
 
     private function getClientTotalPointsEarned($id) {
-        return ClientService::where('agent_com_id', $id)->where('status','complete')->sum('com_agent') + 
+        return ClientService::where('agent_com_id', $id)->where('status','complete')->sum('com_agent') +
                 ClientService::where('client_com_id', $id)->where('status','complete')->sum('com_client');
     }
 

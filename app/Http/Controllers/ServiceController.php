@@ -16,7 +16,6 @@ use Illuminate\Http\Request;
 
 class ServiceController extends Controller
 {
-    
 	public function manageServices() {
 		$parents = Service::where('parent_id', 0)->where('is_active', 1)->orderBy('detail')
 			->select(array('id', 'parent_id', 'detail', DB::raw('SUM(cost + charge + tip + com_agent + com_client) as total_service_charge')))
@@ -62,17 +61,17 @@ class ServiceController extends Controller
 	}
 
 	public function store(Request $request) {
-		$validator = Validator::make($request->all(), [ 
+		$validator = Validator::make($request->all(), [
             'type' => 'required',
             'service_name' => 'required|unique:services,detail',
             'parent_id' => 'required_if:type,child',
             'costs' => 'required_if:type,child|array'
         ]);
 
-        if($validator->fails()) {       
+        if($validator->fails()) {
             $response['status'] = 'Failed';
             $response['errors'] = $validator->errors();
-            $response['code'] = 422;   
+            $response['code'] = 422;
         } else {
         	if( $request->type == 'parent' ) {
         		$service = Service::create([
@@ -133,10 +132,10 @@ class ServiceController extends Controller
 		}
 
 		return Response::json($response);
-	} 
+	}
 
 	public function update(Request $request, $id) {
-		$validator = Validator::make($request->all(), [ 
+		$validator = Validator::make($request->all(), [
 			'type' => 'required',
             'service_name' => 'required|unique:services,detail,'.$id,
             'service_profile' => 'required_if:type,child',
@@ -144,10 +143,10 @@ class ServiceController extends Controller
             'costs' => 'required_if:type,child|array'
         ]);
 
-        if($validator->fails()) {       
+        if($validator->fails()) {
             $response['status'] = 'Failed';
             $response['errors'] = $validator->errors();
-            $response['code'] = 422;   
+            $response['code'] = 422;
         } else {
         	$service = Service::find($id);
 
