@@ -187,4 +187,25 @@ class ServiceProcedureController extends Controller
 		return Response::json($response);
     }
 
+    public function sort(Request $request) {
+        $validator = Validator::make($request->all(), [
+            'service_procedures' => 'required|array'
+        ]);
+
+        if($validator->fails()) {       
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+            foreach($request->service_procedures as $index => $serviceProcedure) {
+                ServiceProcedure::findOrFail($serviceProcedure['id'])
+                    ->update(['step' => ($index + 1)]);
+            }
+
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+        }
+
+        return Response::json($response);
+    }
 }

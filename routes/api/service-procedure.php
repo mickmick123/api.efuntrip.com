@@ -14,4 +14,6 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::delete('{id}', 'ServiceProcedureController@destroy');
 
+	Route::post('sort', 'ServiceProcedureController@sort');
+
 });
