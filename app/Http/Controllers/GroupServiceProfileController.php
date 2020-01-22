@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use App\Service;
 use App\Group;
 use App\ServiceProfileCost;
+use DB;
 
 class GroupServiceProfileController extends Controller
 {
