@@ -8,6 +8,8 @@ use Response, Validator;
 
 use Illuminate\Http\Request;
 
+use Storage;
+
 class ClientDocumentTypeController extends Controller
 {
     
