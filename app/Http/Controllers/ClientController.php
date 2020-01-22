@@ -904,6 +904,7 @@ class ClientController extends Controller
                     'log_group' => 'service',
                     'detail'=> $detail,
                     'detail_cn'=> $detail_cn,
+                    'amount'=> 0,
                 );
                  LogController::save($log_data);
             }
@@ -1438,7 +1439,7 @@ class ClientController extends Controller
                 );
     }
 
-    private function getClientTotalCollectables($id) {
+    public function getClientTotalCollectables($id) {
         return  (
                     (
                         $this->getClientDeposit($id)
