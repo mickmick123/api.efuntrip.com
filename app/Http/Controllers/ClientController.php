@@ -1221,7 +1221,8 @@ class ClientController extends Controller
             ]);
 
             $client->branches()->attach($request->branch);
-
+            $client->roles()->attach(2);
+            
             $response['status'] = 'Success';
             $response['code'] = 200;
         }
