@@ -1105,6 +1105,21 @@ class ClientController extends Controller
                 }
                 $depo->amount = $amount;
                 $depo->save();
+
+                // save transaction logs
+                $detail = 'Deposited an amount of Php'.$amount.'.';
+                $detail_cn = '预存了款项 Php'.$amount.'.';
+                $log_data = array(
+                    'client_service_id' => null,
+                    'client_id' => $client_id,
+                    'group_id' => null,
+                    'log_type' => 'Transaction',
+                    'log_group' => 'deposit',
+                    'detail'=> $detail,
+                    'detail_cn'=> $detail_cn,
+                    'amount'=> $amount,
+                );
+                 LogController::save($log_data);
             }
 
             else if($type == "Payment") {
@@ -1123,6 +1138,21 @@ class ClientController extends Controller
                 }
                 $payment->amount = $amount;
                 $payment->save();
+
+                // save transaction logs
+                $detail = 'Paid an amount of Php'.$amount.'.';
+                $detail_cn = '已支付 Php'.$amount.'.';
+                $log_data = array(
+                    'client_service_id' => null,
+                    'client_id' => $client_id,
+                    'group_id' => null,
+                    'log_type' => 'Transaction',
+                    'log_group' => 'payment',
+                    'detail'=> $detail,
+                    'detail_cn'=> $detail_cn,
+                    'amount'=> $amount,
+                );
+                LogController::save($log_data);
             }
 
             else if($type == "Refund") {
@@ -1137,6 +1167,21 @@ class ClientController extends Controller
                         $refund->storage_type = $bank;
                     }
                     $refund->save();
+
+                    // save transaction logs
+                    $detail = 'Refunded an amount of Php'.$amount.' with the reason of <i>"'.$reason.'"</i>.';
+                    $detail_cn = '退款了 Php'.$amount.' 因为 "'.$reason.'".';
+                    $log_data = array(
+                        'client_service_id' => null,
+                        'client_id' => $client_id,
+                        'group_id' => null,
+                        'log_type' => 'Transaction',
+                        'log_group' => 'refund',
+                        'detail'=> $detail,
+                        'detail_cn'=> $detail_cn,
+                        'amount'=> '-'.$amount,
+                    );
+                    LogController::save($log_data);
             }
 
             else if($type == "Discount"){
@@ -1151,6 +1196,21 @@ class ClientController extends Controller
                     $discount->storage_type = $bank_type;
                 }
                 $discount->save();
+
+                // save transaction logs
+                $detail = 'Discounted an amount of Php'.$amount.' with the reason of <i>"'.$reason.'"</i>.';
+                $detail_cn = '给于折扣 Php'.$amount.' 因为"'.$reason.'".';
+                $log_data = array(
+                    'client_service_id' => null,
+                    'client_id' => $client_id,
+                    'group_id' => null,
+                    'log_type' => 'Transaction',
+                    'log_group' => 'discount',
+                    'detail'=> $detail,
+                    'detail_cn'=> $detail_cn,
+                    'amount'=> $amount,
+                );
+                LogController::save($log_data);
             }
 
             else if($type == "Balance Transfer"){
@@ -1163,6 +1223,30 @@ class ClientController extends Controller
                 $refund->group_id = null;
                 $refund->reason = $reason;
                 $refund->save();
+
+                if($request->transfer_to == 'Group'){
+                    $transferred = Group::where('id',$selected_group)->first()->name;
+                    $leaderId = Group::where('id',$selected_group)->first()->leader_id;
+                }
+                if($request->transfer_to == 'Client'){
+                    $cl_usr = User::where('id',$selected_client)->select('id','first_name','last_name')->first();
+                    $transferred = $cl_usr->first_name.' '.$cl_usr->last_name;
+                }
+
+                // save transaction logs
+                $detail = 'Refunded an amount of Php'.$amount.', transferred to '.$request->transfer_to.' '.$transferred;
+                $detail_cn = '退款 Php'.$amount.', 转移到了客户 '.$transferred;
+                $log_data = array(
+                    'client_service_id' => null,
+                    'client_id' => $client_id,
+                    'group_id' => null,
+                    'log_type' => 'Transaction',
+                    'log_group' => 'refund',
+                    'detail'=> $detail,
+                    'detail_cn'=> $detail_cn,
+                    'amount'=> '-'.$amount,
+                );
+                LogController::save($log_data);
 
                 $transTo = $selected_client;
                 $grid = null;
@@ -1179,6 +1263,21 @@ class ClientController extends Controller
                 $depo->group_id = $grid;
                 $depo->tracking = null;
                 $depo->save();
+
+                 // save transaction logs
+                $detail = 'Deposited an amount of Php'.$amount.' from client '.$client_id.'.';
+                $detail_cn = '预存了款项 Php'.$amount.' 从客户 '.$client_id.'.';
+                $log_data = array(
+                    'client_service_id' => null,
+                    'client_id' => $transTo,
+                    'group_id' => $grid,
+                    'log_type' => 'Transaction',
+                    'log_group' => 'deposit',
+                    'detail'=> $detail,
+                    'detail_cn'=> $detail_cn,
+                    'amount'=> $amount,
+                );
+                 LogController::save($log_data);
             }
 
             $response['status'] = 'Success';

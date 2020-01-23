@@ -52,10 +52,12 @@ class LogController extends Controller
                     if($m == $month && $d == $day){
                         $m = null;
                         $d = null;
+                        $y = null;
                     }
                     else{
                         $month = $m;
                         $day = $d;
+                        $y = $year;
                     }
                 }
                 else{
@@ -80,7 +82,7 @@ class LogController extends Controller
                     $body = $body;
                 }
                 else{
-                    $csdetail = ucfirst($t->type);
+                    $csdetail = ucfirst($t->log_group);
                     $cstracking = '';
                     $csstatus = '';
                     $csactive = 'none';
@@ -92,7 +94,7 @@ class LogController extends Controller
                     'month' => $m,
                     'day' => $d,
                     'year' => $y,
-                    'display_date' => Carbon::parse($y.'-'.$m.'-'.$d)->format('F d,Y'),
+                    'display_date' => Carbon::parse($t->log_date)->format('F d,Y'),
                     'data' => array ( 
                         'id' => $t->id,
                         'head' => $t->detail,
