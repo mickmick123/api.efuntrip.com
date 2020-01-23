@@ -150,6 +150,36 @@ class ClientController extends Controller
     public function manageClientsPaginate(Request $request, $perPage = 20) {
         $sort = $request->input('sort');
         $search = $request->input('search');
+        $search_id = 0;
+        $q1 = '';  $q2 = ''; $spaces = 0;
+        if (preg_match("/^\d+$/", $search)) {
+            $search_id = 1;
+        }
+
+        if(preg_match('/\s/',$search)){
+            $q = explode(" ", $search);
+            $spaces = substr_count($search, ' ');
+            if($spaces == 2){
+                $q1 = $q[0]." ".$q[1];
+                $q2 = $q[2];
+            }
+            if($spaces == 1){
+                $q1 = $q[0];
+                $q2 = $q[1];
+            }
+        }
+
+        $mode = '';
+        if($search_id == 1 && $spaces == 0){
+            $mode = 'id';
+        }
+        else if($search_id == 0 && $spaces == 0 && $search != ''){
+            $mode = 'name';
+        }
+        else if($spaces >0){
+            $mode = 'fullname';
+        }
+
         $clients = DB::table('users as u')
             ->select(DB::raw('u.id, u.first_name, u.last_name,
                 (
@@ -260,9 +290,21 @@ class ClientController extends Controller
                 $sort = explode('-' , $sort);
                 return $q->orderBy($sort[0], $sort[1]);
             })
-            ->when($search != '', function ($q) use($search){
-                // $search = explode('-' , $sort);
-                return $q->where('u.id','LIKE','%'.$search.'%');
+            ->when($mode == 'fullname', function ($query) use($q1,$q2){
+                    return $query->where(function ($query2) use($q1,$q2) {
+                                $query2->where('u.first_name', '=', $q1)
+                                      ->Where('u.last_name', '=', $q2);
+                            })->orwhere(function ($query2) use($q1,$q2) {
+                                $query2->where('u.last_name', '=', $q1)
+                                      ->Where('u.first_name', '=', $q2);
+                            });
+            })
+            ->when($mode == 'id', function ($query) use($search){
+                    return $query->where('u.id','LIKE','%'.$search.'%');
+            })
+            ->when($mode == 'name', function ($query) use($search){
+                    return $query->where('first_name' ,'=', $search)
+                                 ->orwhere('last_name' ,'=', $search);
             })
             ->paginate($perPage);
 
@@ -323,6 +365,8 @@ class ClientController extends Controller
         $keyword = $request->input('search');
         $branch_id = $request->input('branch_id');
 
+        $branch_ids = DB::connection()->table('branch_user as b')->where('user_id',Auth::user()->id)->pluck('branch_id');
+
         $cids = ContactNumber::where("number",'LIKE', '%' . $keyword .'%')->pluck('id');
         if(preg_match('/\s/',$keyword)){
             $q = explode(" ", $keyword);
@@ -373,8 +417,8 @@ class ClientController extends Controller
                     'bu.user_id', '=', 'a.id'
                 )
                 ->where('role.role_id', '2')
-                ->when($branch_id != '', function ($q) use($branch_id){
-                    return $q->where('bu.branch_id', $branch_id);
+                ->when($branch_id != '', function ($q) use($branch_ids){
+                    return $q->whereIn('bu.branch_id', $branch_ids);
                 })
                 ->where(function ($query) use($q1, $q2, $keyword) {
                     $query->orwhere('a.id',$keyword)
@@ -386,12 +430,12 @@ class ClientController extends Controller
                                       ->Where('first_name', '=', $q2);
                             });
                 })
-
                 ->orderBy('sdates2','DESC')
                 ->limit(10)
                 ->get();
         }
         else{
+
             $results = DB::connection()
             ->table('users as a')
             ->select(DB::raw('
@@ -427,8 +471,8 @@ class ClientController extends Controller
                     'bu.user_id', '=', 'a.id'
                 )
                 ->where('role.role_id', '2')
-                ->when($branch_id != '', function ($q) use($branch_id){
-                    return $q->where('bu.branch_id', $branch_id);
+                ->when($branch_id != '', function ($q) use($branch_ids){
+                    return $q->whereIn('bu.branch_id', $branch_ids);
                 })
                 ->where(function ($query) use($cids, $keyword) {
                         $query->orwhereIn('a.id',$cids)
@@ -483,8 +527,8 @@ class ClientController extends Controller
                             'bu.user_id', '=', 'a.id'
                         )
                         ->where('role.role_id', '2')
-                        ->when($branch_id != '', function ($q) use($branch_id){
-                            return $q->where('bu.branch_id', $branch_id);
+                        ->when($branch_id != '', function ($q) use($branch_ids){
+                            return $q->whereIn('bu.branch_id', $branch_ids);
                         })
                         ->where(function ($query) use($cids, $keyword) {
                             $query->orwhereIn('a.id',$cids)
@@ -499,9 +543,10 @@ class ClientController extends Controller
         }
 
         $json = [];
+
         foreach($results as $p){
            $br = Branch::where('id',$p->branch_id)->first()->name;
-           if($p->checkyear >= 2016){
+           if($p->checkyear >= 2016 || $p->checkyear != null){
               $json[] = array(
                   'id' => $p->id,
                   'name' => $p->first_name." ".$p->last_name." -- [".$br."] -- ".$p->sdates."",
@@ -1222,7 +1267,7 @@ class ClientController extends Controller
             } else {
                 $client = User::create([
                     'first_name' => ($request->first_name) ? $request->first_name : $contactNumber,
-                    'last_name' => ($request->last_name) ? $request->last_name : $contactNumber,
+                    'last_name' => 'N/A',
                     'birth_date' => ($request->birthdate) ? $request->birthdate : null,
                     'passport' => ($request->passport) ? $request->passport : null,
                     'gender' => ($request->gender) ? $request->gender : null
@@ -1241,6 +1286,7 @@ class ClientController extends Controller
                 $response['status'] = 'Success';
                 $response['code'] = 200;
             }
+
         }
 
         return Response::json($response);

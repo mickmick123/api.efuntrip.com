@@ -80,7 +80,7 @@ class LogController extends Controller
                     $body = $body;
                 }
                 else{
-                    $csdetail = ucfirst($a->type);
+                    $csdetail = ucfirst($t->type);
                     $cstracking = '';
                     $csstatus = '';
                     $csactive = 'none';
