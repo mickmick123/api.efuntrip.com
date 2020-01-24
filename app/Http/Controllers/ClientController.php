@@ -181,7 +181,7 @@ class ClientController extends Controller
         }
 
         $clients = DB::table('users as u')
-            ->select(DB::raw('u.id, u.first_name, u.last_name,
+            ->select(DB::raw('u.id, u.first_name, u.last_name, concat(u.first_name, " ", u.last_name) as full_name, u.risk,
                 (
                     (IFNULL(transactions.total_deposit, 0) + IFNULL(transactions.total_payment, 0) + IFNULL(transactions.total_discount,0))
                     -
@@ -305,6 +305,10 @@ class ClientController extends Controller
             ->when($mode == 'name', function ($query) use($search){
                     return $query->where('first_name' ,'=', $search)
                                  ->orwhere('last_name' ,'=', $search);
+            // ->when($search != '', function ($q) use($search){
+            //     // $search = explode('-' , $sort);
+            //     return $q->where('u.id','LIKE','%'.$search.'%')
+            //             ->orWhere(DB::raw('concat(u.first_name," ",u.last_name)'),'LIKE','%'.$search.'%');
             })
             ->paginate($perPage);
 
@@ -582,9 +586,9 @@ class ClientController extends Controller
             'birth_country' => 'required',
             'address' => 'required',
             'contact_numbers' => 'required|array',
-            'contact_numbers.*.number' => 'required|unique:contact_numbers,number',
-            'contact_numbers.*.is_primary' => 'required',
-            'contact_numbers.*.is_mobile' => 'required',
+            'contact_numbers.*.number' => 'nullable|min:11|max:13',
+            'contact_numbers.*.is_primary' => 'nullable',
+            'contact_numbers.*.is_mobile' => 'nullable',
             'branches' => 'required|array',
             'email' => 'nullable|email|unique:users,email',
             'passport' => 'nullable',
@@ -604,70 +608,99 @@ class ClientController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
-        	$client = new User;
-        	$client->first_name = $request->first_name;
-        	$client->middle_name = ($request->middle_name) ? $request->middle_name : null;
-        	$client->last_name = $request->last_name;
-        	$client->birth_date = $request->birth_date;
-        	$client->gender = $request->gender;
-        	$client->civil_status = $request->civil_status;
-        	$client->height = ($request->height) ? $request->height : null;
-        	$client->weight = ($request->weight) ? $request->weight : null;
-        	$client->birth_country_id = $request->birth_country;
-        	$client->address = $request->address;
-        	$client->email = ($request->email) ? $request->email : null;
-        	$client->passport = ($request->passport) ? $request->passport : null;
-        	$client->passport_exp_date = ($request->passport_expiration_date) ? $request->passport_expiration_date : null;
-        	if( $request->visa_type == '9A' ) {
-        		$client->visa_type = $request->visa_type;
-        		$client->arrival_date = ($request->arrival_date) ? $request->arrival_date : null;
-        		$client->first_expiration_date = ($request->first_expiration_date) ? $request->first_expiration_date : null;
-        		$client->extended_expiration_date = ($request->extended_expiration_date) ? $request->extended_expiration_date : null;
-        	} elseif( $request->visa_type == '9G' || $request->visa_type == 'TRV' ) {
-        		$client->visa_type = $request->visa_type;
-        		$client->expiration_date = ($request->expiration_date) ? $request->expiration_date : null;
-        		$client->icard_issue_date = ($request->icard_issue_date) ? $request->icard_issue_date : null;
-        		$client->icard_expiration_date = ($request->icard_expiration_date) ? $request->icard_expiration_date : null;
-        	} elseif( $request->visa_type == 'CWV' ) {
-        		$client->visa_type = $request->visa_type;
-        		$client->expiration_date = ($request->expiration_date) ? $request->expiration_date : null;
-        	}
-        	$client->save();
+            $ce_count = 0;
 
-        	foreach($request->nationalities as $nationality) {
-        		$client->nationalities()->attach($nationality);
-        	}
+            foreach($request->contact_numbers as $key=>$contactNumber) {
+                if(strlen($contactNumber['number']) !== 0 && $contactNumber['number'] !== null) {
+                    if(strlen($contactNumber['number']) === 13) {
+                        $number = substr($contactNumber['number'], 3);
+                    } else if(strlen($contactNumber['number']) === 12) {
+                        $number = substr($contactNumber['number'], 2);
+                    } else {
+                        $number = substr($contactNumber['number'], 1);
+                    }
+                    
+                    $contact = ContactNumber::where('number','LIKE','%'.$number.'%')->count();
+    
+                    if($contact > 0) {
+                        $contact_error['contact_numbers.'.$key.'.number'] = ['The contact number has already been taken.'];
+                        $ce_count++;
+                    }
+                }
+            }
 
-        	foreach($request->contact_numbers as $contactNumber) {
-        		ContactNumber::create([
-        			'user_id' => $client->id,
-        			'number' => $contactNumber['number'],
-        			'is_primary' => $contactNumber['is_primary'],
-        			'is_mobile' => $contactNumber['is_mobile']
-        		]);
+            if($ce_count > 0) {
+                $response['status'] = 'Failed';
+                $response['errors'] = $contact_error;
+                $response['code'] = 422;
+            } else {
+                $client = new User;
+                $client->first_name = $request->first_name;
+                $client->middle_name = ($request->middle_name) ? $request->middle_name : null;
+                $client->last_name = $request->last_name;
+                $client->birth_date = $request->birth_date;
+                $client->gender = $request->gender;
+                $client->civil_status = $request->civil_status;
+                $client->height = ($request->height) ? $request->height : null;
+                $client->weight = ($request->weight) ? $request->weight : null;
+                $client->birth_country_id = $request->birth_country;
+                $client->address = $request->address;
+                $client->email = ($request->email) ? $request->email : null;
+                $client->passport = ($request->passport) ? $request->passport : null;
+                $client->passport_exp_date = ($request->passport_expiration_date) ? $request->passport_expiration_date : null;
+                if( $request->visa_type == '9A' ) {
+                	$client->visa_type = $request->visa_type;
+                	$client->arrival_date = ($request->arrival_date) ? $request->arrival_date : null;
+                	$client->first_expiration_date = ($request->first_expiration_date) ? $request->first_expiration_date : null;
+                	$client->extended_expiration_date = ($request->extended_expiration_date) ? $request->extended_expiration_date : null;
+                } elseif( $request->visa_type == '9G' || $request->visa_type == 'TRV' ) {
+                	$client->visa_type = $request->visa_type;
+                	$client->expiration_date = ($request->expiration_date) ? $request->expiration_date : null;
+                	$client->icard_issue_date = ($request->icard_issue_date) ? $request->icard_issue_date : null;
+                	$client->icard_expiration_date = ($request->icard_expiration_date) ? $request->icard_expiration_date : null;
+                } elseif( $request->visa_type == 'CWV' ) {
+                	$client->visa_type = $request->visa_type;
+                	$client->expiration_date = ($request->expiration_date) ? $request->expiration_date : null;
+                }
+                $client->save();
 
-        		if( $contactNumber['is_primary'] ) {
-        			$client->update([
-        				'password' => bcrypt($contactNumber['number'])
-        			]);
-        		}
-        	}
+                foreach($request->nationalities as $nationality) {
+                	$client->nationalities()->attach($nationality);
+                }
 
-            $client->branches()->detach();
-        	foreach($request->branches as $branch) {
-        		$client->branches()->attach($branch);
-        	}
+                foreach($request->contact_numbers as $contactNumber) {
+                    if(strlen($contactNumber['number']) !== 0 && $contactNumber['number'] !== null) {
+                        ContactNumber::create([
+                            'user_id' => $client->id,
+                            'number' => $contactNumber['number'],
+                            'is_primary' => $contactNumber['is_primary'],
+                            'is_mobile' => $contactNumber['is_mobile']
+                        ]);
 
-        	if( $request->groups ) {
-        		foreach($request->groups as $group) {
-	        		$client->groups()->attach($group);
-	        	}
-        	}
+                        if( $contactNumber['is_primary'] ) {
+                            $client->update([
+                                'password' => bcrypt($contactNumber['number'])
+                            ]);
+                        }
+                    }
+                }
 
-        	$client->roles()->attach(2);
+                $client->branches()->detach();
+                foreach($request->branches as $branch) {
+                	$client->branches()->attach($branch);
+                }
 
-        	$response['status'] = 'Success';
-        	$response['code'] = 200;
+                if( $request->groups ) {
+                	foreach($request->groups as $group) {
+                		$client->groups()->attach($group);
+                	}
+                }
+
+                $client->roles()->attach(2);
+                $response['status'] = 'Success';
+        	    $response['code'] = 200;
+            }
+            
         }
 
         return Response::json($response);
@@ -714,9 +747,9 @@ class ClientController extends Controller
             'birth_country' => 'required',
             'address' => 'required',
             'contact_numbers' => 'required|array',
-            'contact_numbers.*.number' => 'required',
-            'contact_numbers.*.is_primary' => 'required',
-            'contact_numbers.*.is_mobile' => 'required',
+            'contact_numbers.*.number' => 'nullable|min:11|max:13',
+            'contact_numbers.*.is_primary' => 'nullable',
+            'contact_numbers.*.is_mobile' => 'nullable',
             'branches' => 'required|array',
             'email' => 'nullable|email|unique:users,email,'.$id,
             'passport' => 'nullable',
@@ -736,97 +769,136 @@ class ClientController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
-        	$client = User::find($id);
+            $ce_count = 0;
 
-        	if( $client ) {
-        		$client->first_name = $request->first_name;
-	        	$client->middle_name = ($request->middle_name) ? $request->middle_name : null;
-	        	$client->last_name = $request->last_name;
-	        	$client->birth_date = $request->birth_date;
-	        	$client->gender = $request->gender;
-	        	$client->civil_status = $request->civil_status;
-	        	$client->height = ($request->height) ? $request->height : null;
-	        	$client->weight = ($request->weight) ? $request->weight : null;
-	        	$client->birth_country_id = $request->birth_country;
-	        	$client->address = $request->address;
-	        	$client->email = ($request->email) ? $request->email : null;
-	        	$client->passport = ($request->passport) ? $request->passport : null;
-	        	$client->passport_exp_date = ($request->passport_expiration_date) ? $request->passport_expiration_date : null;
-	        	if( $request->visa_type == '9A' ) {
-	        		$client->visa_type = $request->visa_type;
+            foreach($request->contact_numbers as $key=>$contactNumber) {
+                if(strlen($contactNumber['number']) !== 0 && $contactNumber['number'] !== null) {
+                    if(strlen($contactNumber['number']) === 13) {
+                        $number = substr($contactNumber['number'], 3);
+                    } else if(strlen($contactNumber['number']) === 12) {
+                        $number = substr($contactNumber['number'], 2);
+                    } else {
+                        $number = substr($contactNumber['number'], 1);
+                    }
+                    
+                    $contact = ContactNumber::where('number','LIKE','%'.$number.'%')->get();
+                    
+                    if($contact) {
+                        $num_duplicate = 0;
+                        foreach($contact as $con) {
+                            if(strval ($con['user_id']) === strval ($id)) {
+                                $num_duplicate++;
+                            }
+                        }
 
-	        		$client->arrival_date = ($request->arrival_date) ? $request->arrival_date : null;
-	        		$client->first_expiration_date = ($request->first_expiration_date) ? $request->first_expiration_date : null;
-	        		$client->extended_expiration_date = ($request->extended_expiration_date) ? $request->extended_expiration_date : null;
+                        if($num_duplicate === 0) {
+                            $contact_error['contact_numbers.'.$key.'.number'] = ['The contact number has already been taken.'];
+                            $ce_count++;
+                        }
+                        
+                    }
+                }
+            }
 
-	        		$client->expiration_date = null;
-	        		$client->icard_issue_date = null;
-	        		$client->icard_expiration_date = null;
-	        	} elseif( $request->visa_type == '9G' || $request->visa_type == 'TRV' ) {
-	        		$client->visa_type = $request->visa_type;
+            if($ce_count > 0) {
+                $response['status'] = 'Failed';
+                $response['errors'] = $contact_error;
+                $response['code'] = 422;
+            } else {
+                $client = User::find($id);
 
-	        		$client->expiration_date = ($request->expiration_date) ? $request->expiration_date : null;
-	        		$client->icard_issue_date = ($request->icard_issue_date) ? $request->icard_issue_date : null;
-	        		$client->icard_expiration_date = ($request->icard_expiration_date) ? $request->icard_expiration_date : null;
+                if( $client ) {
+                    $client->first_name = $request->first_name;
+                    $client->middle_name = ($request->middle_name) ? $request->middle_name : null;
+                    $client->last_name = $request->last_name;
+                    $client->birth_date = $request->birth_date;
+                    $client->gender = $request->gender;
+                    $client->civil_status = $request->civil_status;
+                    $client->height = ($request->height) ? $request->height : null;
+                    $client->weight = ($request->weight) ? $request->weight : null;
+                    $client->birth_country_id = $request->birth_country;
+                    $client->address = $request->address;
+                    $client->email = ($request->email) ? $request->email : null;
+                    $client->passport = ($request->passport) ? $request->passport : null;
+                    $client->passport_exp_date = ($request->passport_expiration_date) ? $request->passport_expiration_date : null;
+                    if( $request->visa_type == '9A' ) {
+                        $client->visa_type = $request->visa_type;
 
-	        		$client->arrival_date = null;
-	        		$client->first_expiration_date = null;
-	        		$client->extended_expiration_date = null;
-	        	} elseif( $request->visa_type == 'CWV' ) {
-	        		$client->visa_type = $request->visa_type;
+                        $client->arrival_date = ($request->arrival_date) ? $request->arrival_date : null;
+                        $client->first_expiration_date = ($request->first_expiration_date) ? $request->first_expiration_date : null;
+                        $client->extended_expiration_date = ($request->extended_expiration_date) ? $request->extended_expiration_date : null;
 
-	        		$client->expiration_date = ($request->expiration_date) ? $request->expiration_date : null;
+                        $client->expiration_date = null;
+                        $client->icard_issue_date = null;
+                        $client->icard_expiration_date = null;
+                    } elseif( $request->visa_type == '9G' || $request->visa_type == 'TRV' ) {
+                        $client->visa_type = $request->visa_type;
 
-	        		$client->arrival_date = null;
-	        		$client->first_expiration_date = null;
-	        		$client->extended_expiration_date = null;
-	        		$client->icard_issue_date = null;
-	        		$client->icard_expiration_date = null;
-	        	} else {
-	        		$client->visa_type = null;
-	        	}
-	        	$client->save();
+                        $client->expiration_date = ($request->expiration_date) ? $request->expiration_date : null;
+                        $client->icard_issue_date = ($request->icard_issue_date) ? $request->icard_issue_date : null;
+                        $client->icard_expiration_date = ($request->icard_expiration_date) ? $request->icard_expiration_date : null;
 
-	        	$client->nationalities()->detach();
-	        	foreach($request->nationalities as $nationality) {
-	        		$client->nationalities()->attach($nationality);
-	        	}
+                        $client->arrival_date = null;
+                        $client->first_expiration_date = null;
+                        $client->extended_expiration_date = null;
+                    } elseif( $request->visa_type == 'CWV' ) {
+                        $client->visa_type = $request->visa_type;
 
-	        	$client->contactNumbers()->delete();
-	        	foreach($request->contact_numbers as $contactNumber) {
-	        		ContactNumber::create([
-	        			'user_id' => $client->id,
-	        			'number' => $contactNumber['number'],
-	        			'is_primary' => $contactNumber['is_primary'],
-	        			'is_mobile' => $contactNumber['is_mobile']
-	        		]);
+                        $client->expiration_date = ($request->expiration_date) ? $request->expiration_date : null;
 
-	        		if( $contactNumber['is_primary'] ) {
-	        			$client->update([
-	        				'password' => bcrypt($contactNumber['number'])
-	        			]);
-	        		}
-	        	}
+                        $client->arrival_date = null;
+                        $client->first_expiration_date = null;
+                        $client->extended_expiration_date = null;
+                        $client->icard_issue_date = null;
+                        $client->icard_expiration_date = null;
+                    } else {
+                        $client->visa_type = null;
+                    }
+                    $client->save();
 
-	        	$client->branches()->detach();
-	        	foreach($request->branches as $branch) {
-	        		$client->branches()->attach($branch);
-	        	}
+                    $client->nationalities()->detach();
+                    foreach($request->nationalities as $nationality) {
+                        $client->nationalities()->attach($nationality);
+                    }
 
-	        	if( $request->groups ) {
-	        		$client->groups()->detach();
-	        		foreach($request->groups as $group) {
-		        		$client->groups()->attach($group);
-		        	}
-	        	}
+                    $client->contactNumbers()->delete();
+                    foreach($request->contact_numbers as $contactNumber) {
+                        if(strlen($contactNumber['number']) !== 0 && $contactNumber['number'] !== null) {
+                            ContactNumber::create([
+                                'user_id' => $client->id,
+                                'number' => $contactNumber['number'],
+                                'is_primary' => $contactNumber['is_primary'],
+                                'is_mobile' => $contactNumber['is_mobile']
+                            ]);
 
-	        	$response['status'] = 'Success';
-        		$response['code'] = 200;
-        	} else {
-        		$response['status'] = 'Failed';
-        		$response['errors'] = 'No query results.';
-				$response['code'] = 404;
-        	}
+                            if( $contactNumber['is_primary'] ) {
+                                $client->update([
+                                    'password' => bcrypt($contactNumber['number'])
+                                ]);
+                            }
+                        }
+                    }
+
+                    $client->branches()->detach();
+                    foreach($request->branches as $branch) {
+                        $client->branches()->attach($branch);
+                    }
+
+                    if( $request->groups ) {
+                        $client->groups()->detach();
+                        foreach($request->groups as $group) {
+                            $client->groups()->attach($group);
+                        }
+                    }
+
+                    $response['status'] = 'Success';
+                    $response['code'] = 200;
+                } else {
+                    $response['status'] = 'Failed';
+                    $response['errors'] = 'No query results.';
+                    $response['code'] = 404;
+                }
+            }
         }
 
         return Response::json($response);
