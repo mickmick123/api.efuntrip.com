@@ -19,12 +19,20 @@ class ServiceProcedureController extends Controller
 		if( $service ) {
 			$serviceProcedures = ServiceProcedure::where('service_id', $serviceId)
                 ->select(array('id', 'name', 'step', 'is_required'))
+                ->whereNotNull('step')
 				->orderBy('step')
 				->get();
+
+            $optionalServiceProcedures = ServiceProcedure::where('service_id', $serviceId)
+                ->select(array('id', 'name', 'step', 'is_required'))
+                ->whereNull('step')
+                ->orderBy('name')
+                ->get();
 
 			$response['status'] = 'Success';
 			$response['data'] = [
 			    'serviceProcedures' => $serviceProcedures,
+                'optionalServiceProcedures' => $optionalServiceProcedures,
                 'serviceName' => $service->detail
 			];
 			$response['code'] = 200;
@@ -82,6 +90,28 @@ class ServiceProcedureController extends Controller
         			'is_required' => $request->is_required
         		]);
 
+                if( $serviceProcedure->step != null && $request->is_required == 0 ) {
+                    $serviceProcedure->update(['step' => null]);
+
+                    $_serviceId = $serviceProcedure->service_id;
+
+                    $_serviceProcedures = ServiceProcedure::where('service_id', $_serviceId)
+                        ->whereNotNull('step')
+                        ->orderBy('step')
+                        ->get();
+
+                    foreach($_serviceProcedures as $index => $_serviceProcedure) {
+                        ServiceProcedure::findOrFail($_serviceProcedure->id)
+                            ->update(['step' => ($index + 1)]);
+                    }
+                } elseif( $serviceProcedure->step == null && $request->is_required == 1 ) {
+                    $_serviceId = $serviceProcedure->service_id;
+
+                    $stepsCount = ServiceProcedure::where('service_id', $_serviceId)->whereNotNull('step')->count();
+
+                    $serviceProcedure->update(['step' => $stepsCount + 1]);
+                }
+
         		$serviceProcedure->serviceProcedureDocuments()->delete();
 
         		foreach($request->required_documents as $requiredDocument) {
@@ -127,17 +157,21 @@ class ServiceProcedureController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
-        	$stepsCount = ServiceProcedure::where('service_id', $request->service_id)->count();
-
         	$serviceProcedure = ServiceProcedure::create([
         		'service_id' => $request->service_id,
         		'name' => $request->name,
                 'preposition' => $request->preposition,
-        		'step' => $stepsCount + 1,
         		'action_id' => $request->action_id,
         		'category_id' => $request->category_id,
         		'is_required' => $request->is_required
         	]);
+
+            if( $request->is_required == 1 ) {
+                $stepsCount = ServiceProcedure::where('service_id', $request->service_id)
+                    ->whereNotNull('step')->count();
+
+                $serviceProcedure->update(['step' => $stepsCount + 1]);
+            }
 
         	foreach($request->required_documents as $requiredDocument) {
         		$serviceProcedure->serviceProcedureDocuments()->create([
@@ -165,16 +199,23 @@ class ServiceProcedureController extends Controller
 
 		if( $serviceProcedure ) {
 			$serviceId = $serviceProcedure->service_id;
+            $step = $serviceProcedure->step;
 
 			$serviceProcedure->delete();
 
-			$serviceProcedures = ServiceProcedure::where('service_id', $serviceId)->orderBy('step')->get();
-			$step = 1;
-			foreach($serviceProcedures as $serviceProcedure) {
-				$serviceProcedure->update(['step' => $step]);
+            if( $step != null ) {
+                $serviceProcedures = ServiceProcedure::where('service_id', $serviceId)
+                    ->whereNotNull('step')
+                    ->orderBy('step')
+                    ->get();
 
-				$step += 1;
-			}
+                $_step = 1;
+                foreach($serviceProcedures as $serviceProcedure) {
+                    $serviceProcedure->update(['step' => $_step]);
+
+                    $_step += 1;
+                }
+            }
 
 			$response['status'] = 'Success';
         	$response['code'] = 200;
