@@ -1175,7 +1175,7 @@ class ClientController extends Controller
 
 
 
-                if ($oldServiceCost == $newServiceCost && $cs->status == 'complete' && $cs->status != $service_status) {
+                if ($oldServiceCost == $newServiceCost && $translog == '' && $cs->status != $service_status) {
                     $translog = 'Service status change from '.$cs->status.' to '.$service_status;
                     $translog_cn = '';
                 }
@@ -1262,10 +1262,10 @@ class ClientController extends Controller
                         $log_data['amount'] = '-'.$newServiceCost;
                     }
                     else{
-                        if(($cs->status != 'complete' && $service_status != 'complete')){
+                        if(($cs->status != 'complete')){
                             $log_data['amount'] = 0;
                         }
-                        if($cs->status == 'complete' ){
+                        else{
                             $log_data['amount'] = '-'.$newServiceCost;
                         }    
 
