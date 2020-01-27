@@ -181,7 +181,10 @@ class GroupController extends Controller
 		return Response::json($response);
 	}
 
-    public function manageGroupsPaginate($perPage = 20) {
+    public function manageGroupsPaginate(Request $request, $perPage = 20) {
+        $sort = $request->input('sort');
+        $search = $request->input('search');
+
         $groups = DB::table('groups as g')
             ->select(DB::raw('g.id, g.name, CONCAT(u.first_name, " ", u.last_name) as leader, g.balance, g.collectables, p.latest_package as latest_package, srv.latest_service as latest_service'))
             ->leftjoin(DB::raw('(select * from users) as u'),'u.id','=','g.leader_id')
@@ -206,7 +209,13 @@ class GroupController extends Controller
                         where cs.active = 1
                         group by cs.group_id) as srv'),
                     'srv.group_id', '=', 'g.id')
-            ->orderBy('g.id', 'desc')
+            ->when($search != '', function ($q) use($search){
+                return $q->where('g.id','LIKE', '%'.$search.'%')->orwhere('g.name','LIKE', '%'.$search.'%');
+            })
+            ->when($sort != '', function ($q) use($sort){
+                $sort = explode('-' , $sort);
+                return $q->orderBy($sort[0], $sort[1]);
+            })
             ->paginate($perPage);
 
         $response = $groups;
