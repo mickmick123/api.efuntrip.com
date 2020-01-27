@@ -1044,7 +1044,45 @@ class ClientController extends Controller
             $response['code'] = 422;
         } else {
                 $cs = ClientService::findorfail($request->cs_id);
+                $service = Service::where('id',$cs->service_id)->first();
 
+                $oldstatus = $cs->status;
+
+                $detail_cn = $service->detail;
+                if($service){ // get chinese translation of service detail
+                    $detail_cn = ($service->detail_cn!='' ? $service->detail_cn : $service->detail);
+                }
+
+                $translog = '';
+                $translog_cn = '';
+                $transtat = '';
+                $transtat_cn = '';
+                $newVal = 0;
+                $oldVal = 0;
+
+                // check changes active/inactive
+                if ($cs->active != $request->active) {
+                    if($request->active == 1) { // Enabled
+                        $transtat = 'Service was enabled.';
+                        $transtat_cn = '服务被标记为已启用.';
+                        $translog = 'Total service charge from Php0 to ' . 'Php'. ($cs->cost + $cs->charge + $cs->tip);
+                        $translog_cn = '总服务费从 Php0 到 ' . 'Php'. ($cs->cost + $cs->charge + $cs->tip);
+                    } elseif($request->active == 0) { // Disabled
+                        $transtat = 'Service was disabled.';
+                        $transtat_cn = '服务被标记为失效.';
+                        $translog = 'Total service charge from Php'. ($cs->cost + $cs->charge + $cs->tip).' to Php'.'0.';
+                        $translog_cn = '总服务费从 Php'. ($cs->cost + $cs->charge + $cs->tip).' 到 Php'.'0.';
+                    }
+
+                    $newVal +=0;
+                    $oldVal +=($cs->cost + $cs->charge + $cs->tip);
+                }
+
+                //check changes of discount
+                $oldDiscount = 0;
+                $newDiscount = 0;
+                $discnotes = '';
+                $discnotes_cn = '';
                 if($request->discount > 0) {
 
                     $__oldDiscount = null;
@@ -1068,16 +1106,82 @@ class ClientController extends Controller
                             'tracking' => $cs->tracking,
                         ]);
                     }
-                    $dcflag = true;
+
+                    // Update discount
+                    if($__oldDiscount != null && $__oldDiscount != $request->get('discount')) {
+                        $discnotes = ' updated discount from Php' . $__oldDiscount . ' to Php' . $request->get('discount').', ';
+                        $discnotes_cn = ' 已更新折扣 ' . $__oldDiscount . ' 到 ' . $request->get('discount') .', ';
+                        $oldDiscount = $__oldDiscount;
+                        $newDiscount = $request->get('discount');  
+                    }
+
+                    if($__oldDiscount == $request->get('discount')){
+                        $oldDiscount = $__oldDiscount;
+                        $newDiscount = $request->get('discount'); 
+                    }
+
+                    // New Discount
+                    if($__oldDiscount == null) { 
+                        $discnotes = ' discounted an amount of Php'.$request->get('discount').', ';
+                        $discnotes_cn = ' 已折扣额度 Php'.$request->get('discount').', ';
+                        $newDiscount = $request->get('discount');  
+                    }
 
                 } else {
                     $discountExist = ClientTransaction::where('client_service_id', $cs->id)->where('type','Discount')->first();
                     if($discountExist){
                         // Delete from client_transactions
                         $discountExist->forceDelete();
+
+                        // When user removed discount
+                        $discnotes = ' removed discount of Php ' . $discountExist->amount . ', ';
+                        $discnotes_cn = ' 移除折扣 ' . $discountExist->amount.', ';
+                        $oldDiscount = $discountExist->amount;
                     }
                 }
 
+                // Check if there's changes in amounts
+                $service_status = $request->status;
+                $oldServiceCost = $cs->cost + $cs->charge + $cs->tip;
+                $newServiceCost = $request->get('cost') + $request->get('charge') + $request->get('tip');
+                if($newDiscount > 0 || $oldDiscount > 0 ){
+                    $oldServiceCost -= $oldDiscount;
+                    $newServiceCost -= $newDiscount;
+                }
+
+                if($request->get('active') == 1) { // Enabled
+                    $toAmount = $newServiceCost;
+                } elseif($request->get('active') == 0) { // Disabled
+                    $toAmount = 0;
+                }
+
+                if ($oldServiceCost != $newServiceCost || $service_status == 'complete') {
+                    if($service_status == 'complete' && $service_status != $cs->status){
+                        $translog = 'Total service charge is Php' . $toAmount;
+                        $translog_cn = '总服务费 Php' . $toAmount;
+                    }
+                    else if($service_status == 'complete' && $service_status == $cs->status){
+                         $translog = 'Total service charge from Php' . ($oldServiceCost) . ' to Php' . $toAmount;
+                         $translog_cn = '总服务费从 Php' . ($oldServiceCost) . ' 到 Php' . $toAmount;
+                    }
+                    else{
+                        $translog = 'Total service charge from Php' . ($oldServiceCost) . ' to Php' . $toAmount;
+                        $translog_cn = '总服务费从 Php' . ($oldServiceCost) . ' 到 Php' . $toAmount;
+                    }
+
+                    $newVal +=$newServiceCost;
+                    $oldVal +=$oldServiceCost;
+                }
+
+
+
+                if ($oldServiceCost == $newServiceCost && $cs->status == 'complete' && $cs->status != $service_status) {
+                    $translog = 'Service status change from '.$cs->status.' to '.$service_status;
+                    $translog_cn = '';
+                }
+
+
+                // create client service remarks/note
                 $remarks = $request->note.' - '. Auth::user()->first_name.' <small>('.date('Y-m-d H:i:s').')</small>';
                 if($request->note==''){
                     $remarks = '';
@@ -1129,6 +1233,48 @@ class ClientController extends Controller
                     $client_user->save();
                 }
 
+
+                //save transaction logs
+                $log =  ' : '.$discnotes .$translog.'. ' . $transtat;
+                $log_cn =  ' : '.$discnotes_cn . $translog_cn. '. ' . $transtat_cn;
+                if($translog != '' || $transtat != '' || $discnotes != ''){
+                    $newVal = $oldVal - $newVal;
+                    //$user = Auth::user();
+                    if($service->status == 0 && $request->active == 1){
+                        $newVal = '-'.$newVal;
+                    }
+
+
+                    $log_data = array(
+                        'client_service_id' => $cs->id,
+                        'client_id' => $cs->client_id,
+                        'group_id' => $cs->group_id,
+                        'log_type' => 'Transaction',
+                        'log_group' => 'service',
+                        'detail'=> $log,
+                        'detail_cn'=> $log_cn,
+                        'amount'=> $newVal,
+                    );
+
+                    if($oldstatus != $service_status && $service_status == 'complete'){
+                        $log_data['detail'] = 'Completed Service '.$log;
+                        $log_data['detail_cn'] = '完成的服务 '.$log_cn;   
+                        $log_data['amount'] = '-'.$newServiceCost;
+                    }
+                    else{
+                        if(($cs->status != 'complete' && $service_status != 'complete')){
+                            $log_data['amount'] = 0;
+                        }
+                        if($cs->status == 'complete' ){
+                            $log_data['amount'] = '-'.$newServiceCost;
+                        }    
+
+                        $log_data['detail'] = 'Updated Service '.$log;
+                        $log_data['detail_cn'] = '服务更新 '.$log_cn;
+                    }
+
+                    LogController::save($log_data);
+                }
             $response['tracking'] = $cs->tracking;
             $response['status'] = 'Success';
             $response['code'] = 200;
