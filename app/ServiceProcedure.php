@@ -13,7 +13,7 @@ class ServiceProcedure extends Model
 
     protected $table = 'service_procedures';
 
-    protected $fillable = ['service_id', 'name', 'preposition', 'step', 'action_id', 'category_id', 'is_required'];
+    protected $fillable = ['service_id', 'name', 'preposition', 'step', 'action_id', 'category_id', 'is_required', 'is_add_to_on_hand'];
 
     public function service() {
     	return $this->belongsTo('App\Service', 'service_id', 'id');

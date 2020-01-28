@@ -18,13 +18,13 @@ class ServiceProcedureController extends Controller
 
 		if( $service ) {
 			$serviceProcedures = ServiceProcedure::where('service_id', $serviceId)
-                ->select(array('id', 'name', 'step', 'is_required'))
+                ->select(array('id', 'name', 'step', 'is_required', 'is_add_to_on_hand'))
                 ->whereNotNull('step')
 				->orderBy('step')
 				->get();
 
             $optionalServiceProcedures = ServiceProcedure::where('service_id', $serviceId)
-                ->select(array('id', 'name', 'step', 'is_required'))
+                ->select(array('id', 'name', 'step', 'is_required', 'is_add_to_on_hand'))
                 ->whereNull('step')
                 ->orderBy('name')
                 ->get();
@@ -70,6 +70,7 @@ class ServiceProcedureController extends Controller
             'action_id' => 'required',
             'category_id' => 'required',
             'is_required' => 'required',
+            'is_add_to_on_hand' => 'required',
             'required_documents' => 'nullable|array',
             'optional_documents' => 'nullable|array'
         ]);
@@ -87,7 +88,8 @@ class ServiceProcedureController extends Controller
                     'preposition' => $request->preposition,
         			'action_id' => $request->action_id,
         			'category_id' => $request->category_id,
-        			'is_required' => $request->is_required
+        			'is_required' => $request->is_required,
+                    'is_add_to_on_hand' => $request->is_add_to_on_hand
         		]);
 
                 if( $serviceProcedure->step != null && $request->is_required == 0 ) {
@@ -148,6 +150,7 @@ class ServiceProcedureController extends Controller
             'action_id' => 'required',
             'category_id' => 'required',
             'is_required' => 'required',
+            'is_add_to_on_hand' => 'required',
             'required_documents' => 'nullable|array',
             'optional_documents' => 'nullable|array'
         ]);
@@ -163,7 +166,8 @@ class ServiceProcedureController extends Controller
                 'preposition' => $request->preposition,
         		'action_id' => $request->action_id,
         		'category_id' => $request->category_id,
-        		'is_required' => $request->is_required
+        		'is_required' => $request->is_required,
+                'is_add_to_on_hand' => $request->is_add_to_on_hand
         	]);
 
             if( $request->is_required == 1 ) {
