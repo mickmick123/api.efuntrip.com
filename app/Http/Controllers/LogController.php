@@ -72,6 +72,9 @@ class LogController extends Controller
                     $cstracking =  $cs->tracking;
                     $csstatus =  $cs->status;
                     $csactive =  $cs->active;
+                    if($csactive == 0){
+                        $csstatus =  'Disabled';
+                    }
                     $currentService = $cs->id;
 
                     $body = DB::table('logs')->where('client_service_id', $cs->id)

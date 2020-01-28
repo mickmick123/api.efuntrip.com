@@ -1070,8 +1070,8 @@ class ClientController extends Controller
                     } elseif($request->active == 0) { // Disabled
                         $transtat = 'Service was disabled.';
                         $transtat_cn = '服务被标记为失效.';
-                        $translog = 'Total service charge from Php'. ($cs->cost + $cs->charge + $cs->tip).' to Php'.'0.';
-                        $translog_cn = '总服务费从 Php'. ($cs->cost + $cs->charge + $cs->tip).' 到 Php'.'0.';
+                        $translog = 'Total service charge from Php'. ($cs->cost + $cs->charge + $cs->tip).' to Php'.'0';
+                        $translog_cn = '总服务费从 Php'. ($cs->cost + $cs->charge + $cs->tip).' 到 Php'.'0';
                     }
 
                     $newVal +=0;
