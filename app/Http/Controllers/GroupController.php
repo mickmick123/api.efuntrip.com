@@ -373,6 +373,9 @@ class GroupController extends Controller
             $group->leader = DB::table('users')->where('id', $group->leader_id)
                 ->select(array('first_name', 'last_name'))->first();
 
+            $group->contact = DB::table('contact_numbers')->where('group_id', $id)
+                    ->select(array('number'))->first(); //here
+
             $group->total_complete_service_cost = $this->getGroupTotalCompleteServiceCost($id);
             $group->total_cost = $this->getGroupTotalCost($id);
             $group->total_payment = $this->getGroupDeposit($id) + $this->getGroupPayment($id);
@@ -510,16 +513,31 @@ class GroupController extends Controller
 
       if($validator){
         foreach($request->clientIds as $clientId) {
-            GroupUser::create([
-                'group_id' => $request->id,
-                'user_id' => $clientId,
-                'is_vice_leader' => 0,
-                'total_service_cost' => 0
-            ]);
+
+          //addMembers
+           $isMemberExist =  GroupUser::where('user_id', $clientId)
+                      ->where('group_id', $request->id)->first();
+
+           if(!$isMemberExist){
+
+             GroupUser::create([
+                 'group_id' => $request->id,
+                 'user_id' => $clientId,
+                 'is_vice_leader' => 0,
+                 'total_service_cost' => 0
+             ]);
+
+             $response['status'] = 'Success';
+             $response['code'] = 200;
+             $response['data'] = $isMemberExist;
+
+
+           }else{
+             $response['status'] = 'Error';
+             $response['code'] = 404;
+             $response['msg'] = 'Client Not Available!';
+           }
         }
-        $response['status'] = 'Success';
-        $response['code'] = 200;
-        $response['data'] = $request->id;
 
       }else{
         $response['status'] = 'Error';
