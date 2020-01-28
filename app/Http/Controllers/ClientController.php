@@ -194,7 +194,7 @@ class ClientController extends Controller
                     (IFNULL(transactions.total_refund, 0) + IFNULL(totalCompleteServiceCost.amount, 0))
                 ) as collectable,
 
-                p.latest_package, srv.latest_service'))
+                p.latest_package, srv.latest_service, srv.latest_service2, p.latest_package2'))
             ->leftjoin(
                 DB::raw('
                     (
@@ -266,7 +266,7 @@ class ClientController extends Controller
                     'transactions.client_id', '=', 'u.id')
             ->leftjoin(DB::raw('
                     (
-                        Select date_format(max(x.dates),"%M %e, %Y, %l:%i %p") as latest_package, x.client_id
+                        Select date_format(max(x.dates),"%M %e, %Y, %l:%i %p") as latest_package, date_format(max(x.dates),"%Y%m%d") as latest_package2, x.client_id
                         from( SELECT STR_TO_DATE(created_at, "%Y-%m-%d %H:%i:%s") as dates,
                             client_id, status
                             FROM packages
@@ -276,7 +276,7 @@ class ClientController extends Controller
                     'p.client_id', '=', 'u.id')
             ->leftjoin(DB::raw('
                     (
-                        Select date_format(max(cs.servdates),"%M %e, %Y") as latest_service, cs.client_id
+                        Select date_format(max(cs.servdates),"%M %e, %Y") as latest_service, date_format(max(cs.servdates),"%Y%m%d") as latest_service2, cs.client_id
                         from( SELECT STR_TO_DATE(created_at, "%Y-%m-%d") as servdates,
                             group_id, active,client_id
                             FROM client_services
@@ -288,6 +288,12 @@ class ClientController extends Controller
             ->where('role.role_id', '2')
             ->when($sort != '', function ($q) use($sort){
                 $sort = explode('-' , $sort);
+                if($sort[0] == 'name'){
+                    $sort[0] = 'first_name';
+                }
+                else if($sort[0] == 'latest_service' || $sort[0] == 'latest_package'){
+                        $sort[0] = $sort[0].'2';
+                }
                 return $q->orderBy($sort[0], $sort[1]);
             })
             ->when($mode == 'fullname', function ($query) use($q1,$q2){
@@ -1000,9 +1006,9 @@ class ClientController extends Controller
                     'client_id' => $request->client_id,
                     'service_id' => $request->services[$i],
                     'detail' => $service->detail,
-                    'cost' => $request->cost,
-                    'charge' => $request->charge,
-                    'tip' => $request->tip,
+                    'cost' => $service->cost,
+                    'charge' => $service->charge,
+                    'tip' => $service->tip,
                     'tracking' => $request->tracking,
                     'remarks' => $remarks,
                     'active' => 1,

@@ -186,11 +186,11 @@ class GroupController extends Controller
         $search = $request->input('search');
 
         $groups = DB::table('groups as g')
-            ->select(DB::raw('g.id, g.name, CONCAT(u.first_name, " ", u.last_name) as leader, g.balance, g.collectables, p.latest_package as latest_package, srv.latest_service as latest_service'))
+            ->select(DB::raw('g.id, g.name, CONCAT(u.first_name, " ", u.last_name) as leader, g.balance, g.collectables, p.latest_package, srv.latest_service, p.latest_package2, srv.latest_service2'))
             ->leftjoin(DB::raw('(select * from users) as u'),'u.id','=','g.leader_id')
             ->leftjoin(DB::raw('
                     (
-                        Select date_format(max(x.dates),"%M %e, %Y, %l:%i %p") as latest_package, x.group_id
+                        Select date_format(max(x.dates),"%M %e, %Y, %l:%i %p") as latest_package, date_format(max(x.dates),"%Y%m%d") as latest_package2, x.group_id
                         from( SELECT STR_TO_DATE(created_at, "%Y-%m-%d %H:%i:%s") as dates,
                             group_id, status
                             FROM packages
@@ -200,7 +200,7 @@ class GroupController extends Controller
                     'p.group_id', '=', 'g.id')
             ->leftjoin(DB::raw('
                     (
-                        Select date_format(max(cs.servdates),"%M %e, %Y") as latest_service,cs.client_id,cs.group_id
+                        Select date_format(max(cs.servdates),"%M %e, %Y") as latest_service, date_format(max(cs.servdates),"%Y%m%d") as latest_service2 ,cs.client_id,cs.group_id
                         from( SELECT STR_TO_DATE(created_at, "%Y-%m-%d") as servdates,
                             group_id, active,client_id
                             FROM client_services
@@ -214,6 +214,9 @@ class GroupController extends Controller
             })
             ->when($sort != '', function ($q) use($sort){
                 $sort = explode('-' , $sort);
+                if($sort[0] == 'latest_package' || $sort[0] == 'latest_service'){
+                    $sort[0] = $sort[0].'2';
+                }
                 return $q->orderBy($sort[0], $sort[1]);
             })
             ->paginate($perPage);
