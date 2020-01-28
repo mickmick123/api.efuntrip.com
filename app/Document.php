@@ -15,4 +15,8 @@ class Document extends Model
 
     protected $fillable = ['title', 'title_cn', 'is_unique'];
 
+    public function clientReportDocuments() {
+    	return $this->hasMany('App\ClientReportDocument', 'document_id', 'id');
+    }
+
 }

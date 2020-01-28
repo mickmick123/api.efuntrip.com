@@ -78,6 +78,10 @@ class User extends Authenticatable
         return $this->hasMany('App\Package', 'client_id', 'id');
     }
 
+    public function reports() {
+        return $this->hasMany('App\Report', 'processor_id', 'id');
+    }
+
     public function roles() {
         return $this->belongsToMany('App\Role', 'role_user', 'user_id', 'role_id');
     }
