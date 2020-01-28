@@ -376,6 +376,7 @@ class GroupController extends Controller
             $group->contact = DB::table('contact_numbers')->where('group_id', $id)
                     ->select(array('number'))->first(); //here
 
+
             $group->total_complete_service_cost = $this->getGroupTotalCompleteServiceCost($id);
             $group->total_cost = $this->getGroupTotalCost($id);
             $group->total_payment = $this->getGroupDeposit($id) + $this->getGroupPayment($id);
@@ -570,15 +571,20 @@ public function members($id, $page = 20) {
                     ->get();
 
         if(count($packs) > 0){
+
           foreach($packs as $p){
+
               $services = DB::table('client_services as cs')
                   ->select(DB::raw('cs.*'))
                   ->where('tracking',$p->tracking)
                   ->get();
 
-              $p->package_cost = $services[0]->cost+ $services[0]->charge + $services[0]->tip + $services[0]->com_agent + $services[0]->com_client;
-              $p->detail =  $services[0]->detail;
-            //  $p->discount =
+                  foreach($services as $s){
+                    $s->package_cost = $s->cost+ $s->charge + $s->tip + $s->com_agent + $s->com_client;
+                    $s->detail =  $s->detail;
+                    //  $s->discount = $this->getGroupTotalDiscount($id);
+                  }
+                  $packs = $services;
           }
           $temp['packages'] = $packs;
         }else{
@@ -628,7 +634,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $clientServices = DB::table('client_services')
           ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, id, detail, created_at'))
           ->where('active',1)->where('group_id',$groupId)
-          ->groupBy('created_at')
+          ->groupBy(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'))
           ->orderBy('id','DESC')
           ->paginate($page);
 
