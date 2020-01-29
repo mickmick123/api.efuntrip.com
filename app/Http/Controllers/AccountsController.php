@@ -152,7 +152,7 @@ class AccountsController extends Controller
             'contact_numbers.*.number'      => 'nullable|min:11|max:13',
             'contact_numbers.*.is_primary'  => 'nullable',
             'contact_numbers.*.is_mobile'   => 'nullable',
-            'email'                         => 'nullable|email|unique:users,email,'.$id,
+            'email'                         => 'nullable|email|unique:users,email,'.$request->id,
         ]);
 
         if($validator->fails()){
@@ -177,7 +177,7 @@ class AccountsController extends Controller
                     if($contact) {
                         $num_duplicate = 0;
                         foreach($contact as $con) {
-                            if(strval ($con['user_id']) === strval ($id)) {
+                            if(strval ($con['user_id']) === strval ($request->id)) {
                                 $num_duplicate++;
                             }
                         }
@@ -196,7 +196,7 @@ class AccountsController extends Controller
                 $response['errors'] = $contact_error;
                 $response['code'] = 422;
             }else{
-                $user = User::findOrFail($id);
+                $user = User::findOrFail($request->id);
                 
                 if($user){
                     $user->first_name = $request->first_name;
@@ -213,17 +213,15 @@ class AccountsController extends Controller
                     $user->save();
 
                     $user->branches()->detach();
-                    foreach($request->branches as $branch) {
-                        $user->branches()->attach($branch);
-                    }
+                    $user->branches()->attach($request->branch);
 
                     $user->roles()->detach();
-                    foreach($request->branches as $branch) {
-                            $user->roles()->attach($branch);
+                    foreach($request->roles as $role) {
+                        $user->roles()->attach($role);
                     }
 
                     //delete all contact numbers saved first before saving updates
-                    $contact_numbers = ContactNumber::where('user_id', $id)->delete();
+                    $contact_numbers = ContactNumber::where('user_id', $request->id)->delete();
                     foreach($request->contact_numbers as $contactNumber) {
                         if(strlen($contactNumber['number']) !== 0 && $contactNumber['number'] !== null) {
                             ContactNumber::create([
