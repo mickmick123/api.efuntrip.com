@@ -608,6 +608,23 @@ public function members($id, $page = 20) {
 }
 
 
+public function getFunds($group_id, $page = 20){
+
+      $funds = DB::table('client_transactions as ct')->select(DB::raw('ct.*,cs.detail as service_name, cs.client_id, u.first_name, u.last_name'))
+                  ->leftjoin(DB::raw('(select * from client_services) as cs'),'cs.id','=','ct.client_service_id')
+                  ->leftjoin(DB::raw('(select * from users) as u'),'u.id','=','cs.client_id')
+                  ->where([['ct.group_id', '=', $group_id]])
+                  ->orderBy('id', 'desc')
+                  ->paginate($page);
+
+      $response['status'] = 'Success';
+      $response['data'] = $funds;
+      $response['code'] = 200;
+
+      return Response::json($response);
+
+}
+
 public function getClientPackagesByGroup($client_id, $group_id){
 
       $packs = DB::table('packages as p')->select(DB::raw('p.*,g.name as group_name'))

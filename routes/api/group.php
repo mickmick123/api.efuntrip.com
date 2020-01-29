@@ -21,8 +21,9 @@ Route::middleware('auth:api')->group(function() {
 	//Route::get('members-packages/{group_id}/{page?}', 'GroupController@getMembersPackages');
 	Route::get('members-packages/{group_id}/{perPage?}', 'GroupController@getMembersPackages');
 
-
 	Route::get('member-packages/{client_id}/{group_id?}', 'GroupController@getClientPackagesByGroup');
+
+	Route::get('get-funds/{group_id?}/{page?}', 'GroupController@getFunds');
 
 	Route::patch('update-group-commission/{id}', 'GroupController@updateGroupCommission');
 
