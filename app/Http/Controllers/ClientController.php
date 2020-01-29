@@ -194,7 +194,12 @@ class ClientController extends Controller
                     (IFNULL(transactions.total_refund, 0) + IFNULL(totalCompleteServiceCost.amount, 0))
                 ) as collectable,
 
-                p.latest_package, srv.latest_service, srv.latest_service2, p.latest_package2'))
+                p.latest_package, 
+                srv.latest_service, 
+                srv.latest_service2, 
+                p.latest_package2, 
+                IFNULL(csrv.active_service_count, 0) AS active_service_count')
+            )
             ->leftjoin(
                 DB::raw('
                     (
@@ -285,42 +290,54 @@ class ClientController extends Controller
                         where cs.active = 1
                         group by cs.client_id) as srv'),
                     'srv.client_id', '=', 'u.id')
-            ->where('role.role_id', '2')
-            ->when($sort != '', function ($q) use($sort){
+            ->leftJoin(DB::raw('
+                (
+                    Select count(*) as active_service_count, client_id
+
+                    from
+                        client_services as cs
+
+                    where
+                        cs.active = 1
+
+                    group by
+                        cs.client_id
+                ) as csrv'),
+                'csrv.client_id', '=', 'u.id')
+            ->where('role.role_id', '2');
+
+        if( $request->withActiveServiceOnly ) {
+            $clients = $clients->where('active_service_count', '>', 0);
+        }
+
+        $clients = $clients
+            ->when($sort != '', function ($q) use($sort) {
                 $sort = explode('-' , $sort);
-                if($sort[0] == 'name'){
+
+                if($sort[0] == 'name') {
                     $sort[0] = 'first_name';
+                } else if($sort[0] == 'latest_service' || $sort[0] == 'latest_package') {
+                    $sort[0] = $sort[0].'2';
                 }
-                else if($sort[0] == 'latest_service' || $sort[0] == 'latest_package'){
-                        $sort[0] = $sort[0].'2';
-                }
+
                 return $q->orderBy($sort[0], $sort[1]);
             })
-            ->when($mode == 'fullname', function ($query) use($q1,$q2){
-                    return $query->where(function ($query2) use($q1,$q2) {
-                                $query2->where('u.first_name', '=', $q1)
-                                      ->Where('u.last_name', '=', $q2);
-                            })->orwhere(function ($query2) use($q1,$q2) {
-                                $query2->where('u.last_name', '=', $q1)
-                                      ->Where('u.first_name', '=', $q2);
-                            });
+            ->when($mode == 'fullname', function ($query) use($q1, $q2) {
+                    return $query->where(function ($query2) use($q1, $q2) {
+                        $query2->where('u.first_name', '=', $q1)->Where('u.last_name', '=', $q2);
+                    })->orwhere(function ($query2) use($q1, $q2) {
+                        $query2->where('u.last_name', '=', $q1)->Where('u.first_name', '=', $q2);
+                    });
             })
-            ->when($mode == 'id', function ($query) use($search){
-                    return $query->where('u.id','LIKE','%'.$search.'%');
+            ->when($mode == 'id', function ($query) use($search) {
+                return $query->where('u.id','LIKE','%'.$search.'%');
             })
-            ->when($mode == 'name', function ($query) use($search){
-                    return $query->where('first_name' ,'=', $search)
-                                 ->orwhere('last_name' ,'=', $search);
-            // ->when($search != '', function ($q) use($search){
-            //     // $search = explode('-' , $sort);
-            //     return $q->where('u.id','LIKE','%'.$search.'%')
-            //             ->orWhere(DB::raw('concat(u.first_name," ",u.last_name)'),'LIKE','%'.$search.'%');
+            ->when($mode == 'name', function ($query) use($search) {
+                return $query->where('first_name' ,'=', $search)->orwhere('last_name' ,'=', $search);
             })
             ->paginate($perPage);
 
-        $response = $clients;
-
-        return Response::json($response);
+        return Response::json($clients);
     }
 
     public function show($id){
