@@ -670,6 +670,19 @@ class ClientController extends Controller
                 }
                 $client->save();
 
+                //save action logs
+                $detail = "Created new client -> ".$client->first_name.' '.$client->last_name.'.';
+                $detail_cn = "Created new client -> ".$client->first_name.' '.$client->last_name.'.';
+                $log_data = array(
+                    'client_id' => $client->id,
+                    'group_id' => null,
+                    'log_type' => 'Action',
+                    'detail'=> $detail,
+                    'detail_cn'=> $detail_cn,
+                    'amount'=> 0,
+                );
+                LogController::save($log_data);
+
                 foreach($request->nationalities as $nationality) {
                 	$client->nationalities()->attach($nationality);
                 }
@@ -860,6 +873,29 @@ class ClientController extends Controller
                     } else {
                         $client->visa_type = null;
                     }
+                    
+                    if($client->isDirty()){
+                        //getOriginal() -> get original values of model
+                        //getDirty -> get all fields updated with value
+                        $changes = $client->getDirty();
+                        $detail = "Updated client Account.";
+                        foreach ($changes as $key => $value) {
+                            $old = $client->getOriginal($key);
+                            $detail .= "Change ".$key." from ".$old." to ".$value.". ";
+                        }
+                        // save action logs
+                        $detail_cn = $detail;
+                        $log_data = array(
+                            'client_id' => $client->id,
+                            'group_id' => null,
+                            'log_type' => 'Action',
+                            'detail'=> $detail,
+                            'detail_cn'=> $detail_cn,
+                            'amount'=> 0,
+                        );
+                         LogController::save($log_data);
+                    }
+
                     $client->save();
 
                     $client->nationalities()->detach();
@@ -1530,6 +1566,20 @@ class ClientController extends Controller
 
 
         if ($new_package) :
+
+            //save action logs
+            $detail = 'Created new package '.$tracking.'.';
+            $detail_cn = '创建了新的服务包 '.$tracking.'.';
+            $log_data = array(
+                'client_service_id' => null,
+                'client_id' => $client_id,
+                'group_id' => null,
+                'log_type' => 'Action',
+                'detail'=> $detail,
+                'detail_cn'=> $detail_cn,
+            );
+            LogController::save($log_data);
+
             $response['status'] = 'Success';
             $response['tracking'] = $tracking;
             $response['code'] = 200;
@@ -1548,6 +1598,18 @@ class ClientController extends Controller
         if ($check_registered_service < 1) :
             $delete_package = Package::where('tracking', $tracking)->delete();
             if($delete_package) :
+                //save action logs
+                $detail = 'Deleted package number '.$tracking.'.';
+                $detail_cn = '删除了服务包 '.$tracking.'.';
+                $log_data = array(
+                    'client_service_id' => null,
+                    'client_id' => $package->client_id,
+                    'group_id' => null,
+                    'log_type' => 'Action',
+                    'detail'=> $detail,
+                    'detail_cn'=> $detail_cn,
+                );
+                LogController::save($log_data);
                 $result = array('status' => 'success', 'log' => 'Deleted Package', 'code' => 200);
             else :
                 $result = array('status' => 'failed', 'log' => 'Error Deleting Package');
@@ -1590,13 +1652,26 @@ class ClientController extends Controller
             } else {
                 $client = User::create([
                     'first_name' => ($request->first_name) ? $request->first_name : $contactNumber,
-                    'last_name' => 'N/A',
+                    'last_name' => ($request->last_name) ? $request->last_name : 'N/A',
                     'birth_date' => ($request->birthdate) ? $request->birthdate : null,
                     'passport' => ($request->passport) ? $request->passport : null,
                     'gender' => ($request->gender) ? $request->gender : null
                 ]);
 
                 $client->update(['email' => $client->id]);
+
+                //save action logs
+                $detail = "Created new client -> ".$client->first_name.' '.$client->last_name.'.';
+                $detail_cn = "Created new client -> ".$client->first_name.' '.$client->last_name.'.';
+                $log_data = array(
+                    'client_id' => $client->id,
+                    'group_id' => null,
+                    'log_type' => 'Action',
+                    'detail'=> $detail,
+                    'detail_cn'=> $detail_cn,
+                    'amount'=> 0,
+                );
+                LogController::save($log_data);
 
                 ContactNumber::create([
                     'user_id' => $client->id,
