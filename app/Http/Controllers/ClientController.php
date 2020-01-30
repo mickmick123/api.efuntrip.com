@@ -1542,7 +1542,8 @@ class ClientController extends Controller
                 $depo->save();
 
                  // save transaction logs
-                $detail = 'Deposited an amount of Php'.$amount.' from client '.$client_id.'.';
+                $client = User::findorfail($client_id);
+                $detail = 'Deposited an amount of Php'.$amount.' from client '.$client->first_name.' '.$client->last_name.'.';
                 $detail_cn = '预存了款项 Php'.$amount.' 从客户 '.$client_id.'.';
                 $log_data = array(
                     'client_service_id' => null,

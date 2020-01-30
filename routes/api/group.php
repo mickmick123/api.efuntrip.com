@@ -25,6 +25,8 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('get-funds/{group_id?}/{page?}', 'GroupController@getFunds');
 
+	Route::post('add-funds', 'GroupController@addFunds');
+
 	Route::patch('update-group-commission/{id}', 'GroupController@updateGroupCommission');
 
 	Route::get('members/{id}/{page?}', 'GroupController@members');
