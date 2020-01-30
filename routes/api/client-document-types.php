@@ -13,5 +13,4 @@ Route::middleware('auth:api')->group(function() {
 	Route::patch('details/{id}', 'ClientDocumentTypeController@update');
 
 	Route::delete('{id}', 'ClientDocumentTypeController@destroy');
-
 });

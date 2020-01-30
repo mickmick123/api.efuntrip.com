@@ -10,4 +10,12 @@ Route::middleware('auth:api')->group(function() {
 
     Route::post('upload-documents', 'ClientDocumentController@uploadDocuments');
 
+    Route::get('client/{id}', 'ClientDocumentController@getDocumentsByClient');
+
+    Route::post('document-type', 'ClientDocumentController@getDocumentTypes');
+
+    Route::post('upload/{id}', 'ClientDocumentController@uploadDocumentsByClient');
+
+    Route::post('delete-client-documents', 'ClientDocumentController@deleteClientDocument');
+
 });
