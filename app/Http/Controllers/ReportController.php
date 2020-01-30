@@ -12,7 +12,6 @@ class ReportController extends Controller
 	public function clientsServices(Request $request) {
 		$clientIds = $request->input("client_ids") ? $request->client_ids : [];
 		$clientIds = explode("," , $clientIds);
-		//dd($clientIds);
 
         $clientsServices = [];
         foreach($clientIds as $clientId) {
@@ -20,7 +19,7 @@ class ReportController extends Controller
 
         	if( $client ) {
         		$services = DB::table('client_services as cs')
-	                ->select(DB::raw('cs.id, date_format(cs.created_at, "%M %e, %Y") as date, cs.tracking, cs.detail, cs.cost, cs.charge, cs.tip, IFNULL(transactions.discount, 0) as discount'))
+	                ->select(DB::raw('cs.id, date_format(cs.created_at, "%M %e, %Y") as date, cs.tracking, cs.detail, cs.cost, cs.charge, cs.tip, cs.active, IFNULL(transactions.discount, 0) as discount'))
 	                ->leftjoin(DB::raw('
 	                    (
 	                        Select 
@@ -38,6 +37,7 @@ class ReportController extends Controller
 	                    ) as transactions'),
 	                    'transactions.client_service_id', '=', 'cs.id')
 	                ->where('cs.client_id', $clientId)
+	                ->where('cs.active', 1)
 	                ->orderBy('cs.id', 'desc')
 	                ->get();
 
@@ -45,7 +45,6 @@ class ReportController extends Controller
 	        		'id' => $client->id,
 	        		'name' => $client->first_name . ' ' . $client->last_name,
 	        		'services' => $services,
-	        		
 	        	];
         	}
         }
@@ -55,6 +54,7 @@ class ReportController extends Controller
 		    'clientsServices' => $clientsServices
 		];
 		$response['code'] = 200;
+
 		return Response::json($response);
 	}
 
