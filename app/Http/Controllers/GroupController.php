@@ -314,12 +314,31 @@ class GroupController extends Controller
                 $group = Group::findOrFail($request->group_id);
 
                 $oldLeaderId = $group->leader_id;
+                $oldLeader = User::where('id',$oldLeaderId)->first();
+                $oldLeaderLabel = '['.$oldLeaderId.'] '.$oldLeader->first_name.' '.$oldLeader->last_name;
 
                 $group->update(['leader_id' => $request->client_id]);
+
+                $newLeader = User::where('id',$request->client_id)->first();
+                $newLeaderLabel = '['.$request->client_id.'] '.$newLeader->first_name.' '.$newLeader->last_name;
 
                 DB::table('group_user')->where('group_id', $request->group_id)
                     ->whereIn('user_id', [$oldLeaderId, $request->client_id])
                     ->update(['is_vice_leader' => 0]);
+
+                //save action logs
+                $detail = 'Change new group main leader from <strong> ' .$oldLeaderLabel. '</strong> to <strong>' . $newLeaderLabel .'</strong>.';
+                $detail_cn = '创建了新的服务包 '.$tracking.'.';
+                $log_data = array(
+                    'client_service_id' => null,
+                    'client_id' => null,
+                    'group_id' => $request->group_id,
+                    'log_type' => 'Action',
+                    'detail'=> $detail,
+                    'detail_cn'=> $detail_cn,
+                );
+                LogController::save($log_data);    
+
             } elseif( $request->role == 'vice-leader' ) {
                 DB::table('group_user')->where('group_id', $request->group_id)->where('user_id', $request->client_id)
                     ->update(['is_vice_leader' => 1]);
@@ -353,6 +372,19 @@ class GroupController extends Controller
         		'tracking' => $this->generateGroupTracking(),
         		'address' => User::findOrFail($request->leader)->address
         	]);
+
+            //save action logs
+            $detail = 'Created new group ->'.$request->group_name.'.';
+            $detail_cn = '建立新群组 '.$request->group_name.'.';
+            $log_data = array(
+                'client_service_id' => null,
+                'client_id' => null,
+                'group_id' => $group->id,
+                'log_type' => 'Action',
+                'detail'=> $detail,
+                'detail_cn'=> $detail_cn,
+            );
+            LogController::save($log_data);
 
         	foreach($request->branches as $branch) {
         		$group->branches()->attach($branch);
@@ -480,6 +512,14 @@ class GroupController extends Controller
         	$group = Group::find($id);
 
         	if( $group ) {
+                $oldName = $group->name;
+                $oldAddress = $group->address;
+                $oldNumber = '';
+                $checkNum = ContactNumber::where('group_id', $id)->where('is_primary',1)->first();
+                if($checkNum){
+                    $oldNumber = $checkNum->number;
+                }
+
         		$group->name = $request->group_name;
         		$group->address = $request->address;
         		$group->save();
@@ -492,6 +532,31 @@ class GroupController extends Controller
         				'is_mobile' => $request->contact_number['is_mobile']
         			]
         		);
+
+                $detail = '';
+                if($oldName != $request->group_name) {
+                    $detail .= ' Change group name from ' . $oldName . ' to ' . $request->group_name .'.';
+                }
+                if($oldAddress != $request->address) {
+                    $detail .= ' Change group address from ' . $oldAddress . ' to ' . $request->address .'.';
+                }
+                if($oldNumber != $request->contact_number['number']) {
+                    $detail.= ' Change group contact number from ' . $oldNumber . ' to ' . $request->contact_number['number'] .'.';
+                }
+
+                if($detail!=''){
+                    //save action logs
+                    $detail_cn = $detail;
+                    $log_data = array(
+                        'client_service_id' => null,
+                        'client_id' => null,
+                        'group_id' => $id,
+                        'log_type' => 'Action',
+                        'detail'=> $detail,
+                        'detail_cn'=> $detail_cn,
+                    );
+                    LogController::save($log_data);
+                }
 
         		$response['status'] = 'Success';
         		$response['code'] = 200;
@@ -530,6 +595,21 @@ class GroupController extends Controller
                  'is_vice_leader' => 0,
                  'total_service_cost' => 0
              ]);
+
+            // save action logs
+            $member = User::where('id',$clientId)->first();
+            $memberLabel = '[' . $clientId . '] ' . $member->first_name.' '.$member->last_name;
+            $detail = 'Added ' . $memberLabel . ' as new member of the group.';
+            $detail_cn = 'Added ' . $memberLabel . ' as new member of the group.';
+            $log_data = array(
+                'client_id' => null,
+                'group_id' => $request->id,
+                'log_type' => 'Action',
+                'detail'=> $detail,
+                'detail_cn'=> $detail_cn,
+                'amount'=> 0,
+            );
+            LogController::save($log_data);
 
              $response['status'] = 'Success';
              $response['code'] = 200;

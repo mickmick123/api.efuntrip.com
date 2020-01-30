@@ -141,6 +141,10 @@ class LogController extends Controller
         }  
         $translogs = DB::table('logs')->where('client_id',$client_id)->where('group_id',$group_id)->where('log_type','Action')->orderBy('id','desc')->get();
 
+        if($group_id > 0){
+            $translogs = DB::table('logs')->where('group_id',$group_id)->where('log_type','Action')->orderBy('id','desc')->get();
+        }
+
         $arraylogs = [];
         $month = null;
         $day = null;
