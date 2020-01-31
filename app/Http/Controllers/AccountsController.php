@@ -58,13 +58,13 @@ class AccountsController extends Controller
             'weight'                        => 'nullable',
             'address'                       => 'required',
             'contact_numbers'               => 'required|array',
-            'contact_numbers.*.number'      => 'nullable|min:11|max:13',
+            'contact_numbers.*.number'      => 'nullable',
             'contact_numbers.*.is_primary'  => 'nullable',
             'contact_numbers.*.is_mobile'   => 'nullable',
             'email'                         => 'nullable|email|unique:users',
-            'branch'                        => 'required'
-            // 'password'                      => 'required|confirmed|min:6'         
-        ]);
+            'branch'                        => 'required',
+            'password'                      => 'nullable|confirmed|min:6'
+            ]);
 
 
 
@@ -73,6 +73,16 @@ class AccountsController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
+            //Check if password is set to default
+            $is_default_password = $request->is_default_password;
+            $password = "";
+
+            if($is_default_password){
+                $password = Hash::make('123admin');
+            }else{
+                $password = Hash::make($request->password);
+            }    
+
             $user = new User;
             $user->first_name = $request->first_name;
             $user->middle_name = $request->middle_name;
@@ -84,7 +94,7 @@ class AccountsController extends Controller
             $user->weight = $request->weight;
             $user->address = $request->address;
             $user->email = $request->email;
-            $user->password = Hash::make('123admin');
+            $user->password = $password;
             $user->save();
 
             foreach($request->contact_numbers as $contactNumber) {
@@ -149,10 +159,12 @@ class AccountsController extends Controller
             'weight'                        => 'nullable',
             'address'                       => 'required',
             'contact_numbers'               => 'required|array',
-            'contact_numbers.*.number'      => 'nullable|min:11|max:13',
+            'contact_numbers.*.number'      => 'nullable',
             'contact_numbers.*.is_primary'  => 'nullable',
             'contact_numbers.*.is_mobile'   => 'nullable',
             'email'                         => 'nullable|email|unique:users,email,'.$request->id,
+            // 'password'                  => 'nullable',
+            // 'new_password'                      => 'nullable|confirmed|min:6|different:password',
         ]);
 
         if($validator->fails()){
