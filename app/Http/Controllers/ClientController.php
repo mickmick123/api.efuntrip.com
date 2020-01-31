@@ -1720,18 +1720,34 @@ class ClientController extends Controller
         $auth_branch =  $this->getBranchAuth();
 
         $sort = $request->input('sort');
+        $search = $request->input('search');
 
         $services = ClientService::with('client')->whereHas('client.branches', function ($query) use ($auth_branch) {
                 $query->where('branches.id', '=', $auth_branch);
                 })->where('client_services.status','pending')->where('client_services.active', '1')
                 ->where(function($query) {
                     return $query->where('checked', '0')->orWhere('checked', NULL);
-                })->with(array('client.groups' => function($query){
+                })
+                ->with(array('client.groups' => function($query){
                     $query->select('name');
                 }))
+                ->leftjoin('group_user', 'client_services.client_id', '=', 'group_user.user_id')
+                ->leftjoin('groups', 'group_user.group_id', '=', 'groups.id')
+                ->select('client_services.*', 'groups.name as group_name')
                 ->when($sort != '', function ($q) use($sort){
                     $sort = explode('-' , $sort);
-                    return $q->orderBy('client_services.' . $sort[0], $sort[1]);
+                    if($sort[0] === 'group') {
+                        return $q->orderBy('group_name', $sort[1]);
+                    } else {
+                        return $q->orderBy('client_services.' . $sort[0], $sort[1]);
+                    }
+                    
+                })
+                ->where(function ($services) use($search) {
+                    $dateSearch = str_replace('/', '-', $search);
+                    $services->orwhere('client_services.created_at', 'LIKE', '%'.$dateSearch.'%')
+                          ->orwhere('client_services.detail', 'LIKE', '%'.$search.'%')
+                          ->orwhere('groups.name', 'LIKE', '%'.$search.'%');
                 })
                 ->paginate($perPage);
 
@@ -1748,6 +1764,7 @@ class ClientController extends Controller
         $auth_branch =  $this->getBranchAuth();
 
         $sort = $request->input('sort');
+        $search = $request->input('search');
 
         $services = ClientService::with('client')->whereHas('client.branches', function ($query) use ($auth_branch) {
                 $query->where('branches.id', '=', $auth_branch);
@@ -1758,9 +1775,22 @@ class ClientController extends Controller
                 })->with(array('client.groups' => function($query){
                     $query->select('name');
                 }))
+                ->leftjoin('group_user', 'client_services.client_id', '=', 'group_user.user_id')
+                ->leftjoin('groups', 'group_user.group_id', '=', 'groups.id')
+                ->select('client_services.*', 'groups.name as group_name')
                 ->when($sort != '', function ($q) use($sort){
                     $sort = explode('-' , $sort);
-                    return $q->orderBy('client_services.' . $sort[0], $sort[1]);
+                    if($sort[0] === 'group') {
+                        return $q->orderBy('group_name', $sort[1]);
+                    } else {
+                        return $q->orderBy('client_services.' . $sort[0], $sort[1]);
+                    }
+                })
+                ->where(function ($services) use($search) {
+                    $dateSearch = str_replace('/', '-', $search);
+                    $services->orwhere('client_services.created_at', 'LIKE', '%'.$dateSearch.'%')
+                          ->orwhere('client_services.detail', 'LIKE', '%'.$search.'%')
+                          ->orwhere('groups.name', 'LIKE', '%'.$search.'%');
                 })
                 ->paginate($perPage);
 
@@ -1776,7 +1806,7 @@ class ClientController extends Controller
         $auth_branch =  $this->getBranchAuth();
 
         $date = $request->input('date');
-
+        $search = $request->input('search');
         $sort = $request->input('sort');
 
         $services = ClientService::with('client')->whereHas('client.branches', function ($query) use ($auth_branch) {
@@ -1785,15 +1815,28 @@ class ClientController extends Controller
                 ->where('client_services.status','complete')
                 ->where('client_services.active', '1')
                 ->where('client_services.created_at', $date)
-                // ->where('client_services.created_at','LIKE','%'.$date.'%')
                 ->where(function($query) {
                     return $query->where('checked', '0')->orWhere('checked', NULL);
                 })->with(array('client.groups' => function($query){
                     $query->select('name');
                 }))
+                ->leftjoin('users', 'client_services.client_id', '=', 'users.id')
+                ->select('client_services.*', DB::raw('CONCAT(users.last_name," ",users.first_name) AS full_name'))
+                ->where(function ($services) use($search) {
+                    $dateSearch = str_replace('/', '-', $search);
+                    $services->orwhere('client_services.created_at', 'LIKE', '%'.$dateSearch.'%')
+                          ->orwhere(DB::raw('CONCAT(users.last_name," ",users.first_name)'), 'LIKE', '%'.$search.'%')
+                          ->orwhere('client_services.id', 'LIKE', '%'.$search.'%')
+                          ->orwhere('client_services.tracking', 'LIKE', '%'.$search.'%')
+                          ->orwhere('client_services.detail', 'LIKE', '%'.$search.'%');
+                })
                 ->when($sort != '', function ($q) use($sort){
                     $sort = explode('-' , $sort);
-                    return $q->orderBy('client_services.' . $sort[0], $sort[1]);
+                    if($sort[0] === 'name') {
+                        return $q->orderBy('full_name', $sort[1]);
+                    } else {
+                        return $q->orderBy('client_services.' . $sort[0], $sort[1]);
+                    }
                 })
                 ->paginate($perPage);
 
