@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
-//use Carbon\Carbon;
+use Carbon\Carbon;
 use App\ClientService;
 
 use App\ClientTransaction;
@@ -12,16 +12,21 @@ use App\Group;
 
 use App\User;
 
+
 use App\GroupUser;
 
 use App\Package;
 
 use App\Branch;
+use App\BranchGroup;
 
 use App\Service;
 use App\ServiceProfileCost;
+use App\ServiceBranchCost;
+use App\ServiceProfile;
 
-use DB, Response, Validator;
+
+use Auth, DB, Response, Validator;
 
 use Illuminate\Http\Request;
 
@@ -32,7 +37,7 @@ class GroupController extends Controller
     	$numeric = '0123456789';
 
     	do {
-    		$tracking = '';
+    		$tracking = 'GL';
 	        for($i=0; $i<7; $i++) {
 	            $tracking .= $numeric[rand(0, strlen($numeric) - 1)];
 	        }
@@ -571,6 +576,49 @@ class GroupController extends Controller
 	}
 
 
+  public function deleteMember(Request $request) {
+
+    $leader = Group::where('id', $request->group_id)
+        ->where('leader_id', $request->member_id)
+        ->count();
+
+    $success = false;
+
+    if($leader != 0) {
+        $success = false;
+        $message = 'Cannot delete leader of the group';
+    } else {
+        $services = ClientService::where('group_id', $request->group_id)
+            ->where('client_id', $request->member_id)
+            ->where('active', 1)
+            ->count();
+
+        if($services != 0) {
+            $success = false;
+            $message = 'Cannot delete member/s that has registered service/s.';
+        } else {
+            GroupUser::where('group_id', $request->group_id)->where('user_id', $request->member_id)->delete();
+
+            // Action log here
+
+
+            $success = true;
+            $message = 'Member successfully deleted';
+        }
+    }
+
+    if($success){
+      $response['status'] = 'Success';
+      $response['code'] = 200;
+      $response['message'] = $message;
+    }else{
+      $response['status'] = 'Failed';
+      $response['code'] = 422;
+      $response['message'] = $message;
+    }
+
+    return Response::json($response);
+  }
 
 
   public function addMembers(Request $request) {
@@ -632,19 +680,77 @@ class GroupController extends Controller
   }
 
 
-public function members($id, $page = 20) {
+public function members(Request $request, $id, $page = 20) {
+
+    $sort = $request->input('sort');
+    $search = $request->input('search');
+
+
+    $search_id = 0;
+    $q1 = '';  $q2 = ''; $spaces = 0;
+    if (preg_match("/^\d+$/", $search)) {
+        $search_id = 1;
+    }
+
+    if(preg_match('/\s/',$search)){
+        $q = explode(" ", $search);
+        $spaces = substr_count($search, ' ');
+        if($spaces == 2){
+            $q1 = $q[0]." ".$q[1];
+            $q2 = $q[2];
+        }
+        if($spaces == 1){
+            $q1 = $q[0];
+            $q2 = $q[1];
+        }
+    }
+
+    $mode = '';
+    if($search_id == 1 && $spaces == 0){
+        $mode = 'id';
+    }
+    else if($search_id == 0 && $spaces == 0 && $search != ''){
+        $mode = 'name';
+    }
+    else if($spaces >0){
+        $mode = 'fullname';
+    }
+
+
 
     $groups = DB::table('group_user as g_u')
         ->select(DB::raw('g_u.id, CONCAT(u.first_name, " ", u.last_name) as name, g_u.user_id,  g_u.is_vice_leader, g_u.total_service_cost'))
         ->leftjoin(DB::raw('(select * from users) as u'),'u.id','=','g_u.user_id')
         ->orderBy('g_u.id', 'desc')
         ->where('group_id', $id)
+
+        ->when($sort != '', function ($q) use($sort){
+            $sort = explode('-' , $sort);
+            return $q->orderBy($sort[0], $sort[1]);
+        })
+
+        ->when($mode == 'fullname', function ($query) use($q1,$q2){
+                return $query->where(function ($query2) use($q1,$q2) {
+                            $query2->where('u.first_name', '=', $q1)
+                                  ->Where('u.last_name', '=', $q2);
+                        })->orwhere(function ($query2) use($q1,$q2) {
+                            $query2->where('u.last_name', '=', $q1)
+                                  ->Where('u.first_name', '=', $q2);
+                        });
+        })
+        ->when($mode == 'id', function ($query) use($search){
+                return $query->where('u.id','LIKE','%'.$search.'%');
+        })
+        ->when($mode == 'name', function ($query) use($search){
+                return $query->where('first_name' ,'=', $search)
+                             ->orwhere('last_name' ,'=', $search);
+        })
         ->paginate($page);
 
-      $response = $groups;
+        $response = $groups;
 
-      $ctr=0;
-      $temp = [];
+        $ctr=0;
+        $temp = [];
       foreach($groups->items() as $g){
          $packs = DB::table('packages as p')->select(DB::raw('p.*,g.name as group_name'))
                     ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','p.group_id')
@@ -953,60 +1059,26 @@ public function getClientPackagesByGroup($client_id, $group_id){
 }
 
 
-  public function getClientPackagesByBatch($groupId, $page = 20){
-
-        $clientServices = DB::table('client_services')
-          ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, id, detail, created_at'))
-          ->where('active',1)->where('group_id',$groupId)
-          ->groupBy(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'))
-          ->orderBy('id','DESC')
-          ->paginate($page);
-
-        $ctr = 0;
-        $temp = [];
-        $response = $clientServices;
-
-        foreach($clientServices->items() as $s){
-
-          $query = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->where('active', 1);
-
-          $temp['total_service_cost'] = $query->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)"));
-          $temp['detail'] = $s->detail;
-          $temp['service_date'] = $s->sdate;
-          $temp['sdate'] = $s->sdate;
-          $temp['group_id'] = $groupId;
-
-          $queryMembers = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->orderBy('created_at','DESC')->orderBy('client_id')->groupBy('client_id')->get();
-
-          $ctr2 = 0;
-          $members = [];
-
-          foreach($queryMembers as $m){
-                $ss =  ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->where('client_id',$m->client_id)->get();
-
-            //  if(count($ss)){
-                  $members[$ctr2] = User::where('id',$m->client_id)->select('first_name','last_name')->first();
-                  $members[$ctr2]['tcost'] = $query->where('client_id',$m->client_id)->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)"));
-                  $members[$ctr2]['services'] = $ss;
-            //  }
-              $ctr2++;
-          }
-          $temp['members'] = $members;
-          $response[$ctr] = $temp;
-          $ctr++;
-        }
-
-        return Response::json($response);
-  }
 
 
-   public function getClientPackagesByService($groupId, $page = 20){
+   public function getClientPackagesByService(Request $request, $groupId, $page = 20){
+
+     $sort = $request->input('sort');
+     $search = $request->input('search');
 
      $clientServices = DB::table('client_services')
        ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, created_at'))
        ->where('active',1)->where('group_id',$groupId)
        ->groupBy('service_id')
        ->orderBy('detail','DESC')
+
+       ->when($sort != '', function ($q) use($sort){
+           $sort = explode('-' , $sort);
+           return $q->orderBy($sort[0], $sort[1]);
+       })
+       ->when($search != '', function ($q) use($search){
+           return $q->where('detail','LIKE','%'.$search.'%');
+       })
        ->paginate($page);
 
      $ctr = 0;
@@ -1084,6 +1156,68 @@ public function getClientPackagesByGroup($client_id, $group_id){
           return Response::json($response);
 
   }
+
+  //$groupId, $page = 20
+  public function getClientPackagesByBatch(Request $request, $groupId, $perPage = 10){
+
+
+    $sort = $request->input('sort');
+    $search = $request->input('search');
+
+
+        $clientServices = DB::table('client_services')
+          ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, id, detail, created_at'))
+          ->where('active',1)->where('group_id',$groupId)
+
+          ->when($sort != '', function ($q) use($sort){
+              $sort = explode('-' , $sort);
+              return $q->orderBy($sort[0], $sort[1]);
+          })
+          ->when($search != '', function ($q) use($search){
+              return $q->where('created_at','LIKE','%'.$search.'%');
+          })
+
+          ->groupBy(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'))
+          ->orderBy('id','DESC')
+          ->paginate($perPage);
+
+        $ctr = 0;
+        $temp = [];
+        $response = $clientServices;
+
+        foreach($clientServices->items() as $s){
+
+          $query = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->where('active', 1);
+
+          $temp['total_service_cost'] = $query->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)"));
+          $temp['detail'] = $s->detail;
+          $temp['service_date'] = $s->sdate;
+          $temp['sdate'] = $s->sdate;
+          $temp['group_id'] = $groupId;
+
+          $queryMembers = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->orderBy('created_at','DESC')->orderBy('client_id')->groupBy('client_id')->get();
+
+          $ctr2 = 0;
+          $members = [];
+
+          foreach($queryMembers as $m){
+                $ss =  ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->where('client_id',$m->client_id)->get();
+
+            //  if(count($ss)){
+                  $members[$ctr2] = User::where('id',$m->client_id)->select('first_name','last_name')->first();
+                  $members[$ctr2]['tcost'] = $query->where('client_id',$m->client_id)->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)"));
+                  $members[$ctr2]['services'] = $ss;
+            //  }
+              $ctr2++;
+          }
+          $temp['members'] = $members;
+          $response[$ctr] = $temp;
+          $ctr++;
+        }
+
+        return Response::json($response);
+  }
+
 
 
 
@@ -1259,6 +1393,475 @@ public function getClientPackagesByGroup($client_id, $group_id){
         'trackings' => $trackingArray]);
 
    }
+
+
+   public function getClientServices($client_id, $group_id) {
+
+        $result['services'] = DB::table('client_services')
+                 ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, tracking, status, detail, created_at'))
+                ->where('group_id', ($group_id != 0) ? $group_id : NULL)
+                ->where('client_id', $client_id)
+                ->orderBy('id', 'desc')
+                ->get();
+
+
+        if($group_id != 0){
+            $result['packages'] = Package::where('group_id', $group_id)
+            ->where('client_id', $client_id)->orderBy('id', 'desc')->get();
+        }
+        else{
+            $result['packages'] = Package::where('client_id', $client_id)->orderBy('id', 'desc')->get();
+        }
+
+
+        $response['status'] = 'Success';
+        $response['data'] = $result;
+        $response['code'] = 200;
+
+        return Response::json($response);
+
+   }
+
+
+   public function transfer(Request $request) {
+
+        if($request->option == 'client-to-group') {
+            $groupId = 0;
+            $newGroupId = $request->group_id;
+        } elseif($request->option == 'group-to-client') {
+            $groupId = $request->group_id;
+            $newGroupId = null;
+        }
+
+        $gentracking = null;
+        for($i=0; $i<count($request->services); $i++) {
+
+            if($request->packages[$i] == 0) { //New package
+                if($gentracking == null){
+                    $type = ($request->option == 'client-to-group') ? 'group' : 'individual';
+                    $tracking = $this->generateTracking($type);
+                    $gentracking = $tracking;
+
+                    Package::create([
+                        'client_id' => $request->member_id,
+                        'group_id' => $newGroupId,
+                        'log_date' => Carbon::now()->format('F j, Y, g:i a'),
+                        'tracking' => $tracking,
+                        'status' => '0'
+                    ]);
+                }
+                else{
+                    $tracking = $gentracking;
+                }
+            } else {
+                $tracking = $request->packages[$i];
+            }
+
+            $oldtrack = null;
+            $getServ = ClientService::where('id', $request->services[$i])
+                //->where('client_id', $request->member_id)
+                //->where('group_id', $groupId)
+                ->first();
+
+            if($getServ){
+                $oldtrack = $getServ->tracking;
+                $getServ->group_id = $newGroupId;
+                $getServ->tracking = $tracking;
+                $getServ->save();
+
+                $response['status'] = 'Success';
+                $response['code'] = 200;
+                $response['data']  = "UPDATED";
+
+                return Response::json($response);
+            }
+
+            $this->updatePackageStatus($tracking);
+            $this->updatePackageStatus($oldtrack);
+
+            //Logs here
+
+        }
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data']  = $getServ;
+
+        return Response::json($response);
+    }
+
+
+    private function updatePackageStatus($tracking){
+        $status = null; // empty
+
+        $countCompleteServices = DB::table('client_services')
+            ->select('*')
+            ->where('tracking', $tracking)
+            ->where('active', 1)
+            ->where('status', 'complete')
+            ->count();
+
+        $countOnProcessServices = DB::table('client_services')
+            ->select('*')
+            ->where('tracking', $tracking)
+            ->where('active', 1)
+            ->where('status', 'on process')
+            ->count();
+
+        $countPendingServices = DB::table('client_services')
+            ->select('*')
+            ->where('tracking', $tracking)
+            ->where('active', 1)
+            ->where('status', 'pending')
+            ->count();
+
+        if($countCompleteServices > 0){
+            $status = "complete";
+        }
+
+        if($countOnProcessServices > 0){
+            $status = "on process";
+        }
+
+        if($countPendingServices > 0){
+            $status = "pending";
+        }
+
+        $data = array('status' => $status);
+
+        DB::table('packages')
+            ->where('tracking', $tracking)
+            ->update($data);
+    }
+
+
+
+    private function generateTracking($option) {
+        Repack:
+            $tracking = ($option == 'group')
+                ? $this->generateGroupTracking()
+                : $this->generateRandomString(7);
+            $check_package = Package::where('tracking', $tracking)->count();
+        if($check_package > 0) :
+            goto Repack;
+        endif;
+
+        return $tracking;
+    }
+
+
+
+
+   public function editServices(Request $request) {
+
+
+     $collection = ClientService::whereIn('id', $request->services);
+     $oldCollect = $collection;
+     $clientServices = $collection->get();
+
+     $getGroup = Group::findOrFail($request->group_id);
+
+
+     foreach($clientServices as $clientService) {
+
+          $dt = Carbon::now();
+          $dt = $dt->toDateString();
+
+          $author = $request->note.' - '. Auth::user()->first_name.' <small>('.$dt.')</small>';
+          if($request->note==''){
+              $author = '';
+          }
+
+          $note = $clientService->remarks;
+          if($note!=''){
+              if($request->note!=''){
+                  $note = $note.'</br>'.$author;
+              }
+          }
+          else{
+              $note = $author;
+          }
+
+
+          $srv = ClientService::findOrFail($clientService->id);
+
+          //For translation
+          $translated = Service::where('id',$srv->service_id)->first();
+          $cnserv =$srv->detail;
+          if($translated){
+              $cnserv = ($translated->detail_cn!='' ? $translated->detail_cn : $translated->detail);
+          }
+          $cdetail = $cnserv;
+
+          $oldDiscount = 0;
+          $newDiscount = 0;
+
+
+          if($request->discount > 0) {
+
+          $__oldDiscount = null;
+
+          //Saving Client Transaction
+          $dc = ClientTransaction::where("client_service_id",$srv->id)->where('type','Discount')->withTrashed()->first();
+
+              if($dc){
+                  $__oldDiscount = $dc->amount;
+                  $oldDiscount = $dc->amount;
+
+                  if($dc->amount != $request->discount){
+
+                      $newDiscount = $request->discount;
+
+                      $dc->amount =  $request->get('discount');
+                      $dc->reason =  $request->get('reason');
+                      $dc->deleted_at = null;
+                      $dc->save();
+                  }else{
+                      if($dc->reason != $request->reason){
+                          $dc->reason =  $request->get('reason');
+                          $dc->save();
+                      }
+                  }
+              }
+
+              else{
+
+                  $newDiscount = $request->discount;
+                  ClientTransaction::create([
+                      'client_id' => $getGroup->leader_id,
+                      'type' => 'Discount',
+                      'amount' => $request->get('discount'),
+                      'group_id' => $getGroup->id,
+                      'client_service_id' => $srv->id,
+                      'reason' => $request->get('reason'),
+                      'tracking' => $srv->tracking,
+                      'log_date' => Carbon::now()->format('m/d/Y h:i:s A')
+                  ]);
+
+
+
+              }
+
+          if($__oldDiscount == $request->get('discount')){
+              $oldDiscount = $__oldDiscount;
+              $newDiscount = $request->get('discount');
+          }
+
+      }
+      else {
+          $discountExist = ClientTransaction::where('client_service_id', $srv->id)->where('type','Discount')->first();
+          if($discountExist && $request->active != 0){
+              $oldDiscount = $discountExist->amount;
+              $newDiscount = 0;
+
+
+              ClientTransaction::where('client_id', $srv->client_id)
+                  ->where('group_id', $srv->group_id)
+                  ->where('client_service_id', $srv->id)
+                  ->where('tracking', $srv->tracking)
+                  ->forceDelete();
+          }
+      }
+
+
+      $old_total_charge = $srv->cost + $srv->tip + $srv->charge + $srv->com_client + $srv->com_agent;
+      $new_total_charge = ($request->cost != null ? $request->cost : $srv->cost) +
+                          ($request->charge != null ? $request->charge : $srv->tip) +
+                          ($request->charge != null ? $request->charge : $srv->charge)
+                          + $srv->com_client + $srv->com_agent;
+
+
+
+      if($newDiscount > 0 || $oldDiscount > 0 ){
+          $old_total_charge -= $oldDiscount;
+          $new_total_charge -= $newDiscount;
+      }
+      $service_status = $request->status;
+
+
+      if($request->status!=null) {
+          $srv->status = $request->status;
+      }
+      if($request->active!=null) {
+          $srv->active = $request->active;
+      }
+
+      $srv->cost = ($request->cost != null ? $request->cost : $srv->cost);
+      $srv->tip = ($request->charge != null ? $request->charge : $srv->tip);
+      $srv->remarks = $note;
+      $srv->save();
+
+          // Check package updates
+          ClientService::where('group_id', $clientService->group_id)
+              ->where('client_id', $clientService->client_id)
+              ->where('service_id', $clientService->service_id)
+              ->where('tracking', $clientService->tracking)
+              ->select('tracking')
+              ->get()
+              ->map(function($d) {
+                  $this->updatePackageStatus($d->tracking);
+              });
+   }
+
+
+
+     $response['status'] = 'Success';
+     $response['code'] = 200;
+     $response['data']  = $clientServices;
+
+ 		 return Response::json($response);
+ 	}
+
+
+
+
+  public function switchBranch($groupId, $branchId) {
+
+    if($branchId !== 0){
+
+        $group = Group::where('id',$groupId)->first();
+        if($group){
+            $branchGroup = BranchGroup::where('group_id',$groupId)->first();
+            $branchGroup->branch_id = $branchId;
+            $branchGroup->save();
+        }
+
+
+        $level = $group->service_profile_id;
+
+        $members = GroupUser::where('group_id',$groupId)->pluck('user_id');
+
+        $member_services = ClientService::whereIn('client_id',$members)->where('group_id',$groupId)->get();
+
+
+        foreach($member_services as $ms){
+            $getService = Service::where('id',$ms->service_id)->first();
+            if($getService){
+                $charge = 0;
+                $cost = 0;
+                $tip = 0;
+                if($branchId > 1){
+                    $amounts = ServiceBranchCost::where('branch_id',$branchId)->where('service_id',$getService->id)->first();
+                    $charge = $amounts->charge;
+                    $cost = $amounts->cost;
+                    $tip = $amounts->tip;
+                }
+
+                if($level > 0){ //service profile
+                    $pcost = ServiceProfileCost::where('profile_id',$level)->where('branch_id',$branchId)->where('service_id',$getService->id)->first();
+
+                    $charge = $pcost->charge;
+                    $cost = $pcost->cost;
+                    $tip = $pcost->tip;
+
+                    $charge = ($charge > 0 ? $charge : $getService->charge);
+                    $cost = ($cost > 0 ? $cost : $getService->cost);
+                    $tip = ($tip > 0 ? $tip : $getService->tip);
+                }
+
+                if($level == 0 && $branchId == 1){
+                    $charge = $getService->charge;
+                    $cost = $getService->cost;
+                    $tip = $getService->tip;
+                }
+
+                $serv = ClientService::find($ms->id);
+                $serv->charge = $charge;
+                $serv->tip = $tip;
+                $serv->save();
+            }
+        }
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+
+      }else{
+        $response['status'] = 'Error';
+        $response['code'] = 401;
+      }
+
+    	return Response::json($response);
+
+    }
+
+
+    //ServiceProfile
+    public function switchCostLevel($groupId, $level) {
+
+    if($groupId !== 0){
+
+        $group = Group::where('id',$groupId)->first();
+        $branchGroup = BranchGroup::where('group_id',$groupId)->first();
+        if($group){
+            $group->service_profile_id = $level;
+            $group->save();
+        }
+
+        $members = GroupUser::where('group_id',$groupId)->pluck('user_id');
+
+        $member_services = ClientService::whereIn('client_id',$members)->where('group_id',$groupId)->where('status','!=','complete')->get();
+
+        foreach($member_services as $ms){
+            $getService = Service::where('id',$ms->service_id)->first();
+            if($getService){
+                $cost = 0;
+                $charge = 0;
+                $tip = 0;
+                $client = 0 ;
+                $agent = 0 ;
+
+                if($group->branch_id > 1){
+                    $amounts = ServiceBranchCost::where('branch_id',$branchGroup->branch_id)->where('service_id',$getService->id)->first();
+                    $charge = $amounts->charge;
+                    $cost = $amounts->cost;
+                    $tip = $amounts->tip;
+                }
+
+                if($level > 0){
+                    $pcost = ServiceProfileCost::where('profile_id',$level)->where('service_id',$getService->id)->where('branch_id',$branchGroup->branch_id)->first();
+                    $charge = $pcost->charge;
+                    $cost = $pcost->cost;
+                    $tip = $pcost->tip;
+                    $client = $pcost->com_client;
+                    $agent = $pcost->com_agent;
+
+                    $charge = ($charge > 0 ? $charge : $getService->charge);
+                    $cost = ($cost > 0 ? $cost : $getService->cost);
+                    $tip = ($tip > 0 ? $tip : $getService->tip);
+                }
+
+                if($level == 0 && $branchGroup->branch_id == 1){
+                    $charge = $getService->charge;
+                    $cost = $getService->cost;
+                    $tip = $getService->tip;
+                }
+
+
+                $serv = ClientService::find($ms->id);
+                if($charge > 0){
+                    $serv->charge = $charge;
+                }
+                //$serv->cost = $cost;
+                $serv->com_client = $client;
+                $serv->com_agent = $agent;
+                if($tip > 0){
+                    $serv->tip = $tip;
+                }
+                $serv->save();
+            }
+        }
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+
+      }else{
+        $response['status'] = 'Error';
+        $response['code'] = 401;
+      }
+
+      return Response::json($response);
+
+    }
 
 
 }
