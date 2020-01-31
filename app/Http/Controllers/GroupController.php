@@ -129,7 +129,7 @@ class GroupController extends Controller
                 );
     }
 
-    private function getGroupTotalCollectables($id) {
+    public function getGroupTotalCollectables($id) {
         return  (
                     (
                         $this->getGroupDeposit($id)
@@ -753,7 +753,7 @@ public function addFunds(Request $request) {
                 $detail_cn = '预存了款项 Php'.$amount.'.';
                 $log_data = array(
                     'client_service_id' => null,
-                    'client_id' => $client_id,
+                    'client_id' => null,
                     'group_id' => $group_id,
                     'log_type' => 'Transaction',
                     'log_group' => 'deposit',
@@ -786,7 +786,7 @@ public function addFunds(Request $request) {
                 $detail_cn = '已支付 Php'.$amount.'.';
                 $log_data = array(
                     'client_service_id' => null,
-                    'client_id' => $client_id,
+                    'client_id' => null,
                     'group_id' => $group_id,
                     'log_type' => 'Transaction',
                     'log_group' => 'payment',
@@ -815,7 +815,7 @@ public function addFunds(Request $request) {
                     $detail_cn = '退款了 Php'.$amount.' 因为 "'.$reason.'".';
                     $log_data = array(
                         'client_service_id' => null,
-                        'client_id' => $client_id,
+                        'client_id' => null,
                         'group_id' => $group_id,
                         'log_type' => 'Transaction',
                         'log_group' => 'refund',
@@ -844,7 +844,7 @@ public function addFunds(Request $request) {
                 $detail_cn = '给于折扣 Php'.$amount.' 因为"'.$reason.'".';
                 $log_data = array(
                     'client_service_id' => null,
-                    'client_id' => $client_id,
+                    'client_id' => null,
                     'group_id' => $group_id,
                     'log_type' => 'Transaction',
                     'log_group' => 'discount',
@@ -880,7 +880,7 @@ public function addFunds(Request $request) {
                 $detail_cn = '退款 Php'.$amount.', 转移到了客户 '.$transferred;
                 $log_data = array(
                     'client_service_id' => null,
-                    'client_id' => $client_id,
+                    'client_id' => null,
                     'group_id' => $group_id,
                     'log_type' => 'Transaction',
                     'log_group' => 'refund',
@@ -911,7 +911,7 @@ public function addFunds(Request $request) {
                 $detail_cn = '预存了款项 Php'.$amount.' 从 团体 '.$gname.'.';
                 $log_data = array(
                     'client_service_id' => null,
-                    'client_id' => $transTo,
+                    'client_id' => null,
                     'group_id' => $grid,
                     'log_type' => 'Transaction',
                     'log_group' => 'deposit',
@@ -1230,6 +1230,21 @@ public function getClientPackagesByGroup($client_id, $group_id){
                   'active' => 1,
                   'extend' => null
               ]);
+
+                // save transaction logs for group
+                $detail = 'Added a service. Service status is pending.';
+                $detail_cn = '已添加服务. 服务状态为 待办。';
+                $log_data = array(
+                    'client_service_id' => $clientService->id,
+                    'client_id' => null,
+                    'group_id' => $request->group_id,
+                    'log_type' => 'Transaction',
+                    'log_group' => 'service',
+                    'detail'=> $detail,
+                    'detail_cn'=> $detail_cn,
+                    'amount'=> 0,
+                );
+                 LogController::save($log_data);
 
               $clientServicesIdArray[] = $clientService;
               $ctr++;

@@ -31,7 +31,8 @@ class LogController extends Controller
     public function getTransactionLogs($client_id, $group_id) {  
         if($group_id == 0){
             $group_id = null;
-        }  
+        }
+
         $translogs = DB::table('logs')->where('client_id',$client_id)->where('group_id',$group_id)->where('log_type','Transaction')->orderBy('id','desc')->get();
 
         $arraylogs = [];
@@ -111,6 +112,139 @@ class LogController extends Controller
                     'data' => array ( 
                         'id' => $t->id,
                         'head' => $t->detail,
+                        'body' => $body,
+                        'balance' => $t->balance,
+                        'prevbalance' => $currentBalance,
+                        'amount' => $t->amount,
+                        'type' => $t->log_group,
+                        'processor' => $usr[0]->first_name,
+                        'date' => Carbon::parse($t->log_date)->format('F d,Y'),
+                        'title' => $csdetail,
+                        'tracking' => $cstracking,
+                        'status' => $csstatus,
+                        'active' => $csactive,
+
+                    )
+                );
+            }
+        }
+
+        $response['status'] = 'Success';
+        $response['data'] = $arraylogs;
+        $response['code'] = 200;
+
+        return Response::json($response);
+    }
+
+    public function getGroupTransactionLogs($client_id, $group_id) {  
+        if($client_id == 0){
+            $client_id = null;
+        }
+
+        $translogs = DB::table('logs')->where('client_id',$client_id)->where('group_id',$group_id)->where('log_type','Transaction')->orderBy('id','desc')->get();
+
+        $arraylogs = [];
+        $month = null;
+        $day = null;
+        $year = null;
+        $currentBalance = app(GroupController::class)->getGroupTotalCollectables($group_id);
+        $currentService = null;
+        $currentDate = null;
+
+        foreach($translogs as $t){
+            $cs = ClientService::where('id',$t->client_service_id)->first();
+            if(($t->log_group == 'service' && $cs->service_id != $currentService && $t->log_date != $currentDate) || $t->log_group != 'service'){
+                $body = "";
+                $usr =  User::where('id',$t->processor_id)->select('id','first_name','last_name')->get();
+
+                $t->balance = $currentBalance;
+
+                $currentBalance -= ($t->amount);
+
+                $cdate = Carbon::parse($t->log_date)->format('M d Y');
+                $dt = explode(" ", $cdate);
+                $m = $dt[0];
+                $d = $dt[1];
+                $y = $dt[2];
+                if($y == $year){
+                    $y = null;
+                    if($m == $month && $d == $day){
+                        $m = null;
+                        $d = null;
+                        $y = null;
+                    }
+                    else{
+                        $month = $m;
+                        $day = $d;
+                        $y = $year;
+                    }
+                }
+                else{
+                    $year = $y;
+                    $month = $m;
+                    $day = $d;
+                }
+
+
+                if($cs){
+                    $csdetail = $cs->detail;
+                    $cstracking =  $cs->tracking;
+                    $csstatus =  $cs->status;
+                    $csactive =  $cs->active;
+                    if($csactive == 0){
+                        $csstatus =  'Disabled';
+                    }
+                    $currentService = $cs->service_id;
+                    $currentDate = $t->log_date;
+                    $servs = DB::table('client_services')
+                                ->where('service_id', $currentService)
+                                ->where('group_id', $t->group_id)
+                                ->where('created_at','LIKE', '%'.$t->log_date.'%')
+                                ->orderBy('id','Desc')
+                                ->get();
+                    
+                    $head = [];
+                    $ctr = 0;
+                    foreach($servs as $s){
+                        $client = User::findorfail($s->client_id);
+                        $head[$ctr]['status'] = $csstatus;
+                        $head[$ctr]['id'] = $s->client_id;
+                        $head[$ctr]['client'] = $client->first_name.' '.$client->last_name;
+                        $head[$ctr]['details'] = $body = DB::table('logs')->where('client_service_id', $s->id)
+                                    // ->where('id','!=', $t->id)
+                                    ->orderBy('id', 'desc')
+                                    ->distinct('detail')
+                                    ->pluck('detail');
+                        $ctr++;
+                    }
+                    
+
+                    // $body = DB::table('logs')->where('client_service_id', $cs->id)
+                    // ->where('id','!=', $t->id)
+                    // ->orderBy('id', 'desc')
+                    // ->distinct('detail')
+                    // ->pluck('detail');
+                    $body = '';
+                }
+                else{
+                    $csdetail = ucfirst($t->log_group);
+                    $cstracking = '';
+                    $csstatus = '';
+                    $csactive = 'none';
+                    $head = [];
+                    $head[0]['details'] = $t->detail;
+                    $body = '';
+                    //$currentService = null;
+                }
+
+                $arraylogs[] = array(
+                    'month' => $m,
+                    'day' => $d,
+                    'year' => $y,
+                    'display_date' => Carbon::parse($t->log_date)->format('F d,Y'),
+                    'data' => array ( 
+                        'id' => $t->id,
+                        'head' => $head,
                         'body' => $body,
                         'balance' => $t->balance,
                         'prevbalance' => $currentBalance,
