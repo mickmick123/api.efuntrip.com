@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Service;
+
+use App\User;
+
 use DB, Response;
 
 use Illuminate\Http\Request;
@@ -54,6 +58,47 @@ class ReportController extends Controller
 		    'clientsServices' => $clientsServices
 		];
 		$response['code'] = 200;
+
+		return Response::json($response);
+	}
+
+	public function reportServices(Request $request) {
+		$clientServicesId = json_decode($request->client_services_id);
+
+		if( is_array($clientServicesId) ) {
+			// $clients = User::whereHas('clientServices', function($query) use($clientServicesId) {
+			// 		$query->whereIn('id', $clientServicesId);
+			// 	})
+			// 	->with(['clientServices' => function($query) {
+			// 		$query->select(['id', 'client_id']);
+			// 	}])
+			// 	->get(['id']);
+				// ->map(function($items) {
+				// 	$data['documents'] = 123; 
+				// 	return $data;
+				// });
+
+				// ->with('clientServices.clientReports.clientReportDocuments')
+
+			$services = Service::whereHas('clientServices', function($query) use($clientServicesId) {
+				$query->whereIn('id', $clientServicesId);
+			})
+			->with(['serviceProcedures' => function($query) {
+				$query->select(['id', 'name', 'service_id', 'step'])->orderBy('step');
+			}])
+			->select(array('id', 'detail'))->get();
+
+			$response['status'] = 'Success';
+			$response['data'] = [
+				// 'clients' => $clients,
+		    	'services' => $services
+			];
+			$response['code'] = 200;
+		} else {
+			$response['status'] = 'Failed';
+        	$response['errors'] = 'No query results.';
+			$response['code'] = 404;
+		}
 
 		return Response::json($response);
 	}
