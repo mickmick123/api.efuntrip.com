@@ -756,6 +756,7 @@ class ClientController extends Controller
 
             if( $client ) {
                 $client->update(['risk' => $request->risk]);
+                $client->save();
 
                 $response['status'] = 'Success';
                 $response['code'] = 200;
