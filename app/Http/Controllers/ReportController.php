@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Report;
+
 use App\Service;
 
 use App\User;
@@ -13,6 +15,81 @@ use Illuminate\Http\Request;
 class ReportController extends Controller
 {
     
+    public function index(Request $request) {
+    	$filter = $request->filter;
+    	$startDate = $request->startDate;
+    	$endDate = $request->endDate;
+
+    	$reports = Report::orderBy('id', 'desc')
+    		->select(['id', 'detail', 'processor_id', 'created_at'])
+    		->whereHas('clientReports.clientService.client', function($query) use($filter) {
+    			if( $filter ) {
+    				$query->where('id', $filter)
+    					->orWhere(function($q) use($filter) {
+    						$q->where('first_name', 'LIKE', '%'.$filter.'%')
+    							->orWhere('last_name', 'LIKE', '%'.$filter.'%');
+    					})
+						->orWhere(DB::raw("CONCAT(`first_name`, ' ', `last_name`)"), 'LIKE', "%".$filter."%");
+    			}
+    		})
+    		->with(['processor' => function($query) {
+    			$query->select('id', 'first_name', 'last_name');
+    		}])
+    		->with([
+    			'clientReports' => function($query) {
+    				$query->select(['id', 'client_service_id', 'report_id']);
+    			},
+    			'clientReports.clientService' => function($query) {
+    				$query->select(['id', 'client_id', 'service_id']);
+    			},
+    			'clientReports.clientService.service' => function($query) {
+    				$query->select(['id', 'detail']);
+    			},
+    			'clientReports.clientService.client' => function($query) use($filter) {
+    				$query = $query->select(['id', 'first_name', 'last_name']);
+
+    				if( $filter ) {
+	    				$query->where('id', $filter)
+	    					->orWhere(function($q) use($filter) {
+	    						$q->where('first_name', 'LIKE', '%'.$filter.'%')
+	    							->orWhere('last_name', 'LIKE', '%'.$filter.'%');
+	    					})
+	    					->orWhere(DB::raw("CONCAT(`first_name`, ' ', `last_name`)"), 'LIKE', "%".$filter."%");
+	    			}
+    			}
+    		])
+    		->where(function($query) use($startDate, $endDate) {
+    			if( $startDate && $endDate ) {
+    				$query->whereDate('created_at', '>=', $startDate)
+    					->whereDate('created_at', '<=', $endDate);
+    			}
+    		})
+    		->paginate(10);
+
+    		// 	$data['id'] = $report->id;
+    		// 	$data['service'] = [
+    		// 		'id' => $report->clientReports[0]->clientService->service->id,
+    		// 		'detail' => $report->clientReports[0]->clientService->service->detail
+    		// 	];
+    		// 	$data['detail'] = $report->detail;
+    		// 	$data['clients'] = $report->clientReports->map(function($clientReport) {
+    		// 		return $clientReport->clientService->client;
+    		// 	});
+    		// 	$data['processor'] = [
+    		// 		'id' => $report->processor->id,
+    		// 		'name' => $report->processor->first_name . ' ' . $report->processor->last_name
+    		// 	];
+    		// 	$data['created_at'] = Carbon::parse($report->created_at)->format('F d, Y h:i A');
+
+    	$response['status'] = 'Success';
+		$response['data'] = [
+		    'reports' => $reports
+		];
+		$response['code'] = 200;
+
+		return Response::json($response);
+    }
+
 	public function clientsServices(Request $request) {
 		$clientIds = $request->input("client_ids") ? $request->client_ids : [];
 		$clientIds = explode("," , $clientIds);
