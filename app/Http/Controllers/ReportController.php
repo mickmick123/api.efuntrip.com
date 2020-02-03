@@ -86,6 +86,13 @@ class ReportController extends Controller
 			->with(['serviceProcedures' => function($query) {
 				$query->select(['id', 'name', 'service_id', 'step'])->orderBy('step');
 			}])
+			->with(['clientServices' => function($query1) use($clientServicesId) {
+				$query1->select(['id', 'client_id', 'service_id', 'tracking'])
+					->whereIn('id', $clientServicesId)
+					->with(['client' => function($query2) {
+						$query2->select(['id', 'first_name', 'last_name']);
+					}]);
+			}])
 			->select(array('id', 'detail'))->get();
 
 			$response['status'] = 'Success';
