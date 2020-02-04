@@ -12,7 +12,6 @@ use App\ContactNumber;
 
 use App\RoleUser;
 
-
 use DB, Auth, Response, Validator, Hash;
 
 use Illuminate\Http\Request;
@@ -123,7 +122,7 @@ class AccountsController extends Controller
 
     //get specific user
     public function show($id){
-        $user = User::select('id', 'email', 'first_name', 'last_name', 'middle_name', 'birth_date', 'gender', 'civil_status', 'height', 'weight', 'address')
+        $user = User::select('id', 'email', 'first_name', 'last_name', 'middle_name', 'birth_date', 'gender', 'civil_status', 'height', 'weight', 'address','password')
                     ->whereId($id)
                     ->with(array('roles' => function($query){
                         $query->select('roles.id');
@@ -148,7 +147,10 @@ class AccountsController extends Controller
 
     //edit cpanel user
     public function update(Request $request, $id) {
-         $validator = Validator::make($request->all(), [
+        $user = User::find($request->id);
+        $hashedPassword = $user->password;
+
+        $validator = Validator::make($request->all(), [
             'first_name'                    => 'required',
             'middle_name'                   => 'nullable',
             'last_name'                     => 'required',
@@ -163,8 +165,9 @@ class AccountsController extends Controller
             'contact_numbers.*.is_primary'  => 'nullable',
             'contact_numbers.*.is_mobile'   => 'nullable',
             'email'                         => 'nullable|email|unique:users,email,'.$request->id,
-            // 'password'                  => 'nullable',
-            // 'new_password'                      => 'nullable|confirmed|min:6|different:password',
+            'password'                      => 'nullable|confirmed|min:6', //new password
+            'old_password'                  => 'required_with:password'
+
         ]);
 
         if($validator->fails()){
@@ -203,55 +206,84 @@ class AccountsController extends Controller
                 }
             }
 
+
             if($ce_count > 0){
                 $response['status'] = 'Failed';
                 $response['errors'] = $contact_error;
                 $response['code'] = 422;
             }else{
-                $user = User::findOrFail($request->id);
-                
-                if($user){
-                    $user->first_name = $request->first_name;
-                    $user->middle_name = $request->middle_name;
-                    $user->last_name = $request->last_name;
-                    $user->birth_date = $request->birthday;
-                    $user->gender = $request->gender;
-                    $user->civil_status = $request->civil_status;
-                    $user->height = $request->height;
-                    $user->weight = $request->weight;
-                    $user->address = $request->address;
-                    $user->password = Hash::make($request->password);
-                    $user->email = $request->email;
-                    $user->save();
+                $pe_count = 0;
 
-                    $user->branches()->detach();
-                    $user->branches()->attach($request->branch);
-
-                    $user->roles()->detach();
-                    foreach($request->roles as $role) {
-                        $user->roles()->attach($role);
+                if (($request->old_password != '') || (!is_null($request->old_password))) {
+                    if(($request->password != '') || (!is_null($request->password))){
+                        if (Hash::check($request->old_password, $hashedPassword)){
+                            if($user){
+                                $user->password = Hash::make($request->password);
+                            }
+                        }else{
+                            $password_error['old_password'] = ['Old password is incorrect. '];
+                            $pe_count = 1;
+                        }   
+                        
+                    }else{
+                        $password_error['password'] = ['New Password is required. '];
+                        $pe_count = 1;
                     }
 
-                    //delete all contact numbers saved first before saving updates
-                    $contact_numbers = ContactNumber::where('user_id', $request->id)->delete();
-                    foreach($request->contact_numbers as $contactNumber) {
-                        if(strlen($contactNumber['number']) !== 0 && $contactNumber['number'] !== null) {
-                            ContactNumber::create([
-                                'user_id' => $user->id,
-                                'number' => $contactNumber['number'],
-                                'is_primary' => $contactNumber['is_primary'],
-                                'is_mobile' => $contactNumber['is_mobile']
-                            ]);
-                        }
-                    }
-
-                    $response['status'] = 'Success';
-                    $response['code'] = 200;
-                } else {
-                    $response['status'] = 'Failed';
-                    $response['errors'] = 'No query results.';
-                    $response['code'] = 404;
                 }
+
+                if($pe_count > 0){
+                    $response['status'] = 'Failed';
+                    $response['errors'] = $password_error;
+                    $response['code'] = 422;
+                }else{
+                    if($user){
+                        $user->first_name = $request->first_name;
+                        $user->middle_name = $request->middle_name;
+                        $user->last_name = $request->last_name;
+                        $user->birth_date = $request->birthday;
+                        $user->gender = $request->gender;
+                        $user->civil_status = $request->civil_status;
+                        $user->height = $request->height;
+                        $user->weight = $request->weight;
+                        $user->address = $request->address;
+                        $user->email = $request->email;
+
+                        $user->save();
+                        $user->branches()->detach();
+                        $user->branches()->attach($request->branch);
+
+                        $user->roles()->detach();
+                        foreach($request->roles as $role) {
+                            $user->roles()->attach($role);
+                        }
+
+                        //delete all contact numbers saved first before saving updates
+                        $contact_numbers = ContactNumber::where('user_id', $request->id)->delete();
+                        foreach($request->contact_numbers as $contactNumber) {
+                            if(strlen($contactNumber['number']) !== 0 && $contactNumber['number'] !== null) {
+                                ContactNumber::create([
+                                    'user_id' => $user->id,
+                                    'number' => $contactNumber['number'],
+                                    'is_primary' => $contactNumber['is_primary'],
+                                    'is_mobile' => $contactNumber['is_mobile']
+                                ]);
+                            }
+                        }
+
+                        $response['status'] = 'Success';
+                        $response['code'] = 200;
+                    } else {
+                        $response['status'] = 'Failed';
+                        $response['errors'] = 'No query results.';
+                        $response['code'] = 404;
+                    }
+                }
+
+
+
+
+
 
             }
 
