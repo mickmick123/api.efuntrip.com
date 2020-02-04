@@ -774,7 +774,10 @@ public function members(Request $request, $id, $page = 20) {
                     $s->package_cost = $s->cost+ $s->charge + $s->tip + $s->com_agent + $s->com_client;
                     $s->detail =  $s->detail;
                     $s->discount =  ClientTransaction::where('client_service_id', $s->id)->where('type', 'Discount')->sum('amount');
-                    $totalServiceCost += ($s->package_cost - $s->discount);
+                    if($s->active !== 0){
+                        $totalServiceCost += ($s->package_cost - $s->discount);
+                    }
+
                   }
                   $packs = $services;
           }
@@ -1051,6 +1054,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
                           ->where('active', 1)
                           ->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
           $p->package_cost = ($package_cost > 0 ? $package_cost : 0);
+
       }
 
       $response['status'] = 'Success';
@@ -1090,9 +1094,11 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
      foreach($clientServices->items() as $s){
 
-         $query = ClientService::where('service_id', $s->service_id)->where('group_id', $groupId);
+         $query = ClientService::where('service_id', $s->service_id)->where('group_id', $groupId)->where('active', 1);
+         //if($s->active === 1){
+           $temp['total_service_cost'] = $query->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)"));
+        // }
 
-         $temp['total_service_cost'] = $query->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)"));
          $temp['detail'] = $s->detail;
          $temp['service_date'] = $s->sdate;
          $temp['sdate'] = $s->sdate;
