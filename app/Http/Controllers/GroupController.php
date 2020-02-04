@@ -333,7 +333,7 @@ class GroupController extends Controller
 
                 //save action logs
                 $detail = 'Change new group main leader from <strong> ' .$oldLeaderLabel. '</strong> to <strong>' . $newLeaderLabel .'</strong>.';
-                $detail_cn = '创建了新的服务包 '.$tracking.'.';
+                $detail_cn = '创建了新的服务包 '. $group->tracking.'.';
                 $log_data = array(
                     'client_service_id' => null,
                     'client_id' => null,
@@ -342,7 +342,7 @@ class GroupController extends Controller
                     'detail'=> $detail,
                     'detail_cn'=> $detail_cn,
                 );
-                LogController::save($log_data);    
+                LogController::save($log_data);
 
             } elseif( $request->role == 'vice-leader' ) {
                 DB::table('group_user')->where('group_id', $request->group_id)->where('user_id', $request->client_id)
@@ -749,8 +749,9 @@ public function members(Request $request, $id, $page = 20) {
 
         $response = $groups;
 
-        $ctr=0;
-        $temp = [];
+      $ctr=0;
+      $temp = [];
+
       foreach($groups->items() as $g){
          $packs = DB::table('packages as p')->select(DB::raw('p.*,g.name as group_name'))
                     ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','p.group_id')
@@ -759,6 +760,7 @@ public function members(Request $request, $id, $page = 20) {
                     ->orderBy('id', 'desc')
                     ->get();
 
+        $totalServiceCost = 0;
         if(count($packs) > 0){
 
           foreach($packs as $p){
@@ -771,7 +773,8 @@ public function members(Request $request, $id, $page = 20) {
                   foreach($services as $s){
                     $s->package_cost = $s->cost+ $s->charge + $s->tip + $s->com_agent + $s->com_client;
                     $s->detail =  $s->detail;
-                    //  $s->discount = $this->getGroupTotalDiscount($id);
+                    $s->discount =  ClientTransaction::where('client_service_id', $s->id)->where('type', 'Discount')->sum('amount');
+                    $totalServiceCost += ($s->package_cost - $s->discount);
                   }
                   $packs = $services;
           }
@@ -785,7 +788,7 @@ public function members(Request $request, $id, $page = 20) {
         $temp['name'] = $g->name;
         $temp['is_vice_leader'] = $g->is_vice_leader;
         $temp['user_id'] = $g->user_id;
-        $temp['total_service_cost'] = $g->total_service_cost;
+        $temp['total_service_cost'] = $totalServiceCost;
         $response[$ctr] =  $temp;
         $ctr++;
       }
@@ -816,10 +819,10 @@ public function addFunds(Request $request) {
             'group_id' => 'required',
         ]);
 
-        if($validator->fails()) {       
+        if($validator->fails()) {
             $response['status'] = 'Failed';
             $response['errors'] = $validator->errors();
-            $response['code'] = 422;   
+            $response['code'] = 422;
         } else {
             $tracking = $request->get('tracking');
             $group_id = $request->get('group_id');
@@ -1002,7 +1005,7 @@ public function addFunds(Request $request) {
                     $transTo = Group::where('id',$selected_group)->first()->leader_id;
                     $grid = $selected_group;
                 }
-                
+
                 // Deposit amount to client or group selected
                 $depo = new ClientTransaction;
                 $depo->client_id = $transTo;
@@ -1068,7 +1071,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
      $clientServices = DB::table('client_services')
        ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, created_at'))
-       ->where('active',1)->where('group_id',$groupId)
+       ->where('group_id',$groupId)
        ->groupBy('service_id')
        ->orderBy('detail','DESC')
 
@@ -1087,7 +1090,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
      foreach($clientServices->items() as $s){
 
-         $query = ClientService::where('service_id', $s->service_id)->where('group_id', $groupId)->where('active', 1);
+         $query = ClientService::where('service_id', $s->service_id)->where('group_id', $groupId);
 
          $temp['total_service_cost'] = $query->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)"));
          $temp['detail'] = $s->detail;
@@ -1103,10 +1106,19 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
              $ss =  ClientService::where('service_id', $s->service_id)->where('group_id', $groupId)->where('client_id',$m->client_id)->get();
 
-             //if(count($ss)){
+                 $clientServices = [];
+                 $tmpCtr = 0;
+
+                 foreach($ss as $cs){
+                   $cs->discount =  ClientTransaction::where('client_service_id', $cs->id)->where('type', 'Discount')->sum('amount');
+                   $clientServices[$tmpCtr] = $cs;
+                   $tmpCtr++;
+                 }
+
+
                  $members[$ctr2] = User::where('id',$m->client_id)->select('first_name','last_name')->first();
                  $members[$ctr2]['tcost'] = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->where('client_id',$m->client_id)->value(DB::raw("SUM(cost + charge + tip +com_client + com_agent)"));
-                 $members[$ctr2]['services'] = $ss;
+                 $members[$ctr2]['services'] = $clientServices;
              //}
              $ctr2++;
          }
@@ -1203,11 +1215,19 @@ public function getClientPackagesByGroup($client_id, $group_id){
           foreach($queryMembers as $m){
                 $ss =  ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->where('client_id',$m->client_id)->get();
 
-            //  if(count($ss)){
-                  $members[$ctr2] = User::where('id',$m->client_id)->select('first_name','last_name')->first();
-                  $members[$ctr2]['tcost'] = $query->where('client_id',$m->client_id)->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)"));
-                  $members[$ctr2]['services'] = $ss;
-            //  }
+                $clientServices = [];
+                $tmpCtr = 0;
+
+                foreach($ss as $cs){
+                  $cs->discount =  ClientTransaction::where('client_service_id', $cs->id)->where('type', 'Discount')->sum('amount');
+                  $clientServices[$tmpCtr] = $cs;
+                  $tmpCtr++;
+                }
+
+                $members[$ctr2] = User::where('id',$m->client_id)->select('first_name','last_name')->first();
+                $members[$ctr2]['tcost'] = $query->where('client_id',$m->client_id)->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)"));
+                $members[$ctr2]['services'] = $clientServices;
+
               $ctr2++;
           }
           $temp['members'] = $members;
