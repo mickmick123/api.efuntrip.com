@@ -1107,6 +1107,7 @@ class ClientController extends Controller
                 $service = Service::where('id',$cs->service_id)->first();
 
                 $oldstatus = $cs->status;
+                $oldactive = $cs->active;
 
                 $detail_cn = $service->detail;
                 if($service){ // get chinese translation of service detail
@@ -1300,7 +1301,7 @@ class ClientController extends Controller
                 if($translog != '' || $transtat != '' || $discnotes != ''){
                     $newVal = $oldVal - $newVal;
                     //$user = Auth::user();
-                    if($service->status == 0 && $request->active == 1){
+                    if($oldactive == 0 && $request->active == 1){
                         $newVal = '-'.$newVal;
                     }
 

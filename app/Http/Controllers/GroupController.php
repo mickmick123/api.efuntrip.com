@@ -1610,7 +1610,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
 
           $srv = ClientService::findOrFail($clientService->id);
-
+          $oldstatus = $srv->status;
+          $oldactive = $srv->active;
           //For translation
           $translated = Service::where('id',$srv->service_id)->first();
           $cnserv =$srv->detail;
@@ -1621,8 +1622,34 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
           $oldDiscount = 0;
           $newDiscount = 0;
+          $discnotes = '';   
+          $discnotes_cn = ''; 
+          $translog = '';
+          $translog_cn = '';
+          $transtat = '';
+          $transtat_cn = '';
+          $newVal = 0;
+          $oldVal = 0;
 
+            // check changes active/inactive
+            if ($srv->active != $request->active) {
+                if($request->active == 1) { // Enabled
+                    $transtat = 'Service was enabled.';
+                    $transtat_cn = '服务被标记为已启用.';
+                    $translog = 'Total service charge from Php0 to ' . 'Php'. ($srv->cost + $srv->charge + $srv->tip + $srv->com_client + $srv->com_agent);
+                    $translog_cn = '总服务费从 Php0 到 ' . 'Php'. ($srv->cost + $srv->charge + $srv->tip + $srv->com_client + $srv->com_agent);
+                } elseif($request->active == 0) { // Disabled
+                    $transtat = 'Service was disabled.';
+                    $transtat_cn = '服务被标记为失效.';
+                    $translog = 'Total service charge from Php'. ($srv->cost + $srv->charge + $srv->tip + $srv->com_client + $srv->com_agent).' to Php'.'0';
+                    $translog_cn = '总服务费从 Php'. ($srv->cost + $srv->charge + $srv->tip + $srv->com_client + $srv->com_agent).' 到 Php'.'0';
+                }
 
+                $newVal +=0;
+                $oldVal +=($srv->cost + $srv->charge + $srv->tip + $srv->com_client + $srv->com_agent);
+            }
+
+            // discount
           if($request->discount > 0) {
 
           $__oldDiscount = null;
@@ -1637,7 +1664,6 @@ public function getClientPackagesByGroup($client_id, $group_id){
                   if($dc->amount != $request->discount){
 
                       $newDiscount = $request->discount;
-
                       $dc->amount =  $request->get('discount');
                       $dc->reason =  $request->get('reason');
                       $dc->deleted_at = null;
@@ -1664,14 +1690,27 @@ public function getClientPackagesByGroup($client_id, $group_id){
                       'log_date' => Carbon::now()->format('m/d/Y h:i:s A')
                   ]);
 
-
-
               }
 
-          if($__oldDiscount == $request->get('discount')){
-              $oldDiscount = $__oldDiscount;
-              $newDiscount = $request->get('discount');
-          }
+            // Update discount
+            if($__oldDiscount != null && $__oldDiscount != $request->get('discount')) {
+                $discnotes = ' updated discount from Php' . $__oldDiscount . ' to Php' . $request->get('discount').', ';
+                $discnotes_cn = ' 已更新折扣 ' . $__oldDiscount . ' 到 ' . $request->get('discount') .', ';
+                $oldDiscount = $__oldDiscount;
+                $newDiscount = $request->get('discount');  
+            }
+
+            if($__oldDiscount == $request->get('discount')){
+                $oldDiscount = $__oldDiscount;
+                $newDiscount = $request->get('discount'); 
+            }
+
+            // New Discount
+            if($__oldDiscount == null) { 
+                $discnotes = ' discounted an amount of Php'.$request->get('discount').', ';
+                $discnotes_cn = ' 已折扣额度 Php'.$request->get('discount').', ';
+                $newDiscount = $request->get('discount');  
+            }
 
       }
       else {
@@ -1686,17 +1725,19 @@ public function getClientPackagesByGroup($client_id, $group_id){
                   ->where('client_service_id', $srv->id)
                   ->where('tracking', $srv->tracking)
                   ->forceDelete();
+
+                // When user removed discount
+                $discnotes = ' removed discount of Php ' . $discountExist->amount . ', ';
+                $discnotes_cn = ' 移除折扣 ' . $discountExist->amount.', ';
+
           }
       }
 
-
       $old_total_charge = $srv->cost + $srv->tip + $srv->charge + $srv->com_client + $srv->com_agent;
       $new_total_charge = ($request->cost != null ? $request->cost : $srv->cost) +
-                          ($request->charge != null ? $request->charge : $srv->tip) +
+                          ($request->tip != null ? $request->tip : $srv->tip) +
                           ($request->charge != null ? $request->charge : $srv->charge)
                           + $srv->com_client + $srv->com_agent;
-
-
 
       if($newDiscount > 0 || $oldDiscount > 0 ){
           $old_total_charge -= $oldDiscount;
@@ -1704,6 +1745,36 @@ public function getClientPackagesByGroup($client_id, $group_id){
       }
       $service_status = $request->status;
 
+        if($request->get('active') == 1) { // Enabled
+            $toAmount = $new_total_charge;
+        } elseif($request->get('active') == 0) { // Disabled
+            $toAmount = 0;
+        }
+
+        if ($old_total_charge != $new_total_charge || $service_status == 'complete') {
+            if($service_status == 'complete' && $service_status != $srv->status){
+                $translog = 'Total service charge is Php' . $toAmount;
+                $translog_cn = '总服务费 Php' . $toAmount;
+            }
+            else if($service_status == 'complete' && $service_status == $srv->status){
+                 $translog = 'Total service charge from Php' . ($old_total_charge) . ' to Php' . $toAmount;
+                 $translog_cn = '总服务费从 Php' . ($old_total_charge) . ' 到 Php' . $toAmount;
+            }
+            else{
+                $translog = 'Total service charge from Php' . ($old_total_charge) . ' to Php' . $toAmount;
+                $translog_cn = '总服务费从 Php' . ($old_total_charge) . ' 到 Php' . $toAmount;
+            }
+
+            $newVal +=$new_total_charge;
+            $oldVal +=$old_total_charge;
+        }
+
+
+
+        if ($old_total_charge == $new_total_charge && $translog == '' && $srv->status != $service_status) {
+            $translog = 'Service status change from '.$srv->status.' to '.$service_status;
+            $translog_cn = '';
+        }
 
       if($request->status!=null) {
           $srv->status = $request->status;
@@ -1713,7 +1784,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
       }
 
       $srv->cost = ($request->cost != null ? $request->cost : $srv->cost);
-      $srv->tip = ($request->charge != null ? $request->charge : $srv->tip);
+      $srv->tip = ($request->tip != null ? $request->tip : $srv->tip);
       $srv->remarks = $note;
       $srv->save();
 
@@ -1727,6 +1798,48 @@ public function getClientPackagesByGroup($client_id, $group_id){
               ->map(function($d) {
                   $this->updatePackageStatus($d->tracking);
               });
+
+        //save transaction logs
+        $log =  ' : '.$discnotes .$translog.'. ' . $transtat;
+        $log_cn =  ' : '.$discnotes_cn . $translog_cn. '. ' . $transtat_cn;
+        if($translog != '' || $transtat != '' || $discnotes != ''){
+            $newVal = $oldVal - $newVal;
+            //$user = Auth::user();
+            if($oldactive == 0 && $request->active == 1){
+                $newVal = '-'.$newVal;
+            }
+
+
+            $log_data = array(
+                'client_service_id' => $srv->id,
+                'client_id' => $srv->client_id,
+                'group_id' => $srv->group_id,
+                'log_type' => 'Transaction',
+                'log_group' => 'service',
+                'detail'=> $log,
+                'detail_cn'=> $log_cn,
+                'amount'=> $newVal,
+            );
+
+            if($oldstatus != $service_status && $service_status == 'complete'){
+                $log_data['detail'] = 'Completed Service '.$log;
+                $log_data['detail_cn'] = '完成的服务 '.$log_cn;   
+                $log_data['amount'] = '-'.$new_total_charge;
+            }
+            else{
+                if(($srv->status != 'complete')){
+                    $log_data['amount'] = 0;
+                }
+                else{
+                    $log_data['amount'] = '-'.$new_total_charge;
+                }    
+
+                $log_data['detail'] = 'Updated Service '.$log;
+                $log_data['detail_cn'] = '服务更新 '.$log_cn;
+            }
+
+            LogController::save($log_data);
+        }
    }
 
 

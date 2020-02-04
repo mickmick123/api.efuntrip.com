@@ -202,28 +202,33 @@ class LogController extends Controller
                                 ->where('created_at','LIKE', '%'.$t->log_date.'%')
                                 ->orderBy('id','Desc')
                                 ->get();
-                    
+                    $servs_id = $servs->pluck('id');
                     $head = [];
                     $ctr = 0;
+                    $total_cost = 0;
+                    $total_disc = 0;
                     foreach($servs as $s){
                         $client = User::findorfail($s->client_id);
                         $head[$ctr]['status'] = $csstatus;
                         $head[$ctr]['id'] = $s->client_id;
                         $head[$ctr]['client'] = $client->first_name.' '.$client->last_name;
-                        $head[$ctr]['details'] = $body = DB::table('logs')->where('client_service_id', $s->id)
+                        $head[$ctr]['details'] =  DB::table('logs')->where('client_service_id', $s->id)
                                     // ->where('id','!=', $t->id)
                                     ->orderBy('id', 'desc')
                                     ->distinct('detail')
                                     ->pluck('detail');
+
+                        if($s->status == 'complete'){
+                            $total_disc = DB::table('client_transactions')
+                                    ->where('type', 'Discount')->where('group_id',$t->group_id)
+                                    ->where('client_service_id', $s->id)
+                                    ->sum('amount');
+                            $total_cost += ($s->charge + $s->cost + $s->tip + $s->com_agent + $s->com_client) - $total_disc;
+                        }            
                         $ctr++;
                     }
+                    $t->amount = '-'.$total_cost;
                     
-
-                    // $body = DB::table('logs')->where('client_service_id', $cs->id)
-                    // ->where('id','!=', $t->id)
-                    // ->orderBy('id', 'desc')
-                    // ->distinct('detail')
-                    // ->pluck('detail');
                     $body = '';
                 }
                 else{
@@ -246,6 +251,7 @@ class LogController extends Controller
                         'id' => $t->id,
                         'head' => $head,
                         'body' => $body,
+                        'total_cost' => $total_cost,
                         'balance' => $t->balance,
                         'prevbalance' => $currentBalance,
                         'amount' => $t->amount,
