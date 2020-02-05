@@ -213,12 +213,12 @@ class LogController extends Controller
                         $head[$ctr]['id'] = $s->client_id;
                         $head[$ctr]['client'] = $client->first_name.' '.$client->last_name;
                         $head[$ctr]['details'] =  DB::table('logs')->where('client_service_id', $s->id)
-                                    // ->where('id','!=', $t->id)
+                                    ->where('log_type', 'Transaction')
                                     ->orderBy('id', 'desc')
                                     ->distinct('detail')
                                     ->pluck('detail');
 
-                        if($s->status == 'complete'){
+                        if($s->status == 'complete' && $s->active != 0){
                             $total_disc = DB::table('client_transactions')
                                     ->where('type', 'Discount')->where('group_id',$t->group_id)
                                     ->where('client_service_id', $s->id)
@@ -267,6 +267,94 @@ class LogController extends Controller
                 );
             }
         }
+
+        $response['status'] = 'Success';
+        $response['data'] = $arraylogs;
+        $response['code'] = 200;
+
+        return Response::json($response);
+    }
+
+
+public function getCommissionLogs($client_id, $group_id) {  
+        if($client_id == 0){
+            $client_id = null;
+            $translogs = DB::table('logs')->where('client_id','!=',null)->where('group_id',$group_id)->where('log_type','Commission')->orderBy('id','desc')->get();
+        }
+        else{
+            $translogs = DB::table('logs')->where('client_id',$client_id)->where('group_id','!=',null)->where('log_type','Commission')->orderBy('id','desc')->get();
+        }
+
+
+        $arraylogs = [];
+        $month = null;
+        $day = null;
+        $year = null;
+        $currentBalance = app(GroupController::class)->getGroupTotalCollectables($group_id);
+        $currentService = null;
+        $currentDate = null;
+
+        foreach($translogs as $a){
+            
+           
+                $totalClientCommission =  Log::select(DB::raw("SUM(amount) as total"))
+                        ->where('log_type','Commission')
+                        ->where('group_id',$a->group_id)
+                        ->where('client_id',$a->client_id)
+                        ->where('log_group',$a->log_group)
+                        ->where('id','<=',$a->id)
+                        ->first()->total;
+
+                $client_last_record  =  Log::select('amount')->where('group_id',$a->group_id)
+                        ->where('client_id',$a->client_id)
+                        ->where('log_group',$a->log_group)
+                        ->where('id','<',$a->id)
+                        ->orderby('id', 'desc')->first();
+
+                        //\Log::info($totalClientCommission);
+            if($client_last_record['amount']==null){
+                $client_last_record['amount'] = $totalClientCommission;
+               
+            }
+            $usr =  User::where('id',$a->processor_id)->select('id','first_name','last_name')->get();
+            $cdate = Carbon::parse($a->log_date)->format('M d Y');
+            $dt = explode(" ", $cdate);
+            $m = $dt[0];
+            $d = $dt[1];
+            $y = $dt[2];
+            if($y == $year){
+                $y = null;
+                if($m == $month && $d == $day){
+                    $m = null;
+                    $d = null;
+                }
+                else{
+                    $month = $m;
+                    $day = $d;
+                }
+            }
+            else{
+                $year = $y;
+                $month = $m;
+                $day = $d;
+            }
+
+            $arraylogs[] = array(
+                'month' => $m,
+                'day' => $d,
+                'year' => $y,
+                'data' => array ( 
+                    'id' => $a->id,
+                    'title' => $a->detail,
+                    'balance' => $totalClientCommission,
+                    'prevbalance' => floatval($totalClientCommission)-floatval($client_last_record['amount']),
+                    'type' => $a->log_group,
+                    'processor' => $usr[0]->first_name,
+                    'date' => Carbon::parse($a->log_date)->format('F d,Y'),
+                )
+            );
+        }
+
 
         $response['status'] = 'Success';
         $response['data'] = $arraylogs;

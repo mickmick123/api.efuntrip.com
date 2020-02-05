@@ -4,12 +4,23 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 
+use App\Http\Controllers\GroupController;
+
 class ClientService extends Model
 {
     
     protected $table = 'client_services';
 
     protected $fillable = ['client_id', 'group_id', 'service_id', 'detail', 'cost', 'charge', 'tip', 'com_client', 'com_agent', 'client_com_id', 'agent_com_id', 'status', 'remarks', 'tracking', 'active', 'extend', 'checked'];
+
+    public static function boot() {
+        parent::boot();
+
+        self::updated(function($model) {
+            $original = $model->getOriginal();
+            GroupController::createOrDeleteCommission($model,$original);
+        });
+    }
 
     public function agentCom() {
     	return $this->belongsTo('App\User', 'agent_com_id', 'id');

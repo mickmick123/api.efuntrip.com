@@ -12,6 +12,7 @@ use App\Group;
 
 use App\User;
 
+use App\Log;
 
 use App\GroupUser;
 
@@ -1384,6 +1385,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
                   'com_client' => $com_client,
                   'com_agent' => $com_agent,
                   'agent_com_id' => $agent_com_id,
+                  'client_com_id' => $client_com_id,
                   'remarks' => $author,
                   'group_id' => $request->group_id,
                   'tracking' => $trackingArray[$i],
@@ -1999,6 +2001,165 @@ public function getClientPackagesByGroup($client_id, $group_id){
       }
 
       return Response::json($response);
+
+    }
+
+
+    public static function createOrDeleteCommission($model, $original) {
+
+        //DELETE
+        //if user change service status from complete to on process or pending, delete commission from that service
+        if(($original['status'] == 'complete' && $original['status'] != $model->status) || ($original['active'] != $model->active && $model->active == 0)){
+
+            $check =  Log::where('log_type', 'Commission')->where('client_service_id', $model->id)
+                            ->where('client_id',$model->client_com_id)
+                            ->first();
+
+            if($check){
+                $commissionClient = ClientTransaction::where('client_id',$model->client_com_id)->where('tracking', $check->id)->where('type','Deposit')->where('is_commission',1)->first();
+                $check->delete();
+                if($commissionClient){
+                    // Delete from client_transactions
+                    $commissionClient->forceDelete();
+                    Log::where('transaction_id',$commissionClient->id)->where('amount',$commissionClient->amount)->delete();
+                }
+            }
+
+            $check =  Log::where('log_type', 'Commission')->where('client_service_id', $model->id)
+                            ->where('client_id',$model->agent_com_id)
+                            ->first();
+
+            if($check){
+                $commissionAgent = ClientTransaction::where('client_id',$model->agent_com_id)->where('tracking', $check->id)->where('type','Deposit')->where('is_commission',1)->first();
+                $check->delete();
+                if($commissionAgent){
+                    // Delete from client_transactions
+                    $commissionAgent->forceDelete();
+                    Log::where('transaction_id',$commissionAgent->id)->where('amount',$commissionAgent->amount)->delete();
+                }
+            }
+        }
+
+
+        //CREATE
+        //if user change service status from on process or pending to complete create commission to client and agent
+        if($model->status=='complete' && $original['status'] != $model->status && $model->active == 1 && $model->group_id > 0){
+                
+            $user = Auth::user();
+            date_default_timezone_set("Asia/Manila");
+            $date = date('m/d/Y h:i:s A');
+            
+            $detail_cn = DB::table('services')->select('detail_cn')->where('id',$model->service_id)->first()->detail_cn;
+            $group_name = DB::table('groups')->select('name')->where('id',$model->group_id)->first()->name;
+            
+
+            $d = Carbon::now()->format('Ymd');
+            $year =  substr($d,0,4);
+            $month =  substr($d,4,2);
+            $day =  substr($d,6,2);
+            if((int)$day >= 1 && (int)$day <= 10){
+                $day = 10;
+            }
+            else if((int)$day >= 11 && (int)$day <= 20){
+                $day = 20;
+            }
+            else{
+                $day = 31;
+            }
+            //Client Commissions
+            if($model->client_com_id != '' && $model->client_com_id>0){
+                $client = User::where('id',$model->client_com_id)->select('first_name','last_name')->first();
+                $log = "Completed Service ".$model->detail.". Commission is ".$model->com_client." for ".$client->first_name.' '.$client->last_name.".";
+                $log_cn = "完成的服务 ".$detail_cn.". 对于 ".$client->first_name.' '.$client->last_name." 佣金是 ".$model->com_client.".";
+
+                $savelog = new Log;
+                $savelog->client_service_id = $model->id;
+                $savelog->client_id = $model->client_com_id;
+                $savelog->group_id = $model->group_id;
+                $savelog->processor_id = Auth::user()->id;
+                $savelog->log_date = date('Y-m-d');
+                $savelog->log_type = 'Commission';
+                $savelog->log_group = 'client';
+                $savelog->detail = $log;
+                $savelog->detail_cn = $log_cn;
+                $savelog->amount = $model->com_client;
+                $savelog->save();
+
+
+                $depo = new ClientTransaction;
+                $depo->client_id = $model->client_com_id;
+                $depo->type = 'Deposit';
+                $depo->group_id = null;
+                $depo->tracking = $savelog->id;
+                $depo->amount = $model->com_client;
+                $depo->is_commission = 1;
+                $depo->save();
+
+                //save transaction logs
+                $detail = 'Received commission Php'.$model->com_client.' from group '.$group_name.'.';
+                $detail_cn = $detail;
+                $log_data = array(
+                    'client_service_id' => null,
+                    'client_id' => $model->client_com_id,
+                    'group_id' => null,
+                    'processor_id' => Auth::user()->id,
+                    'log_date' => date('Y-m-d'),
+                    'log_type' => 'Transaction',
+                    'log_group' => 'deposit',
+                    'detail'=> $detail,
+                    'detail_cn'=> $detail_cn,
+                    'amount'=> $model->com_client,
+                );
+                 LogController::save($log_data);
+
+            }
+
+            //Agent Commissions
+            if($model->agent_com_id != '' && $model->agent_com_id>0){
+                $agent = User::where('id',$model->agent_com_id)->select('first_name','last_name')->first();
+
+                $log = "Completed Service ".$model->detail.". Commission is ".$model->com_agent." for ".$agent->first_name.' '.$agent->last_name.".";
+                $log_cn = "完成的服务 ".$detail_cn.". 对于 ".$agent->first_name.' '.$agent->last_name." 佣金是 ".$model->com_agent.".";
+                $savelog = new Log;
+                $savelog->client_service_id = $model->id;
+                $savelog->client_id = $model->agent_com_id;
+                $savelog->group_id = $model->group_id;
+                $savelog->processor_id = Auth::user()->id;
+                $savelog->log_date = date('Y-m-d');
+                $savelog->log_type = 'Commission';
+                $savelog->log_group = 'agent';
+                $savelog->detail = $log;
+                $savelog->detail_cn = $log_cn;
+                $savelog->amount = $model->com_agent;
+                $savelog->save();
+
+                $depo = new ClientTransaction;
+                $depo->client_id = $model->agent_com_id;
+                $depo->type = 'Deposit';
+                $depo->group_id = null;
+                $depo->tracking = $savelog->id;
+                $depo->amount = $model->com_agent;
+                $depo->is_commission = 1;
+                $depo->save();
+
+                //save transaction logs
+                $detail = 'Received commission Php'.$model->com_agent.' from group '.$group_name.'.';
+                $detail_cn = $detail;
+                $log_data = array(
+                    'client_service_id' => null,
+                    'client_id' => $model->agent_com_id,
+                    'group_id' => null,
+                    'processor_id' => Auth::user()->id,
+                    'log_date' => date('Y-m-d'),
+                    'log_type' => 'Transaction',
+                    'log_group' => 'deposit',
+                    'detail'=> $detail,
+                    'detail_cn'=> $detail_cn,
+                    'amount'=> $model->com_agent,
+                );
+                 LogController::save($log_data);
+            }
+        }
 
     }
 
