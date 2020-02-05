@@ -8,28 +8,36 @@ use App\Service;
 
 use App\User;
 
-use DB, Response;
+use Carbon\Carbon, DB, Response;
 
 use Illuminate\Http\Request;
 
 class ReportController extends Controller
 {
     
-    public function index(Request $request) {
-    	$filter = $request->filter;
-    	$startDate = $request->startDate;
-    	$endDate = $request->endDate;
+    public function index(Request $request, $perPage = 20) {
+    	$search = $request->search;
+
+    	$startDate = null;
+    	$endDate = null;
+    	if( $request->date != null && $request->date != 'null' ) {
+    		$date = explode(',', $request->date);
+
+    		$startDate = $date[0];
+
+    		$endDate = $date[1];
+    	}
 
     	$reports = Report::orderBy('id', 'desc')
     		->select(['id', 'detail', 'processor_id', 'created_at'])
-    		->whereHas('clientReports.clientService.client', function($query) use($filter) {
-    			if( $filter ) {
-    				$query->where('id', $filter)
-    					->orWhere(function($q) use($filter) {
-    						$q->where('first_name', 'LIKE', '%'.$filter.'%')
-    							->orWhere('last_name', 'LIKE', '%'.$filter.'%');
+    		->whereHas('clientReports.clientService.client', function($query) use($search) {
+    			if( $search ) {
+    				$query->where('id', $search)
+    					->orWhere(function($q) use($search) {
+    						$q->where('first_name', 'LIKE', '%'.$search.'%')
+    							->orWhere('last_name', 'LIKE', '%'.$search.'%');
     					})
-						->orWhere(DB::raw("CONCAT(`first_name`, ' ', `last_name`)"), 'LIKE', "%".$filter."%");
+						->orWhere(DB::raw("CONCAT(`first_name`, ' ', `last_name`)"), 'LIKE', "%".$search."%");
     			}
     		})
     		->with(['processor' => function($query) {
@@ -45,16 +53,16 @@ class ReportController extends Controller
     			'clientReports.clientService.service' => function($query) {
     				$query->select(['id', 'detail']);
     			},
-    			'clientReports.clientService.client' => function($query) use($filter) {
+    			'clientReports.clientService.client' => function($query) use($search) {
     				$query = $query->select(['id', 'first_name', 'last_name']);
 
-    				if( $filter ) {
-	    				$query->where('id', $filter)
-	    					->orWhere(function($q) use($filter) {
-	    						$q->where('first_name', 'LIKE', '%'.$filter.'%')
-	    							->orWhere('last_name', 'LIKE', '%'.$filter.'%');
+    				if( $search ) {
+	    				$query->where('id', $search)
+	    					->orWhere(function($q) use($search) {
+	    						$q->where('first_name', 'LIKE', '%'.$search.'%')
+	    							->orWhere('last_name', 'LIKE', '%'.$search.'%');
 	    					})
-	    					->orWhere(DB::raw("CONCAT(`first_name`, ' ', `last_name`)"), 'LIKE', "%".$filter."%");
+	    					->orWhere(DB::raw("CONCAT(`first_name`, ' ', `last_name`)"), 'LIKE', "%".$search."%");
 	    			}
     			}
     		])
@@ -64,22 +72,7 @@ class ReportController extends Controller
     					->whereDate('created_at', '<=', $endDate);
     			}
     		})
-    		->paginate(10);
-
-    		// 	$data['id'] = $report->id;
-    		// 	$data['service'] = [
-    		// 		'id' => $report->clientReports[0]->clientService->service->id,
-    		// 		'detail' => $report->clientReports[0]->clientService->service->detail
-    		// 	];
-    		// 	$data['detail'] = $report->detail;
-    		// 	$data['clients'] = $report->clientReports->map(function($clientReport) {
-    		// 		return $clientReport->clientService->client;
-    		// 	});
-    		// 	$data['processor'] = [
-    		// 		'id' => $report->processor->id,
-    		// 		'name' => $report->processor->first_name . ' ' . $report->processor->last_name
-    		// 	];
-    		// 	$data['created_at'] = Carbon::parse($report->created_at)->format('F d, Y h:i A');
+    		->paginate($perPage);
 
     	$response['status'] = 'Success';
 		$response['data'] = [
