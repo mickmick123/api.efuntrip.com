@@ -23,6 +23,10 @@ class ServiceProfile extends Model
         });
     }
 
+    public function breakdowns() {
+        return $this->hasMany('App\Breakdown', 'service_profile_id', 'id');
+    }
+
     public function groups() {
     	return $this->hasMany('App\Group', 'service_profile_id', 'id');
     }

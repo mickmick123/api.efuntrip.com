@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Breakdown;
+
 use App\Service;
 
 use App\ServiceBranchCost;
@@ -120,6 +122,8 @@ class ServiceController extends Controller
 		$service = Service::with('serviceBranchCosts', 'serviceProfileCosts')->find($id);
 
 		if( $service ) {
+			$service['breakdowns'] = DB::table('breakdowns')->where('service_id', $id)->get();
+			
 			$response['status'] = 'Success';
 			$response['data'] = [
 			    'service' => $service

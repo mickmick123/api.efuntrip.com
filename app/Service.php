@@ -13,6 +13,10 @@ class Service extends Model
 
     protected $fillable = ['parent_id', 'detail', 'detail_cn', 'description', 'description_cn', 'cost', 'charge', 'tip', 'com_agent', 'com_client', 'is_active', 'months_required'];
 
+    public function breakdowns() {
+        return $this->hasMany('App\Breakdown', 'service_id', 'id');
+    }
+
     public function clientServices() {
         return $this->hasMany('App\ClientService', 'service_id', 'id');
     }

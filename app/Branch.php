@@ -29,6 +29,10 @@ class Branch extends Model
         });
     }
 
+    public function breakdowns() {
+        return $this->hasMany('App\Breakdown', 'branch_id', 'id');
+    }
+
     public function groups() {
     	return $this->belongsToMany('App\Group', 'branch_group', 'branch_id', 'group_id');
     }
