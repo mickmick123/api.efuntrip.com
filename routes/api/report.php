@@ -10,4 +10,6 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('/{perPage?}', 'ReportController@index');
 
+	Route::post('/', 'ReportController@store');
+
 });

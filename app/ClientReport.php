@@ -13,7 +13,7 @@ class ClientReport extends Model
 
     protected $table = 'client_reports';
 
-    protected $fillable = ['client_service_id', 'report_id', 'service_procedure_id'];
+    protected $fillable = ['detail', 'client_service_id', 'report_id', 'service_procedure_id'];
 
     public function clientReportDocuments() {
     	return $this->hasMany('App\ClientReportDocument', 'client_report_id', 'id');

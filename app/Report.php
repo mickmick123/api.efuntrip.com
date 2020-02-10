@@ -13,7 +13,7 @@ class Report extends Model
 
     protected $table = 'reports';
 
-    protected $fillable = ['detail', 'processor_id'];
+    protected $fillable = ['processor_id'];
 
     public function clientReports() {
     	return $this->hasMany('App\ClientReport', 'report_id', 'id');

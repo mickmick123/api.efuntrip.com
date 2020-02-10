@@ -2,13 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\ClientService;
+
+use App\Document;
+
 use App\Report;
 
 use App\Service;
 
+use App\ServiceProcedure;
+
 use App\User;
 
-use Carbon\Carbon, DB, Response;
+use Auth, Carbon\Carbon, DB, Response, Validator;
 
 use Illuminate\Http\Request;
 
@@ -29,7 +35,7 @@ class ReportController extends Controller
     	}
 
     	$reports = Report::orderBy('id', 'desc')
-    		->select(['id', 'detail', 'processor_id', 'created_at'])
+    		->select(['id', 'processor_id', 'created_at'])
     		->whereHas('clientReports.clientService.client', function($query) use($search) {
     			if( $search ) {
     				$query->where('id', $search)
@@ -45,7 +51,7 @@ class ReportController extends Controller
     		}])
     		->with([
     			'clientReports' => function($query) {
-    				$query->select(['id', 'client_service_id', 'report_id']);
+    				$query->select(['id', 'detail', 'client_service_id', 'report_id']);
     			},
     			'clientReports.clientService' => function($query) {
     				$query->select(['id', 'client_id', 'service_id']);
@@ -177,6 +183,126 @@ class ReportController extends Controller
 			$response['code'] = 404;
 		}
 
+		return Response::json($response);
+	}
+
+	private function _63($serviceProcedure, $clientService) {
+		$serviceProcedure = ServiceProcedure::find($serviceProcedure);
+
+		$detail = $serviceProcedure->name;
+
+		// Documents
+		if( array_key_exists('documents', $clientService)
+			&& is_array($clientService['documents']) 
+			&& count($clientService['documents']) > 0 
+		) {
+			$documents = Document::whereIn('id', $clientService['documents'])->pluck('title')->toArray();
+			
+			$documents = ' (' . trim(implode(',', $documents)) . ')';
+
+			$detail .= $documents . '.';
+		}
+
+		// Extensions
+		if( array_key_exists('extensions', $clientService) ) {
+			if( array_key_exists('estimated_releasing_date', $clientService['extensions']) ) {
+				$estimatedReleasingDate = $clientService['extensions']['estimated_releasing_date'];
+				$estimatedReleasingDate = Carbon::parse($estimatedReleasingDate)->format('F d, Y');
+
+				$detail .= ' with an estimated releasing date of ' . $estimatedReleasingDate . '.';
+			}
+
+			if( array_key_exists('scheduled_hearing_date_and_time', $clientService['extensions'])
+				&& is_array($clientService['extensions']['scheduled_hearing_date_and_time']) 
+				&& count($clientService['extensions']['scheduled_hearing_date_and_time']) > 0 
+			) {
+				$scheduledHearingDateAndTimes = $clientService['extensions']['scheduled_hearing_date_and_time'];
+				$count = count($scheduledHearingDateAndTimes);
+
+				$detail .= ' The scheduled hearing date are as follows: ';
+				foreach($scheduledHearingDateAndTimes as $index => $scheduledHearingDateAndTime) {
+					$s = Carbon::parse($scheduledHearingDateAndTime)->format('F d, Y h:i A');
+
+					$detail .= $s;
+					if( $index+1 != $count ) {
+						$detail .= ', ';
+					}
+				}
+				$detail .= '.';
+			}
+		}
+
+		return $detail;
+	}
+
+	private function getDetail($serviceProcedure, $clientService) {
+		$detail = '';
+		
+		$cs = ClientService::find($clientService['id']);
+
+		if( $cs ) {
+			$serviceParentId = ClientService::find($clientService['id'])->service->parent_id;
+
+			// 9A Visa Extension
+			if( $serviceParentId == 63 ) {
+				$detail = $this->_63($serviceProcedure, $clientService);
+			}
+		}
+
+		return $detail;
+	}
+
+	public function store(Request $request) {
+		$validator = Validator::make($request->all(), [
+            'reports' => 'required|array',
+            'reports.*.service_procedure' => 'required',
+            'reports.*.client_services' => 'required|array',
+            'reports.*.client_services.*.id' => 'required',
+            'reports.*.client_services.*.documents' => 'array'
+        ], [
+        	'reports.*.service_procedure.required' => 'The service procedure field is required.',
+        	'reports.*.client_services.required' => 'The client services field is required.',
+        	'reports.*.client_services.array' => 'The client services field must be an array.',
+        	'reports.*.client_services.*.id.required' => 'The client services id field is required.',
+        	'reports.*.client_services.*.documents.array' => 'The client services documents field must be an array.',
+        ]);
+
+        if($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+        	$reports = $request->reports;
+        	$processorId = Auth::user()->id;
+
+        	foreach($reports as $report) {
+        		$r = Report::create([
+        			'processor_id' => $processorId
+        		]);
+
+        		$clientServices = $report['client_services'];
+        		foreach($clientServices as $clientService) {
+        			$detail = $this->getDetail($report['service_procedure'], $clientService);
+
+        			$cr = $r->clientReports()->create([
+        				'detail' => $detail,
+	        			'client_service_id' => $clientService['id'],
+	        			'service_procedure_id' => $report['service_procedure']
+	        		]);
+
+        			$documents = $clientService['documents'];
+        			foreach($documents as $document) {
+        				$cr->clientReportDocuments()->create([
+		        			'document_id' => $document
+		        		]);
+        			}
+        		}
+        	}
+
+        	$response['status'] = 'Success';
+			$response['code'] = 200;
+        }
+		
 		return Response::json($response);
 	}
 
