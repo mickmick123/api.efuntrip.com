@@ -153,7 +153,7 @@ class LogController extends Controller
 
         foreach($translogs as $t){
             $cs = ClientService::where('id',$t->client_service_id)->first();
-            if(($t->log_group == 'service' && $cs->service_id != $currentService && $t->log_date != $currentDate) || $t->log_group != 'service'){
+            if(($t->log_group == 'service' && $cs->service_id != $currentService) || $t->log_group != 'service'){
                 $body = "";
                 $usr =  User::where('id',$t->processor_id)->select('id','first_name','last_name')->get();
 
@@ -184,8 +184,7 @@ class LogController extends Controller
                     $month = $m;
                     $day = $d;
                 }
-
-
+                $total_cost = 0;
                 if($cs){
                     $csdetail = $cs->detail;
                     $cstracking =  $cs->tracking;
@@ -251,7 +250,7 @@ class LogController extends Controller
                         'id' => $t->id,
                         'head' => $head,
                         'body' => $body,
-                        'total_cost' => $total_cost,
+                        'total_cost' => ($total_cost > 0 ? $total_cost : 0),
                         'balance' => $t->balance,
                         'prevbalance' => $currentBalance,
                         'amount' => $t->amount,
