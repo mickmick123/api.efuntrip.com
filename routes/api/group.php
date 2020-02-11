@@ -34,7 +34,7 @@ Route::middleware('auth:api')->group(function() {
 	Route::get('members/{id}/{page?}', 'GroupController@members');
 	Route::get('packages-bybatch/{group_id}/{page?}', 'GroupController@getClientPackagesByBatch');
 	Route::get('packages-byservice/{group_id}/{page?}', 'GroupController@getClientPackagesByService');
-	Route::get('unpaid-services/{group_id}/{page?}', 'GroupController@getUnpaidServices');
+	Route::get('unpaid-services/{group_id}/{is_auto_generated}/{page?}', 'GroupController@getUnpaidServices');
 
 
 	Route::get('{id}', 'GroupController@show');
@@ -48,6 +48,8 @@ Route::middleware('auth:api')->group(function() {
 	Route::get('client-services/{client_id}/{group_id?}', 'GroupController@getClientServices');
 
 	Route::post('transfer', 'GroupController@transfer');
+
+	Route::post('add-service-payment', 'GroupController@addServicePayment');
 
 	Route::get('switch-branch/{group_id}/{branch_id?}', 'GroupController@switchBranch');
 
