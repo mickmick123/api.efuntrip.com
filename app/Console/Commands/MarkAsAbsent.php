@@ -194,7 +194,7 @@ class MarkAsAbsent extends Command
                                 ->where('month',$month)
                                 ->where('year',$year)
                                 ->where('user_id',$user_id)
-                                ->update(['time_out'=>'18:00']);
+                                ->update(['time_out'=>'18:00:00']);
                 }
 
                 // if($checkAttendance->time_in!=NULL && $getSchedule->schedule_type_id!=3) {
