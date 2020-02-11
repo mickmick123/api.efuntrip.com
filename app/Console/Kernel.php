@@ -13,7 +13,8 @@ class Kernel extends ConsoleKernel
      * @var array
      */
     protected $commands = [
-        //
+        // 'App\Console\Commands\MarkAsAbsent',
+        \App\Console\Commands\MarkAsAbsent::class
     ];
 
     /**
@@ -24,6 +25,9 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
+        $schedule->command('attendance:mark-as-absent')->timezone('Asia/Manila')
+            ->between('22:00', '23:00');
+            // ->everyMinute();
         // $schedule->command('inspire')
         //          ->hourly();
     }

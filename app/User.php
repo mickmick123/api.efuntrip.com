@@ -50,6 +50,10 @@ class User extends Authenticatable
         return $this->hasMany('App\ContactNumber', 'user_id', 'id');
     }
 
+    public function department() {
+        return $this->hasOne('App\DepartmentUser', 'user_id', 'id');
+    }
+
     public function devices() {
         return $this->hasMany('App\Device', 'user_id', 'id');
     }
