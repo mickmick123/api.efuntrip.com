@@ -15,4 +15,8 @@ class ServiceProcedureDocument extends Model
     	return $this->belongsTo('App\ServiceProcedure', 'service_procedure_id', 'id');
     }
 
+    public function document() {
+    	return $this->belongsTo('App\Document', 'document_id', 'id');
+    }
+
 }

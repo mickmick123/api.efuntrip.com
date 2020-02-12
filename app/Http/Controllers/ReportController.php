@@ -142,26 +142,20 @@ class ReportController extends Controller
 		$clientServicesId = json_decode($request->client_services_id);
 
 		if( is_array($clientServicesId) ) {
-			// $clients = User::whereHas('clientServices', function($query) use($clientServicesId) {
-			// 		$query->whereIn('id', $clientServicesId);
-			// 	})
-			// 	->with(['clientServices' => function($query) {
-			// 		$query->select(['id', 'client_id']);
-			// 	}])
-			// 	->get(['id']);
-				// ->map(function($items) {
-				// 	$data['documents'] = 123; 
-				// 	return $data;
-				// });
-
-				// ->with('clientServices.clientReports.clientReportDocuments')
-
 			$services = Service::whereHas('clientServices', function($query) use($clientServicesId) {
 				$query->whereIn('id', $clientServicesId);
 			})
-			->with(['serviceProcedures' => function($query) {
-				$query->select(['id', 'name', 'service_id', 'step'])->orderBy('step');
-			}])
+			->with([
+				'serviceProcedures' => function($query) {
+					$query->select(['id', 'name', 'service_id', 'step', 'action_id', 'category_id'])->orderBy('step');
+				},
+				'serviceProcedures.serviceProcedureDocuments' => function($query) {
+					$query->select(['service_procedure_id', 'document_id', 'is_required']);
+				},
+				'serviceProcedures.serviceProcedureDocuments.document' => function($query) {
+					$query->select(['id', 'title', 'is_unique']);
+				}
+			])
 			->with(['clientServices' => function($query1) use($clientServicesId) {
 				$query1->select(['id', 'client_id', 'service_id', 'tracking'])
 					->whereIn('id', $clientServicesId)
@@ -169,11 +163,10 @@ class ReportController extends Controller
 						$query2->select(['id', 'first_name', 'last_name']);
 					}]);
 			}])
-			->select(array('id', 'detail'))->get();
+			->select(array('id', 'parent_id', 'detail'))->get();
 
 			$response['status'] = 'Success';
 			$response['data'] = [
-				// 'clients' => $clients,
 		    	'services' => $services
 			];
 			$response['code'] = 200;
@@ -186,8 +179,8 @@ class ReportController extends Controller
 		return Response::json($response);
 	}
 
-	private function _63($serviceProcedure, $clientService) {
-		$serviceProcedure = ServiceProcedure::find($serviceProcedure);
+	private function _63($report, $clientService) {
+		$serviceProcedure = ServiceProcedure::find($report['service_procedure']);
 
 		$detail = $serviceProcedure->name;
 
@@ -204,19 +197,19 @@ class ReportController extends Controller
 		}
 
 		// Extensions
-		if( array_key_exists('extensions', $clientService) ) {
-			if( array_key_exists('estimated_releasing_date', $clientService['extensions']) ) {
-				$estimatedReleasingDate = $clientService['extensions']['estimated_releasing_date'];
+		if( array_key_exists('extensions', $report) ) {
+			if( array_key_exists('estimated_releasing_date', $report['extensions']) ) {
+				$estimatedReleasingDate = $report['extensions']['estimated_releasing_date'];
 				$estimatedReleasingDate = Carbon::parse($estimatedReleasingDate)->format('F d, Y');
 
 				$detail .= ' with an estimated releasing date of ' . $estimatedReleasingDate . '.';
 			}
 
-			if( array_key_exists('scheduled_hearing_date_and_time', $clientService['extensions'])
-				&& is_array($clientService['extensions']['scheduled_hearing_date_and_time']) 
-				&& count($clientService['extensions']['scheduled_hearing_date_and_time']) > 0 
+			if( array_key_exists('scheduled_hearing_date_and_time', $report['extensions'])
+				&& is_array($report['extensions']['scheduled_hearing_date_and_time']) 
+				&& count($report['extensions']['scheduled_hearing_date_and_time']) > 0 
 			) {
-				$scheduledHearingDateAndTimes = $clientService['extensions']['scheduled_hearing_date_and_time'];
+				$scheduledHearingDateAndTimes = $report['extensions']['scheduled_hearing_date_and_time'];
 				$count = count($scheduledHearingDateAndTimes);
 
 				$detail .= ' The scheduled hearing date are as follows: ';
@@ -235,7 +228,7 @@ class ReportController extends Controller
 		return $detail;
 	}
 
-	private function getDetail($serviceProcedure, $clientService) {
+	private function getDetail($report, $clientService) {
 		$detail = '';
 		
 		$cs = ClientService::find($clientService['id']);
@@ -245,7 +238,7 @@ class ReportController extends Controller
 
 			// 9A Visa Extension
 			if( $serviceParentId == 63 ) {
-				$detail = $this->_63($serviceProcedure, $clientService);
+				$detail = $this->_63($report, $clientService);
 			}
 		}
 
@@ -282,7 +275,7 @@ class ReportController extends Controller
 
         		$clientServices = $report['client_services'];
         		foreach($clientServices as $clientService) {
-        			$detail = $this->getDetail($report['service_procedure'], $clientService);
+        			$detail = $this->getDetail($report, $clientService);
 
         			$cr = $r->clientReports()->create([
         				'detail' => $detail,
