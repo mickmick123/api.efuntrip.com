@@ -861,12 +861,12 @@ class ClientController extends Controller
                     if($contact) {
                         $num_duplicate = 0;
                         foreach($contact as $con) {
-                            if(strval ($con['user_id']) === strval ($id)) {
+                            if(strval ($con['user_id']) !== strval ($id)) {
                                 $num_duplicate++;
                             }
                         }
 
-                        if($num_duplicate === 0) {
+                        if($num_duplicate > 0) {
                             $contact_error['contact_numbers.'.$key.'.number'] = ['The contact number has already been taken.'];
                             $ce_count++;
                         }
