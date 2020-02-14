@@ -18,10 +18,12 @@ use App\Branch;
 
 use App\Service;
 
+use App\Updates;
+
 use Auth, DB, Response, Validator;
 
 use App\Http\Controllers\LogController;
-
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class ClientController extends Controller
@@ -355,6 +357,42 @@ class ClientController extends Controller
 
             $client->groups = DB::table('group_user')->where('user_id', $id)
                 ->select(array('group_id'))->get();
+
+            $updates = DB::table('updates')->where('client_id', $id)->get();
+
+            $upd = Carbon::parse($client->created_at)->format('F j, Y');
+            $client->update_address = $upd;
+            $client->update_contact = $upd;
+            $client->update_passport = $upd;
+            $client->update_visa = $upd;
+
+            foreach($updates as $up){
+                switch($up->type){
+                    case 'Address' : {
+                        $client->update_address = Carbon::parse($up->updated_at)->format('F j, Y');
+                        break;
+                    }
+
+                    case 'Contact' : {
+                        $client->update_contact = Carbon::parse($up->updated_at)->format('F j, Y');
+                        break;
+                    }
+
+                    case 'Passport' : {
+                        $client->update_passport = Carbon::parse($up->updated_at)->format('F j, Y');
+                        break;
+                    }
+
+                    case 'Visa' : {
+                        $client->update_visa = Carbon::parse($up->updated_at)->format('F j, Y');
+                        break;
+                    }
+                    default : {
+                        break;
+                    }
+                }
+            }
+
 
             $branch = DB::table('branch_user')->where('user_id', $id)
                 ->select(array('branch_id'))->first();
@@ -900,6 +938,27 @@ class ClientController extends Controller
                         foreach ($changes as $key => $value) {
                             $old = $client->getOriginal($key);
                             $detail .= "Change ".$key." from ".$old." to ".$value.". ";
+                            
+                            if($key == 'address'){
+                                $upd = Updates::updateOrCreate(
+                                            ['client_id' => $id, 'type' => 'Address'],
+                                            ['updated_at' => Carbon::now()]
+                                        );
+                            }
+
+                            if($key == 'passport' || $key == 'passport_exp_date' ){
+                                $upd = Updates::updateOrCreate(
+                                            ['client_id' => $id, 'type' => 'Passport'],
+                                            ['updated_at' => Carbon::now()]
+                                        );
+                            }
+
+                            if($key == 'visa_type' || $key == 'arrival_date' || $key == 'first_expiration_date' || $key == 'extended_expiration_date' || $key == 'expiration_date' || $key == 'icard_issue_date' || $key == 'icard_expiration_date'){
+                                $upd = Updates::updateOrCreate(
+                                            ['client_id' => $id, 'type' => 'Visa'],
+                                            ['updated_at' => Carbon::now()]
+                                        );
+                            }
                         }
                         // save action logs
                         $detail_cn = $detail;
@@ -932,6 +991,15 @@ class ClientController extends Controller
                             ]);
 
                             if( $contactNumber['is_primary'] ) {
+                                $old = ContactNumber::where('user_id',$client->id)->where('is_primary',1)->first();
+                                if($old){
+                                    if($old->number != $contactNumber['number']){
+                                        $upd = Updates::updateOrCreate(
+                                            ['client_id' => $client->id, 'type' => 'Contact'],
+                                            ['updated_at' => Carbon::now()]
+                                        );
+                                    }
+                                }
                                 $client->update([
                                     'password' => bcrypt($contactNumber['number'])
                                 ]);
