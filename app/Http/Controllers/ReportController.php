@@ -214,7 +214,7 @@ class ReportController extends Controller
 
 				$detail .= ' The scheduled hearing date are as follows: ';
 				foreach($scheduledHearingDateAndTimes as $index => $scheduledHearingDateAndTime) {
-					$s = Carbon::parse($scheduledHearingDateAndTime)->format('F d, Y h:i A');
+					$s = Carbon::parse($scheduledHearingDateAndTime['value'])->format('F d, Y h:i A');
 
 					$detail .= $s;
 					if( $index+1 != $count ) {
