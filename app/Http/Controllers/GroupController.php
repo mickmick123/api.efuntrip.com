@@ -1190,8 +1190,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
            $temp['service_date'] = $s->sdate;
            $temp['sdate'] = $s->sdate;
            $temp['group_id'] = $groupId;
-
-           $temp['total_balance'] = $this->getGroupTotalBalance($groupId);
+           $temp['total_balance'] = $this->getGroupDeposit($groupId);
            $temp['total_available_balance'] = $totalAvailableBalance;
 
            $queryClients = ClientService::where('service_id', $s->service_id)->where('group_id', $groupId)->where('is_full_payment', 0)->orderBy('created_at','DESC')->orderBy('client_id')->groupBy('client_id')->get();
