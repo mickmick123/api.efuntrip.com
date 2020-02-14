@@ -31,7 +31,7 @@ class AttendanceController extends Controller
                         }))
                         ->leftjoin('users', 'department_user.user_id', '=', 'users.id')
                         ->leftjoin('departments', 'department_user.department_id', '=', 'departments.id')
-                        ->select('department_user.*', 'users.first_name', 'users.last_name', 'departments.name as department')
+                        ->select('department_user.*', 'users.first_name', 'users.last_name', DB::raw('CONCAT(users.last_name," ",users.first_name) AS full_name'), 'departments.name as department')
                         ->orderBy('departments.id', 'asc')
                         ->orderBy('users.last_name', 'asc')
                         ->get();
