@@ -769,9 +769,12 @@ public function members(Request $request, $id, $page = 20) {
 
               $services = DB::table('client_services as cs')
                   ->select(DB::raw('cs.*'))
-                  ->where('tracking',$p->tracking)
+                  ->where('client_id',$p->client_id)
+                  ->where('group_id',$id)
                   ->get();
 
+            //  $tempService = [];
+              $ctr2 = 0;
                   foreach($services as $s){
                     $s->package_cost = $s->cost+ $s->charge + $s->tip + $s->com_agent + $s->com_client;
                     $s->detail =  $s->detail;
@@ -779,7 +782,8 @@ public function members(Request $request, $id, $page = 20) {
                     if($s->active !== 0){
                         $totalServiceCost += ($s->package_cost - $s->discount);
                     }
-
+                  //  $tempService[$ctr2] = $s;
+                  //  $ctr2 ++;
                   }
                   $packs = $services;
           }
@@ -1280,6 +1284,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
           $response = $group_members;
 
           $ctr=0;
+          //foreach($group_members->items() as $gm){
           foreach($group_members as $gm){
               $usr =  User::where('id',$gm->user_id)->select('id','first_name','last_name')->limit(1)->get();
               if($usr){
