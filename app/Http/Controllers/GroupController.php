@@ -771,6 +771,7 @@ public function members(Request $request, $id, $page = 20) {
                   ->select(DB::raw('cs.*'))
                   ->where('client_id',$p->client_id)
                   ->where('group_id',$id)
+                  ->orderBy('id', 'desc')
                   ->get();
 
             //  $tempService = [];
