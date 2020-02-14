@@ -1027,6 +1027,10 @@ class ClientController extends Controller
         foreach($groups as $g){
             $g->leader = DB::table('users')->where('id', $g->leader_id)
                 ->select(array('first_name', 'last_name'))->first();
+            $g->client_last_active = DB::table('client_services')->where('group_id', $g->id)->where('client_id', $id)
+                ->select(array('created_at'))->orderBy('created_at','Desc')->first();
+            $g->group_latest_active = DB::table('client_services')->where('group_id', $g->id)
+                ->select(array('created_at'))->orderBy('created_at','Desc')->first();
         }
 
         $response['status'] = 'Success';
