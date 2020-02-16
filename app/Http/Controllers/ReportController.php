@@ -202,7 +202,7 @@ class ReportController extends Controller
 				$estimatedReleasingDate = $report['extensions']['estimated_releasing_date'];
 				$estimatedReleasingDate = Carbon::parse($estimatedReleasingDate)->format('F d, Y');
 
-				$detail .= ' with an estimated releasing date of ' . $estimatedReleasingDate . '.';
+				$detail .= ' Estimated releasing date is ' . $estimatedReleasingDate . '.';
 			}
 
 			if( array_key_exists('scheduled_hearing_date_and_time', $report['extensions'])
@@ -283,11 +283,14 @@ class ReportController extends Controller
 	        			'service_procedure_id' => $report['service_procedure']
 	        		]);
 
-        			$documents = $clientService['documents'];
-        			foreach($documents as $document) {
-        				$cr->clientReportDocuments()->create([
-		        			'document_id' => $document
-		        		]);
+        			if( array_key_exists('documents', $clientService) ) {
+        				$documents = $clientService['documents'];
+
+        				foreach($documents as $document) {
+	        				$cr->clientReportDocuments()->create([
+			        			'document_id' => $document
+			        		]);
+	        			}
         			}
         		}
         	}
