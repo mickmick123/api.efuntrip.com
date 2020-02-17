@@ -159,9 +159,20 @@ class ReportController extends Controller
 			->with(['clientServices' => function($query1) use($clientServicesId) {
 				$query1->select(['id', 'client_id', 'service_id', 'tracking'])
 					->whereIn('id', $clientServicesId)
-					->with(['client' => function($query2) {
-						$query2->select(['id', 'first_name', 'last_name']);
-					}]);
+					->with([
+						'client' => function($query2) {
+							$query2->select(['id', 'first_name', 'last_name']);
+						},
+						'clientReports' => function($query3) {
+							$query3->select(['id', 'client_service_id', 'service_procedure_id']);
+						},
+						'clientReports.clientReportDocuments' => function($query4) {
+							$query4->select(['id', 'client_report_id', 'document_id']);
+						},
+						'clientReports.clientReportDocuments.document' => function($query5) {
+							$query5->select(['id', 'title', 'is_unique']);
+						}
+					]);
 			}])
 			->select(array('id', 'parent_id', 'detail'))->get();
 
