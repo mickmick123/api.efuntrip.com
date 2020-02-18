@@ -862,7 +862,7 @@ class ClientController extends Controller
                         $num_duplicate = 0;
                         foreach($contact as $con) {
                             if(strval ($con['user_id']) !== strval ($id)) {
-                                $num_duplicate++;
+                              $num_duplicate++;
                             }
                         }
 

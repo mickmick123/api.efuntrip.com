@@ -26,7 +26,7 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         $schedule->command('attendance:mark-as-absent')->timezone('Asia/Manila')
-            ->daily()->between('22:00', '23:00');
+            ->between('22:00', '23:00');
             // ->everyMinute();
         // $schedule->command('inspire')
         //          ->hourly();
