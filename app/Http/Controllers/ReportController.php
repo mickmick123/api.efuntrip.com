@@ -6,6 +6,8 @@ use App\ClientService;
 
 use App\Document;
 
+use App\Log;
+
 use App\Report;
 
 use App\Service;
@@ -295,12 +297,33 @@ class ReportController extends Controller
 	        		]);
 
         			if( array_key_exists('documents', $clientService) ) {
+	        			$cs = ClientService::findOrFail($clientService['id']);
+	        			$sp = ServiceProcedure::find($report['service_procedure']);
+	        			$today = Carbon::now()->toDateString();
+
+	        			$log = Log::updateOrCreate(
+	        				[
+	        					'client_service_id' => $cs->id, 
+	        					'service_procedure_id' => $sp->id, 
+	        					'log_date' => $today,
+	        					'log_type' => 'Document',
+	        				],
+	        				[
+	        					'client_id' => $cs->client_id,
+	        					'group_id' => $cs->group_id,
+	        					'processor_id' => $processorId,
+	        					'detail' => $sp->name,
+	        				]
+	        			);
+
         				$documents = $clientService['documents'];
 
         				foreach($documents as $document) {
 	        				$cr->clientReportDocuments()->create([
 			        			'document_id' => $document
 			        		]);
+
+			        		$log->documents()->attach($document);
 	        			}
         			}
         		}

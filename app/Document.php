@@ -19,4 +19,8 @@ class Document extends Model
     	return $this->hasMany('App\ClientReportDocument', 'document_id', 'id');
     }
 
+    public function logs() {
+    	return $this->belongsToMany('App\Log', 'document_log', 'document_id', 'log_id')->withPivot('created_at', 'updated_at');
+    }
+
 }

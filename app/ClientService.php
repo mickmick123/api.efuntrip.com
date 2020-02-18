@@ -54,4 +54,8 @@ class ClientService extends Model
     	return $this->belongsTo('App\Service', 'service_id', 'id');
     }
 
+    public function logs() {
+        return $this->hasMany('App\Log', 'client_service_id', 'id');
+    }
+
 }

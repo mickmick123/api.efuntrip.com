@@ -473,5 +473,63 @@ public function getCommissionLogs($client_id, $group_id) {
         return Response::json($response);
     }
 
+    public function getDocumentLogs($client_id) {
+        $dates = DB::table('logs')->where('client_id', $client_id)
+            ->where('group_id', null)
+            ->where('log_type', 'Document')
+            ->groupBy('log_date')
+            ->orderBy('log_date', 'desc')
+            ->pluck('log_date');
+
+        $data = [];
+        foreach( $dates as $date ) {
+            $logs = Log::whereDate('log_date', '=', $date)
+                ->where('client_id', $client_id)
+                ->where('group_id', null)
+                ->where('log_type', 'Document')
+                ->orderBy('id', 'desc')
+                ->get();
+
+            $clientServicesIdArray = [];
+            $lastDisplayDate = null;
+
+            foreach( $logs as $log ) {
+                $clientServiceId = $log->client_service_id;
+
+                if( !in_array($clientServiceId, $clientServicesIdArray) ) {
+                    $service = ClientService::select(['id', 'detail', 'status', 'tracking', 'active'])
+                        ->with([
+                            'logs' => function($query1) {
+                                $query1->select(['id', 'client_service_id', 'detail', 'processor_id'])
+                                    ->where('log_type', 'Document');
+                            },
+                            'logs.processor' => function($query2) {
+                                $query2->select(['id', 'first_name', 'last_name']);
+                            },
+                            'logs.documents' => function($query3) {
+                                $query3->select(['title']);
+                            }
+                        ])
+                        ->findorfail($clientServiceId);
+
+                    $displayDate = ($lastDisplayDate != $date) ? Carbon::parse($date)->format('F d, Y') : null;
+
+                    $data[] = [
+                        'display_date' => $displayDate,
+                        'service' => $service
+                    ];
+
+                    $lastDisplayDate = $date;
+                    $clientServicesIdArray[] = $clientServiceId;
+                }
+            }
+        }
+
+        $response['status'] = 'Success';
+        $response['data'] = $data;
+        $response['code'] = 200;
+
+        return Response::json($response);
+    }
 
 }
