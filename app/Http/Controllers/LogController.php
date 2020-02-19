@@ -478,12 +478,14 @@ public function getCommissionLogs($client_id, $group_id) {
             ->where('group_id', null)
             ->where('log_type', 'Document')
             ->groupBy('log_date')
-            ->orderBy('log_date', 'desc')
+            ->orderBy('id', 'desc')
             ->pluck('log_date');
 
         $data = [];
         foreach( $dates as $date ) {
-            $logs = Log::whereDate('log_date', '=', $date)
+            $logs = DB::table('logs')
+                ->select(['client_service_id'])
+                ->whereDate('log_date', '=', $date)
                 ->where('client_id', $client_id)
                 ->where('group_id', null)
                 ->where('log_type', 'Document')
@@ -499,16 +501,17 @@ public function getCommissionLogs($client_id, $group_id) {
                 if( !in_array($clientServiceId, $clientServicesIdArray) ) {
                     $service = ClientService::select(['id', 'detail', 'status', 'tracking', 'active'])
                         ->with([
-                            'logs' => function($query1) use($date) {
-                                $query1->select(['id', 'client_service_id', 'detail', 'processor_id'])
+                            'logs' => function($query) use($date) {
+                                $query->select(['id', 'client_service_id', 'detail', 'processor_id'])
                                     ->where('log_type', 'Document')
-                                    ->whereDate('log_date', '=', $date);
+                                    ->whereDate('log_date', '=', $date)
+                                    ->orderBy('id', 'desc');
                             },
-                            'logs.processor' => function($query2) {
-                                $query2->select(['id', 'first_name', 'last_name']);
+                            'logs.processor' => function($query) {
+                                $query->select(['id', 'first_name', 'last_name']);
                             },
-                            'logs.documents' => function($query3) {
-                                $query3->select(['title'])->orderBy('document_log.id', 'desc');
+                            'logs.documents' => function($query) {
+                                $query->select(['title'])->orderBy('document_log.id', 'desc');
                             }
                         ])
                         ->findorfail($clientServiceId);
