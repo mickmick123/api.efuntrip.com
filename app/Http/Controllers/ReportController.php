@@ -22,24 +22,25 @@ use Illuminate\Http\Request;
 
 class ReportController extends Controller
 {
-    
+
     public function index(Request $request, $perPage = 20) {
     	$search = $request->search;
 
     	$startDate = null;
     	$endDate = null;
+
     	if( $request->date != null && $request->date != 'null' ) {
     		$date = explode(',', $request->date);
-
     		$startDate = $date[0];
-
     		$endDate = $date[1];
     	}
+
 
     	$reports = Report::orderBy('id', 'desc')
     		->select(['id', 'processor_id', 'created_at'])
     		->whereHas('clientReports.clientService.client', function($query) use($search) {
-    			if( $search ) {
+
+          if( $search ) {
     				$query->where('id', $search)
     					->orWhere(function($q) use($search) {
     						$q->where('first_name', 'LIKE', '%'.$search.'%')
@@ -47,6 +48,7 @@ class ReportController extends Controller
     					})
 						->orWhere(DB::raw("CONCAT(`first_name`, ' ', `last_name`)"), 'LIKE', "%".$search."%");
     			}
+
     		})
     		->with(['processor' => function($query) {
     			$query->select('id', 'first_name', 'last_name');
@@ -82,7 +84,7 @@ class ReportController extends Controller
     		})
     		->paginate($perPage);
 
-    	$response['status'] = 'Success';
+    $response['status'] = 'Success';
 		$response['data'] = [
 		    'reports' => $reports
 		];
@@ -90,6 +92,43 @@ class ReportController extends Controller
 
 		return Response::json($response);
     }
+
+
+   public function reportsByService($clientServiceId) {
+
+    $reports = Report::orderBy('id', 'desc')
+      ->select(['id', 'processor_id', 'created_at'])
+      ->whereHas('clientReports.clientService.client', function($query) use($clientServiceId) {
+        if($clientServiceId){
+          $query->where('client_service_id', $clientServiceId);
+        }
+      })
+      ->with(['processor' => function($query) {
+        $query->select('id', 'first_name', 'last_name');
+      }])
+
+      ->with([
+        'clientReports' => function($query) {
+          $query->select(['id', 'detail', 'client_service_id', 'report_id']);
+        },
+        'clientReports.clientService' => function($query) {
+          $query->select(['id', 'client_id', 'service_id']);
+        },
+        'clientReports.clientService.client' => function($query) {
+          $query = $query->select(['id', 'first_name', 'last_name']);
+        }
+      ])
+      ->latest()
+      ->get();
+
+      $response['status'] = 'Success';
+      $response['data'] = $reports;
+      $response['code'] = 200;
+
+      return Response::json($response);
+
+  }
+
 
 	public function clientsServices(Request $request) {
 		$clientIds = $request->input("client_ids") ? $request->client_ids : [];
@@ -104,17 +143,17 @@ class ReportController extends Controller
 	                ->select(DB::raw('cs.id, date_format(cs.created_at, "%M %e, %Y") as date, cs.tracking, cs.detail, cs.cost, cs.charge, cs.tip, cs.active, IFNULL(transactions.discount, 0) as discount'))
 	                ->leftjoin(DB::raw('
 	                    (
-	                        Select 
+	                        Select
 	                            SUM(IF(ct.type = "Discount", ct.amount, 0)) as discount,
 	                            ct.client_service_id
 
-	                        from 
+	                        from
 	                            client_transactions as ct
 
-	                        where 
+	                        where
 	                            ct.deleted_at is null
 
-	                        group by 
+	                        group by
 	                            ct.client_service_id
 	                    ) as transactions'),
 	                    'transactions.client_service_id', '=', 'cs.id')
@@ -199,11 +238,11 @@ class ReportController extends Controller
 
 		// Documents
 		if( array_key_exists('documents', $clientService)
-			&& is_array($clientService['documents']) 
-			&& count($clientService['documents']) > 0 
+			&& is_array($clientService['documents'])
+			&& count($clientService['documents']) > 0
 		) {
 			$documents = Document::whereIn('id', $clientService['documents'])->pluck('title')->toArray();
-			
+
 			$documents = ' (' . trim(implode(',', $documents)) . ')';
 
 			$detail .= $documents . '.';
@@ -219,8 +258,8 @@ class ReportController extends Controller
 			}
 
 			if( array_key_exists('scheduled_hearing_date_and_time', $report['extensions'])
-				&& is_array($report['extensions']['scheduled_hearing_date_and_time']) 
-				&& count($report['extensions']['scheduled_hearing_date_and_time']) > 0 
+				&& is_array($report['extensions']['scheduled_hearing_date_and_time'])
+				&& count($report['extensions']['scheduled_hearing_date_and_time']) > 0
 			) {
 				$scheduledHearingDateAndTimes = $report['extensions']['scheduled_hearing_date_and_time'];
 				$count = count($scheduledHearingDateAndTimes);
@@ -243,7 +282,7 @@ class ReportController extends Controller
 
 	private function getDetail($report, $clientService) {
 		$detail = '';
-		
+
 		$cs = ClientService::find($clientService['id']);
 
 		if( $cs ) {
@@ -332,7 +371,7 @@ class ReportController extends Controller
         	$response['status'] = 'Success';
 			$response['code'] = 200;
         }
-		
+
 		return Response::json($response);
 	}
 

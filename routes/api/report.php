@@ -10,6 +10,8 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('/{perPage?}', 'ReportController@index');
 
+	Route::get('reports-by-service/{id?}', 'ReportController@reportsByService');
+
 	Route::post('/', 'ReportController@store');
 
 });

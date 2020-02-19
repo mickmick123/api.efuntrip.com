@@ -1232,6 +1232,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
          }
        }
 
+      // $response['total_available_balance'] =  $totalAvailableBalance;
+
       return Response::json($response);
    }
 
