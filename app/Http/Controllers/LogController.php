@@ -499,15 +499,16 @@ public function getCommissionLogs($client_id, $group_id) {
                 if( !in_array($clientServiceId, $clientServicesIdArray) ) {
                     $service = ClientService::select(['id', 'detail', 'status', 'tracking', 'active'])
                         ->with([
-                            'logs' => function($query1) {
+                            'logs' => function($query1) use($date) {
                                 $query1->select(['id', 'client_service_id', 'detail', 'processor_id'])
-                                    ->where('log_type', 'Document');
+                                    ->where('log_type', 'Document')
+                                    ->whereDate('log_date', '=', $date);
                             },
                             'logs.processor' => function($query2) {
                                 $query2->select(['id', 'first_name', 'last_name']);
                             },
                             'logs.documents' => function($query3) {
-                                $query3->select(['title']);
+                                $query3->select(['title'])->orderBy('document_log.id', 'desc');
                             }
                         ])
                         ->findorfail($clientServiceId);
