@@ -18,6 +18,8 @@ use App\Branch;
 
 use App\Service;
 
+use App\Financing;
+
 use App\Updates;
 
 use Auth, DB, Response, Validator;
@@ -1457,6 +1459,22 @@ class ClientController extends Controller
                 $depo->amount = $amount;
                 $depo->save();
 
+                //save financing
+                $finance = new Financing;
+                $finance->user_sn = Auth::user()->id;
+                $finance->type = "deposit";
+                $finance->record_id = $depo->id;
+                $finance->cat_type = "process";
+                $finance->cat_storage = $storage;
+                $finance->branch_id = $branch_id;
+                $finance->storage_type = $bank;
+                $finance->trans_desc = Auth::user()->first_name.' received deposit from client #'.$client_id.' on Package #'.$tracking;
+                if($storage=='Alipay'){
+                    $finance->trans_desc = Auth::user()->first_name.' received deposit from client #'.$client_id.' on Package #'.$tracking.' with Alipay reference: '.$alipay_reference;
+                }
+                ((strcasecmp($storage,'Cash')==0) ? $finance->cash_client_depo_payment = $amount : $finance->bank_client_depo_payment = $amount);
+                $finance->save();
+
                 // save transaction logs
                 $detail = 'Deposited an amount of Php'.$amount.'.';
                 $detail_cn = '预存了款项 Php'.$amount.'.';
@@ -1490,6 +1508,22 @@ class ClientController extends Controller
                 $payment->amount = $amount;
                 $payment->save();
 
+                //for financing
+                $finance = new Financing;
+                $finance->user_sn = Auth::user()->id;            
+                $finance->type = "payment";
+                $finance->record_id = $payment->id;
+                $finance->cat_type = "process";
+                $finance->cat_storage = $storage;
+                $finance->branch_id = $branch_id;
+                $finance->storage_type = $bank;
+                $finance->trans_desc = Auth::user()->first_name.' received payment from client #'.$client_id.' on Package #'.$tracking;
+                if($storage=='Alipay'){
+                    $finance->trans_desc = Auth::user()->first_name.' received payment from client #'.$client_id.' on Package #'.$tracking.' with Alipay reference: '.$alipay_reference;
+                }
+                ((strcasecmp($storage,'Cash')==0) ? $finance->cash_client_depo_payment = $amount : $finance->bank_client_depo_payment = $amount);
+                $finance->save();
+
                 // save transaction logs
                 $detail = 'Paid an amount of Php'.$amount.'.';
                 $detail_cn = '已支付 Php'.$amount.'.';
@@ -1519,6 +1553,19 @@ class ClientController extends Controller
                     }
                     $refund->save();
 
+                    //for financing
+                    $finance = new Financing;
+                    $finance->user_sn = Auth::user()->id;
+                    $finance->type = "refund";
+                    $finance->record_id = $refund->id;
+                    $finance->cat_type = "process";
+                    $finance->cat_storage = $storage;
+                    $finance->cash_client_refund = $amount;
+                    $finance->branch_id = $branch_id;
+                    $finance->trans_desc = Auth::user()->first_name.' refund to client #'.$client_id.' on Package #'.$tracking.' for the reason of '.$reason;
+                    $finance->storage_type = ($storage!='Cash') ? $bank : null;
+                    $finance->save();
+
                     // save transaction logs
                     $detail = 'Refunded an amount of Php'.$amount.' with the reason of <i>"'.$reason.'"</i>.';
                     $detail_cn = '退款了 Php'.$amount.' 因为 "'.$reason.'".';
@@ -1543,8 +1590,8 @@ class ClientController extends Controller
                 $discount->amount = $amount;
                 $discount->group_id = null;
                 $discount->reason = $reason;
-                if($storage=='bank'){
-                    $discount->storage_type = $bank_type;
+                if($storage=='Bank'){
+                    $discount->storage_type = $bank;
                 }
                 $discount->save();
 
@@ -1614,6 +1661,19 @@ class ClientController extends Controller
                 $depo->group_id = $grid;
                 $depo->tracking = null;
                 $depo->save();
+
+                //for financing
+                $finance = new Financing;
+                $finance->user_sn = Auth::user()->id;
+                $finance->type = "transfer";
+                $finance->record_id = $depo->id;
+                $finance->cat_type = "process";
+                $finance->cat_storage = $storage;
+                $finance->branch_id = $branch_id;
+                ((strcasecmp($storage,'Cash')==0) ? $finance->cash_client_depo_payment = $amount : $finance->bank_client_depo_payment = $amount);
+                ((strcasecmp($storage,'Cash')==0) ? $finance->cash_client_refund = $amount : $finance->bank_cost = $amount);
+                $finance->trans_desc = Auth::user()->first_name.' transffered funds from client #'.$client_id.' to '.$request->transfer_to.' '.$transferred.'.';
+                $finance->save();
 
                  // save transaction logs
                 $client = User::findorfail($client_id);
