@@ -941,7 +941,7 @@ class ClientController extends Controller
                             $old = $client->getOriginal($key);
 
                             $field = str_replace("_", " ", $key);
-                            $field = str_replace("exp", "expiration", $field);
+                            $field = str_replace(" exp ", " expiration ", $field);
                             if( $old ) {
                                 $detail .= "Change ".$field." from ".$old." to ".$value.". ";
                             } else {
