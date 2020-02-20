@@ -936,11 +936,18 @@ class ClientController extends Controller
                         //getOriginal() -> get original values of model
                         //getDirty -> get all fields updated with value
                         $changes = $client->getDirty();
-                        $detail = "Updated client Account.";
+                        $detail = "Updated client account. ";
                         foreach ($changes as $key => $value) {
                             $old = $client->getOriginal($key);
-                            $detail .= "Change ".$key." from ".$old." to ".$value.". ";
-                            
+
+                            $field = str_replace("_", " ", $key);
+                            $field = str_replace("exp", "expiration", $field);
+                            if( $old ) {
+                                $detail .= "Change ".$field." from ".$old." to ".$value.". ";
+                            } else {
+                                $detail .= "Change ".$field." to ".$value.". ";
+                            }
+
                             if($key == 'address'){
                                 $upd = Updates::updateOrCreate(
                                             ['client_id' => $id, 'type' => 'Address'],
