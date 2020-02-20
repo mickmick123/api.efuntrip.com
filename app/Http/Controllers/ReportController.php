@@ -188,7 +188,7 @@ class ReportController extends Controller
 			})
 			->with([
 				'serviceProcedures' => function($query) {
-					$query->select(['id', 'name', 'service_id', 'step', 'action_id', 'category_id'])->orderBy('step');
+					$query->select(['id', 'name', 'service_id', 'step', 'action_id', 'category_id', 'is_required'])->orderBy('step');
 				},
 				'serviceProcedures.serviceProcedureDocuments' => function($query) {
 					$query->select(['service_procedure_id', 'document_id', 'is_required']);
