@@ -1350,6 +1350,24 @@ class ClientController extends Controller
 
                 $this->updatePackageStatus($cs->tracking); //update package status
 
+                // Soft delete discount
+                if($request->get('active') == 0) {
+                    ClientTransaction::where('client_id', $cs->client_id)
+                        ->where('client_service_id', $cs->id)
+                        ->where('tracking', $cs->tracking)
+                        ->where('type', 'Discount')
+                        ->delete();
+                } 
+                // Restore discount
+                elseif($request->get('active') == 1) {
+                    ClientTransaction::withTrashed()
+                        ->where('client_id', $cs->client_id)
+                        ->where('client_service_id', $cs->id)
+                        ->where('tracking', $cs->tracking)
+                        ->where('type', 'Discount')
+                        ->restore();
+                }
+
                 //update user expirys
                 $client_user = User::findorfail($cs->client_id);
                 if($request->status == 'complete' && $request->active==1){
