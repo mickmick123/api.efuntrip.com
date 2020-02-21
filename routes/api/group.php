@@ -45,7 +45,7 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::post('delete-member', 'GroupController@deleteMember');
 
-	Route::get('client-services/{client_id}/{group_id?}', 'GroupController@getClientServices');
+	Route::post('client-services', 'GroupController@getClientServices');
 
 	Route::post('transfer', 'GroupController@transfer');
 

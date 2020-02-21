@@ -193,7 +193,7 @@ class GroupController extends Controller
         $search = $request->input('search');
 
         $groups = DB::table('groups as g')
-            ->select(DB::raw('g.id, g.name, CONCAT(u.first_name, " ", u.last_name) as leader, g.balance, g.collectables, p.latest_package, srv.latest_service, p.latest_package2, srv.latest_service2'))
+            ->select(DB::raw('g.id, g.name, CONCAT(u.first_name, " ", u.last_name) as leader, g.risk, g.balance, g.collectables, p.latest_package, srv.latest_service, p.latest_package2, srv.latest_service2'))
             ->leftjoin(DB::raw('(select * from users) as u'),'u.id','=','g.leader_id')
             ->leftjoin(DB::raw('
                     (
@@ -1170,7 +1170,6 @@ public function addFunds(Request $request) {
 
          $query = ClientService::where('service_id', $s->service_id)->where('group_id', $groupId)->where('active', 1);
 
-
          $temp['detail'] = $s->detail;
          $temp['service_date'] = $s->sdate;
          $temp['sdate'] = $s->sdate;
@@ -1194,7 +1193,6 @@ public function addFunds(Request $request) {
                    $clientServices[$tmpCtr] = $cs;
                    $tmpCtr++;
                  }
-
 
                  $members[$ctr2] = User::where('id',$m->client_id)->select('first_name','last_name')->first();
                  $members[$ctr2]['tcost'] = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->where('client_id',$m->client_id)->value(DB::raw("SUM(cost + charge + tip +com_client + com_agent)"));
@@ -1628,23 +1626,25 @@ public function addFunds(Request $request) {
 
    }
 
+   //
+   public function getClientServices(Request $request) {
 
-   public function getClientServices($client_id, $group_id) {
+        $group_id = $request->group_id;
+        $client_id = $request->client_id;
 
         $result['services'] = DB::table('client_services')
                  ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, tracking, status, detail, created_at'))
-                ->where('group_id', ($group_id != 0) ? $group_id : NULL)
+                ->where('group_id', ($request->option !== 'client-to-group') ? $group_id : NULL)
                 ->where('client_id', $client_id)
                 ->orderBy('id', 'desc')
                 ->get();
 
 
-        if($group_id != 0){
-            $result['packages'] = Package::where('group_id', $group_id)
-            ->where('client_id', $client_id)->orderBy('id', 'desc')->get();
+        if($request->option === 'client-to-group'){
+          $result['packages'] = Package::where('group_id', $group_id)->where('client_id', $client_id)->orderBy('id', 'desc')->get();
         }
         else{
-            $result['packages'] = Package::where('client_id', $client_id)->orderBy('id', 'desc')->get();
+          $result['packages'] = Package::where('client_id', $client_id)->where('group_id', NULL)->orderBy('id', 'desc')->get();
         }
 
 
@@ -1670,7 +1670,7 @@ public function addFunds(Request $request) {
         $gentracking = null;
         for($i=0; $i<count($request->services); $i++) {
 
-            if($request->packages[$i] == 0) { //New package
+            if($request->packages[$i] === 0) { //New package
                 if($gentracking == null){
                     $type = ($request->option == 'client-to-group') ? 'group' : 'individual';
                     $tracking = $this->generateTracking($type);
@@ -1693,8 +1693,8 @@ public function addFunds(Request $request) {
 
             $oldtrack = null;
             $getServ = ClientService::where('id', $request->services[$i])
-                //->where('client_id', $request->member_id)
-                //->where('group_id', $groupId)
+              //  ->where('client_id', $request->member_id)
+              //  ->where('group_id', $groupId)
                 ->first();
 
             if($getServ){
@@ -1705,9 +1705,9 @@ public function addFunds(Request $request) {
 
                 $response['status'] = 'Success';
                 $response['code'] = 200;
-                $response['data']  = "UPDATED";
 
-                return Response::json($response);
+
+                //return Response::json($response);
             }
 
             $this->updatePackageStatus($tracking);
