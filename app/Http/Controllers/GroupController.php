@@ -349,6 +349,19 @@ class GroupController extends Controller
             } elseif( $request->role == 'vice-leader' ) {
                 DB::table('group_user')->where('group_id', $request->group_id)->where('user_id', $request->client_id)
                     ->update(['is_vice_leader' => 1]);
+
+                $viceLeader = User::where('id',$request->client_id)->first();
+                $viceLeaderLabel = '['.$request->client_id.'] '.$viceLeader->first_name.' '.$viceLeader->last_name;
+
+                $detail = 'Marked ' . $viceLeaderLabel . ' as a vice-leader.';
+                $log_data = array(
+                    'client_service_id' => null,
+                    'client_id' => null,
+                    'group_id' => $request->group_id,
+                    'log_type' => 'Action',
+                    'detail'=> $detail
+                );
+                LogController::save($log_data);
             } elseif( $request->role == 'member' ) {
                 DB::table('group_user')->where('group_id', $request->group_id)->where('user_id', $request->client_id)
                     ->update(['is_vice_leader' => 0]);
