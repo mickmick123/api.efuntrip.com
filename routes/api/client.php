@@ -42,6 +42,8 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::patch('{id}', 'ClientController@update');
 
+  Route::post('get-today-tasks', 'ClientController@getTodayTasks');
 
+  Route::post('get-employee', 'ClientController@getEmployees');
 
 });

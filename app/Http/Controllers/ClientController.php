@@ -2,25 +2,29 @@
 
 namespace App\Http\Controllers;
 
-use App\ContactNumber;
-
-use App\User;
+use App\Branch;
 
 use App\ClientService;
 
 use App\ClientTransaction;
 
+use App\ContactNumber;
+
 use App\Group;
 
 use App\Package;
 
-use App\Branch;
+use App\RoleUser;
 
 use App\Service;
 
 use App\Financing;
 
+use App\Tasks;
+
 use App\Updates;
+
+use App\User;
 
 use Auth, DB, Response, Validator;
 
@@ -1974,9 +1978,9 @@ class ClientController extends Controller
         $services = ClientService::with('client')->whereHas('client.branches', function ($query) use ($auth_branch) {
                 $query->where('branches.id', '=', $auth_branch);
                 })
-                ->where('client_services.status','complete')
+                // ->where('client_services.status','complete')
                 ->where('client_services.active', '1')
-                ->where('client_services.created_at', $date)
+                ->where('client_services.created_at', 'LIKE', '%'.$date.'%')
                 ->where(function($query) {
                     return $query->where('checked', '0')->orWhere('checked', NULL);
                 })->with(array('client.groups' => function($query){
@@ -2002,13 +2006,47 @@ class ClientController extends Controller
                 })
                 ->paginate($perPage);
 
-
         $response['status'] = 'Success';
         $response['data'] = $services;
         $response['code'] = 200;
-        $response['date'] = $request->input('date');
+        $response['date'] = $date;
         return Response::json($response);
 
+    }
+
+    // List of Today's Tasks
+    public function getTodayTasks(Request $request) {
+      $date = $request['data'];
+
+      $tasks = Tasks::with('client_service')
+                ->with(array('client_service.client'))
+                ->leftjoin('users as u', 'tasks.who_is_in_charge', '=', 'u.id')
+                ->when($date != null, function ($q) use ($date) {
+                  return $q->where('tasks.date', '>=', $date);
+                })
+                ->select('tasks.*', 'u.first_name as in_charge_first_name', 'u.last_name as in_charge_last_name')
+                ->orderBy('tasks.date', 'desc')
+                ->get();
+      
+
+      $response['status'] = 'Success';
+      $response['data'] = $tasks;
+      $response['code'] = 200;
+      $response['test'] = $request['data'];
+      return Response::json($response);
+    }
+
+    public function getEmployees() {
+      $role = DB::table('role_user')
+              ->leftjoin('users', 'role_user.user_id', '=', 'users.id')
+              ->where('role_user.role_id', '4')
+              ->select('role_user.*', 'users.first_name', 'users.last_name')
+              ->get();
+
+      $response['status'] = 'Success';
+      $response['data'] = $role;
+      $response['code'] = 200;
+      return Response::json($response);
     }
 
     /**** Private Functions ****/

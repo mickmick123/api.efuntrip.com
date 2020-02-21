@@ -9,9 +9,11 @@ class RoleUser extends Model
 
     protected $table = 'role_user';
 
-    public $timestamps = false;
+    protected $fillable = ['id', 'role_id', 'user_id'];
 
-    protected $fillable = ['role_id', 'user_id'];
+    public function user() {
+    	return $this->belongTo('App\User', 'id', 'user_id');
+    }
 
 
 }
