@@ -118,7 +118,6 @@ class ReportController extends Controller
           $query = $query->select(['id', 'first_name', 'last_name']);
         }
       ])
-      ->latest()
       ->get();
 
       $response['status'] = 'Success';
@@ -342,8 +341,8 @@ class ReportController extends Controller
 
 	        			$log = Log::updateOrCreate(
 	        				[
-	        					'client_service_id' => $cs->id, 
-	        					'service_procedure_id' => $sp->id, 
+	        					'client_service_id' => $cs->id,
+	        					'service_procedure_id' => $sp->id,
 	        					'log_date' => $today,
 	        					'log_type' => 'Document',
 	        				],

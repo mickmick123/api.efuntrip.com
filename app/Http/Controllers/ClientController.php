@@ -198,10 +198,10 @@ class ClientController extends Controller
                     (IFNULL(transactions.total_refund, 0) + IFNULL(totalCompleteServiceCost.amount, 0))
                 ) as collectable,
 
-                p.latest_package, 
-                srv.latest_service, 
-                srv.latest_service2, 
-                p.latest_package2, 
+                p.latest_package,
+                srv.latest_service,
+                srv.latest_service2,
+                p.latest_package2,
                 IFNULL(csrv.active_service_count, 0) AS active_service_count')
             )
             ->leftjoin(
@@ -618,6 +618,7 @@ class ClientController extends Controller
                   'id' => $p->id,
                   'name' => $p->first_name." ".$p->last_name." -- [".$br."] -- ".$p->sdates."",
                   'full_name' => $p->first_name." ".$p->last_name,
+									'branch_id' => $p->branch_id
               );
            }
            if($p->checkyear == null){
@@ -625,6 +626,7 @@ class ClientController extends Controller
                   'id' => $p->id,
                   'name' => $p->first_name." ".$p->last_name." -- [".$br."] -- No Service",
                   'full_name' => $p->first_name." ".$p->last_name,
+									'branch_id' => $p->branch_id
               );
            }
         }
@@ -682,9 +684,9 @@ class ClientController extends Controller
                     } else {
                         $number = substr($contactNumber['number'], 1);
                     }
-                    
+
                     $contact = ContactNumber::where('number','LIKE','%'.$number.'%')->count();
-    
+
                     if($contact > 0) {
                         $contact_error['contact_numbers.'.$key.'.number'] = ['The contact number has already been taken.'];
                         $ce_count++;
@@ -776,7 +778,7 @@ class ClientController extends Controller
                 $response['status'] = 'Success';
         	    $response['code'] = 200;
             }
-            
+
         }
 
         return Response::json($response);
@@ -857,9 +859,9 @@ class ClientController extends Controller
                     } else {
                         $number = substr($contactNumber['number'], 1);
                     }
-                    
+
                     $contact = ContactNumber::where('number','LIKE','%'.$number.'%')->get();
-                    
+
                     if($contact) {
                         $num_duplicate = 0;
                         foreach($contact as $con) {
@@ -872,7 +874,7 @@ class ClientController extends Controller
                             $contact_error['contact_numbers.'.$key.'.number'] = ['The contact number has already been taken.'];
                             $ce_count++;
                         }
-                        
+
                     }
                 }
             }
@@ -931,7 +933,7 @@ class ClientController extends Controller
                     } else {
                         $client->visa_type = null;
                     }
-                    
+
                     if($client->isDirty()){
                         //getOriginal() -> get original values of model
                         //getDirty -> get all fields updated with value
@@ -947,6 +949,7 @@ class ClientController extends Controller
                             } else {
                                 $detail .= "Change ".$field." to ".$value.". ";
                             }
+
 
                             if($key == 'address'){
                                 $upd = Updates::updateOrCreate(
@@ -1254,19 +1257,19 @@ class ClientController extends Controller
                         $discnotes = ' updated discount from Php' . $__oldDiscount . ' to Php' . $request->get('discount').', ';
                         $discnotes_cn = ' 已更新折扣 ' . $__oldDiscount . ' 到 ' . $request->get('discount') .', ';
                         $oldDiscount = $__oldDiscount;
-                        $newDiscount = $request->get('discount');  
+                        $newDiscount = $request->get('discount');
                     }
 
                     if($__oldDiscount == $request->get('discount')){
                         $oldDiscount = $__oldDiscount;
-                        $newDiscount = $request->get('discount'); 
+                        $newDiscount = $request->get('discount');
                     }
 
                     // New Discount
-                    if($__oldDiscount == null) { 
+                    if($__oldDiscount == null) {
                         $discnotes = ' discounted an amount of Php'.$request->get('discount').', ';
                         $discnotes_cn = ' 已折扣额度 Php'.$request->get('discount').', ';
-                        $newDiscount = $request->get('discount');  
+                        $newDiscount = $request->get('discount');
                     }
 
                 } else {
@@ -1400,7 +1403,7 @@ class ClientController extends Controller
 
                     if($oldstatus != $service_status && $service_status == 'complete'){
                         $log_data['detail'] = 'Completed Service '.$log;
-                        $log_data['detail_cn'] = '完成的服务 '.$log_cn;   
+                        $log_data['detail_cn'] = '完成的服务 '.$log_cn;
                         $log_data['amount'] = '-'.$newServiceCost;
                     }
                     else{
@@ -1409,7 +1412,7 @@ class ClientController extends Controller
                         }
                         else{
                             $log_data['amount'] = '-'.$newServiceCost;
-                        }    
+                        }
 
                         $log_data['detail'] = 'Updated Service '.$log;
                         $log_data['detail_cn'] = '服务更新 '.$log_cn;
@@ -1431,10 +1434,10 @@ class ClientController extends Controller
             'client_id' => 'required',
         ]);
 
-        if($validator->fails()) {       
+        if($validator->fails()) {
             $response['status'] = 'Failed';
             $response['errors'] = $validator->errors();
-            $response['code'] = 422;   
+            $response['code'] = 422;
         } else {
             $tracking = $request->get('tracking');
             $client_id = $request->get('client_id');
@@ -1517,7 +1520,7 @@ class ClientController extends Controller
 
                 //for financing
                 $finance = new Financing;
-                $finance->user_sn = Auth::user()->id;            
+                $finance->user_sn = Auth::user()->id;
                 $finance->type = "payment";
                 $finance->record_id = $payment->id;
                 $finance->cat_type = "process";
@@ -1659,7 +1662,7 @@ class ClientController extends Controller
                     $transTo = Group::where('id',$selected_group)->first()->leader_id;
                     $grid = $selected_group;
                 }
-                
+
                 // Deposit amount to client or group selected
                 $depo = new ClientTransaction;
                 $depo->client_id = $transTo;
@@ -1793,7 +1796,7 @@ class ClientController extends Controller
             $response['code'] = 422;
         } else {
             $contactNumber = $request->contact_number;
-            
+
             if(strlen($contactNumber) === 13) {
                 $number = substr($contactNumber, 3);
             } else if(strlen($contactNumber) === 12) {
@@ -1801,7 +1804,7 @@ class ClientController extends Controller
             } else {
                 $number = substr($contactNumber, 1);
             }
-            
+
             $contact = ContactNumber::where('number','LIKE','%'.$number.'%')->count();
 
             if($contact > 0) {
@@ -1839,7 +1842,7 @@ class ClientController extends Controller
 
                 $client->branches()->attach($request->branch);
                 $client->roles()->attach(2);
-                
+
                 $response['status'] = 'Success';
                 $response['code'] = 200;
             }
@@ -1882,7 +1885,7 @@ class ClientController extends Controller
                     } else {
                         return $q->orderBy('client_services.' . $sort[0], $sort[1]);
                     }
-                    
+
                 })
                 ->where(function ($services) use($search) {
                     $dateSearch = str_replace('/', '-', $search);
