@@ -81,7 +81,11 @@ class ServiceController extends Controller
         			'detail' => $request->service_name,
         			'detail_cn' => ($request->service_name_chinese) ? $request->service_name_chinese : null,
         			'description' => ($request->description) ? $request->description : null,
-        			'description_cn' => ($request->description_chinese) ? $request->description_chinese : null
+        			'description_cn' => ($request->description_chinese) ? $request->description_chinese : null,
+        			'months_required' => $request->months_required,
+        			'min_months' => $request->minimum_months,
+        			'max_months' => $request->maximum_months,
+        			'form_id' => $request->form_id
         		]);
 
         		ServiceBranchCostController::createData([$service->id]);
@@ -91,7 +95,11 @@ class ServiceController extends Controller
         			'detail' => $request->service_name,
         			'detail_cn' => ($request->service_name_chinese) ? $request->service_name_chinese : null,
         			'description' => ($request->description) ? $request->description : null,
-        			'description_cn' => ($request->description_chinese) ? $request->description_chinese : null
+        			'description_cn' => ($request->description_chinese) ? $request->description_chinese : null,
+        			'months_required' => $request->months_required,
+        			'min_months' => $request->minimum_months,
+        			'max_months' => $request->maximum_months,
+        			'form_id' => $request->form_id
         		]);
 
         		foreach($request->costs as $cost) {
@@ -160,7 +168,11 @@ class ServiceController extends Controller
 	        			'detail' => $request->service_name,
 	        			'detail_cn' => ($request->service_name_chinese) ? $request->service_name_chinese : null,
 	        			'description' => ($request->description) ? $request->description : null,
-	        			'description_cn' => ($request->description_chinese) ? $request->description_chinese : null
+	        			'description_cn' => ($request->description_chinese) ? $request->description_chinese : null,
+	        			'months_required' => $request->months_required,
+	        			'min_months' => $request->minimum_months,
+	        			'max_months' => $request->maximum_months,
+	        			'form_id' => $request->form_id
 	        		]);
         		} elseif( $request->type == 'child' ) {
         			$service->update([
@@ -168,7 +180,11 @@ class ServiceController extends Controller
 	        			'detail' => $request->service_name,
 	        			'detail_cn' => ($request->service_name_chinese) ? $request->service_name_chinese : null,
 	        			'description' => ($request->description) ? $request->description : null,
-	        			'description_cn' => ($request->description_chinese) ? $request->description_chinese : null
+	        			'description_cn' => ($request->description_chinese) ? $request->description_chinese : null,
+	        			'months_required' => $request->months_required,
+	        			'min_months' => $request->minimum_months,
+	        			'max_months' => $request->maximum_months,
+	        			'form_id' => $request->form_id
 	        		]);
 
         			if( $request->service_profile == 0 ) {

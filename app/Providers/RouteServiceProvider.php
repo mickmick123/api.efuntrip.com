@@ -66,6 +66,8 @@ class RouteServiceProvider extends ServiceProvider
 
             $this->mapFinancingRoutes();
 
+            $this->mapFormRoutes();
+
             $this->mapGroupRoutes();
 
             $this->mapGroupServiceProfileRoutes();
@@ -222,6 +224,14 @@ class RouteServiceProvider extends ServiceProvider
                  ->middleware('api')
                  ->namespace($this->namespace)
                  ->group(base_path('routes/api/financing.php'));
+        }
+
+        protected function mapFormRoutes()
+        {
+            Route::prefix('api/v1/forms')
+                 ->middleware('api')
+                 ->namespace($this->namespace)
+                 ->group(base_path('routes/api/forms.php'));
         }
 
         protected function mapGroupRoutes()

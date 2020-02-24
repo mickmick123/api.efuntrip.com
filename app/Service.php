@@ -11,7 +11,7 @@ class Service extends Model
 
     public $timestamps = false;
 
-    protected $fillable = ['parent_id', 'detail', 'detail_cn', 'description', 'description_cn', 'cost', 'charge', 'tip', 'com_agent', 'com_client', 'is_active', 'months_required','max_months', 'min_months', 'form'];
+    protected $fillable = ['parent_id', 'detail', 'detail_cn', 'description', 'description_cn', 'cost', 'charge', 'tip', 'com_agent', 'com_client', 'is_active', 'months_required','max_months', 'min_months', 'form_id'];
 
     public function breakdowns() {
         return $this->hasMany('App\Breakdown', 'service_id', 'id');
@@ -19,6 +19,10 @@ class Service extends Model
 
     public function clientServices() {
         return $this->hasMany('App\ClientService', 'service_id', 'id');
+    }
+
+    public function form() {
+        return $this->belongsTo('App\Form', 'form_id', 'id');
     }
     
     public function serviceBranchCosts() {
