@@ -2049,6 +2049,23 @@ class ClientController extends Controller
       return Response::json($response);
     }
 
+    public function getReminders(Request $request, $perPage = 5) {
+      $range = Carbon::now()->addDays(7)->format('Y-m-d');
+
+
+      $query = User::where('visa_type', '<>', null)
+              ->where(function($query) use ($range) {
+                return $query->where('expiration_date', '<=', $range)->orWhere('first_expiration_date', '<=', $range);
+              })
+              ->orderBy('id', 'asc')
+              ->paginate($perPage);
+
+      $response['status'] = 'Success';
+      $response['data'] = $query;
+      $response['code'] = 200;
+      return Response::json($response);
+    }
+
     /**** Private Functions ****/
 
     private function generateIndividualTrackingNumber($length = 7) {
