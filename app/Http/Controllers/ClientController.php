@@ -561,7 +561,10 @@ class ClientController extends Controller
                 $keyword = ltrim($keyword,"0");
                 $keyword = ltrim($keyword,'+');
                 $keyword = ltrim($keyword,'63');
-                $cids = ContactNumber::where("number",'LIKE', '%' . $keyword .'%')->pluck('id');
+                $cids = [];
+                if($keyword != ''){
+                    $cids = ContactNumber::where("number",'LIKE', '%' . $keyword .'%')->pluck('user_id');
+                }
 
                 $results = DB::connection()
                     ->table('users as a')
