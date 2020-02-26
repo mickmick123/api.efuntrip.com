@@ -10,6 +10,8 @@ use App\Log;
 
 use App\Report;
 
+use App\ClientReportDocument;
+
 use App\Service;
 
 use App\ServiceProcedure;
@@ -296,6 +298,63 @@ class ReportController extends Controller
 		return $detail;
 	}
 
+	private function statusUponCompletion($clientService, $serviceProcedureId) {
+		$clientService_id = $clientService->id;
+		$clientService_serviceId = $clientService->service_id;
+		$clientService_status = $clientService->status;
+
+		$service = Service::with([
+				'serviceProcedures' => function($query) use($serviceProcedureId) {
+					$query->where('id', $serviceProcedureId);
+				},
+				'serviceProcedures.serviceProcedureDocuments' => function($query) {
+					$query->where('is_required', 1);
+				}
+			])
+			->findOrFail($clientService_serviceId);
+
+		if( count($service->serviceProcedures) == 1 ) {
+			$serviceProcedure = $service->serviceProcedures[0];
+
+			if( $serviceProcedure->status_upon_completion != null ) {
+				$statuses = ['pending','on process','complete', 'released'];
+
+				$currentStatus = $clientService_status;
+				$currentStatusIndex = array_search($currentStatus, $statuses, true);
+
+				$targetStatus = $serviceProcedure->status_upon_completion;
+				$targetStatusIndex = array_search($targetStatus, $statuses, true);
+
+				if( $targetStatusIndex > $currentStatusIndex ) {
+					$serviceProcedureRequiredDocuments = $serviceProcedure->serviceProcedureDocuments
+						->map(function($item, $key) {
+							return $item['document_id'];
+						})->toArray();
+
+					// Service procedure: without required documents
+					if( count($serviceProcedureRequiredDocuments) == 0 ) {
+						$clientService->update(['status' => $targetStatus]);
+					} 
+					// Service procedure: with required documents
+					else {
+						$reportedDocuments = ClientReportDocument::whereHas('clientReport', 
+							function($query) use($clientService_id, $serviceProcedureId) {
+								$query->where('client_service_id', $clientService_id)
+									->where('service_procedure_id', $serviceProcedureId);
+							})
+							->pluck('document_id')->toArray();
+
+						$difference = array_diff($serviceProcedureRequiredDocuments, $reportedDocuments);
+
+						if( count($difference) == 0 ) {
+							$clientService->update(['status' => $targetStatus]);
+						}
+					}
+				}
+			}
+		}
+	}
+
 	public function store(Request $request) {
 		$validator = Validator::make($request->all(), [
             'reports' => 'required|array',
@@ -334,8 +393,9 @@ class ReportController extends Controller
 	        			'service_procedure_id' => $report['service_procedure']
 	        		]);
 
+        			$cs = ClientService::findOrFail($clientService['id']);
+
         			if( array_key_exists('documents', $clientService) ) {
-	        			$cs = ClientService::findOrFail($clientService['id']);
 	        			$sp = ServiceProcedure::find($report['service_procedure']);
 	        			$today = Carbon::now()->toDateString();
 
@@ -364,6 +424,8 @@ class ReportController extends Controller
 			        		$log->documents()->attach($document);
 	        			}
         			}
+
+        			$this->statusUponCompletion($cs, $report['service_procedure']);
         		}
         	}
 

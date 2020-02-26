@@ -89,7 +89,10 @@ class ServiceProcedureController extends Controller
         			'action_id' => $request->action_id,
         			'category_id' => $request->category_id,
         			'is_required' => $request->is_required,
-                    'is_add_to_on_hand' => $request->is_add_to_on_hand
+                    'is_add_to_on_hand' => $request->is_add_to_on_hand,
+                    'status_upon_completion' => ($request->is_required == 1)
+                        ? $request->status_upon_completion
+                        : null
         		]);
 
                 if( $serviceProcedure->step != null && $request->is_required == 0 ) {
@@ -174,7 +177,10 @@ class ServiceProcedureController extends Controller
                 $stepsCount = ServiceProcedure::where('service_id', $request->service_id)
                     ->whereNotNull('step')->count();
 
-                $serviceProcedure->update(['step' => $stepsCount + 1]);
+                $serviceProcedure->update([
+                    'step' => $stepsCount + 1,
+                    'status_upon_completion' => $request->status_upon_completion
+                ]);
             }
 
         	foreach($request->required_documents as $requiredDocument) {
