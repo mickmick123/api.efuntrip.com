@@ -1138,6 +1138,7 @@ class ClientController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
+            $service_ids = [];
             for($i=0; $i<count($request->services); $i++) {
                 $service = Service::findorfail($request->services[$i]);
 
@@ -1159,6 +1160,8 @@ class ClientController extends Controller
                     'active' => 1,
                 ]);
 
+                $service_ids[] = $cs->id;
+
                 $this->updatePackageStatus($request->tracking); //update package status
 
                 // save transaction logs
@@ -1178,6 +1181,7 @@ class ClientController extends Controller
             }
 
             $response['status'] = 'Success';
+            $response['service_ids'] = $service_ids;
             $response['code'] = 200;
         }
 
