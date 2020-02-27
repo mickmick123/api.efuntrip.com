@@ -160,6 +160,7 @@ class ReportController extends Controller
 	                    'transactions.client_service_id', '=', 'cs.id')
 	                ->where('cs.client_id', $clientId)
 	                ->where('cs.active', 1)
+	                ->where('cs.status', '<>', 'released')
 	                ->orderBy('cs.id', 'desc')
 	                ->get();
 
