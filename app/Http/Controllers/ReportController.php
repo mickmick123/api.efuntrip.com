@@ -192,6 +192,12 @@ class ReportController extends Controller
 				'serviceProcedures' => function($query) {
 					$query->select(['id', 'name', 'service_id', 'step', 'action_id', 'category_id', 'is_required'])->orderBy('step');
 				},
+				'serviceProcedures.action' => function($query) {
+					$query->select(['id', 'name']);
+				},
+				'serviceProcedures.category' => function($query) {
+					$query->select(['id', 'name']);
+				},
 				'serviceProcedures.serviceProcedureDocuments' => function($query) {
 					$query->select(['service_procedure_id', 'document_id', 'is_required']);
 				},
@@ -279,6 +285,12 @@ class ReportController extends Controller
 			}
 		}
 
+		// Extras
+			// Reason
+			if( $report['extras']['reason'] ) {
+				$detail .= ' with a reason of ' . $report['extras']['reason'] . '.';
+			}
+
 		return $detail;
 	}
 
@@ -356,6 +368,14 @@ class ReportController extends Controller
 		}
 	}
 
+	private function checkIfRequestToCancel($clientService, $serviceProcedureId) {
+		$serviceProcedure = ServiceProcedure::with('action', 'category')->findOrFail($serviceProcedureId);
+
+		if( $serviceProcedure->action->name == 'Cancelled' && $serviceProcedure->category->name == 'Service' ) {
+			$clientService->update(['active' => 0]);
+		}
+	}
+
 	public function store(Request $request) {
 		$validator = Validator::make($request->all(), [
             'reports' => 'required|array',
@@ -427,6 +447,8 @@ class ReportController extends Controller
         			}
 
         			$this->statusUponCompletion($cs, $report['service_procedure']);
+
+        			$this->checkIfRequestToCancel($cs, $report['service_procedure']);
         		}
         	}
 
