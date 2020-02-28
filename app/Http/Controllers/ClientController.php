@@ -1165,8 +1165,10 @@ class ClientController extends Controller
                 $this->updatePackageStatus($request->tracking); //update package status
 
                 // save transaction logs
-                $detail = 'Added a service. Service status is pending.';
-                $detail_cn = '已添加服务. 服务状态为 待办。';
+                $totalAmount = $cs->cost + $cs->tip + $cs->charge;
+
+                $detail = 'Added a service. Total service cost is Php' . $totalAmount. '. Service status is pending.';
+                $detail_cn = '已添加服务. 总服务费 Php' . $totalAmount. '. 服务状态为 待办。';
                 $log_data = array(
                     'client_service_id' => $cs->id,
                     'client_id' => $cs->client_id,
@@ -1239,6 +1241,9 @@ class ClientController extends Controller
                 $newDiscount = 0;
                 $discnotes = '';
                 $discnotes_cn = '';
+                $temp_note = 'total service charge from Php';
+                $temp_note_cn = '总服务费从 Php';
+                $deduct = 0;
                 if($request->discount > 0) {
 
                     $__oldDiscount = null;
@@ -1264,9 +1269,12 @@ class ClientController extends Controller
                     }
 
                     // Update discount
+                    $f = ($cs->cost + $cs->charge + $cs->tip) - $__oldDiscount;
+                    $t = ($cs->cost + $cs->charge + $cs->tip) - $request->get('discount');
                     if($__oldDiscount != null && $__oldDiscount != $request->get('discount')) {
-                        $discnotes = ' updated discount from Php' . $__oldDiscount . ' to Php' . $request->get('discount').', ';
-                        $discnotes_cn = ' 已更新折扣 ' . $__oldDiscount . ' 到 ' . $request->get('discount') .', ';
+                        $deduct = $request->get('discount') - $__oldDiscount;
+                        $discnotes = ' updated discount from Php' . $__oldDiscount . ' to Php' . $request->get('discount').', '. $temp_note . $f. ' to Php' .$t;
+                        $discnotes_cn = ' 已更新折扣 ' . $__oldDiscount . ' 到 ' . $request->get('discount') .', '. $temp_note_cn . ' 到 Php' . $t;
                         $oldDiscount = $__oldDiscount;
                         $newDiscount = $request->get('discount');
                     }
@@ -1277,9 +1285,12 @@ class ClientController extends Controller
                     }
 
                     // New Discount
+                    $f = ($cs->cost + $cs->charge + $cs->tip);
+                    $t = ($cs->cost + $cs->charge + $cs->tip) - $request->get('discount');
                     if($__oldDiscount == null) {
-                        $discnotes = ' discounted an amount of Php'.$request->get('discount').', ';
-                        $discnotes_cn = ' 已折扣额度 Php'.$request->get('discount').', ';
+                        $deduct = $request->get('discount');
+                        $discnotes = ' discounted an amount of Php'.$request->get('discount').', '. $temp_note . $f. ' to Php' .$t;
+                        $discnotes_cn = ' 已折扣额度 Php'.$request->get('discount').', '. $temp_note_cn . $f. ' 到 Php' .$t;
                         $newDiscount = $request->get('discount');
                     }
 
@@ -1288,10 +1299,12 @@ class ClientController extends Controller
                     if($discountExist){
                         // Delete from client_transactions
                         $discountExist->forceDelete();
-
+                        $f = ($cs->cost + $cs->charge + $cs->tip) - $discountExist->amount;
+                        $t = ($cs->cost + $cs->charge + $cs->tip); 
+                        $deduct = -1 * $discountExist->amount;   
                         // When user removed discount
-                        $discnotes = ' removed discount of Php ' . $discountExist->amount . ', ';
-                        $discnotes_cn = ' 移除折扣 ' . $discountExist->amount.', ';
+                        $discnotes = ' removed discount of Php ' . $discountExist->amount .', '. $temp_note . $f. ' to Php' .$t;
+                        $discnotes_cn = ' 移除折扣 ' . $discountExist->amount.', '. $temp_note_cn . $f. ' 到 Php' .$t;
                         $oldDiscount = $discountExist->amount;
                     }
                 }
@@ -1321,12 +1334,12 @@ class ClientController extends Controller
                          $translog_cn = '总服务费从 Php' . ($oldServiceCost) . ' 到 Php' . $toAmount;
                     }
                     else{
-                        $translog = 'Total service charge from Php' . ($oldServiceCost) . ' to Php' . $toAmount;
-                        $translog_cn = '总服务费从 Php' . ($oldServiceCost) . ' 到 Php' . $toAmount;
+                        $translog = 'Total service charge from Php' . ($oldServiceCost - $deduct) . ' to Php' . $toAmount;
+                        $translog_cn = '总服务费从 Php' . ($oldServiceCost - $deduct) . ' 到 Php' . $toAmount;
                     }
 
                     $newVal +=$newServiceCost;
-                    $oldVal +=$oldServiceCost;
+                    $oldVal +=$oldServiceCost - $deduct;
                 }
 
 
@@ -1407,11 +1420,36 @@ class ClientController extends Controller
                     $client_user->save();
                 }
 
-
                 //save transaction logs
-                $log =  ' : '.$discnotes .$translog.'. ' . $transtat;
-                $log_cn =  ' : '.$discnotes_cn . $translog_cn. '. ' . $transtat_cn;
-                if($translog != '' || $transtat != '' || $discnotes != ''){
+                if($discnotes != '' ){
+                    $log2 =  'Updated Service : '.$discnotes.'. ';
+                    $log_cn2 =  '服务更新 : '. $discnotes_cn. '. '; 
+
+                    $log_data2 = array(
+                        'client_service_id' => $cs->id,
+                        'client_id' => $cs->client_id,
+                        'group_id' => $cs->group_id,
+                        'log_type' => 'Transaction',
+                        'log_group' => 'service',
+                        'detail'=> $log2,
+                        'detail_cn'=> $log_cn2,
+                        'amount'=> $t,
+                    );  
+
+                    if(($cs->status != 'complete')){
+                        $log_data2['amount'] = 0;
+                    }
+                    else{
+                        $log_data2['amount'] = '-'.$t;
+                    }
+
+                    LogController::save($log_data2);
+                }
+
+
+                $log =  ' : '.$translog.'. ' . $transtat;
+                $log_cn =  ' : '. $translog_cn. '. ' . $transtat_cn;
+                if($translog != '' || $transtat != '' ){
                     $newVal = $oldVal - $newVal;
                     //$user = Auth::user();
                     if($oldactive == 0 && $request->active == 1){
