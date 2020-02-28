@@ -88,12 +88,28 @@ class LogController extends Controller
                     }
                     $currentService = $cs->id;
 
-                    $body = DB::table('logs')->where('client_service_id', $cs->id)
-                    ->where('id','!=', $t->id)
-                    ->orderBy('id', 'desc')
-                    ->distinct('detail')
-                    ->pluck('detail');
-                    $body = $body;
+                    $body = DB::table('logs as l')->select(DB::raw('l.detail, l.log_date, pr.first_name'))
+                    ->where('client_service_id', $cs->id)
+                    ->where('l.id','!=', $t->id)
+                    ->leftjoin(
+                        DB::raw('
+                            (
+                                Select id,first_name, last_name
+                                from users as u
+                            ) as pr
+                        '),
+                        'pr.id', '=', 'l.processor_id'
+                    )
+                    ->where('l.id','!=', $t->id)
+                    ->where('log_type','Transaction')
+                    ->orderBy('l.id', 'desc')
+                    //->distinct('detail')
+                    ->get();
+                    \Log::info($body);
+
+                    $data = collect($body->toArray())->flatten()->all();
+                    
+                    $body = $data;
                 }
                 else{
                     $csdetail = ucfirst($t->log_group);
