@@ -286,10 +286,12 @@ class ReportController extends Controller
 		}
 
 		// Extras
+		if( array_key_exists('extras', $report) ) {
 			// Reason
-			if( $report['extras']['reason'] ) {
-				$detail .= ' with a reason of ' . $report['extras']['reason'] . '.';
+			if( array_key_exists('reason', $report['extras']) ) {
+				$detail .= ' With a reason of ' . $report['extras']['reason'] . '.';
 			}
+		}
 
 		return $detail;
 	}
@@ -311,7 +313,7 @@ class ReportController extends Controller
 		return $detail;
 	}
 
-	private function statusUponCompletion($clientService, $serviceProcedureId) {
+	private function handleStatusUponCompletion($clientService, $serviceProcedureId) {
 		$clientService_id = $clientService->id;
 		$clientService_serviceId = $clientService->service_id;
 		$clientService_status = $clientService->status;
@@ -368,7 +370,7 @@ class ReportController extends Controller
 		}
 	}
 
-	private function checkIfRequestToCancel($clientService, $serviceProcedureId) {
+	private function handleRequestToCancel($clientService, $serviceProcedureId) {
 		$serviceProcedure = ServiceProcedure::with('action', 'category')->findOrFail($serviceProcedureId);
 
 		if( $serviceProcedure->action->name == 'Cancelled' && $serviceProcedure->category->name == 'Service' ) {
@@ -446,9 +448,9 @@ class ReportController extends Controller
 	        			}
         			}
 
-        			$this->statusUponCompletion($cs, $report['service_procedure']);
+        			$this->handleStatusUponCompletion($cs, $report['service_procedure']);
 
-        			$this->checkIfRequestToCancel($cs, $report['service_procedure']);
+        			$this->handleRequestToCancel($cs, $report['service_procedure']);
         		}
         	}
 
