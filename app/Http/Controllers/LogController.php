@@ -22,13 +22,13 @@ class LogController extends Controller
     public static function save($log_data) {
         if(Auth::check()) {
             //Insert new transaction log
-            $log_data['processor_id'] = Auth::user()->id;        
-            $log_data['log_date'] = date('Y-m-d');        
+            $log_data['processor_id'] = Auth::user()->id;
+            $log_data['log_date'] = date('Y-m-d');
             Log::insert($log_data);
         }
     }
 
-    public function getTransactionLogs($client_id, $group_id) {  
+    public function getTransactionLogs($client_id, $group_id) {
         if($group_id == 0){
             $group_id = null;
         }
@@ -125,7 +125,7 @@ class LogController extends Controller
                     'day' => $d,
                     'year' => $y,
                     'display_date' => Carbon::parse($t->log_date)->format('F d,Y'),
-                    'data' => array ( 
+                    'data' => array (
                         'id' => $t->id,
                         'head' => $t->detail,
                         'body' => $body,
@@ -152,7 +152,7 @@ class LogController extends Controller
         return Response::json($response);
     }
 
-    public function getGroupTransactionLogs($client_id, $group_id) {  
+    public function getGroupTransactionLogs($client_id, $group_id) {
         if($client_id == 0){
             $client_id = null;
         }
@@ -239,11 +239,11 @@ class LogController extends Controller
                                     ->where('client_service_id', $s->id)
                                     ->sum('amount');
                             $total_cost += ($s->charge + $s->cost + $s->tip + $s->com_agent + $s->com_client) - $total_disc;
-                        }            
+                        }
                         $ctr++;
                     }
                     $t->amount = '-'.$total_cost;
-                    
+
                     $body = '';
                 }
                 else{
@@ -262,7 +262,7 @@ class LogController extends Controller
                     'day' => $d,
                     'year' => $y,
                     'display_date' => Carbon::parse($t->log_date)->format('F d,Y'),
-                    'data' => array ( 
+                    'data' => array (
                         'id' => $t->id,
                         'head' => $head,
                         'body' => $body,
@@ -291,7 +291,7 @@ class LogController extends Controller
     }
 
 
-public function getCommissionLogs($client_id, $group_id) {  
+public function getCommissionLogs($client_id, $group_id) {
         if($client_id == 0){
             $client_id = null;
             $translogs = DB::table('logs')->where('client_id','!=',null)->where('group_id',$group_id)->where('log_type','Commission')->orderBy('id','desc')->get();
@@ -310,8 +310,8 @@ public function getCommissionLogs($client_id, $group_id) {
         $currentDate = null;
 
         foreach($translogs as $a){
-            
-           
+
+
                 $totalClientCommission =  Log::select(DB::raw("SUM(amount) as total"))
                         ->where('log_type','Commission')
                         ->where('group_id',$a->group_id)
@@ -329,7 +329,7 @@ public function getCommissionLogs($client_id, $group_id) {
                         //\Log::info($totalClientCommission);
             if($client_last_record['amount']==null){
                 $client_last_record['amount'] = $totalClientCommission;
-               
+
             }
             $usr =  User::where('id',$a->processor_id)->select('id','first_name','last_name')->get();
             $cdate = Carbon::parse($a->log_date)->format('M d Y');
@@ -358,7 +358,7 @@ public function getCommissionLogs($client_id, $group_id) {
                 'month' => $m,
                 'day' => $d,
                 'year' => $y,
-                'data' => array ( 
+                'data' => array (
                     'id' => $a->id,
                     'title' => $a->detail,
                     'balance' => $totalClientCommission,
@@ -378,10 +378,10 @@ public function getCommissionLogs($client_id, $group_id) {
         return Response::json($response);
     }
 
-    public function getActionLogs($client_id, $group_id) {  
+    public function getActionLogs($client_id, $group_id) {
         if($group_id == 0){
             $group_id = null;
-        }  
+        }
         $translogs = DB::table('logs')->where('client_id',$client_id)->where('group_id',$group_id)->where('log_type','Action')->orderBy('id','desc')->get();
 
         if($group_id > 0){
@@ -462,7 +462,7 @@ public function getCommissionLogs($client_id, $group_id) {
                     'day' => $d,
                     'year' => $y,
                     'display_date' => Carbon::parse($t->log_date)->format('F d,Y'),
-                    'data' => array ( 
+                    'data' => array (
                         'id' => $t->id,
                         'head' => $t->detail,
                         'body' => $body,
@@ -551,5 +551,44 @@ public function getCommissionLogs($client_id, $group_id) {
 
         return Response::json($response);
     }
+
+
+    public function getAllLogs($client_service_id) {
+
+
+      $logs = DB::table('logs')->where('client_service_id',$client_service_id)->orderBy('id','desc')->get();
+
+
+      foreach( $logs as $log ) {
+          $usr =  User::where('id',$log->processor_id)->select('first_name','last_name')->get();
+          $log->processor = ($usr) ? ($usr[0]->first_name ." ".$usr[0]->last_name) : "";
+          $log->detail =  ($log->detail !=='' && $log->detail !== null) ? $log->detail : '';
+          $log->detail_cn =  ($log->detail_cn !=='' && $log->detail_cn !== null) ? $log->detail_cn : '';
+
+          if($log->log_type === 'Document'){
+            $log->documents = ClientService::select(['id', 'detail', 'status', 'tracking', 'active'])
+                ->with([
+                    'logs.processor' => function($query) {
+                        $query->select(['id', 'first_name', 'last_name']);
+                    },
+                    'logs.documents' => function($query) {
+                        $query->select(['title'])->orderBy('document_log.id', 'desc');
+                    }
+                ])
+                ->findorfail($client_service_id);
+          }
+
+      }
+
+      $response['status'] = 'Success';
+      $response['data'] = $logs;
+      $response['code'] = 200;
+
+
+      return Response::json($response);
+
+
+    }
+
 
 }

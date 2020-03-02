@@ -17,7 +17,6 @@ use App\Log;
 use App\GroupUser;
 
 use App\Package;
-use App\Financing;
 
 use App\Branch;
 use App\BranchGroup;
@@ -349,19 +348,6 @@ class GroupController extends Controller
             } elseif( $request->role == 'vice-leader' ) {
                 DB::table('group_user')->where('group_id', $request->group_id)->where('user_id', $request->client_id)
                     ->update(['is_vice_leader' => 1]);
-
-                $viceLeader = User::where('id',$request->client_id)->first();
-                $viceLeaderLabel = '['.$request->client_id.'] '.$viceLeader->first_name.' '.$viceLeader->last_name;
-
-                $detail = 'Marked ' . $viceLeaderLabel . ' as a vice-leader.';
-                $log_data = array(
-                    'client_service_id' => null,
-                    'client_id' => null,
-                    'group_id' => $request->group_id,
-                    'log_type' => 'Action',
-                    'detail'=> $detail
-                );
-                LogController::save($log_data);
             } elseif( $request->role == 'member' ) {
                 DB::table('group_user')->where('group_id', $request->group_id)->where('user_id', $request->client_id)
                     ->update(['is_vice_leader' => 0]);
@@ -881,22 +867,6 @@ public function addFunds(Request $request) {
                 $depo->amount = $amount;
                 $depo->save();
 
-                //add to financing
-                $finance = new Financing;
-                $finance->type = 'deposit';
-                $finance->record_id = $depo->id;
-                $finance->cat_type = 'process';
-                $finance->cat_storage = $storage;
-                $finance->branch_id = $branch_id;
-                $finance->trans_desc = Auth::user()->first_name.' received deposit from group '.$gname;
-                if($storage == 'Alipay'){
-                    $finance->trans_desc = Auth::user()->first_name.' received deposit from group '.$gname.' with alipay reference: '.$alipay_reference;
-                }
-                (($storage=='Cash') ? $finance->cash_client_depo_payment = $amount: $finance->bank_client_depo_payment = $amount );
-                $finance->storage_type = ($storage!='Cash') ? $bank : null;
-                $finance->save();
-
-
                 // save transaction logs
                 $detail = 'Deposited an amount of Php'.$amount.'.';
                 $detail_cn = '预存了款项 Php'.$amount.'.';
@@ -930,21 +900,6 @@ public function addFunds(Request $request) {
                 $payment->amount = $amount;
                 $payment->save();
 
-                //add to financing
-                $finance = new Financing;
-                $finance->type = 'payment';
-                $finance->record_id = $payment->id;
-                $finance->cat_type = 'process';
-                $finance->cat_storage = $storage;
-                $finance->branch_id = $branch_id;
-                $finance->trans_desc = Auth::user()->first_name.' received payment from group '.$gname;
-                if($storage == 'Alipay'){
-                    $finance->trans_desc = Auth::user()->first_name.' received payment from group '.$gname.' with alipay reference: '.$alipay_reference;
-                }
-                (($storage=='Cash') ? $finance->cash_client_depo_payment = $amount: $finance->bank_client_depo_payment = $amount );
-                $finance->storage_type = ($storage!='Cash') ? $bank : null;
-                $finance->save();
-
                 // save transaction logs
                 $detail = 'Paid an amount of Php'.$amount.'.';
                 $detail_cn = '已支付 Php'.$amount.'.';
@@ -973,18 +928,6 @@ public function addFunds(Request $request) {
                         $refund->storage_type = $bank;
                     }
                     $refund->save();
-
-                    //save to financing
-                    $f = new Financing;
-                    $f->type = 'refund';
-                    $f->record_id = $refund->id;
-                    $f->cat_type = 'process';
-                    $f->cat_storage = $storage;
-                    $f->cash_client_refund = $amount;
-                    $f->branch_id = $branch_id;
-                    $f->trans_desc = Auth::user()->first_name.' refunded from group '.$group->name.' for the reason of '.$reason;
-                    $f->storage_type = ($storage!='Cash') ? $bank : null;
-                    $f->save();
 
                     // save transaction logs
                     $detail = 'Refunded an amount of Php'.$amount.' with the reason of <i>"'.$reason.'"</i>.';
@@ -1082,19 +1025,6 @@ public function addFunds(Request $request) {
                 $depo->tracking = null;
                 $depo->save();
 
-                //for financing
-                $finance = new Financing;
-                $finance->user_sn = Auth::user()->id;
-                $finance->type = 'transfer';
-                $finance->record_id = $depo->id;
-                $finance->cat_type = "process";
-                $finance->cat_storage = $storage;
-                $finance->branch_id = $branch_id;
-                ((strcasecmp($storage,'Cash')==0) ? $finance->cash_client_depo_payment = $amount : $finance->bank_client_depo_payment = $amount);
-                ((strcasecmp($storage,'Cash')==0) ? $finance->cash_client_refund = $amount : $finance->bank_cost = $amount);
-                $finance->trans_desc = Auth::user()->first_name.' transferred funds from group '.$gname.' to '.$request->transfer_to.' '.$transferred.'.';
-                $finance->save();
-
                  // save transaction logs
                 $detail = 'Deposited an amount of Php'.$amount.' from group '.$gname.'.';
                 $detail_cn = '预存了款项 Php'.$amount.' 从 团体 '.$gname.'.';
@@ -1118,31 +1048,34 @@ public function addFunds(Request $request) {
         return Response::json($response);
     }
 
-    public function getClientPackagesByGroup($client_id, $group_id){
+public function getClientPackagesByGroup($client_id, $group_id){
 
-          $packs = DB::table('packages as p')->select(DB::raw('p.*,g.name as group_name'))
-                      ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','p.group_id')
-                       ->where([['client_id', '=' , $client_id], ['p.group_id', '=', $group_id]])
-                      ->orderBy('id', 'desc')
-                      ->get();
+      $packs = DB::table('packages as p')->select(DB::raw('p.*,g.name as group_name'))
+                  ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','p.group_id')
+                   ->where([['client_id', '=' , $client_id], ['p.group_id', '=', $group_id]])
+                  ->orderBy('id', 'desc')
+                  ->get();
 
-          foreach($packs as $p){
-              $package_cost = ClientService::where('tracking', $p->tracking)
-                              ->where('active', 1)
-                              ->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
-              $p->package_cost = ($package_cost > 0 ? $package_cost : 0);
+      foreach($packs as $p){
+          $package_cost = ClientService::where('tracking', $p->tracking)
+                          ->where('active', 1)
+                          ->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
+          $p->package_cost = ($package_cost > 0 ? $package_cost : 0);
 
-          }
+      }
 
-          $response['status'] = 'Success';
-          $response['data'] = $packs;
-          $response['code'] = 200;
+      $response['status'] = 'Success';
+      $response['data'] = $packs;
+      $response['code'] = 200;
 
-          return Response::json($response);
+      return Response::json($response);
 
-    }
+}
 
-    public function getClientPackagesByService(Request $request, $groupId, $page = 20){
+
+
+
+   public function getClientPackagesByService(Request $request, $groupId, $page = 20){
 
      $sort = $request->input('sort');
      $search = $request->input('search');
@@ -1670,7 +1603,7 @@ public function addFunds(Request $request) {
         $gentracking = null;
         for($i=0; $i<count($request->services); $i++) {
 
-            if($request->packages[$i] === 0) { //New package
+            if($request->packages[$i] == 0) { //New package
                 if($gentracking == null){
                     $type = ($request->option == 'client-to-group') ? 'group' : 'individual';
                     $tracking = $this->generateTracking($type);
@@ -1683,12 +1616,14 @@ public function addFunds(Request $request) {
                         'tracking' => $tracking,
                         'status' => '0'
                     ]);
+
                 }
                 else{
                     $tracking = $gentracking;
                 }
             } else {
                 $tracking = $request->packages[$i];
+
             }
 
             $oldtrack = null;
@@ -1991,8 +1926,12 @@ public function addFunds(Request $request) {
           $srv->active = $request->active;
       }
 
-      $srv->cost = ($request->cost != null ? $request->cost : $srv->cost);
-      $srv->tip = ($request->tip != null ? $request->tip : $srv->tip);
+      $srv->cost = (isset($request->cost) ? $request->cost : $srv->cost);
+      $srv->tip = (isset($request->tip) ? $request->tip : $srv->tip);
+
+      //$srv->cost = $request->cost;
+      //$srv->tip = $request->tip;
+
       $srv->remarks = $note;
       $srv->save();
 
@@ -2048,9 +1987,7 @@ public function addFunds(Request $request) {
 
             LogController::save($log_data);
         }
-   }
-
-
+     }
 
      $response['status'] = 'Success';
      $response['code'] = 200;
