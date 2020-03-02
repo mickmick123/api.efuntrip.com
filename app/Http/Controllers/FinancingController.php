@@ -77,6 +77,8 @@ class FinancingController extends Controller
         $securitybank = $initial->securitybank;
         $aub = $initial->aub;
         $eastwest = $initial->eastwest;
+        $chinabank = $initial->chinabank;
+        $pnb = $initial->pnb;
 
         for($i=$month->month;$i<$now->month;$i++){
 
@@ -103,77 +105,17 @@ class FinancingController extends Controller
                             + (($q->cost_other!=null && $q->cost_other!='') && ($q->deposit_other!=null && $q->deposit_other!='') && $q->cat_storage=='bank' ? $q->cost_other:0)
                         );
 
-				$metrobank = (
-								$metrobank
-								+ $q->metrobank
-								+ ($q->cat_storage=='bank' && $q->storage_type=='metrobank' ? $q->bank_client_depo_payment:0)
-								+ ($q->cat_storage=='bank' && $q->storage_type=='metrobank' ? $q->cash_client_process_budget_return:0)
-								+ ($q->cat_storage=='bank' && $q->storage_type=='metrobank' ? $q->cash_admin_budget_return:0)
-								+ ($q->cat_storage=='bank' && $q->storage_type=='metrobank' ? $q->deposit_other:0)
-							)
-							-
-							(
-								($q->cat_storage=='bank' && $q->storage_type=='metrobank' ? $q->cash_admin_cost:0)
-								+ ($q->cat_storage=='bank' && $q->storage_type=='metrobank' ? $q->cash_client_refund:0)
-								+ ($q->cat_storage=='bank' && $q->storage_type=='metrobank' ? $q->cash_process_cost:0)
-								+ ($q->cat_storage=='bank' && $q->storage_type=='metrobank' ? $q->additional_budget:0)
-								+ (($q->cost_other!=null && $q->cost_other!='') && ($q->deposit_other==null || $q->deposit_other=='') && $q->cat_storage=='bank' && $q->storage_type=='metrobank'? $q->cost_other:0)
-								+ (($q->cost_other!=null && $q->cost_other!='') && ($q->deposit_other!=null && $q->deposit_other!='') && $q->cat_storage=='cash' && $q->storage_type=='metrobank' ? $q->cost_other:0)
-							);
+                $metrobank = ($metrobank + $q->metrobank + $this->bankComputation('metrobank', $q));
 
-                $securitybank = (
-                				$securitybank
-                            	+ $q->securitybank
-	                            + ($q->cat_storage=='bank' && $q->storage_type=='securitybank' ? $q->bank_client_depo_payment:0)
-	                            + ($q->cat_storage=='bank' && $q->storage_type=='securitybank' ? $q->cash_client_process_budget_return:0)
-	                            + ($q->cat_storage=='bank' && $q->storage_type=='securitybank' ? $q->cash_admin_budget_return:0)
-	                            + ($q->cat_storage=='bank' && $q->storage_type=='securitybank' ? $q->deposit_other:0)
-	                        )
-	                        -
-	                        (
-	                            ($q->cat_storage=='bank' && $q->storage_type=='securitybank' ? $q->cash_admin_cost:0)
-	                            + ($q->cat_storage=='bank' && $q->storage_type=='securitybank' ? $q->cash_client_refund:0)
-	                            + ($q->cat_storage=='bank' && $q->storage_type=='securitybank' ? $q->cash_process_cost:0)
-	                            + ($q->cat_storage=='bank' && $q->storage_type=='securitybank' ? $q->additional_budget:0)
-	                            + (($q->cost_other!=null && $q->cost_other!='') && ($q->deposit_other==null || $q->deposit_other=='') && $q->cat_storage=='bank' && $q->storage_type=='securitybank'? $q->cost_other:0)
-	                            + (($q->cost_other!=null && $q->cost_other!='') && ($q->deposit_other!=null && $q->deposit_other!='') && $q->cat_storage=='cash' && $q->storage_type=='securitybank' ? $q->cost_other:0)
-	                        );
+                $securitybank = ($securitybank + $q->aub + $this->bankComputation('aub', $q));
 
-                $aub =  (
-                			$aub
-                            + $q->aub
-                            + (($q->cat_storage=='bank' || $q->cat_storage=='alipay') && $q->storage_type=='aub' ? $q->bank_client_depo_payment:0)
-                            + ($q->cat_storage=='bank' && $q->storage_type=='aub' ? $q->cash_client_process_budget_return:0)
-                            + ($q->cat_storage=='bank' && $q->storage_type=='aub' ? $q->cash_admin_budget_return:0)
-                            + ($q->cat_storage=='bank' && $q->storage_type=='aub' ? $q->deposit_other:0)
-                        )
-                        -
-                        (
-                            ($q->cat_storage=='bank' && $q->storage_type=='aub' ? $q->cash_admin_cost:0)
-                            + ($q->cat_storage=='bank' && $q->storage_type=='aub' ? $q->cash_client_refund:0)
-                            + ($q->cat_storage=='bank' && $q->storage_type=='aub' ? $q->cash_process_cost:0)
-                            + ($q->cat_storage=='bank' && $q->storage_type=='aub' ? $q->additional_budget:0)
-                            + (($q->cost_other!=null && $q->cost_other!='') && ($q->deposit_other==null || $q->deposit_other=='') && $q->cat_storage=='bank' && $q->storage_type=='aub'? $q->cost_other:0)
-                            + (($q->cost_other!=null && $q->cost_other!='') && ($q->deposit_other!=null && $q->deposit_other!='') && $q->cat_storage=='cash' && $q->storage_type=='aub' ? $q->cost_other:0)
-                        );
-                           
-                $eastwest = (
-                				$eastwest
-	                            + $q->eastwest
-	                            + (($q->cat_storage=='bank' || $q->cat_storage=='alipay') && $q->storage_type=='eastwest' ? $q->bank_client_depo_payment:0)
-	                            + ($q->cat_storage=='bank' && $q->storage_type=='eastwest' ? $q->cash_client_process_budget_return:0)
-	                            + ($q->cat_storage=='bank' && $q->storage_type=='eastwest' ? $q->cash_admin_budget_return:0)
-	                            + ($q->cat_storage=='bank' && $q->storage_type=='eastwest' ? $q->deposit_other:0)
-	                        )
-	                        -
-	                        (
-	                            ($q->cat_storage=='bank' && $q->storage_type=='eastwest' ? $q->cash_admin_cost:0)
-	                            + ($q->cat_storage=='bank' && $q->storage_type=='eastwest' ? $q->cash_client_refund:0)
-	                            + ($q->cat_storage=='bank' && $q->storage_type=='eastwest' ? $q->cash_process_cost:0)
-	                            + ($q->cat_storage=='bank' && $q->storage_type=='eastwest' ? $q->additional_budget:0)
-	                            + (($q->cost_other!=null && $q->cost_other!='') && ($q->deposit_other==null || $q->deposit_other=='') && $q->cat_storage=='bank' && $q->storage_type=='eastwest'? $q->cost_other:0)
-	                            + (($q->cost_other!=null && $q->cost_other!='') && ($q->deposit_other!=null && $q->deposit_other!='') && $q->cat_storage=='cash' && $q->storage_type=='eastwest' ? $q->cost_other:0)
-	                        );  
+                $aub = ($aub + $q->aub + $this->bankComputation('aub', $q));
+
+                $eastwest = ($eastwest + $q->eastwest + $this->bankComputation('eastwest', $q));
+
+	            $chinabank = ($chinabank + $q->chinabank + $this->bankComputation('chinabank', $q));
+
+	            $pnb = ($pnb + $q->pnb + $this->bankComputation('pnb', $q));
 
               }
             }
@@ -191,12 +133,14 @@ class FinancingController extends Controller
                 'securitybank'=>$securitybank,
                 'aub'=>$aub,
                 'eastwest'=>$eastwest,
+                'chinabank'=>$chinabank,
+                'pnb'=>$pnb,
                 'branch_id'=>$branch_id,
                 'created_at'=>$ndate3
               ]);
             }else{
               $initial2 = DB::table('financing')->where('branch_id',$branch_id)->where('cat_type','initial')->orderBy('created_at', 'desc')->first();
-              Financing::where('id',$initial2->id)->update(['cash_balance'=>$cash,'metrobank'=>$metrobank,'securitybank'=>$securitybank,'aub'=>$aub,'eastwest'=>$eastwest]);
+              Financing::where('id',$initial2->id)->update(['cash_balance'=>$cash,'metrobank'=>$metrobank,'securitybank'=>$securitybank, 'aub'=>$aub, 'eastwest'=>$eastwest, 'chinabank'=>$chinabank, 'pnb'=>$pnb]);
             }
 
             $initial = DB::table('financing')->where('branch_id',$branch_id)->where('cat_type','initial')->orderBy('created_at', 'desc')->first();
@@ -205,9 +149,28 @@ class FinancingController extends Controller
             $securitybank = $initial->securitybank;
             $aub = $initial->aub;
             $eastwest = $initial->eastwest;
+            $chinabank = $initial->chinabank;
+            $pnb = $initial->pnb;
              
         }
       }
+    }
+
+    public function bankComputation($bank, $q){
+           return ((($q->cat_storage=='bank' || $q->cat_storage=='alipay') && $q->storage_type==$bank ? $q->bank_client_depo_payment:0)
+                    + ($q->cat_storage=='bank' && $q->storage_type==$bank ? $q->cash_client_process_budget_return:0)
+                    + ($q->cat_storage=='bank' && $q->storage_type==$bank ? $q->cash_admin_budget_return:0)
+                    + ($q->cat_storage=='bank' && $q->storage_type==$bank ? $q->deposit_other:0)
+                )
+                -
+                (
+                    ($q->cat_storage=='bank' && $q->storage_type==$bank ? $q->cash_admin_cost:0)
+                    + ($q->cat_storage=='bank' && $q->storage_type==$bank ? $q->cash_client_refund:0)
+                    + ($q->cat_storage=='bank' && $q->storage_type==$bank ? $q->cash_process_cost:0)
+                    + ($q->cat_storage=='bank' && $q->storage_type==$bank ? $q->additional_budget:0)
+                    + (($q->cost_other!=null && $q->cost_other!='') && ($q->deposit_other==null || $q->deposit_other=='') && $q->cat_storage=='bank' && $q->storage_type==$bank? $q->cost_other:0)
+                    + (($q->cost_other!=null && $q->cost_other!='') && ($q->deposit_other!=null && $q->deposit_other!='') && $q->cat_storage=='cash' && $q->storage_type==$bank ? $q->cost_other:0)
+                );
     }
 
     public function store(Request $request){
