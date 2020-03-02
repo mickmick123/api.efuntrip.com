@@ -1279,9 +1279,9 @@ class ClientController extends Controller
                     $f = ($cs->cost + $cs->charge + $cs->tip) - $__oldDiscount;
                     $t = ($cs->cost + $cs->charge + $cs->tip) - $request->get('discount');
                     if($__oldDiscount != null && $__oldDiscount != $request->get('discount')) {
-                        $deduct = $request->get('discount') - $__oldDiscount;
-                        $discnotes = ' updated discount from Php' . $__oldDiscount . ' to Php' . $request->get('discount').', '. $temp_note . $f. ' to Php' .$t;
-                        $discnotes_cn = ' 已更新折扣 ' . $__oldDiscount . ' 到 ' . $request->get('discount') .', '. $temp_note_cn . ' 到 Php' . $t;
+                        $deduct = $request->get('discount');
+                        $discnotes = ' updated discount from Php' . $__oldDiscount . ' to Php' . $request->get('discount').' with the reason of '.$request->reason.', '. $temp_note . $f. ' to Php' .$t;
+                        $discnotes_cn = ' 已更新折扣 ' . $__oldDiscount . ' 到 ' . $request->get('discount') .' 因为 '.$request->reason.', '. $temp_note_cn . ' 到 Php' . $t;
                         $oldDiscount = $__oldDiscount;
                         $newDiscount = $request->get('discount');
                     }
@@ -1296,8 +1296,8 @@ class ClientController extends Controller
                     $t = ($cs->cost + $cs->charge + $cs->tip) - $request->get('discount');
                     if($__oldDiscount == null) {
                         $deduct = $request->get('discount');
-                        $discnotes = ' discounted an amount of Php'.$request->get('discount').', '. $temp_note . $f. ' to Php' .$t;
-                        $discnotes_cn = ' 已折扣额度 Php'.$request->get('discount').', '. $temp_note_cn . $f. ' 到 Php' .$t;
+                        $discnotes = ' discounted an amount of Php'.$request->get('discount').' with the reason of '.$request->reason.', '. $temp_note . $f. ' to Php' .$t;
+                        $discnotes_cn = ' 已折扣额度 Php'.$request->get('discount').' 因为 '.$request->reason.', '. $temp_note_cn . $f. ' 到 Php' .$t;
                         $newDiscount = $request->get('discount');
                     }
 
@@ -1310,8 +1310,8 @@ class ClientController extends Controller
                         $t = ($cs->cost + $cs->charge + $cs->tip); 
                         $deduct = -1 * $discountExist->amount;   
                         // When user removed discount
-                        $discnotes = ' removed discount of Php ' . $discountExist->amount .', '. $temp_note . $f. ' to Php' .$t;
-                        $discnotes_cn = ' 移除折扣 ' . $discountExist->amount.', '. $temp_note_cn . $f. ' 到 Php' .$t;
+                        $discnotes = ' removed discount of Php ' . $discountExist->amount .' with the reason of '.$request->reason.', '. $temp_note . $f. ' to Php' .$t;
+                        $discnotes_cn = ' 移除折扣 ' . $discountExist->amount.' 因为 '.$request->reason.', '. $temp_note_cn . $f. ' 到 Php' .$t;
                         $oldDiscount = $discountExist->amount;
                     }
                 }
@@ -1320,10 +1320,10 @@ class ClientController extends Controller
                 $service_status = $request->status;
                 $oldServiceCost = $cs->cost + $cs->charge + $cs->tip;
                 $newServiceCost = $request->get('cost') + $request->get('charge') + $request->get('tip');
-                if($newDiscount > 0 || $oldDiscount > 0 ){
-                    $oldServiceCost -= $oldDiscount;
-                    $newServiceCost -= $newDiscount;
-                }
+                // if($newDiscount > 0 || $oldDiscount > 0 ){
+                //     $oldServiceCost -= $oldDiscount;
+                //     $newServiceCost -= $newDiscount;
+                // }
 
                 if($request->get('active') == 1) { // Enabled
                     $toAmount = $newServiceCost;
@@ -1333,23 +1333,21 @@ class ClientController extends Controller
 
                 if ($oldServiceCost != $newServiceCost || $service_status == 'complete') {
                     if($service_status == 'complete' && $service_status != $cs->status){
-                        $translog = 'Total service charge is Php' . $toAmount;
-                        $translog_cn = '总服务费 Php' . $toAmount;
+                        $translog = 'Total service charge is Php' . ($toAmount - $deduct);
+                        $translog_cn = '总服务费 Php' . ($toAmount - $deduct);
                     }
                     else if($service_status == 'complete' && $service_status == $cs->status){
-                         $translog = 'Total service charge from Php' . ($oldServiceCost) . ' to Php' . $toAmount;
-                         $translog_cn = '总服务费从 Php' . ($oldServiceCost) . ' 到 Php' . $toAmount;
+                         $translog = 'Total service charge from Php' . ($oldServiceCost - $deduct) . ' to Php' . ($toAmount - $deduct);
+                         $translog_cn = '总服务费从 Php' . ($oldServiceCost - $deduct) . ' 到 Php' . ($toAmount - $deduct);
                     }
                     else{
-                        $translog = 'Total service charge from Php' . ($oldServiceCost - $deduct) . ' to Php' . $toAmount;
-                        $translog_cn = '总服务费从 Php' . ($oldServiceCost - $deduct) . ' 到 Php' . $toAmount;
+                        $translog = 'Total service charge from Php' . ($oldServiceCost - $deduct) . ' to Php' . ($toAmount - $deduct);
+                        $translog_cn = '总服务费从 Php' . ($oldServiceCost - $deduct) . ' 到 Php' . ($toAmount - $deduct);
                     }
 
                     $newVal +=$newServiceCost;
                     $oldVal +=$oldServiceCost - $deduct;
                 }
-
-
 
                 if ($oldServiceCost == $newServiceCost && $translog == '' && $cs->status != $service_status) {
                     $translog = 'Service status change from '.$cs->status.' to '.$service_status;
@@ -1478,14 +1476,14 @@ class ClientController extends Controller
                     if($oldstatus != $service_status && $service_status == 'complete'){
                         $log_data['detail'] = 'Completed Service '.$log;
                         $log_data['detail_cn'] = '完成的服务 '.$log_cn;
-                        $log_data['amount'] = '-'.$newServiceCost;
+                        $log_data['amount'] = '-'.($newServiceCost - $deduct);
                     }
                     else{
                         if(($cs->status != 'complete')){
                             $log_data['amount'] = 0;
                         }
                         else{
-                            $log_data['amount'] = '-'.$newServiceCost;
+                            $log_data['amount'] = '-'.($newServiceCost - $deduct);
                         }
 
                         $log_data['detail'] = 'Updated Service '.$log;

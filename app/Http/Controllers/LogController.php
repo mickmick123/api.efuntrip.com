@@ -105,7 +105,7 @@ class LogController extends Controller
                     ->orderBy('l.id', 'desc')
                     //->distinct('detail')
                     ->get();
-                    \Log::info($body);
+                    //\Log::info($body);
 
                     $data = collect($body->toArray())->flatten()->all();
                     
