@@ -2,11 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Breakdown;
-
 use App\Service;
 
+use App\ServiceProfile;
+
+use App\ServiceProfileCost;
+
+use App\Branch;
+
 use App\ServiceBranchCost;
+
+use App\Breakdown;
 
 use App\Http\Controllers\ServiceBranchCostController;
 
@@ -223,6 +229,72 @@ class ServiceController extends Controller
         	$response['errors'] = 'No query results.';
 			$response['code'] = 404;
 		}
+
+		return Response::json($response);
+	}
+
+	public function serviceProfilesDetails($id) {
+		$serviceProfilesDetails = ServiceProfile::select(['id', 'name'])
+			->where('is_active', 1)->orderBy('name')->get();
+		$serviceProfilesDetails->prepend(collect(['id' => 0, 'name' => 'Regular']));
+
+		$branches = Branch::select(['id', 'name'])->where('name', '<>', 'Both')->get();
+
+		foreach( $serviceProfilesDetails as $serviceProfilesDetail ) {
+			$data = [];
+
+			foreach( $branches as $branch ) {
+				if( $serviceProfilesDetail['id'] == 0 ) { // Regular
+					if( $branch->id == 1 ) { // Manila
+						$service = Service::select(['cost', 'charge', 'tip', 'com_agent', 'com_client'])
+							->findOrFail($id);
+					} else {
+						$service = ServiceBranchCost::select(['cost', 'charge', 'tip', 'com_agent', 'com_client'])
+							->where('service_id', $id)->where('branch_id', $branch->id)->first();
+					}
+				} else {
+					$service = ServiceProfileCost::select(['cost', 'charge', 'tip', 'com_agent', 'com_client'])
+						->where('service_id', $id)->where('profile_id', $serviceProfilesDetail['id'])
+						->where('branch_id', $branch->id)->first();
+				}
+
+				$costBreakdown = Breakdown::select(['description', 'amount'])
+					->where('type', 'cost')->where('service_id', $id)
+					->where('branch_id', $branch->id)->where('service_profile_id', $serviceProfilesDetail['id'])
+					->get();
+
+				$chargeBreakdown = Breakdown::select(['description', 'amount'])
+					->where('type', 'charge')->where('service_id', $id)
+					->where('branch_id', $branch->id)->where('service_profile_id', $serviceProfilesDetail['id'])
+					->get();
+
+				$tipBreakdown = Breakdown::select(['description', 'amount'])
+					->where('type', 'tip')->where('service_id', $id)
+					->where('branch_id', $branch->id)->where('service_profile_id', $serviceProfilesDetail['id'])
+					->get();
+
+				$data[] = [
+					'id' => $branch->id,
+					'name' => $branch->name,
+					'cost' => $service->cost,
+					'cost_breakdown' => $costBreakdown,
+					'charge' => $service->charge,
+					'charge_breakdown' => $chargeBreakdown,
+					'tip' => $service->tip,
+					'tip_breakdown' => $tipBreakdown,
+					'com_agent' => $service->com_agent,
+					'com_client' => $service->com_client
+				];
+			}
+
+			$serviceProfilesDetail['branches'] = $data;
+		}
+
+		$response['status'] = 'Success';
+		$response['data'] = [
+			'serviceProfilesDetails' => $serviceProfilesDetails
+		];
+		$response['code'] = 200;
 
 		return Response::json($response);
 	}
