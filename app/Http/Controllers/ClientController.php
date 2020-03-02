@@ -1358,14 +1358,14 @@ class ClientController extends Controller
                 $note = $cs->remarks;
                 if($note!=''){
                     if($request->note!=''){
-                        $remarks = $note.'</br>'.$remarks;
+                        $note = $note.'</br>'.$remarks;
                     }
                 }
                 else{
                     $note = $remarks;
                 }
 
-                $cs->remarks = $remarks;
+                $cs->remarks = $note;
                 $cs->cost = $request->cost;
                 $cs->tip = $request->tip;
                 $cs->status = $request->status;
