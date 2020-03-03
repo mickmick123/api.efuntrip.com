@@ -568,6 +568,11 @@ public function getCommissionLogs($client_id, $group_id) {
           if($log->log_type === 'Document'){
             $log->documents = ClientService::select(['id', 'detail', 'status', 'tracking', 'active'])
                 ->with([
+                    'logs' => function($query) {
+                        $query->select(['id', 'client_service_id', 'detail', 'processor_id'])
+                                    ->where('log_type', 'Document')
+                                    ->orderBy('id', 'desc');
+                    },
                     'logs.processor' => function($query) {
                         $query->select(['id', 'first_name', 'last_name']);
                     },
