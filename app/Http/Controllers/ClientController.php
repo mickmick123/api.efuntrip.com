@@ -411,7 +411,8 @@ class ClientController extends Controller
             $client->total_points_earned = $this->getClientTotalPointsEarned($id);
             $client->total_complete_service_cost = $this->getClientTotalCompleteServiceCost($id);
             $client->total_cost = $this->getClientTotalCost($id);
-            $client->total_payment = $this->getClientDeposit($id) + $this->getClientPayment($id);
+            $client->total_payment = $this->getClientPayment($id);
+            $client->total_deposit = $this->getClientDeposit($id);
 
             $client->total_discount = $this->getClientTotalDiscount($id);
             $client->total_refund = $this->getClientTotalRefund($id);
