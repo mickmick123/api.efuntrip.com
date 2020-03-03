@@ -216,6 +216,7 @@ class ServiceController extends Controller
             'service_name' => 'required|unique:services,detail,'.$id,
             'service_profile' => 'required_if:type,child',
             'parent_id' => 'required_if:type,child',
+            'mode' => 'required_if:type,child',
             'costs' => 'required_if:type,child|array'
         ]);
 
@@ -241,6 +242,7 @@ class ServiceController extends Controller
 	        			'detail_cn' => ($request->service_name_chinese) ? $request->service_name_chinese : null,
 	        			'description' => ($request->description) ? $request->description : null,
 	        			'description_cn' => ($request->description_chinese) ? $request->description_chinese : null,
+	        			'mode' => $request->mode,
 	        			'months_required' => $request->months_required,
 	        			'min_months' => $request->minimum_months,
 	        			'max_months' => $request->maximum_months,
