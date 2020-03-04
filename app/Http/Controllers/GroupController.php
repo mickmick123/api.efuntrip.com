@@ -420,8 +420,8 @@ class GroupController extends Controller
 
             $group->total_complete_service_cost = $this->getGroupTotalCompleteServiceCost($id);
             $group->total_cost = $this->getGroupTotalCost($id);
-            $group->total_payment = $this->getGroupDeposit($id) + $this->getGroupPayment($id);
-
+            //$group->total_payment = $this->getGroupDeposit($id) + $this->getGroupPayment($id);
+            $group->total_payment = $this->getGroupPayment($id);
             $group->total_discount = $this->getGroupTotalDiscount($id);
             $group->total_refund = $this->getGroupTotalRefund($id);
             $group->total_balance = $this->getGroupTotalBalance($id);
