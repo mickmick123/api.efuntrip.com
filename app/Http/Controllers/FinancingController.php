@@ -105,17 +105,17 @@ class FinancingController extends Controller
                             + (($q->cost_other!=null && $q->cost_other!='') && ($q->deposit_other!=null && $q->deposit_other!='') && $q->cat_storage=='bank' ? $q->cost_other:0)
                         );
 
-                $metrobank = ($metrobank + $q->metrobank + $this->bankComputation('metrobank', $q));
+                $metrobank = ( floatval($metrobank) + floatval($q->metrobank) + $this->bankComputation('metrobank', $q));
 
-                $securitybank = ($securitybank + $q->aub + $this->bankComputation('aub', $q));
+                $securitybank = ( floatval($securitybank) + floatval($q->aub) + $this->bankComputation('aub', $q));
 
-                $aub = ($aub + $q->aub + $this->bankComputation('aub', $q));
+                $aub = ( floatval($aub) + floatval($q->aub) + $this->bankComputation('aub', $q));
 
-                $eastwest = ($eastwest + $q->eastwest + $this->bankComputation('eastwest', $q));
+                $eastwest = ( floatval($eastwest) + floatval($q->eastwest) + $this->bankComputation('eastwest', $q));
 
-	            $chinabank = ($chinabank + $q->chinabank + $this->bankComputation('chinabank', $q));
+	            $chinabank = ( floatval($chinabank) + floatval($q->chinabank) + $this->bankComputation('chinabank', $q));
 
-	            $pnb = ($pnb + $q->pnb + $this->bankComputation('pnb', $q));
+	            $pnb = ( floatval($pnb) + floatval($q->pnb) + $this->bankComputation('pnb', $q));
 
               }
             }
