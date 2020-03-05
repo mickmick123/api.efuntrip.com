@@ -18,4 +18,6 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('{id}/service-profiles-details', 'ServiceController@serviceProfilesDetails');
 
+	Route::get('{id}/expanded-details', 'ServiceController@expandedDetails');
+
 });

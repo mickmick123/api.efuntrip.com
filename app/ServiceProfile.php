@@ -13,7 +13,7 @@ class ServiceProfile extends Model
 
     public $timestamps = false;
 
-    protected $fillable = ['name', 'slug', 'is_active'];
+    protected $fillable = ['name', 'slug', 'with_agent_commision', 'with_client_commision', 'is_active'];
 
     public static function boot() {
         parent::boot();

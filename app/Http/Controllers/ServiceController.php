@@ -363,4 +363,161 @@ class ServiceController extends Controller
 		return Response::json($response);
 	}
 
+	private function getServiceProfilesDetails($id, $serviceProfiles, $branchId) {
+		$service = Service::select(['cost', 'charge', 'tip'])->findOrFail($id);
+
+		$serviceProfiles->map(function($item) use($id, $service, $branchId) {
+			$cost = null;
+			$charge = null;
+			$tip = null;
+			$comAgent = null;
+			$comClient = null;
+
+			// Regular Price/Market Price
+			if( $item['id'] == 0 ) {
+				// Init
+				$cost = 0;
+				$charge = 0;
+				$tip = 0;
+
+				// Manila
+				if( $branchId == 1 ) {
+					$cost = $service->cost;
+					$charge = $service->charge;
+					$tip = $service->tip;
+				} else {
+					$serviceBranchCost = ServiceBranchCost::select(['cost', 'charge', 'tip'])
+						->where('service_id', $id)
+						->where('branch_id', $branchId)
+						->first();
+
+					if( $serviceBranchCost ) {
+						$cost = $serviceBranchCost->cost;
+						$charge = $serviceBranchCost->charge;
+						$tip = $serviceBranchCost->tip;
+					}
+				}
+			} else {
+				// Special Service Profiles
+				if( $item['with_agent_commision'] == 0 && $item['with_client_commision'] == 0 ) {
+					// Init
+					$cost = 0;
+					$charge = 0;
+					$tip = 0;
+
+					$select = ['cost', 'charge', 'tip'];
+				}
+
+				// Regular Service Profiles
+				else {
+					// Init
+					$cost = 0;
+					$charge = 0;
+					$tip = 0;
+					$comAgent = 0;
+					$comClient = 0;
+
+					$select = ['cost', 'charge', 'tip', 'com_agent', 'com_client'];
+				}
+
+				$serviceProfileCost = ServiceProfileCost::select($select)
+					->where('service_id', $id)
+					->where('profile_id', $item['id'])
+					->where('branch_id', $branchId)
+					->first();
+
+				if( $serviceProfileCost ) {
+					$cost = $serviceProfileCost->cost;
+					$charge = $serviceProfileCost->charge;
+					$tip = $serviceProfileCost->tip;
+
+					if( $serviceProfileCost->com_agent ) {
+						$comAgent = $serviceProfileCost->com_agent;
+					}
+					if( $serviceProfileCost->com_client ) {
+						$comClient = $serviceProfileCost->com_client;
+					}
+				}
+			}
+
+			$item['cost'] = !is_null($cost) ? number_format($cost, 2) : $cost;
+			$item['cost_breakdown'] = Breakdown::select(['description', 'amount'])->where('type', 'cost')
+				->where('service_id', $id)->where('branch_id', $branchId)
+				->where('service_profile_id', $item['id'])->get();
+			$item['charge'] = !is_null($charge) ? number_format($charge, 2) : $charge;
+			$item['charge_breakdown'] = Breakdown::select(['description', 'amount'])->where('type', 'charge')
+				->where('service_id', $id)->where('branch_id', $branchId)
+				->where('service_profile_id', $item['id'])->get();
+			$item['tip'] = !is_null($tip) ? number_format($tip, 2) : $tip;
+			$item['tip_breakdown'] = Breakdown::select(['description', 'amount'])->where('type', 'tip')
+				->where('service_id', $id)->where('branch_id', $branchId)
+				->where('service_profile_id', $item['id'])->get();
+			$item['comAgent'] = !is_null($comAgent) ? number_format($comAgent, 2) : $comAgent;
+			$item['comClient'] = !is_null($comClient) ? number_format($comClient, 2) : $comClient;
+
+			return $item;
+		});
+
+		return $serviceProfiles->toArray();
+	}
+
+	public function expandedDetails($id) {
+		$specialProfiles = [];
+		$regularProfiles = [];
+
+		$branches = Branch::select(['id', 'name'])->where('name', '<>', 'Both')->get();
+
+		$serviceProfiles = ServiceProfile::select(['id', 'name', 'with_agent_commision', 'with_client_commision'])
+			->where('is_active', 1)
+			->get();
+
+		$marketPrice = [
+			'id' => 0, 
+			'name' => 'Market Price', 
+			'with_agent_commision' => 0, 
+			'with_client_commision' => 0
+		];
+		$serviceProfiles->push(collect($marketPrice));
+
+		$specialServiceProfiles = $serviceProfiles->filter(function($item) {
+			return $item['with_agent_commision'] == 0 && $item['with_client_commision'] == 0;
+		})->values();
+
+		$regularServiceProfiles = $serviceProfiles->filter(function($item) {
+			return $item['with_agent_commision'] != 0 && $item['with_client_commision'] != 0;
+		})->values();
+
+		foreach( $branches as $branch ) {
+			// Special Profiles
+			$specialProfiles[] = [
+				'branch' => $branch,
+				'serviceProfiles' => $this->getServiceProfilesDetails(
+					$id,
+					$specialServiceProfiles,
+					$branch->id
+				)
+			];
+
+			// Regular Profiles
+			$regularProfiles[] = [
+				'branch' => $branch,
+				'serviceProfiles' => $this->getServiceProfilesDetails(
+					$id,
+					$regularServiceProfiles,
+					$branch->id
+				)
+			];
+		}
+
+		$response['status'] = 'Success';
+		$response['data'] = [
+			'serviceId' => $id,
+			'specialProfiles' => $specialProfiles,
+			'regularProfiles' => $regularProfiles
+		];
+		$response['code'] = 200;
+
+		return Response::json($response);
+	}
+
 }
