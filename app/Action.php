@@ -9,7 +9,7 @@ class Action extends Model
     
     protected $table = 'actions';
 
-    protected $fillable = ['name'];
+    protected $fillable = ['name', 'order_of_precedence'];
 
     public function categories() {
     	return $this->belongsToMany('App\Category', 'action_category', 'action_id', 'category_id');
