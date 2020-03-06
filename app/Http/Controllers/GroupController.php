@@ -1638,17 +1638,70 @@ public function getClientPackagesByGroup($client_id, $group_id){
                 $getServ->tracking = $tracking;
                 $getServ->save();
 
+                $disc = ClientTransaction::where('client_service_id',$getServ->id)->where('type','Discount')->first();
+                $discount = 0;
+                $group_leader = null;
+                if($disc){
+                    $discount = $disc->amount;
+                    $disc->group_id = $newGroupId;
+                    $disc->client_id = $request->member_id;
+                    $disc->tracking = $tracking;
+                    if($newGroupId != null){
+                        $group_leader = Group::where('id', $newGroupId)->first()->leader_id;
+                        $disc->client_id = $group_leader;
+                    }
+                    $disc->save();
+                }
+
                 $response['status'] = 'Success';
                 $response['code'] = 200;
 
+                //Logs here
+                $translated = Service::where('id',$getServ->service_id)->first();
+                $cnserv =$getServ->detail;
+                if($translated){
+                    $cnserv = ($translated->detail_cn!='' ? $translated->detail_cn : $translated->detail);
+                }
 
-                //return Response::json($response);
+                $cost = ($getServ->cost + $getServ->charge + $getServ->tip + $getServ->com_client + $getServ->com_agent) - $discount;
+
+                if($request->option == 'client-to-group') {
+                    $details = 'Transfer service ' . $getServ->detail . ' to Group Package #' . $tracking .' with <strong>Total Service Cost of ' . $cost;
+                    $details_cn = '转移了服务 ' . $cnserv . '到服务包(团体)#' . $tracking .'以及总服务费 Php' . $cost;
+
+                    $_groupId = $newGroupId;
+
+                } 
+                elseif($request->option == 'group-to-client') {
+                    $details = 'Transfer service ' . $getServ->detail . ' to Package #<strong>' . $tracking .' with Total Service Cost of ' . $cost;
+                    $details_cn = '转移了服务 ' . $cnserv . '到服务包#' . $tracking .'以及总服务费 Php' . $cost;
+
+                    $_groupId = $groupId;
+                }
+
+                // save transaction logs
+                $log_data = array(
+                    'client_service_id' => $getServ->id,
+                    'client_id' => $request->member_id,
+                    'group_id' => null,
+                    'log_type' => 'Transaction',
+                    'log_group' => 'service',
+                    'detail'=> $details,
+                    'detail_cn'=> $details_cn,
+                    'amount'=> $cost,
+                );
+                LogController::save($log_data);
+
+                // $log_data['group_id'] = $_groupId; 
+                // $log_data['client_id'] = null; 
+                // LogController::save($log_data);
+
+
             }
 
             $this->updatePackageStatus($tracking);
             $this->updatePackageStatus($oldtrack);
 
-            //Logs here
 
         }
 

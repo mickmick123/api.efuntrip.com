@@ -89,7 +89,7 @@ class LogController extends Controller
                     $currentService = $cs->id;
 
                     $body = DB::table('logs as l')->select(DB::raw('l.detail, l.log_date, pr.first_name'))
-                    ->where('client_service_id', $cs->id)
+                    ->where('client_service_id', $cs->id)->where('group_id',null)
                     ->where('l.id','!=', $t->id)
                     ->leftjoin(
                         DB::raw('
@@ -217,6 +217,7 @@ class LogController extends Controller
                                 ->where('created_at','LIKE', '%'.$t->log_date.'%')
                                 ->orderBy('id','Desc')
                                 ->get();
+
                     $servs_id = $servs->pluck('id');
                     $head = [];
                     $ctr = 0;
@@ -227,7 +228,7 @@ class LogController extends Controller
                         $head[$ctr]['status'] = $csstatus;
                         $head[$ctr]['id'] = $s->client_id;
                         $head[$ctr]['client'] = $client->first_name.' '.$client->last_name;
-                        $head[$ctr]['details'] =  DB::table('logs')->where('client_service_id', $s->id)
+                        $head[$ctr]['details'] =  DB::table('logs')->where('client_service_id', $s->id)->where('group_id',"!=",null)
                                     ->where('log_type', 'Transaction')
                                     ->orderBy('id', 'desc')
                                     ->distinct('detail')
