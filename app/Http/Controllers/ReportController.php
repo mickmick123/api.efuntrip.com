@@ -291,6 +291,17 @@ class ReportController extends Controller
 			if( array_key_exists('reason', $report['extras']) ) {
 				$detail .= ' With a reason of ' . $report['extras']['reason'] . '.';
 			}
+			// Cost
+			if( array_key_exists('cost', $report['extras']) ) {
+				$_clientService = ClientService::findOrFail($clientService['id']);
+
+				$oldCost = number_format($_clientService->cost, 2);
+				$newCost = number_format($report['extras']['cost'], 2);
+
+				$_clientService->update(['cost' => $report['extras']['cost']]);
+
+				$detail .= ' from  ' . $oldCost . ' to ' . $newCost . '.';
+			}
 		}
 
 		return $detail;
