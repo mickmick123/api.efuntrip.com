@@ -298,8 +298,6 @@ class ReportController extends Controller
 				$oldCost = number_format($_clientService->cost, 2);
 				$newCost = number_format($report['extras']['cost'], 2);
 
-				$_clientService->update(['cost' => $report['extras']['cost']]);
-
 				$detail .= ' from  ' . $oldCost . ' to ' . $newCost . '.';
 			}
 		}
@@ -381,11 +379,19 @@ class ReportController extends Controller
 		}
 	}
 
-	private function handleRequestToCancel($clientService, $serviceProcedureId) {
+	private function handleCancelledService($clientService, $serviceProcedureId) {
 		$serviceProcedure = ServiceProcedure::with('action', 'category')->findOrFail($serviceProcedureId);
 
 		if( $serviceProcedure->action->name == 'Cancelled' && $serviceProcedure->category->name == 'Service' ) {
 			$clientService->update(['active' => 0]);
+		}
+	}
+
+	private function handleUpdatedTheCost($clientService, $serviceProcedureId, $report) {
+		$serviceProcedure = ServiceProcedure::with('action', 'category')->findOrFail($serviceProcedureId);
+
+		if( $serviceProcedure->action->name == 'Updated' && $serviceProcedure->category->name == 'Cost' ) {
+			$clientService->update(['cost' => $report['extras']['cost']]);
 		}
 	}
 
@@ -461,7 +467,9 @@ class ReportController extends Controller
 
         			$this->handleStatusUponCompletion($cs, $report['service_procedure']);
 
-        			$this->handleRequestToCancel($cs, $report['service_procedure']);
+        			$this->handleCancelledService($cs, $report['service_procedure']);
+
+        			$this->handleUpdatedTheCost($cs, $report['service_procedure'], $report);
         		}
         	}
 
