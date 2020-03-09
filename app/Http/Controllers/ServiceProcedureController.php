@@ -69,7 +69,6 @@ class ServiceProcedureController extends Controller
             'action_id' => 'required',
             'category_id' => 'required',
             'is_required' => 'required',
-            'is_add_to_on_hand' => 'required',
             'required_documents' => 'nullable|array',
             'optional_documents' => 'nullable|array'
         ]);
@@ -149,7 +148,6 @@ class ServiceProcedureController extends Controller
             'action_id' => 'required',
             'category_id' => 'required',
             'is_required' => 'required',
-            'is_add_to_on_hand' => 'required',
             'required_documents' => 'nullable|array',
             'optional_documents' => 'nullable|array'
         ]);
