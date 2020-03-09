@@ -239,7 +239,7 @@ class ReportController extends Controller
 		return Response::json($response);
 	}
 
-	private function _63($report, $clientService) {
+	private function generateDetail($report, $clientService) {
 		$serviceProcedure = ServiceProcedure::find($report['service_procedure']);
 
 		$detail = $serviceProcedure->name;
@@ -313,9 +313,10 @@ class ReportController extends Controller
 		if( $cs ) {
 			$serviceParentId = ClientService::find($clientService['id'])->service->parent_id;
 
-			// 9A Visa Extension
-			if( $serviceParentId == 63 ) {
-				$detail = $this->_63($report, $clientService);
+			// 63 = 9A Visa Extension
+			// 70 = 9G Working Visa Conversion
+			if( $serviceParentId == 63 || $serviceParentId == 70 ) {
+				$detail = $this->generateDetail($report, $clientService);
 			}
 		}
 
