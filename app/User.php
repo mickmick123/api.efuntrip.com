@@ -78,6 +78,10 @@ class User extends Authenticatable
         return $this->belongsToMany('App\Nationality', 'nationality_user', 'user_id', 'nationality_id');
     }
 
+    public function onHandDocuments() {
+        return $this->hasMany('App\OnHandDocument', 'client_id', 'id');
+    }
+
     public function packages() {
         return $this->hasMany('App\Package', 'client_id', 'id');
     }
