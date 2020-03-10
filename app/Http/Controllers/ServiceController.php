@@ -477,7 +477,7 @@ class ServiceController extends Controller
 			'with_agent_commision' => 0, 
 			'with_client_commision' => 0
 		];
-		$serviceProfiles->push(collect($marketPrice));
+		$serviceProfiles->prepend(collect($marketPrice));
 
 		$specialServiceProfiles = $serviceProfiles->filter(function($item) {
 			return $item['with_agent_commision'] == 0 && $item['with_client_commision'] == 0;
