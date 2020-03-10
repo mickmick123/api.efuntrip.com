@@ -1665,7 +1665,7 @@ class ClientController extends Controller
                     LogController::save($log_data);
             }
 
-            else if($type == "Discount"){
+            else if($type == "Discount" || $type == "Promo"){
                 $discount = new ClientTransaction;
                 $discount->client_id = $client_id;
                 $discount->tracking = $tracking;
@@ -2190,7 +2190,8 @@ class ClientController extends Controller
     }
 
     private function getClientTotalDiscount($id) {
-        return ClientTransaction::where('client_id', $id)->where('group_id', null)->where('type', 'Discount')->sum('amount');
+        return ClientTransaction::where('client_id', $id)->where('group_id', null)->where('type', 'Discount')
+                    ->where('client_service_id',null)->sum('amount');
     }
 
     private function getClientTotalRefund($id) {
@@ -2202,7 +2203,12 @@ class ClientController extends Controller
             ->where('active', 1)->where('group_id', null)
             ->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
 
-        return ($clientTotalCost) ? $clientTotalCost : 0;
+        $discount =  ClientTransaction::where('client_id', $id)->where('group_id', null)->where('type', 'Discount')
+                    ->where('client_service_id','!=',null)->sum('amount');
+
+        $discount = ($discount) ? $discount : 0;
+
+        return (($clientTotalCost) ? $clientTotalCost : 0) - $discount;
     }
 
     private function getClientTotalCompleteServiceCost($id) {
@@ -2211,7 +2217,12 @@ class ClientController extends Controller
             ->where('status', 'complete')
             ->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
 
-        return ($clientTotalCompleteServiceCost) ? $clientTotalCompleteServiceCost : 0;
+        $discount =  ClientTransaction::where('client_id', $id)->where('group_id', null)->where('type', 'Discount')
+                    ->where('client_service_id','!=',null)->sum('amount');
+
+        $discount = ($discount) ? $discount : 0;
+
+        return (($clientTotalCompleteServiceCost) ? $clientTotalCompleteServiceCost : 0) - $discount;
     }
 
     private function getClientTotalBalance($id) {
