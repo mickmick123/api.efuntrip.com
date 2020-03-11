@@ -82,7 +82,8 @@ class GroupController extends Controller
     }
 
     private function getGroupTotalDiscount($id) {
-        return ClientTransaction::where('group_id', $id)->where('type', 'Discount')->sum('amount');
+        return ClientTransaction::where('group_id', $id)->where('client_id', null)->where('type', 'Discount')->sum('amount'); //if client null
+        //discount per service
     }
 
     private function getGroupTotalRefund($id) {
@@ -1671,7 +1672,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
                     $_groupId = $newGroupId;
 
-                } 
+                }
                 elseif($request->option == 'group-to-client') {
                     $details = 'Transfer service ' . $getServ->detail . ' to Package #<strong>' . $tracking .' with Total Service Cost of ' . $cost;
                     $details_cn = '转移了服务 ' . $cnserv . '到服务包#' . $tracking .'以及总服务费 Php' . $cost;
@@ -1692,8 +1693,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
                 );
                 LogController::save($log_data);
 
-                // $log_data['group_id'] = $_groupId; 
-                // $log_data['client_id'] = null; 
+                // $log_data['group_id'] = $_groupId;
+                // $log_data['client_id'] = null;
                 // LogController::save($log_data);
 
 
