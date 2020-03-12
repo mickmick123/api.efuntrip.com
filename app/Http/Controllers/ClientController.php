@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Branch;
+use App\BranchUser;
 
 use App\ClientService;
 
@@ -17,6 +18,8 @@ use App\Package;
 use App\RoleUser;
 
 use App\Service;
+use App\ServiceBranchCost;
+use App\ServiceProfileCost;
 
 use App\Financing;
 
@@ -2115,6 +2118,84 @@ class ClientController extends Controller
       $response['data'] = $query;
       $response['code'] = 200;
       return Response::json($response);
+    }
+
+    //ServiceProfile
+    public function switchCostLevel($clientId, $level) {
+
+    if($clientId !== 0){
+
+        $client = User::where('id',$clientId)->first();
+        $branchUser = BranchUser::where('user_id',$clientId)->first();
+        if($client){
+            $client->service_profile_id = $level;
+            $client->save();
+        }
+
+        $services = ClientService::where('client_id',$clientId)->where('group_id',null)->where('status','!=','complete')->get();
+
+        foreach($services as $ms){
+            $getService = Service::where('id',$ms->service_id)->first();
+            if($getService){
+                $cost = 0;
+                $charge = 0;
+                $tip = 0;
+                $client = 0 ;
+                $agent = 0 ;
+
+                if($branchUser->branch_id > 1){
+                    $amounts = ServiceBranchCost::where('branch_id',$branchUser->branch_id)->where('service_id',$getService->id)->first();
+                    $charge = $amounts->charge;
+                    $cost = $amounts->cost;
+                    $tip = $amounts->tip;
+                }
+
+                if($level > 0){
+                    $pcost = ServiceProfileCost::where('profile_id',$level)->where('service_id',$getService->id)->where('branch_id',$branchUser->branch_id)->first();
+                    if($pcost){                    
+                        $charge = $pcost->charge;
+                        $cost = $pcost->cost;
+                        $tip = $pcost->tip;
+                        $client = $pcost->com_client;
+                        $agent = $pcost->com_agent;
+                    }
+
+                    $charge = ($charge > 0 ? $charge : $getService->charge);
+                    $cost = ($cost > 0 ? $cost : $getService->cost);
+                    $tip = ($tip > 0 ? $tip : $getService->tip);
+                }
+
+                if($level == 0 && $branchUser->branch_id == 1){
+                    $charge = $getService->charge;
+                    $cost = $getService->cost;
+                    $tip = $getService->tip;
+                }
+
+
+                $serv = ClientService::find($ms->id);
+                if($charge > 0){
+                    $serv->charge = $charge;
+                }
+                //$serv->cost = $cost;
+                $serv->com_client = $client;
+                $serv->com_agent = $agent;
+                if($tip > 0){
+                    $serv->tip = $tip;
+                }
+                $serv->save();
+            }
+        }
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+
+      }else{
+        $response['status'] = 'Error';
+        $response['code'] = 401;
+      }
+
+      return Response::json($response);
+
     }
 
     /**** Private Functions ****/

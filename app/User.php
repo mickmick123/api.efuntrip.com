@@ -12,7 +12,7 @@ class User extends Authenticatable
 {
     use Notifiable, SoftDeletes, HasApiTokens;
 
-    protected $fillable = ['email', 'password', 'first_name', 'middle_name', 'last_name', 'address', 'birth_date', 'gender', 'height', 'weight', 'civil_status', 'birth_country_id', 'risk', 'visa_type', 'arrival_date', 'first_expiration_date', 'extended_expiration_date', 'expiration_date', 'icard_issue_date', 'icard_expiration_date', 'passport', 'passport_exp_date', 'balance', 'collectable', 'verification_token', 'registered_at'];
+    protected $fillable = ['email', 'password', 'first_name', 'middle_name', 'last_name', 'address', 'birth_date', 'gender', 'height', 'weight', 'civil_status', 'birth_country_id', 'risk', 'service_profile_id', 'visa_type', 'arrival_date', 'first_expiration_date', 'extended_expiration_date', 'expiration_date', 'icard_issue_date', 'icard_expiration_date', 'passport', 'passport_exp_date', 'balance', 'collectable', 'verification_token', 'registered_at'];
 
     protected $hidden = [
         'password', 'verification_token', 'remember_token',

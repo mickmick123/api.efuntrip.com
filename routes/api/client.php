@@ -52,4 +52,6 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::post('add-service-payment', 'ClientController@addServicePayment');
 
+	Route::get('switch-client-cost-level/{client_id}/{service_profile_id?}', 'ClientController@switchCostLevel');
+
 });
