@@ -82,7 +82,7 @@ class GroupController extends Controller
     }
 
     private function getGroupTotalDiscount($id) {
-        return ClientTransaction::where('group_id', $id)->where('client_id', null)->where('client_service_id', null)->where('type', 'Discount')->sum('amount'); //if client null
+        return ClientTransaction::where('group_id', $id)->where('client_service_id', null)->where('type', 'Discount')->sum('amount'); //if client null
         //discount per service
     }
 
@@ -95,7 +95,7 @@ class GroupController extends Controller
             ->where('active', 1)
             ->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
 
-        $discount =  ClientTransaction::where('group_id', $id)->where('client_id', null)->where('type', 'Discount')
+        $discount =  ClientTransaction::where('group_id', $id)->where('type', 'Discount')
                         ->where('client_service_id','!=',null)->sum('amount');
 
         return ($groupTotalCost) ? ($groupTotalCost - $discount) : 0;
@@ -122,7 +122,7 @@ class GroupController extends Controller
             ->where('status', 'complete')
             ->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
 
-        $discount = ClientTransaction::where('group_id', $id)->where('client_id', null)->where('type', 'Discount')
+        $discount = ClientTransaction::where('group_id', $id)->where('type', 'Discount')
                             ->where('client_service_id','!=',null)->sum('amount');
 
         return ($groupTotalCompleteServiceCost) ? ($groupTotalCompleteServiceCost - $discount) : 0;
@@ -2363,6 +2363,95 @@ public function getClientPackagesByGroup($client_id, $group_id){
                 );
                  LogController::save($log_data);
             }
+        }
+
+    }
+
+
+    // EXPORT EXCEL
+    public function showServiceDates($group_id){
+   
+            $dates = DB::table('client_services as cs')
+            ->select(DB::raw('cs.*, date_format(STR_TO_DATE(created_at, "%Y-%m-%d %H:%i:%s"),"%Y-%m") as sdate'))
+            ->where('active',1)->where('group_id',$group_id)
+            ->orderBy('id','DESC')
+            ->groupBy('sdate')
+            ->pluck('sdate');
+
+            return $dates;
+    }
+
+    public function showServiceAdded($group_id, $date = 0){
+
+            $groupServices = ClientService::where('group_id',$group_id)
+                                ->groupBy('service_id')
+                                ->where(function($q) use($date){
+                                    $q->where('created_at','LIKE', '%'.$date.'%');
+                                    $q->where('created_at','LIKE', '%'.$date.'%');
+                                })
+                                ->pluck('service_id');
+
+            $profileServices = Service::select('id','detail')->whereIn('id',$groupServices)->get();
+            return $profileServices;
+
+    }
+    
+    private function statusChinese($status){
+        $s = strtolower(trim($status," "));
+        $stat = '';
+        if($s == 'complete'){
+            $stat = '已完成';
+        }
+        if($s == 'on process'){
+            $stat = '办理中';
+        }
+        if($s == 'pending'){
+            $stat=  '待办';
+        }
+        return $stat;
+    }
+
+    private function DateChinese($date){
+        $d = explode(" ",strtolower($date));
+        switch($d[0]){
+            case "jan":
+                return "一月"." ".$d[1];
+                break;
+            case "feb":
+                return "二月"." ".$d[1];
+                break;
+            case "mar":
+                return "三月"." ".$d[1];
+                break;
+            case "apr":
+                return "四月"." ".$d[1];
+                break;
+            case "may":
+                return "五月"." ".$d[1];
+                break;
+            case "jun":
+                return "六月"." ".$d[1];
+                break;
+            case "jul":
+                return "七月"." ".$d[1];
+                break;
+            case "aug":
+                return "八月"." ".$d[1];
+                break;
+            case "sep":
+                return "九月"." ".$d[1];
+                break;
+            case "oct":
+                return "十月"." ".$d[1];
+                break;
+            case "nov":
+                return "十一月"." ".$d[1];
+                break;
+            case "dec":
+                return "十二月"." ".$d[1];
+                break;
+            default:
+                return $date;
         }
 
     }

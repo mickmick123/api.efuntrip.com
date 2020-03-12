@@ -36,6 +36,8 @@ Route::middleware('auth:api')->group(function() {
 	Route::get('packages-byservice/{group_id}/{page?}', 'GroupController@getClientPackagesByService');
 	Route::get('unpaid-services/{group_id}/{is_auto_generated}/{page?}', 'GroupController@getUnpaidServices');
 
+	Route::get('get-service-dates/{group_id}', 'GroupController@showServiceDates');
+	Route::get('get-service-added/{group_id}/{date}', 'GroupController@showServiceAdded');
 
 	Route::get('{id}', 'GroupController@show');
 
