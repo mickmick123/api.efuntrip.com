@@ -82,7 +82,7 @@ class GroupController extends Controller
     }
 
     private function getGroupTotalDiscount($id) {
-        return ClientTransaction::where('group_id', $id)->where('client_id', null)->where('type', 'Discount')->sum('amount'); //if client null
+        return ClientTransaction::where('group_id', $id)->where('client_id', null)->where('client_service_id', null)->where('type', 'Discount')->sum('amount'); //if client null
         //discount per service
     }
 
@@ -95,7 +95,10 @@ class GroupController extends Controller
             ->where('active', 1)
             ->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
 
-        return ($groupTotalCost) ? ($groupTotalCost - $this->getGroupTotalDiscount($id)) : 0;
+        $discount =  ClientTransaction::where('group_id', $id)->where('client_id', null)->where('type', 'Discount')
+                        ->where('client_service_id','!=',null)->sum('amount');
+
+        return ($groupTotalCost) ? ($groupTotalCost - $discount) : 0;
     }
 
 
@@ -119,8 +122,10 @@ class GroupController extends Controller
             ->where('status', 'complete')
             ->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
 
+        $discount = ClientTransaction::where('group_id', $id)->where('client_id', null)->where('type', 'Discount')
+                            ->where('client_service_id','!=',null)->sum('amount');
 
-        return ($groupTotalCompleteServiceCost) ? ($groupTotalCompleteServiceCost - $this->getGroupTotalDiscount($id)) : 0;
+        return ($groupTotalCompleteServiceCost) ? ($groupTotalCompleteServiceCost - $discount) : 0;
     }
 
     private function getGroupTotalBalance($id) {
