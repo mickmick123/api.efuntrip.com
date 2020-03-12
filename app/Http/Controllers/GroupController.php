@@ -95,7 +95,7 @@ class GroupController extends Controller
             ->where('active', 1)
             ->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
 
-        return ($groupTotalCost) ? $groupTotalCost : 0;
+        return ($groupTotalCost) ? ($groupTotalCost - $this->getGroupTotalDiscount($id)) : 0;
     }
 
 
@@ -113,12 +113,14 @@ class GroupController extends Controller
 
 
     private function getGroupTotalCompleteServiceCost($id) {
+
         $groupTotalCompleteServiceCost = ClientService::where('group_id', $id)
             ->where('active', 1)
             ->where('status', 'complete')
             ->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
 
-        return ($groupTotalCompleteServiceCost) ? $groupTotalCompleteServiceCost : 0;
+
+        return ($groupTotalCompleteServiceCost) ? ($groupTotalCompleteServiceCost - $this->getGroupTotalDiscount($id)) : 0;
     }
 
     private function getGroupTotalBalance($id) {
