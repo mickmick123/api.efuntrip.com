@@ -495,7 +495,7 @@ class ClientController extends Controller
                 ->where('role.role_id', '2')
                 ->when($branch_id != '', function ($q) use($branch_ids, $is_member_search, $branch_id){
 										if($is_member_search){
-											  return $q->where('bu.branch_id', $branch_id);
+											  return $q->where('bu.branch_id', $is_member_search);
 										}
                     return $q->whereIn('bu.branch_id', $branch_ids);
                 })
@@ -552,7 +552,7 @@ class ClientController extends Controller
                 ->where('role.role_id', '2')
                 ->when($branch_id != '', function ($q) use($branch_ids, $is_member_search, $branch_id){
 											if($is_member_search){
-													return $q->where('bu.branch_id', $branch_id);
+													return $q->where('bu.branch_id', $is_member_search);
 											}
 											return $q->whereIn('bu.branch_id', $branch_ids);
                 })
