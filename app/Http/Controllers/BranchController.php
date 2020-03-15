@@ -4,9 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Branch;
 
+use App\ServiceBranchCost;
+
+use App\ServiceProfileCost;
+
 use App\User;
 
-use Response, Validator;
+use DB, Response, Validator;
 
 use Illuminate\Http\Request;
 
@@ -97,7 +101,37 @@ class BranchController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;   
         } else {
-        	Branch::create(['name' => $request->name]);
+        	$branch = Branch::create(['name' => $request->name]);
+
+			$serviceIds = DB::table('services')->pluck('id');
+			$profileIds = DB::table('service_profiles')->pluck('id');
+
+			foreach( $serviceIds as $serviceId ) {
+				ServiceBranchCost::create([
+					'service_id' => $serviceId,
+					'branch_id' => $branch->id,
+					'cost' => 0,
+					'charge' => 0,
+					'tip' => 0,
+					'com_agent' => 0,
+					'com_client' => 0
+				]);
+			}
+
+			foreach( $serviceIds as $serviceId ) {
+				foreach( $profileIds as $profileId ) {
+					ServiceProfileCost::create([
+						'service_id' => $serviceId,
+						'profile_id' => $profileId,
+						'branch_id' => $branch->id,
+						'cost' => 0,
+						'charge' => 0,
+						'tip' => 0,
+						'com_agent' => 0,
+						'com_client' => 0
+					]);
+				}
+			}
 
         	$response['status'] = 'Success';
 			$response['code'] = 200;
