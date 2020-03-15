@@ -18,13 +18,13 @@ class ServiceProcedureController extends Controller
 
 		if( $service ) {
 			$serviceProcedures = ServiceProcedure::where('service_id', $serviceId)
-                ->select(array('id', 'name', 'step', 'is_required', 'is_add_to_on_hand'))
+                ->select(array('id', 'name', 'step'))
                 ->whereNotNull('step')
 				->orderBy('step')
 				->get();
 
             $optionalServiceProcedures = ServiceProcedure::where('service_id', $serviceId)
-                ->select(array('id', 'name', 'step', 'is_required', 'is_add_to_on_hand'))
+                ->select(array('id', 'name', 'step'))
                 ->whereNull('step')
                 ->orderBy('name')
                 ->get();
@@ -69,8 +69,12 @@ class ServiceProcedureController extends Controller
             'action_id' => 'required',
             'category_id' => 'required',
             'is_required' => 'required',
-            'required_documents' => 'nullable|array',
-            'optional_documents' => 'nullable|array'
+            'required_documents_add' => 'nullable|array',
+            'required_documents_remove' => 'nullable|array',
+            'required_documents_stay' => 'nullable|array',
+            'optional_documents_add' => 'nullable|array',
+            'optional_documents_remove' => 'nullable|array',
+            'optional_documents_stay' => 'nullable|array'
         ]);
 
         if($validator->fails()) {       
@@ -87,7 +91,7 @@ class ServiceProcedureController extends Controller
         			'action_id' => $request->action_id,
         			'category_id' => $request->category_id,
         			'is_required' => $request->is_required,
-                    'is_add_to_on_hand' => $request->is_add_to_on_hand,
+                    'required_service_procedure' => $request->required_service_procedure,
                     'status_upon_completion' => $request->status_upon_completion
         		]);
 
@@ -115,19 +119,53 @@ class ServiceProcedureController extends Controller
 
         		$serviceProcedure->serviceProcedureDocuments()->delete();
 
-        		foreach($request->required_documents as $requiredDocument) {
-	        		$serviceProcedure->serviceProcedureDocuments()->create([
-	        			'document_id' => $requiredDocument,
-	        			'is_required' => 1
-	        		]);
-	        	}
+        		foreach($request->required_documents_add as $document) {
+                    $serviceProcedure->serviceProcedureDocuments()->create([
+                        'document_id' => $document,
+                        'is_required' => 1,
+                        'mode' => 'add'
+                    ]);
+                }
 
-	        	foreach($request->optional_documents as $optionalDocument) {
-	        		$serviceProcedure->serviceProcedureDocuments()->create([
-	        			'document_id' => $optionalDocument,
-	        			'is_required' => 0
-	        		]);
-	        	}
+                foreach($request->required_documents_remove as $document) {
+                    $serviceProcedure->serviceProcedureDocuments()->create([
+                        'document_id' => $document,
+                        'is_required' => 1,
+                        'mode' => 'remove'
+                    ]);
+                }
+
+                foreach($request->required_documents_stay as $document) {
+                    $serviceProcedure->serviceProcedureDocuments()->create([
+                        'document_id' => $document,
+                        'is_required' => 1,
+                        'mode' => 'stay'
+                    ]);
+                }
+
+                foreach($request->optional_documents_add as $document) {
+                    $serviceProcedure->serviceProcedureDocuments()->create([
+                        'document_id' => $document,
+                        'is_required' => 0,
+                        'mode' => 'add'
+                    ]);
+                }
+
+                foreach($request->optional_documents_remove as $document) {
+                    $serviceProcedure->serviceProcedureDocuments()->create([
+                        'document_id' => $document,
+                        'is_required' => 0,
+                        'mode' => 'remove'
+                    ]);
+                }
+
+                foreach($request->optional_documents_stay as $document) {
+                    $serviceProcedure->serviceProcedureDocuments()->create([
+                        'document_id' => $document,
+                        'is_required' => 0,
+                        'mode' => 'stay'
+                    ]);
+                }
 
         		$response['status'] = 'Success';
         		$response['code'] = 200;
@@ -148,8 +186,12 @@ class ServiceProcedureController extends Controller
             'action_id' => 'required',
             'category_id' => 'required',
             'is_required' => 'required',
-            'required_documents' => 'nullable|array',
-            'optional_documents' => 'nullable|array'
+            'required_documents_add' => 'nullable|array',
+            'required_documents_remove' => 'nullable|array',
+            'required_documents_stay' => 'nullable|array',
+            'optional_documents_add' => 'nullable|array',
+            'optional_documents_remove' => 'nullable|array',
+            'optional_documents_stay' => 'nullable|array'
         ]);
 
         if($validator->fails()) {       
@@ -164,7 +206,7 @@ class ServiceProcedureController extends Controller
         		'action_id' => $request->action_id,
         		'category_id' => $request->category_id,
         		'is_required' => $request->is_required,
-                'is_add_to_on_hand' => $request->is_add_to_on_hand,
+                'required_service_procedure' => $request->required_service_procedure,
                 'status_upon_completion' => $request->status_upon_completion
         	]);
 
@@ -177,19 +219,53 @@ class ServiceProcedureController extends Controller
                 ]);
             }
 
-        	foreach($request->required_documents as $requiredDocument) {
+        	foreach($request->required_documents_add as $document) {
         		$serviceProcedure->serviceProcedureDocuments()->create([
-        			'document_id' => $requiredDocument,
-        			'is_required' => 1
+        			'document_id' => $document,
+        			'is_required' => 1,
+                    'mode' => 'add'
         		]);
         	}
 
-        	foreach($request->optional_documents as $optionalDocument) {
-        		$serviceProcedure->serviceProcedureDocuments()->create([
-        			'document_id' => $optionalDocument,
-        			'is_required' => 0
-        		]);
-        	}
+            foreach($request->required_documents_remove as $document) {
+                $serviceProcedure->serviceProcedureDocuments()->create([
+                    'document_id' => $document,
+                    'is_required' => 1,
+                    'mode' => 'remove'
+                ]);
+            }
+
+            foreach($request->required_documents_stay as $document) {
+                $serviceProcedure->serviceProcedureDocuments()->create([
+                    'document_id' => $document,
+                    'is_required' => 1,
+                    'mode' => 'stay'
+                ]);
+            }
+
+            foreach($request->optional_documents_add as $document) {
+                $serviceProcedure->serviceProcedureDocuments()->create([
+                    'document_id' => $document,
+                    'is_required' => 0,
+                    'mode' => 'add'
+                ]);
+            }
+
+            foreach($request->optional_documents_remove as $document) {
+                $serviceProcedure->serviceProcedureDocuments()->create([
+                    'document_id' => $document,
+                    'is_required' => 0,
+                    'mode' => 'remove'
+                ]);
+            }
+
+            foreach($request->optional_documents_stay as $document) {
+                $serviceProcedure->serviceProcedureDocuments()->create([
+                    'document_id' => $document,
+                    'is_required' => 0,
+                    'mode' => 'stay'
+                ]);
+            }
 
         	$response['status'] = 'Success';
 			$response['code'] = 200;

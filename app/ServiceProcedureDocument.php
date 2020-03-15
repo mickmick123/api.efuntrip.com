@@ -9,7 +9,7 @@ class ServiceProcedureDocument extends Model
     
     protected $table = 'service_procedure_documents';
 
-    protected $fillable = ['service_procedure_id', 'document_id', 'is_required'];
+    protected $fillable = ['service_procedure_id', 'document_id', 'is_required', 'mode'];
 
     public function serviceProcedure() {
     	return $this->belongsTo('App\ServiceProcedure', 'service_procedure_id', 'id');
