@@ -91,8 +91,37 @@ class ServiceController extends Controller
         			'description_cn' => ($request->description_chinese) ? $request->description_chinese : null
         		]);
 
-        		ServiceBranchCostController::createData([$service->id]);
-        		ServiceProfileCostController::createData([$service->id]);
+        		$branchIds  = DB::table('branches')->where('name', '<>', 'Manila')->pluck('id');
+        		
+        		foreach( $branchIds  as $branchId ) {
+        			ServiceBranchCost::create([
+        				'service_id' => $service->id,
+        				'branch_id' => $branchId,
+        				'cost' => 0, 
+						'charge' => 0,
+						'tip' => 0,
+						'com_agent' => 0,
+						'com_client' => 0
+        			]);
+        		}
+        		
+        		$profileIds = DB::table('service_profiles')->pluck('id');
+        		$branchIds  = DB::table('branches')->pluck('id');
+
+        		foreach( $profileIds as $profileId ) {
+        			foreach( $branchIds as $branchId ) {
+        				ServiceProfileCost::create([
+        					'service_id' => $service->id,
+        					'profile_id' => $profileId,
+        					'branch_id' => $branchId,
+        					'cost' => 0, 
+							'charge' => 0,
+							'tip' => 0,
+							'com_agent' => 0,
+							'com_client' => 0
+        				]);
+        			}
+        		}
         	} elseif( $request->type == 'child' ) {
         		$service = Service::create([
         			'parent_id' => $request->parent_id,
