@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\ServiceProfile;
 
-use Response, Validator;
+use App\ServiceProfileCost;
+
+use DB, Response, Validator;
 
 use Illuminate\Support\Str;
 
@@ -26,7 +28,7 @@ class ServiceProfileController extends Controller
     public function store(Request $request) {
     	$validator = Validator::make($request->all(), [ 
             'name' => 'required|unique:service_profiles,name',
-            'is_active' => 'required'
+            'type' => 'required'
         ]);
 
         if($validator->fails()) {       
@@ -34,11 +36,29 @@ class ServiceProfileController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;   
         } else {
-        	ServiceProfile::create([
+        	$serviceProfile = ServiceProfile::create([
         		'name' => $request->name,
         		'slug' => Str::slug($request->name, '-'),
-        		'is_active' => $request->is_active
+                'type' => $request->type
         	]);
+
+            $serviceIds = DB::table('services')->pluck('id');
+            $branchIds = DB::table('branches')->pluck('id');
+
+            foreach( $serviceIds as $serviceId ) {
+                foreach( $branchIds as $branchId ) {
+                    ServiceProfileCost::create([
+                        'service_id' => $serviceId,
+                        'profile_id' => $serviceProfile->id,
+                        'branch_id' => $branchId,
+                        'cost' => 0, 
+                        'charge' => 0,
+                        'tip' => 0,
+                        'com_agent' => 0,
+                        'com_client' => 0
+                    ]);
+                }
+            }
 
         	$response['status'] = 'Success';
 			$response['code'] = 200;
@@ -67,7 +87,8 @@ class ServiceProfileController extends Controller
 
     public function update(Request $request, $id) {
     	$validator = Validator::make($request->all(), [ 
-            'name' => 'required|unique:service_profiles,name,'.$id
+            'name' => 'required|unique:service_profiles,name,'.$id,
+            'type' => 'required'
         ]);
 
         if($validator->fails()) {       
@@ -80,7 +101,8 @@ class ServiceProfileController extends Controller
         	if( $serviceProfile ) {
         		$serviceProfile->update([
                     'name' => $request->name,
-                    'slug' => Str::slug($request->name, '-')
+                    'slug' => Str::slug($request->name, '-'),
+                    'type' => $request->type
                 ]);
 
         		$response['status'] = 'Success';

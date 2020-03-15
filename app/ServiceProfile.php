@@ -2,8 +2,6 @@
 
 namespace App;
 
-use App\Http\Controllers\ServiceProfileCostController;
-
 use Illuminate\Database\Eloquent\Model;
 
 class ServiceProfile extends Model
@@ -13,15 +11,7 @@ class ServiceProfile extends Model
 
     public $timestamps = false;
 
-    protected $fillable = ['name', 'slug', 'with_agent_commision', 'with_client_commision', 'is_active'];
-
-    public static function boot() {
-        parent::boot();
-
-        self::created(function($model) {
-            ServiceProfileCostController::createData();
-        });
-    }
+    protected $fillable = ['name', 'slug', 'type', 'is_active'];
 
     public function breakdowns() {
         return $this->hasMany('App\Breakdown', 'service_profile_id', 'id');
