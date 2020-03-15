@@ -373,7 +373,7 @@ class ServiceController extends Controller
 			$comAgent = null;
 			$comClient = null;
 
-			// Regular Price/Market Price
+			// Market Price
 			if( $item['id'] == 0 ) {
 				// Init
 				$cost = 0;
@@ -398,8 +398,8 @@ class ServiceController extends Controller
 					}
 				}
 			} else {
-				// Special Service Profiles
-				if( $item['with_agent_commision'] == 0 && $item['with_client_commision'] == 0 ) {
+				// Default Rates
+				if( $item['type'] == 'default' ) {
 					// Init
 					$cost = 0;
 					$charge = 0;
@@ -408,7 +408,7 @@ class ServiceController extends Controller
 					$select = ['cost', 'charge', 'tip'];
 				}
 
-				// Regular Service Profiles
+				// Customized Rates
 				else {
 					// Init
 					$cost = 0;
@@ -462,48 +462,47 @@ class ServiceController extends Controller
 	}
 
 	public function expandedDetails($id) {
-		$specialProfiles = [];
-		$regularProfiles = [];
+		$branches = Branch::select(['id', 'name'])->get();
 
-		$branches = Branch::select(['id', 'name'])->where('name', '<>', 'Both')->get();
-
-		$serviceProfiles = ServiceProfile::select(['id', 'name', 'with_agent_commision', 'with_client_commision'])
+		$serviceProfiles = ServiceProfile::select(['id', 'name', 'type'])
 			->where('is_active', 1)
 			->get();
 
 		$marketPrice = [
 			'id' => 0, 
 			'name' => 'Market Price', 
-			'with_agent_commision' => 0, 
-			'with_client_commision' => 0
+			'type' => 'default'
 		];
 		$serviceProfiles->prepend(collect($marketPrice));
 
-		$specialServiceProfiles = $serviceProfiles->filter(function($item) {
-			return $item['with_agent_commision'] == 0 && $item['with_client_commision'] == 0;
+		$default = $serviceProfiles->filter(function($item) {
+			return $item['type'] == 'default';
 		})->values();
 
-		$regularServiceProfiles = $serviceProfiles->filter(function($item) {
-			return $item['with_agent_commision'] != 0 && $item['with_client_commision'] != 0;
+		$customized = $serviceProfiles->filter(function($item) {
+			return $item['type'] == 'customized';
 		})->values();
+
+		$defaultRates = [];
+		$customizedRates = [];
 
 		foreach( $branches as $branch ) {
-			// Special Profiles
-			$specialProfiles[] = [
+			// Default Rates
+			$defaultRates[] = [
 				'branch' => $branch,
 				'serviceProfiles' => $this->getServiceProfilesDetails(
 					$id,
-					$specialServiceProfiles,
+					$default,
 					$branch->id
 				)
 			];
 
-			// Regular Profiles
-			$regularProfiles[] = [
+			// Customized Rates
+			$customizedRates[] = [
 				'branch' => $branch,
 				'serviceProfiles' => $this->getServiceProfilesDetails(
 					$id,
-					$regularServiceProfiles,
+					$customized,
 					$branch->id
 				)
 			];
@@ -512,8 +511,8 @@ class ServiceController extends Controller
 		$response['status'] = 'Success';
 		$response['data'] = [
 			'serviceId' => $id,
-			'specialProfiles' => $specialProfiles,
-			'regularProfiles' => $regularProfiles
+			'defaultRates' => $defaultRates,
+			'customizedRates' => $customizedRates
 		];
 		$response['code'] = 200;
 
