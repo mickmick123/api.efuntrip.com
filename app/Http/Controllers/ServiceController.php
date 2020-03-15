@@ -327,9 +327,9 @@ class ServiceController extends Controller
 	}
 
 	public function serviceProfilesDetails($id) {
-		$serviceProfilesDetails = ServiceProfile::select(['id', 'name'])
+		$serviceProfilesDetails = ServiceProfile::select(['id', 'name', 'type'])
 			->where('is_active', 1)->orderBy('name')->get();
-		$serviceProfilesDetails->prepend(collect(['id' => 0, 'name' => 'Market Price']));
+		$serviceProfilesDetails->prepend(collect(['id' => 0, 'name' => 'Market Price', 'type' => 'default']));
 
 		$branches = Branch::select(['id', 'name'])->where('name', '<>', 'Both')->get();
 
