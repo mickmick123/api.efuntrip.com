@@ -16,6 +16,10 @@ use App\Service;
 
 use App\ServiceProcedure;
 
+use App\ServiceProcedureDocument;
+
+use App\OnHandDocument;
+
 use App\User;
 
 use Auth, Carbon\Carbon, DB, Response, Validator;
@@ -190,7 +194,7 @@ class ReportController extends Controller
 			})
 			->with([
 				'serviceProcedures' => function($query) {
-					$query->select(['id', 'name', 'service_id', 'step', 'action_id', 'category_id', 'is_required'])->orderBy('step');
+					$query->select(['id', 'name', 'service_id', 'step', 'action_id', 'category_id', 'is_required', 'required_service_procedure'])->orderBy('step');
 				},
 				'serviceProcedures.action' => function($query) {
 					$query->select(['id', 'name']);
@@ -463,6 +467,21 @@ class ReportController extends Controller
 			        		]);
 
 			        		$log->documents()->attach($document);
+
+			        		$serviceProcedureDocument = ServiceProcedureDocument::where('service_procedure_id', $report['service_procedure'])->where('document_id', $document)->first();
+			        		if( $serviceProcedureDocument ) {
+			        			$mode = $serviceProcedureDocument->mode;
+
+			        			if( $mode == 'add' || $mode == 'stay' ) {
+			        				OnHandDocument::firstOrCreate([
+			        					'client_id' => $cs->client_id,
+			        					'document_id' => $document
+			        				]);
+			        			} elseif( $mode == 'remove' ) {
+			        				OnHandDocument::where('client_id', $cs->client_id)
+			        					->where('document_id', $document)->delete();
+			        			}
+			        		}
 	        			}
         			}
 
