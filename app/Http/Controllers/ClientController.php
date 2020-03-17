@@ -1149,6 +1149,8 @@ class ClientController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
+            $c = User::findOrFail($request->client_id);
+            $level = $c->service_profile_id;
             $service_ids = [];
             for($i=0; $i<count($request->services); $i++) {
                 $service = Service::findorfail($request->services[$i]);
@@ -1159,13 +1161,46 @@ class ClientController extends Controller
                     $remarks = '';
                 }
 
+              $scharge = $service->charge;
+              $scost = $service->cost;
+              $stip = $service->tip;
+
+              if($request->branch_id > 1){
+                  $bcost = ServiceBranchCost::where('branch_id',$request->branch_id)->where('service_id',$service->id)->first();
+                  $scost = $bcost->cost;
+                  $stip = $bcost->tip;
+                  $scharge = $bcost->charge;   
+              }
+              else{
+                  $scost = $service->cost;
+                  $stip = $service->tip;
+                  $scharge = $service->charge;
+              }
+
+              //has profile id
+              if($level > 0 && $level != null){
+                  $newcost = ServiceProfileCost::where('profile_id',$level)
+                                ->where('branch_id',$request->branch_id)
+                                ->where('service_id',$service->id)
+                                ->first();
+                  if($newcost){
+                      $scharge = $newcost->charge;
+                      $scost = $newcost->cost;
+                      $stip = $newcost->tip;
+                  }
+              }
+
+              $scharge = ($scharge > 0 ? $scharge : $service->charge);
+              $scost = ($scost > 0 ? $scost : $service->cost);
+              $stip = ($stip > 0 ? $stip : $service->tip);
+
                 $cs = ClientService::create([
                     'client_id' => $request->client_id,
                     'service_id' => $request->services[$i],
                     'detail' => $service->detail,
-                    'cost' => $service->cost,
-                    'charge' => $service->charge,
-                    'tip' => $service->tip,
+                    'cost' => $scost,
+                    'charge' => $scharge,
+                    'tip' => $stip,
                     'tracking' => $request->tracking,
                     'remarks' => $remarks,
                     'active' => 1,
