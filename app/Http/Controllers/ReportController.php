@@ -229,9 +229,24 @@ class ReportController extends Controller
 			}])
 			->select(array('id', 'parent_id', 'detail'))->get();
 
+			$onHandDocuments = User::select(['id'])
+				->whereHas('clientServices', function($query) use($clientServicesId) {
+					$query->whereIn('id', $clientServicesId);
+				})
+				->with([
+					'onHandDocuments' => function($query) {
+						$query->select(['id', 'client_id', 'document_id']);
+					},
+					'onHandDocuments.document' => function($query) {
+						$query->select(['id', 'title', 'is_unique']);
+					}
+				])
+				->get();
+
 			$response['status'] = 'Success';
 			$response['data'] = [
-		    	'services' => $services
+		    	'services' => $services,
+		    	'onHandDocuments' => $onHandDocuments
 			];
 			$response['code'] = 200;
 		} else {
