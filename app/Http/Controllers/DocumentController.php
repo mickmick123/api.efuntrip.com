@@ -42,7 +42,8 @@ class DocumentController extends Controller
 	public function update(Request $request, $id) {
 		$validator = Validator::make($request->all(), [ 
             'title' => 'required|unique:documents,title,'.$id,
-            'is_unique' => 'required'
+            'is_unique' => 'required',
+            'is_company_document' => 'required'
         ]);
 
         if($validator->fails()) {       
@@ -56,7 +57,8 @@ class DocumentController extends Controller
         		$document->update([
         			'title' => $request->title,
         			'title_cn' => ($request->title_cn) ? $request->title_cn : null,
-        			'is_unique' => $request->is_unique 
+        			'is_unique' => $request->is_unique,
+                    'is_company_document' => $request->is_company_document
         		]);
 
         		$response['status'] = 'Success';
@@ -74,7 +76,8 @@ class DocumentController extends Controller
 	public function store(Request $request) {
 		$validator = Validator::make($request->all(), [ 
             'title' => 'required|unique:documents,title',
-            'is_unique' => 'required'
+            'is_unique' => 'required',
+            'is_company_document' => 'required'
         ]);
 
         if($validator->fails()) {       
@@ -85,7 +88,8 @@ class DocumentController extends Controller
         	Document::create([
         		'title' => $request->title,
         		'title_cn' => ($request->title_cn) ? $request->title_cn : null,
-        		'is_unique' => $request->is_unique 
+        		'is_unique' => $request->is_unique,
+                'is_company_document' => $request->is_company_document
         	]);
 
         	$response['status'] = 'Success';

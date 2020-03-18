@@ -13,7 +13,7 @@ class Document extends Model
 
     protected $table = 'documents';
 
-    protected $fillable = ['title', 'title_cn', 'is_unique'];
+    protected $fillable = ['title', 'title_cn', 'is_unique', 'is_company_document'];
 
     public function clientReportDocuments() {
     	return $this->hasMany('App\ClientReportDocument', 'document_id', 'id');
