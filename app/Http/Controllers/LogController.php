@@ -206,7 +206,7 @@ class LogController extends Controller
                     $cstracking =  $cs->tracking;
                     $csstatus =  $cs->status;
                     $csactive =  $cs->active;
-                    if($csactive == 0){
+                    if($csactive == 0 && $csstatus != 'cancelled'){
                         $csstatus =  'Disabled';
                     }
                     $currentService = $cs->service_id;
