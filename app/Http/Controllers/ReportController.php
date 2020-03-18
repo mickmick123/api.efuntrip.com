@@ -403,7 +403,7 @@ class ReportController extends Controller
 		$serviceProcedure = ServiceProcedure::with('action', 'category')->findOrFail($serviceProcedureId);
 
 		if( $serviceProcedure->action->name == 'Cancelled' && $serviceProcedure->category->name == 'Service' ) {
-			$clientService->update(['active' => 0]);
+			$clientService->update(['active' => 0, 'status' => 'cancelled']);
 		}
 	}
 
