@@ -1724,6 +1724,20 @@ public function getClientPackagesByGroup($client_id, $group_id){
     private function updatePackageStatus($tracking){
         $status = null; // empty
 
+        $countCancelledServices = DB::table('client_services')
+            ->select('*')
+            ->where('tracking', $tracking)
+            ->where('active', 1)
+            ->where('status', 'cancelled')
+            ->count();
+
+        $countReleasedServices = DB::table('client_services')
+            ->select('*')
+            ->where('tracking', $tracking)
+            ->where('active', 1)
+            ->where('status', 'released')
+            ->count();
+
         $countCompleteServices = DB::table('client_services')
             ->select('*')
             ->where('tracking', $tracking)
@@ -1745,14 +1759,18 @@ public function getClientPackagesByGroup($client_id, $group_id){
             ->where('status', 'pending')
             ->count();
 
+        if($countCancelledServices > 0){
+            $status = "cancelled";
+        }
+        if($countReleasedServices > 0){
+            $status = "released";
+        }
         if($countCompleteServices > 0){
             $status = "complete";
         }
-
         if($countOnProcessServices > 0){
             $status = "on process";
         }
-
         if($countPendingServices > 0){
             $status = "pending";
         }
@@ -1763,8 +1781,6 @@ public function getClientPackagesByGroup($client_id, $group_id){
             ->where('tracking', $tracking)
             ->update($data);
     }
-
-
 
     private function generateTracking($option) {
         Repack:

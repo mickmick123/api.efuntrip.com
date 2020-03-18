@@ -2249,6 +2249,20 @@ class ClientController extends Controller
     private function updatePackageStatus($tracking){
         $status = null; // empty
 
+        $countCancelledServices = DB::table('client_services')
+            ->select('*')
+            ->where('tracking', $tracking)
+            ->where('active', 1)
+            ->where('status', 'cancelled')
+            ->count();
+
+        $countReleasedServices = DB::table('client_services')
+            ->select('*')
+            ->where('tracking', $tracking)
+            ->where('active', 1)
+            ->where('status', 'released')
+            ->count();
+
         $countCompleteServices = DB::table('client_services')
             ->select('*')
             ->where('tracking', $tracking)
@@ -2270,6 +2284,12 @@ class ClientController extends Controller
             ->where('status', 'pending')
             ->count();
 
+        if($countCancelledServices > 0){
+            $status = "cancelled";
+        }
+        if($countReleasedServices > 0){
+            $status = "released";
+        }
         if($countCompleteServices > 0){
             $status = "complete";
         }
