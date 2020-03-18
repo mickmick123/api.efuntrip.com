@@ -20,9 +20,9 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('get-clients-groups/{id}', 'ClientController@getClientGroups');
 
-  Route::get('search', 'ClientController@clientSearch');
+    Route::get('search', 'ClientController@clientSearch');
 
-  Route::get('get-reminders', 'ClientController@getReminders');
+    Route::get('get-reminders', 'ClientController@getReminders');
 
 	Route::post('add-temporary-client', 'ClientController@addTemporaryClient');
 
@@ -44,9 +44,9 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::patch('{id}', 'ClientController@update');
 
-  Route::post('get-today-tasks', 'ClientController@getTodayTasks');
+    Route::post('get-today-tasks', 'ClientController@getTodayTasks');
 
-  Route::post('get-employee', 'ClientController@getEmployees');
+    Route::post('get-employee', 'ClientController@getEmployees');
 
 	Route::get('unpaid-services/{group_id}/{is_auto_generated}/{page?}', 'ClientController@getUnpaidServices');
 

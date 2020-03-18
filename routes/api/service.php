@@ -20,4 +20,6 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('{id}/expanded-details', 'ServiceController@expandedDetails');
 
+	Route::get('get-service-rate/{type}/{id}/{service_id?}', 'ServiceController@getServiceRate');
+
 });

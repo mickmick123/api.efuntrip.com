@@ -8,7 +8,11 @@ use App\ServiceProfile;
 
 use App\ServiceProfileCost;
 
+use App\User;
+use App\Group;
 use App\Branch;
+use App\BranchUser;
+use App\BranchGroup;
 
 use App\ServiceBranchCost;
 
@@ -542,6 +546,72 @@ class ServiceController extends Controller
 			'serviceId' => $id,
 			'defaultRates' => $defaultRates,
 			'customizedRates' => $customizedRates
+		];
+		$response['code'] = 200;
+
+		return Response::json($response);
+	}
+
+	public function getServiceRate($type, $id, $service_id) {
+		$branch_id = 1;
+		if($type == 'client'){
+			$client = User::findOrFail($id);
+			$level = $client->service_profile_id;
+			$branch = BranchUser::where('user_id',$id)->first();
+			if($branch){
+				$branch_id = $branch->branch_id;
+			}
+		}
+		else {
+			$group = Group::findOrFail($id);
+			$level = $group->service_profile_id;
+			$branch = BranchGroup::where('group_id',$id)->first();
+			if($branch){
+				$branch_id = $branch->branch_id;
+			}
+		}
+
+		$service = Service::findorfail($service_id);
+
+
+		  $scharge = $service->charge;
+	      $scost = $service->cost;
+	      $stip = $service->tip;
+
+	      if($branch_id > 1){
+	          $bcost = ServiceBranchCost::where('branch_id',$branch_id)->where('service_id',$service_id)->first();
+	          $scost = $bcost->cost;
+	          $stip = $bcost->tip;
+	          $scharge = $bcost->charge;   
+	      }
+	      else{
+	          $scost = $service->cost;
+	          $stip = $service->tip;
+	          $scharge = $service->charge;
+	      }
+
+	      //has profile id
+	      if($level > 0 && $level != null){
+	          $newcost = ServiceProfileCost::where('profile_id',$level)
+	                        ->where('branch_id',$branch_id)
+	                        ->where('service_id',$service_id)
+	                        ->first();
+	          if($newcost){
+	              $scharge = $newcost->charge;
+	              $scost = $newcost->cost;
+	              $stip = $newcost->tip;
+	          }
+	      }
+
+	      $scharge = ($scharge > 0 ? $scharge : $service->charge);
+	      $scost = ($scost > 0 ? $scost : $service->cost);
+	      $stip = ($stip > 0 ? $stip : $service->tip);
+
+		$response['status'] = 'Success';
+		$response['data'] = [
+			'cost' => $scharge,
+			'charge' => $scost,
+			'tip' => $stip
 		];
 		$response['code'] = 200;
 
