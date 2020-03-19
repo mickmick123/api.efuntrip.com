@@ -1082,7 +1082,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
 
 
-
+/*
    public function getClientPackagesByService(Request $request, $groupId, $page = 20){
 
      $sort = $request->input('sort');
@@ -1111,6 +1111,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
          $query = ClientService::where('service_id', $s->service_id)->where('group_id', $groupId)->where('active', 1);
 
+
+
          $temp['detail'] = $s->detail;
          $temp['service_date'] = $s->sdate;
          $temp['sdate'] = $s->sdate;
@@ -1138,11 +1140,17 @@ public function getClientPackagesByGroup($client_id, $group_id){
                  $members[$ctr2] = User::where('id',$m->client_id)->select('first_name','last_name')->first();
                  $members[$ctr2]['tcost'] = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->where('client_id',$m->client_id)->value(DB::raw("SUM(cost + charge + tip +com_client + com_agent)"));
                  $members[$ctr2]['services'] = $clientServices;
+                 $members[$ctr2]['created_at'] = $m->created_at;
+
+
+
              //}
              $ctr2++;
          }
          //if($s->active === 1){
            $temp['total_service_cost'] = ($query->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)"))) - $discountCtr;
+           $temp['total_service'] = ($query->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)")));
+           $temp['service_count'] = $query->count();
         // } //
 
 
@@ -1154,6 +1162,96 @@ public function getClientPackagesByGroup($client_id, $group_id){
      return Response::json($response);
 
    }
+  */
+  public function getClientPackagesByService(Request $request, $groupId, $page = 20){
+
+    $sort = $request->input('sort');
+    $search = $request->input('search');
+
+    $clientServices = DB::table('client_services')
+      ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, created_at'))
+      ->where('group_id',$groupId)
+      ->groupBy('service_id')
+      ->orderBy('created_at','DESC')
+
+      ->when($sort != '', function ($q) use($sort){
+          $sort = explode('-' , $sort);
+          return $q->orderBy($sort[0], $sort[1]);
+      })
+      ->when($search != '', function ($q) use($search){
+          return $q->where('detail','LIKE','%'.$search.'%');
+      })
+      ->paginate($page);
+
+    $ctr = 0;
+    $temp = [];
+    $response = $clientServices;
+
+    foreach($clientServices->items() as $s){
+
+        $query = ClientService::where('created_at', $s->created_at)->where('service_id',$s->service_id)->where('group_id', $groupId)->where('active', 1);
+
+        $servicesByDate = DB::table('client_services')
+          ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, created_at, client_id'))
+          ->where('group_id',$groupId)
+          ->where('service_id',$s->service_id)
+          ->groupBy(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'))
+          ->orderBy('created_at','DESC')
+          ->get();
+
+        $temp['detail'] = $s->detail;
+        $temp['service_date'] = $s->sdate;
+        $temp['sdate'] = $s->sdate;
+        $temp['group_id'] = $groupId;
+
+
+        $members = [];
+        $discountCtr = 0;
+
+        foreach($servicesByDate as $sd){
+
+          $queryClients = ClientService::where('service_id', $sd->service_id)->where('created_at', $sd->created_at)->where('group_id', $groupId)->orderBy('created_at','DESC')->orderBy('client_id')->groupBy('client_id')->get();
+
+          $memberByDate = [];
+          $ctr2 = 0;
+
+          foreach($queryClients as $m){
+
+            $clientServices = [];
+            $tmpCtr = 0;
+
+            $m->discount = ClientTransaction::where('client_service_id', $m->id)->where('type', 'Discount')->sum('amount');
+            $discountCtr += $m->discount;
+
+            $memberByDate[$ctr2] = User::where('id',$m->client_id)->select('first_name','last_name')->first();
+            $memberByDate[$ctr2]['tcost'] = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$sd->sdate)->where('group_id', $groupId)->where('client_id',$m->client_id)->value(DB::raw("SUM(cost + charge + tip +com_client + com_agent)"));
+            $memberByDate[$ctr2]['service'] = $m;
+            $memberByDate[$ctr2]['created_at'] = $m->created_at;
+
+            $ctr2++;
+         }
+
+         $sd->members = $memberByDate;
+      }
+
+        //$servicesByDate->membersByDate = $memberByDate;
+
+        //if($s->active === 1){
+        $temp['total_service_cost'] = ($query->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)"))) - $discountCtr;
+        $temp['total_service'] = ($query->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)")));
+        $temp['service_count'] = $servicesByDate->count();
+       // } //
+
+        $temp['bydates'] = $servicesByDate;
+        $response[$ctr] = $temp;
+        $ctr++;
+    }
+
+    return Response::json($response);
+
+  }
+
+
 
 
    public function getUnpaidServices(Request $request, $groupId, $isAutoGenerated, $page = 5){
@@ -2386,7 +2484,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
     // EXPORT EXCEL
     public function showServiceDates($group_id){
-   
+
             $dates = DB::table('client_services as cs')
             ->select(DB::raw('cs.*, date_format(STR_TO_DATE(created_at, "%Y-%m-%d %H:%i:%s"),"%Y-%m") as sdate'))
             ->where('active',1)->where('group_id',$group_id)
@@ -2411,7 +2509,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
             return $profileServices;
 
     }
-    
+
     private function statusChinese($status){
         $s = strtolower(trim($status," "));
         $stat = '';
