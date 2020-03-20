@@ -1745,7 +1745,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $countCancelledServices = DB::table('client_services')
             ->select('*')
             ->where('tracking', $tracking)
-            ->where('active', 1)
+            ->where('active', 0)
             ->where('status', 'cancelled')
             ->count();
 
