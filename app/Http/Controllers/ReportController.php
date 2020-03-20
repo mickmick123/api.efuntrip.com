@@ -209,11 +209,11 @@ class ReportController extends Controller
 					$query->select(['service_procedure_id', 'document_id', 'is_required']);
 				},
 				'serviceProcedures.serviceProcedureDocuments.document' => function($query) {
-					$query->select(['id', 'title', 'is_unique']);
+					$query->select(['id', 'title', 'is_unique', 'is_company_document']);
 				}
 			])
 			->with(['clientServices' => function($query1) use($clientServicesId) {
-				$query1->select(['id', 'client_id', 'service_id', 'tracking'])
+				$query1->select(['id', 'client_id', 'group_id', 'service_id', 'tracking'])
 					->whereIn('id', $clientServicesId)
 					->with([
 						'client' => function($query2) {
@@ -502,10 +502,12 @@ class ReportController extends Controller
 			        			if( $mode == 'add' || $mode == 'stay' ) {
 			        				OnHandDocument::firstOrCreate([
 			        					'client_id' => $cs->client_id,
+			        					'group_id' => $cs->group_id,
 			        					'document_id' => $document
 			        				]);
 			        			} elseif( $mode == 'remove' ) {
 			        				OnHandDocument::where('client_id', $cs->client_id)
+			        					->where('group_id', $cs->group_id)
 			        					->where('document_id', $document)->delete();
 			        			}
 			        		}
