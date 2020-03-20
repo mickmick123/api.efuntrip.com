@@ -119,7 +119,10 @@ class GroupController extends Controller
 
         $groupTotalCompleteServiceCost = ClientService::where('group_id', $id)
             ->where('active', 1)
-            ->where('status', 'complete')
+            ->where(function ($query) {
+                        $query->where('status', 'complete')
+                             ->orwhere('status', 'released');
+                    })
             ->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
 
         $discount = ClientTransaction::where('group_id', $id)->where('type', 'Discount')
@@ -2175,7 +2178,12 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
         $members = GroupUser::where('group_id',$groupId)->pluck('user_id');
 
-        $member_services = ClientService::whereIn('client_id',$members)->where('group_id',$groupId)->where('status','!=','complete')->get();
+        $member_services = ClientService::whereIn('client_id',$members)->where('group_id',$groupId)
+                            ->where(function ($query) {
+                                $query->where('status', '!=', 'complete')
+                                     ->where('status', '!=', 'released');
+                            })
+                            ->get();
 
         foreach($member_services as $ms){
             $getService = Service::where('id',$ms->service_id)->first();

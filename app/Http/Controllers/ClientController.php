@@ -97,7 +97,7 @@ class ClientController extends Controller
                         where
                             b.active = 1
                             and b.group_id is null
-                            and b.status = "complete"
+                            and (b.status = "complete" or b.status ="released")
 
                         group by
                             b.client_id
@@ -254,7 +254,7 @@ class ClientController extends Controller
                         where
                             b.active = 1
                             and b.group_id is null
-                            and b.status = "complete"
+                            and (b.status = "complete" or b.status ="released")
 
                         group by
                             b.client_id
@@ -2167,7 +2167,12 @@ class ClientController extends Controller
             $client->save();
         }
 
-        $services = ClientService::where('client_id',$clientId)->where('group_id',null)->where('status','!=','complete')->get();
+        $services = ClientService::where('client_id',$clientId)->where('group_id',null)
+                        ->where(function ($query) {
+                            $query->where('status', '!=', 'complete')
+                                      ->where('status', '!=', 'released');
+                            })
+                        ->get();
 
         foreach($services as $ms){
             $getService = Service::where('id',$ms->service_id)->first();
@@ -2246,13 +2251,13 @@ class ClientController extends Controller
     }
 
 
-    private function updatePackageStatus($tracking){
+    public static function updatePackageStatus($tracking){
         $status = null; // empty
 
         $countCancelledServices = DB::table('client_services')
             ->select('*')
             ->where('tracking', $tracking)
-            ->where('active', 1)
+            ->where('active', 0)
             ->where('status', 'cancelled')
             ->count();
 
@@ -2313,8 +2318,18 @@ class ClientController extends Controller
     /**** Computations ****/
 
     private function getClientTotalPointsEarned($id) {
-        return ClientService::where('agent_com_id', $id)->where('status','complete')->sum('com_agent') +
-                ClientService::where('client_com_id', $id)->where('status','complete')->sum('com_client');
+        return  ClientService::where('agent_com_id', $id)
+                    ->where(function ($query) {
+                        $query->where('status', 'complete')
+                             ->orwhere('status', 'released');
+                    })
+                    ->sum('com_agent') +
+                ClientService::where('client_com_id', $id)
+                    ->where(function ($query) {
+                        $query->where('status', 'complete')
+                             ->orwhere('status', 'released');
+                    })
+                    ->sum('com_client');
     }
 
     private function getClientDeposit($id) {
@@ -2350,7 +2365,10 @@ class ClientController extends Controller
     private function getClientTotalCompleteServiceCost($id) {
         $clientTotalCompleteServiceCost = ClientService::where('client_id', $id)
             ->where('active', 1)->where('group_id', null)
-            ->where('status', 'complete')
+            ->where(function ($query) {
+                        $query->where('status', 'complete')
+                             ->orwhere('status', 'released');
+                    })
             ->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
 
         $discount =  ClientTransaction::where('client_id', $id)->where('group_id', null)->where('type', 'Discount')

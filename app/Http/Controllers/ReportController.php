@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\ClientController;
+
 use App\ClientService;
 
 use App\Document;
@@ -25,6 +27,7 @@ use App\User;
 use Auth, Carbon\Carbon, DB, Response, Validator;
 
 use Illuminate\Http\Request;
+
 
 class ReportController extends Controller
 {
@@ -378,6 +381,7 @@ class ReportController extends Controller
 					// Service procedure: without required documents
 					if( count($serviceProcedureRequiredDocuments) == 0 ) {
 						$clientService->update(['status' => $targetStatus]);
+						ClientController::updatePackageStatus($clientService->tracking);
 					} 
 					// Service procedure: with required documents
 					else {
@@ -392,6 +396,7 @@ class ReportController extends Controller
 
 						if( count($difference) == 0 ) {
 							$clientService->update(['status' => $targetStatus]);
+							ClientController::updatePackageStatus($clientService->tracking);
 						}
 					}
 				}
@@ -410,6 +415,7 @@ class ReportController extends Controller
 				'charge' => 0,
 				'tip' => 0
 			]);
+			ClientController::updatePackageStatus($clientService->tracking);
 		}
 	}
 
