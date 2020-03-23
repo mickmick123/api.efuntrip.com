@@ -8,6 +8,8 @@ use App\ClientService;
 
 use App\Document;
 
+use App\GroupUser;
+
 use App\Log;
 
 use App\Report;
@@ -237,11 +239,28 @@ class ReportController extends Controller
 					$query->whereIn('id', $clientServicesId);
 				})
 				->with([
-					'onHandDocuments' => function($query) {
+					'clientServices' => function($query) use($clientServicesId) {
+						$query->whereIn('id', $clientServicesId)->select(['id', 'client_id', 'group_id']);
+					},
+
+					'clientServices.client' => function($query) {
+						$query->select(['id', 'first_name', 'last_name']);
+					},
+					'clientServices.client.onHandDocuments' => function($query) {
 						$query->select(['id', 'client_id', 'document_id']);
 					},
-					'onHandDocuments.document' => function($query) {
-						$query->select(['id', 'title', 'is_unique']);
+					'clientServices.client.onHandDocuments.document' => function($query) {
+						$query->select(['id', 'title', 'is_unique', 'is_company_document']);
+					},
+
+					'clientServices.group' => function($query) {
+						$query->select(['id', 'name']);
+					},
+					'clientServices.group.onHandDocuments' => function($query) {
+						$query->select(['id', 'group_id', 'document_id']);
+					},
+					'clientServices.group.onHandDocuments.document' => function($query) {
+						$query->select(['id', 'title', 'is_unique', 'is_company_document']);
 					}
 				])
 				->get();
@@ -498,17 +517,27 @@ class ReportController extends Controller
 			        		$serviceProcedureDocument = ServiceProcedureDocument::where('service_procedure_id', $report['service_procedure'])->where('document_id', $document)->first();
 			        		if( $serviceProcedureDocument ) {
 			        			$mode = $serviceProcedureDocument->mode;
+			        			$isCompanyDocument = Document::findOrFail($document)->is_company_document;
 
 			        			if( $mode == 'add' || $mode == 'stay' ) {
 			        				OnHandDocument::firstOrCreate([
-			        					'client_id' => $cs->client_id,
-			        					'group_id' => $cs->group_id,
+			        					'client_id' => ($cs->group_id && $isCompanyDocument == 1)
+			        						? null
+			        						: $cs->client_id,
+			        					'group_id' => ($cs->group_id && $isCompanyDocument == 1)
+			        						? $cs->group_id
+			        						: null,
 			        					'document_id' => $document
 			        				]);
 			        			} elseif( $mode == 'remove' ) {
-			        				OnHandDocument::where('client_id', $cs->client_id)
-			        					->where('group_id', $cs->group_id)
-			        					->where('document_id', $document)->delete();
+			        				if( $cs->group_id && $isCompanyDocument == 1 ) {
+			        					OnHandDocument::where('group_id', $cs->group_id)
+			        						->where('document_id', $document)->delete();
+			        				} else {
+			        					OnHandDocument::where('client_id', $cs->client_id)
+				        					->where('document_id', $document)->delete();
+			        				}
+			        				
 			        			}
 			        		}
 	        			}
