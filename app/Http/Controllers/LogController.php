@@ -559,7 +559,6 @@ public function getCommissionLogs($client_id, $group_id) {
 
       $logs = DB::table('logs')->where('client_service_id',$client_service_id)->orderBy('id','desc')->get();
 
-
       foreach( $logs as $log ) {
           $usr =  User::where('id',$log->processor_id)->select('first_name','last_name')->get();
           $log->processor = ($usr) ? ($usr[0]->first_name ." ".$usr[0]->last_name) : "";
@@ -569,15 +568,16 @@ public function getCommissionLogs($client_id, $group_id) {
           if($log->log_type === 'Document'){
             $log->documents = ClientService::select(['id', 'detail', 'status', 'tracking', 'active'])
                 ->with([
-                    'logs' => function($query) {
+                    'logs' => function($query) use($log) {
                         $query->select(['id', 'client_service_id', 'detail', 'processor_id'])
                                     ->where('log_type', 'Document')
+                                    ->where('id',$log->id)
                                     ->orderBy('id', 'desc');
                     },
                     'logs.processor' => function($query) {
                         $query->select(['id', 'first_name', 'last_name']);
                     },
-                    'logs.documents' => function($query) {
+                    'logs.documents' => function($query)  {
                         $query->select(['title'])->orderBy('document_log.id', 'desc');
                     }
                 ])
