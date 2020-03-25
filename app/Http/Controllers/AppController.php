@@ -43,7 +43,7 @@ class AppController extends Controller
             if(is_numeric($login)){
                 
                 $ids = ContactNumber::where('number','like','%'.$login)->where('user_id','!=',null)->pluck('user_id');
-                $user = User::whereIn('id', $id)->get();
+                $user = User::whereIn('id', $ids)->get();
             }else{
                 $user = NULL; 
             }
