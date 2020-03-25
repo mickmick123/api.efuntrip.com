@@ -577,17 +577,23 @@ class ServiceController extends Controller
 		  $scharge = $service->charge;
 	      $scost = $service->cost;
 	      $stip = $service->tip;
+	      $sclient = $service->com_client;
+	      $sagent = $service->com_agent;
 
 	      if($branch_id > 1){
 	          $bcost = ServiceBranchCost::where('branch_id',$branch_id)->where('service_id',$service_id)->first();
 	          $scost = $bcost->cost;
 	          $stip = $bcost->tip;
-	          $scharge = $bcost->charge;   
+	          $scharge = $bcost->charge; 
+	          $sclient = $bcost->com_client;
+	      	  $sagent = $bcost->com_agent;  
 	      }
 	      else{
 	          $scost = $service->cost;
 	          $stip = $service->tip;
 	          $scharge = $service->charge;
+	          $sclient = $service->com_client;
+	      	  $sagent = $service->com_agent;  
 	      }
 
 	      //has profile id
@@ -600,18 +606,24 @@ class ServiceController extends Controller
 	              $scharge = $newcost->charge;
 	              $scost = $newcost->cost;
 	              $stip = $newcost->tip;
+	              $sclient = $newcost->com_client;
+	      	  	  $sagent = $newcost->com_agent; 
 	          }
 	      }
 
 	      $scharge = ($scharge > 0 ? $scharge : $service->charge);
 	      $scost = ($scost > 0 ? $scost : $service->cost);
 	      $stip = ($stip > 0 ? $stip : $service->tip);
+	      $sclient = ($sclient > 0 ? $sclient : $service->com_client);
+	      $sagent = ($sagent > 0 ? $sagent : $service->com_agent);
 
 		$response['status'] = 'Success';
 		$response['data'] = [
 			'cost' => $scharge,
 			'charge' => $scost,
-			'tip' => $stip
+			'tip' => $stip,
+			'com_client' => $sclient,
+			'com_agent' => $sagent
 		];
 		$response['code'] = 200;
 
