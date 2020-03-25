@@ -44,6 +44,8 @@ class RouteServiceProvider extends ServiceProvider
 
             $this->mapActionRoutes();
 
+            $this->mapAppRoutes();
+
             $this->mapAttendanceRoutes();
 
             $this->mapBranchRoutes();
@@ -135,6 +137,14 @@ class RouteServiceProvider extends ServiceProvider
                  ->middleware('api')
                  ->namespace($this->namespace)
                  ->group(base_path('routes/api/actions.php'));
+        }
+
+        protected function mapAppRoutes()
+        {
+            Route::prefix('api/v1/app')
+                 ->middleware('api')
+                 ->namespace($this->namespace)
+                 ->group(base_path('routes/api/app.php'));
         }
 
         protected function mapAttendanceRoutes()
