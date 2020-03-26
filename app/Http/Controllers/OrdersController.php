@@ -162,4 +162,13 @@ class OrdersController extends Controller
 
         return Response::json($response);
     }
+
+    public function delete($id){
+            Order::where('order_id',$id)->delete();
+            OrderDetails::where('order_id',$id)->delete();
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+
+        return Response::json($response);
+    }
 }

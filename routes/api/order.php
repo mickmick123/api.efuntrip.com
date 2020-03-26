@@ -11,5 +11,6 @@ Route::middleware('auth:api')->group(function() {
 	Route::post('/', 'OrdersController@store');
 	Route::get('{id}', 'OrdersController@show');
 	Route::patch('{id}', 'OrdersController@update');
+	Route::delete('/{id}', 'OrdersController@delete');
 
 });
