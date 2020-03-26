@@ -8,6 +8,7 @@ class Order extends Model
 {
 
     protected $table = 'orders';
+    public $primaryKey  = 'order_id';
 
     protected $fillable = ['name', 'address','contact','delivered_by','is_delivered'];
 

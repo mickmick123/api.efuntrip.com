@@ -105,7 +105,7 @@ class OrdersController extends Controller
 
             foreach($request->products as $p){
                 $order_detail = new OrderDetails;
-                $order_detail->order_id = $order->id;
+                $order_detail->order_id = $order->order_id;
                 $order_detail->product_id = $p['product_id'];
                 $order_detail->qty = $p['qty'];
                 $order_detail->remarks = $p['remarks'];
@@ -121,5 +121,43 @@ class OrdersController extends Controller
         return Response::json($response);
     }
 
+    public function update(Request $request, $id){
+        $validator = Validator::make($request->all(), [
+            'products' => 'required|array',
+            'name' => 'required',
+            'address' => 'required',
+            'delivered_by' => 'required',
+            'contact' => 'required',
+        ]);
 
+        if($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+            $order = Order::where('order_id',$id)->first();
+            $order->name = $request->name;
+            $order->delivered_by = $request->delivered_by;
+            $order->address = $request->address;
+            $order->contact = $request->contact;
+            $order->save();
+
+                OrderDetails::where('order_id',$id)->delete();
+            foreach($request->products as $p){
+                $order_detail = new OrderDetails;
+                $order_detail->order_id = $id;
+                $order_detail->product_id = $p['product_id'];
+                $order_detail->qty = $p['qty'];
+                $order_detail->remarks = $p['remarks'];
+                $order_detail->unit_price = $p['unit_price'];
+                $order_detail->total_price = $p['total_price'];
+                $order_detail->save();
+            }
+
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+        }
+
+        return Response::json($response);
+    }
 }
