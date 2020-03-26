@@ -78,6 +78,8 @@ class RouteServiceProvider extends ServiceProvider
 
             $this->mapNationalityRoutes();
 
+            $this->mapOrderRoutes();
+
             $this->mapReportRoutes();
 
             $this->mapRoleRoutes();
@@ -273,6 +275,14 @@ class RouteServiceProvider extends ServiceProvider
                  ->middleware('api')
                  ->namespace($this->namespace)
                  ->group(base_path('routes/api/nationality.php'));
+        }
+
+        protected function mapOrderRoutes()
+        {
+            Route::prefix('api/v1/order')
+                 ->middleware('api')
+                 ->namespace($this->namespace)
+                 ->group(base_path('routes/api/order.php'));
         }
 
         protected function mapRoleRoutes() {
