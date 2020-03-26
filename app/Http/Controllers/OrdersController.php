@@ -128,6 +128,7 @@ class OrdersController extends Controller
             'address' => 'required',
             'delivered_by' => 'required',
             'contact' => 'required',
+            'is_delivered' => 'required',
         ]);
 
         if($validator->fails()) {
@@ -140,6 +141,7 @@ class OrdersController extends Controller
             $order->delivered_by = $request->delivered_by;
             $order->address = $request->address;
             $order->contact = $request->contact;
+            $order->is_delivered = $request->is_delivered;
             $order->save();
 
                 OrderDetails::where('order_id',$id)->delete();
