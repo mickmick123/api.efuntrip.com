@@ -51,6 +51,7 @@ class OrdersController extends Controller
             $prod = Product::where('product_id', $d->product_id)->first();
             $d->product_name = $prod->product_name;
             $d->product_name_chinese = $prod->product_name_chinese;
+            $d->combined_name = $prod->product_name.' ('.$prod->product_name_chinese.')';
         }
 
         $order->details = $details;
