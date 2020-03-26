@@ -6,6 +6,7 @@ use App\User;
 use App\Order;
 use App\OrderDetails;
 use App\Product;
+use App\ProductCategory;
 
 use Illuminate\Http\Request;
 
@@ -22,7 +23,7 @@ class OrdersController extends Controller
 
     public function list() {
         
-        $orders = Order::get();
+        $orders = Order::orderBy('order_id','Desc')->get();
 
         foreach($orders as $o){
             $total_price = OrderDetails::where('order_id',$o->order_id)->where('order_status',1)->sum('total_price');
@@ -59,6 +60,24 @@ class OrdersController extends Controller
         $response['status'] = 'Success';
         $response['code'] = 200;
         $response['data'] = $order;
+        return Response::json($response);
+    }
+
+    public function productCategories(){
+        $cats = ProductCategory::get();
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $cats;
+        return Response::json($response);
+    }
+
+    public function products($cat_id){
+        $prods = Product::where('category_id',$cat_id)->get();
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $prods;
         return Response::json($response);
     }
 
