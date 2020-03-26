@@ -87,7 +87,7 @@ class OrdersController extends Controller
             'products' => 'required|array',
             'name' => 'required',
             'address' => 'required',
-            'delivered_by' => 'required',
+            'wechat_id' => 'required',
             'contact' => 'required',
         ]);
 
@@ -98,7 +98,7 @@ class OrdersController extends Controller
         } else {
             $order = new Order;
             $order->name = $request->name;
-            $order->delivered_by = $request->delivered_by;
+            $order->wechat_id = $request->wechat_id;
             $order->address = $request->address;
             $order->contact = $request->contact;
             $order->save();
@@ -126,7 +126,7 @@ class OrdersController extends Controller
             'products' => 'required|array',
             'name' => 'required',
             'address' => 'required',
-            'delivered_by' => 'required',
+            'wechat_id' => 'required',
             'contact' => 'required',
             'is_delivered' => 'required',
         ]);
@@ -138,7 +138,7 @@ class OrdersController extends Controller
         } else {
             $order = Order::where('order_id',$id)->first();
             $order->name = $request->name;
-            $order->delivered_by = $request->delivered_by;
+            $order->wechat_id = $request->wechat_id;
             $order->address = $request->address;
             $order->contact = $request->contact;
             $order->is_delivered = $request->is_delivered;
