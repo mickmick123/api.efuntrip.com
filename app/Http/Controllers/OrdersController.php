@@ -38,5 +38,29 @@ class OrdersController extends Controller
 
     }
 
+    public function show($id){
+        $order = Order::where('order_id',$id)->first();
+
+        $total_price = OrderDetails::where('order_id',$order->order_id)->where('order_status',1)->sum('total_price');
+        $order->total_price = $total_price;
+
+        $details = OrderDetails::where('order_id',$order->order_id)->get();
+
+        foreach($details as $d){
+            $prod = Product::where('product_id', $d->product_id)->first();
+            $d->product_name = $prod->product_name;
+            $d->product_name_chinese = $prod->product_name_chinese;
+        }
+
+        $order->details = $details;
+
+        $response = [];
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $order;
+        return Response::json($response);
+    }
+
 
 }
