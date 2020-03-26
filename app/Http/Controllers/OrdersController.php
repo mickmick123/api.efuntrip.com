@@ -82,4 +82,44 @@ class OrdersController extends Controller
     }
 
 
+    public function store(Request $request){
+        $validator = Validator::make($request->all(), [
+            'products' => 'required|array',
+            'name' => 'required',
+            'address' => 'required',
+            'delivered_by' => 'required',
+            'contact' => 'required',
+        ]);
+
+        if($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+            $order = new Order;
+            $order->name = $request->name;
+            $order->delivered_by = $request->delivered_by;
+            $order->address = $request->address;
+            $order->contact = $request->contact;
+            $order->save();
+
+            foreach($request->products as $p){
+                $order_detail = new OrderDetails;
+                $order_detail->order_id = $order->id;
+                $order_detail->product_id = $p['product_id'];
+                $order_detail->qty = $p['qty'];
+                $order_detail->remarks = $p['remarks'];
+                $order_detail->unit_price = $p['unit_price'];
+                $order_detail->total_price = $p['total_price'];
+                $order_detail->save();
+            }
+
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+        }
+
+        return Response::json($response);
+    }
+
+
 }
