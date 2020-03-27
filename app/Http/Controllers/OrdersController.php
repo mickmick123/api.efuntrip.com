@@ -22,7 +22,7 @@ class OrdersController extends Controller
 {
 
     public function list() {
-        
+
         $orders = Order::orderBy('order_id','Desc')->get();
 
         foreach($orders as $o){
@@ -53,6 +53,7 @@ class OrdersController extends Controller
             $d->product_name = $prod->product_name;
             $d->product_name_chinese = $prod->product_name_chinese;
             $d->category = $cat->name;
+            $d->category_id = $cat->category_id;
             $d->combined_name = $cat->name.' - '.$prod->product_name.' ('.$prod->product_name_chinese.')';
         }
 
@@ -128,6 +129,8 @@ class OrdersController extends Controller
     }
 
     public function update(Request $request, $id){
+
+
         $validator = Validator::make($request->all(), [
             'products' => 'required|array',
             'name' => 'required',
