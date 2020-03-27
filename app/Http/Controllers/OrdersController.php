@@ -134,7 +134,7 @@ class OrdersController extends Controller
             'address' => 'required',
             'wechat_id' => 'required',
             'contact' => 'required',
-            'data_of_delivery' => 'required',
+            'date_of_delivery' => 'required',
         ]);
 
         if($validator->fails()) {
@@ -199,6 +199,33 @@ class OrdersController extends Controller
             // $order->remarks = $request->remarks;
             $order->money_received = $request->money_received;
             $order->save();
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+        }
+
+        return Response::json($response);
+    }
+
+    public function newOrderSummary(Request $request){
+        $validator = Validator::make($request->all(), [
+            'order_id_from' => 'required',
+            'order_id_to' => 'required',
+        ]);
+
+        if($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+
+            $orders = Order::where('order_id','>=',$request->order_id_from)->where('order_id','<=',$request->order_id_to)
+                        ->where('is_delivered',0)->pluck('order_id');
+            
+            $details = OrderDetails::whereIn('order_id',$orders)->unique('product_id')->pluck('product_id');
+            return $details;
+            foreach($details as $od){
+
+            }
             $response['status'] = 'Success';
             $response['code'] = 200;
         }
