@@ -49,9 +49,11 @@ class OrdersController extends Controller
 
         foreach($details as $d){
             $prod = Product::where('product_id', $d->product_id)->first();
+            $cat = ProductCategory::where('category_id',$prod->category_id)->first();
             $d->product_name = $prod->product_name;
             $d->product_name_chinese = $prod->product_name_chinese;
-            $d->combined_name = $prod->product_name.' ('.$prod->product_name_chinese.')';
+            $d->category = $cat->name;
+            $d->combined_name = $cat->name.' - '.$prod->product_name.' ('.$prod->product_name_chinese.')';
         }
 
         $order->details = $details;
@@ -90,6 +92,7 @@ class OrdersController extends Controller
             'address' => 'required',
             'wechat_id' => 'required',
             'contact' => 'required',
+            'date_of_delivery' => 'required',
         ]);
 
         if($validator->fails()) {
@@ -102,6 +105,8 @@ class OrdersController extends Controller
             $order->wechat_id = $request->wechat_id;
             $order->address = $request->address;
             $order->contact = $request->contact;
+            $order->remarks = $request->remarks;
+            $order->date_of_delivery = $request->date_of_delivery;
             $order->save();
 
             foreach($request->products as $p){
@@ -129,7 +134,7 @@ class OrdersController extends Controller
             'address' => 'required',
             'wechat_id' => 'required',
             'contact' => 'required',
-            'is_delivered' => 'required',
+            'data_of_delivery' => 'required',
         ]);
 
         if($validator->fails()) {
@@ -142,7 +147,8 @@ class OrdersController extends Controller
             $order->wechat_id = $request->wechat_id;
             $order->address = $request->address;
             $order->contact = $request->contact;
-            $order->is_delivered = $request->is_delivered;
+            $order->date_of_delivery = $request->date_of_delivery;
+            $order->remarks = $request->remarks;
             $order->save();
 
                 OrderDetails::where('order_id',$id)->delete();
@@ -169,6 +175,33 @@ class OrdersController extends Controller
             OrderDetails::where('order_id',$id)->delete();
             $response['status'] = 'Success';
             $response['code'] = 200;
+
+        return Response::json($response);
+    }
+
+
+    public function markComplete(Request $request){
+        $validator = Validator::make($request->all(), [
+            'order_id' => 'required',
+            'is_delivered' => 'required',
+            'money_received' => 'required'
+        ]);
+
+        if($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+
+            $order = Order::where('order_id',$request->order_id)->first();
+            $is_delivered = ($request->is_delivered == 'no' ? 0 : 1);
+            $order->is_delivered = $is_delivered;
+            // $order->remarks = $request->remarks;
+            $order->money_received = $request->money_received;
+            $order->save();
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+        }
 
         return Response::json($response);
     }
