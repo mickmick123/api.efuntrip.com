@@ -187,8 +187,8 @@ class OrdersController extends Controller
         $validator = Validator::make($request->all(), [
             'order_id' => 'required',
             'is_delivered' => 'required',
-            'money_received' => 'required',
-            'delivered_by' => 'required',
+            // 'money_received' => 'required',
+            // 'delivered_by' => 'required',
         ]);
 
         if($validator->fails()) {
