@@ -244,6 +244,7 @@ class OrdersController extends Controller
                 $ctr2 = 0;
                 foreach($list[$ctr]['products'] as $p){
                     $list[$ctr]['products'][$ctr2]['order_details'] = OrderDetails::whereIn('order_id',$request->order_ids)->where('product_id',$p->product_id)->get();
+                    $list[$ctr]['products'][$ctr2]['total'] = OrderDetails::whereIn('order_id',$request->order_ids)->where('product_id',$p->product_id)->sum('total_price');
                     $ctr2++;
                 }
                 $ctr++;
