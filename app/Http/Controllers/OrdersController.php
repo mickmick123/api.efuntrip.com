@@ -234,10 +234,15 @@ class OrdersController extends Controller
 
             $cats = Product::whereIn('product_id',$prod_ids)->orderBy('category_id')->groupBy('category_id')->pluck('category_id');
 
+            $final_total = 0;
+
             foreach($cats as $c){
                 $list[$ctr]['category'] = ProductCategory::where('category_id',$c)->first()->name;
 
                 $products = Product::whereIn('product_id',$prod_ids)->where('category_id',$c)->get();
+
+                $ps = $products->pluck('product_id');
+                $list[$ctr]['orders'] = OrderDetails::whereIn('order_id',$request->order_ids)->whereIn('product_id',$ps)->orderBy('order_id')->groupBy('order_id')->pluck('order_id');
 
                 $list[$ctr]['products'] = $products;
 
@@ -245,12 +250,14 @@ class OrdersController extends Controller
                 foreach($list[$ctr]['products'] as $p){
                     $list[$ctr]['products'][$ctr2]['order_details'] = OrderDetails::whereIn('order_id',$request->order_ids)->where('product_id',$p->product_id)->get();
                     $list[$ctr]['products'][$ctr2]['total'] = OrderDetails::whereIn('order_id',$request->order_ids)->where('product_id',$p->product_id)->sum('total_price');
+                    $final_total += $list[$ctr]['products'][$ctr2]['total'];
                     $ctr2++;
                 }
                 $ctr++;
             }
 
             $response['data'] = $list;
+            $response['total'] = $final_total;
             $response['status'] = 'Success';
             $response['code'] = 200;
         }
