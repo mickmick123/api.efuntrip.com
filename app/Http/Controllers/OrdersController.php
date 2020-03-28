@@ -187,7 +187,8 @@ class OrdersController extends Controller
         $validator = Validator::make($request->all(), [
             'order_id' => 'required',
             'is_delivered' => 'required',
-            'money_received' => 'required'
+            'money_received' => 'required',
+            'delivered_by' => 'required',
         ]);
 
         if($validator->fails()) {
@@ -201,6 +202,7 @@ class OrdersController extends Controller
             $order->is_delivered = $is_delivered;
             // $order->remarks = $request->remarks;
             $order->money_received = $request->money_received;
+            $order->delivered_by = $request->delivered_by;
             $order->save();
             $response['status'] = 'Success';
             $response['code'] = 200;
@@ -211,8 +213,8 @@ class OrdersController extends Controller
 
     public function newOrderSummary(Request $request){
         $validator = Validator::make($request->all(), [
-            'order_id_from' => 'required',
-            'order_id_to' => 'required',
+            'order_ids' => 'required|array',
+            // 'order_id_to' => 'required',
         ]);
 
         if($validator->fails()) {
@@ -221,14 +223,33 @@ class OrdersController extends Controller
             $response['code'] = 422;
         } else {
 
-            $orders = Order::where('order_id','>=',$request->order_id_from)->where('order_id','<=',$request->order_id_to)
-                        ->where('is_delivered',0)->pluck('order_id');
+            //$orders = Order::where('order_id','>=',$request->order_id_from)->where('order_id','<=',$request->order_id_to)
+                        //->where('is_delivered',0)->pluck('order_id');
             
-            $details = OrderDetails::whereIn('order_id',$orders)->unique('product_id')->pluck('product_id');
-            return $details;
-            foreach($details as $od){
+            $prod_ids = OrderDetails::whereIn('order_id',$request->order_ids)->groupBy('product_id')->pluck('product_id');
+            
 
+            $list = [];
+            $ctr = 0;
+
+            $cats = Product::whereIn('product_id',$prod_ids)->orderBy('category_id')->groupBy('category_id')->pluck('category_id');
+
+            foreach($cats as $c){
+                $list[$ctr]['category'] = ProductCategory::where('category_id',$c)->first()->name;
+
+                $products = Product::whereIn('product_id',$prod_ids)->where('category_id',$c)->get();
+
+                $list[$ctr]['products'] = $products;
+
+                $ctr2 = 0;
+                foreach($list[$ctr]['products'] as $p){
+                    $list[$ctr]['products'][$ctr2]['order_details'] = OrderDetails::whereIn('order_id',$request->order_ids)->where('product_id',$p->product_id)->get();
+                    $ctr2++;
+                }
+                $ctr++;
             }
+
+            $response['data'] = $list;
             $response['status'] = 'Success';
             $response['code'] = 200;
         }
