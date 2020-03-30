@@ -30,7 +30,12 @@ class OrdersController extends Controller
             $total_price = OrderDetails::where('order_id',$o->order_id)->where('order_status',1)->sum('total_price');
             $o->total_price = $total_price;
             $prods = OrderDetails::where('order_id',$o->order_id)->where('order_status',1)->pluck('product_id');
-            $prio = Product::whereIn('product_id',$prods)->where('category_id','>',1)->count();
+            $prio = Product::whereIn('product_id',$prods)
+                        ->where(function($q){
+                                    $q->where('category_id', 3);
+                                    $q->orwhere('category_id', 5);
+                                })
+                        ->count();
             $o->prio = 0;
             if($prio > 0 && $o->is_delivered == 0){
                 $o->prio = 1;
