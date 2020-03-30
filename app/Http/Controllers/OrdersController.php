@@ -26,8 +26,15 @@ class OrdersController extends Controller
         $orders = Order::orderBy('order_id','Desc')->get();
 
         foreach($orders as $o){
+            //$prio = 0;
             $total_price = OrderDetails::where('order_id',$o->order_id)->where('order_status',1)->sum('total_price');
             $o->total_price = $total_price;
+            $prods = OrderDetails::where('order_id',$o->order_id)->where('order_status',1)->pluck('product_id');
+            $prio = Product::whereIn('product_id',$prods)->where('category_id','>',1)->count();
+            $o->prio = 0;
+            if($prio > 0 && $o->is_delivered == 0){
+                $o->prio = 1;
+            }
         }
 
         $response = [];
