@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\User;
+use App\ContactNumber;
 use App\Order;
 use App\OrderDetails;
 use App\Product;
@@ -103,7 +104,6 @@ class OrdersController extends Controller
             'products' => 'required|array',
             'name' => 'required',
             'address' => 'required',
-            'wechat_id' => 'required',
             'contact' => 'required',
             'date_of_delivery' => 'required',
         ]);
@@ -113,9 +113,52 @@ class OrdersController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
+            $client_id = $request->client_id;
+            if(!$request->client_id || $request->client_id == ''){
+                $user = new User;
+                $user->first_name = $request->name;
+                $user->last_name = $request->last_name;
+                $user->wechat_id = $request->wechat_id;
+                $user->telegram = $request->telegram;
+                $user->address = $request->address;
+                // $order->contact = $request->contact;
+                $user->save();
+
+                $num = new ContactNumber;
+                $num->user_id = $user->id;
+                $num->number = $request->contact;
+                $num->save();
+
+                $user->update([
+                                'password' => bcrypt($request->contact)
+                            ]);
+
+                $user->branches()->attach(1);
+                $user->roles()->attach(2);
+
+                $client_id = $user->id;
+            }
+            else{
+                $user = User::findorFail($request->client_id);
+                $user->wechat_id = $request->wechat_id;
+                $user->telegram = $request->telegram;
+                $user->address = $request->address;
+                $user->save();
+
+                $user->contactNumbers()->delete();
+                $num = new ContactNumber;
+                $num->user_id = $user->id;
+                $num->number = $request->contact;
+                $num->save();
+            }
+
+
             $order = new Order;
             $order->name = $request->name;
+            $order->last_name = $request->last_name;
+            $order->user_id = $client_id;
             $order->wechat_id = $request->wechat_id;
+            $order->telegram = $request->telegram;
             $order->address = $request->address;
             $order->contact = $request->contact;
             $order->remarks = $request->remarks;
@@ -146,10 +189,12 @@ class OrdersController extends Controller
         $validator = Validator::make($request->all(), [
             'products' => 'required|array',
             'name' => 'required',
+            'last_name' => 'required',
             'address' => 'required',
-            'wechat_id' => 'required',
+            // 'wechat_id' => 'required',
             'contact' => 'required',
             'date_of_delivery' => 'required',
+            'client_id' => 'required',
         ]);
 
         if($validator->fails()) {
@@ -157,16 +202,31 @@ class OrdersController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
+            $user = User::findorFail($request->client_id);
+            $user->wechat_id = $request->wechat_id;
+            $user->telegram = $request->telegram;
+            $user->address = $request->address;
+            $user->save();
+
+            $user->contactNumbers()->delete();
+            $num = new ContactNumber;
+            $num->user_id = $user->id;
+            $num->number = $request->contact;
+            $num->save();
+
+
             $order = Order::where('order_id',$id)->first();
             $order->name = $request->name;
+            $order->last_name = $request->last_name;
             $order->wechat_id = $request->wechat_id;
+            $order->telegram = $request->telegram;
             $order->address = $request->address;
             $order->contact = $request->contact;
             $order->date_of_delivery = $request->date_of_delivery;
             $order->remarks = $request->remarks;
             $order->save();
 
-                OrderDetails::where('order_id',$id)->delete();
+            OrderDetails::where('order_id',$id)->delete();
             foreach($request->products as $p){
                 $order_detail = new OrderDetails;
                 $order_detail->order_id = $id;
