@@ -24,7 +24,7 @@ class OrdersController extends Controller
 
     public function list() {
 
-        $orders = Order::orderBy('date_of_delivery','DESC')->get();
+        $orders = Order::orderBy('date_of_delivery','DESC')->orderBy('order_id','DESC')->get();
 
         foreach($orders as $o){
             //$prio = 0;
