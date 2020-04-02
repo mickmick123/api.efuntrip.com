@@ -8,6 +8,8 @@ Route::middleware('auth:api')->group(function() {
 	Route::get('/product-category', 'OrdersController@productCategories');
 	Route::get('/products/{category_id}', 'OrdersController@products');
 	Route::post('/mark-complete', 'OrdersController@markComplete');
+	Route::post('/update-product', 'OrdersController@updateProduct');
+	Route::post('/add-product', 'OrdersController@addProduct');
 	Route::post('/summary', 'OrdersController@newOrderSummary');
 
 	Route::post('/', 'OrdersController@store');

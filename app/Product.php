@@ -8,6 +8,8 @@ class Product extends Model
 {
 
     protected $table = 'product';
+    public $primaryKey  = 'product_id';
+    public $timestamps = false;
 
     protected $fillable = ['category_id', 'product_name','product_name_chinese','product_price'];
 

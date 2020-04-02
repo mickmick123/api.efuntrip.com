@@ -283,6 +283,59 @@ class OrdersController extends Controller
         return Response::json($response);
     }
 
+    public function addProduct(Request $request){
+        $validator = Validator::make($request->all(), [
+            'category_id' => 'required',
+            'price' => 'required',
+            'name' => 'required',
+            'name_chinese' => 'required',
+        ]);
+
+        if($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+
+            $prod = new Product;
+            $prod->category_id = $request->category_id;
+            $prod->product_price = $request->price;
+            $prod->product_name = $request->name;
+            $prod->product_name_chinese = $request->name_chinese;
+            $prod->save();
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+        }
+
+        return Response::json($response);
+    }
+
+    public function updateProduct(Request $request){
+        $validator = Validator::make($request->all(), [
+            'product_id' => 'required',
+            'price' => 'required',
+            'name' => 'required',
+            'name_chinese' => 'required',
+        ]);
+
+        if($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+
+            $prod = Product::where('product_id',$request->product_id)->first();
+            $prod->product_price = $request->price;
+            $prod->product_name = $request->name;
+            $prod->product_name_chinese = $request->name_chinese;
+            $prod->save();
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+        }
+
+        return Response::json($response);
+    }
+
     public function newOrderSummary(Request $request){
         $validator = Validator::make($request->all(), [
             'order_ids' => 'required|array',
