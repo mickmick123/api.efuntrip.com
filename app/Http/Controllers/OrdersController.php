@@ -22,9 +22,9 @@ use Carbon\Carbon;
 class OrdersController extends Controller
 {
 
-    public function list() {
+    public function list(Request $request, $perPage = 20) {
 
-        $orders = Order::orderBy('date_of_delivery','DESC')->orderBy('order_id','DESC')->get();
+        $orders = Order::orderBy('date_of_delivery','DESC')->orderBy('order_id','DESC')->paginate($perPage);
 
         foreach($orders as $o){
             //$prio = 0;
