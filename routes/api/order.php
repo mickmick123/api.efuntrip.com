@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 
 Route::middleware('auth:api')->group(function() {
 
+	Route::post('/product-upload/{product_id}', 'OrdersController@uploadProduct');
 	Route::get('/list/{perPage?}', 'OrdersController@list');
 	Route::get('/product-category', 'OrdersController@productCategories');
 	Route::get('/products/{category_id}', 'OrdersController@products');

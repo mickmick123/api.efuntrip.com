@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Auth;
 use Response;
 use Validator;
 use Hash, DB;
+use Storage;
 
 use Carbon\Carbon;
 
@@ -334,6 +335,53 @@ class OrdersController extends Controller
         }
 
         return Response::json($response);
+    }
+
+    public function uploadProduct(Request $request, $id){
+        foreach($request->data as $item) {
+            $imgData = [
+                'imgBase64' => $item['imgBase64'],
+                'file_path' => $id,
+                'img_name' => $item['file_path']
+            ];
+            $success = $this->uploadDocuments($imgData);
+            // return $success;
+            if($success){            
+                $product = Product::where('product_id',$id)->first();
+                // return $product;
+                if($product){
+                    $product->product_img = $item['file_path'];
+                    $product->save();
+                }
+                return json_encode([
+                    'success' => true,
+                    'message' => 'Successfully saved.'
+                ]);
+            }
+            else{
+                return json_encode([
+                    'success' => false,
+                    'message' => 'Uplaod failed.'
+                ]);
+            }
+        }
+
+    }
+
+    public function uploadDocuments($data) {
+        $img64 = $data['imgBase64'];
+
+        list($type, $img64) = explode(';', $img64);
+        list(, $img64) = explode(',', $img64); 
+
+        $success = 0;
+        
+        if($img64!=""){ // storing image in storage/app/public Folder 
+            \Storage::disk('public')->put('products/' . $data['img_name'], base64_decode($img64)); 
+            $success = 1;
+        } 
+
+        return $success;
     }
 
     public function newOrderSummary(Request $request){
