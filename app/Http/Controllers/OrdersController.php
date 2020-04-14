@@ -5,13 +5,14 @@ namespace App\Http\Controllers;
 use App\User;
 use App\ContactNumber;
 use App\Order;
+use App\OrderLog;
 use App\OrderDetails;
 use App\Product;
 use App\ProductCategory;
 
 use Illuminate\Http\Request;
 
-use Illuminate\Support\Facades\Auth;
+use Auth;
 
 use Response;
 use Validator;
@@ -72,6 +73,17 @@ class OrdersController extends Controller
         }
 
         $order->details = $details;
+
+        $response = [];
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $order;
+        return Response::json($response);
+    }
+
+    public function viewOrderLog($id){
+        $order = OrderLog::where('order_id',$id)->orderBy('id','Desc')->get();
 
         $response = [];
 
@@ -227,8 +239,25 @@ class OrdersController extends Controller
             $order->remarks = $request->remarks;
             $order->save();
 
-            OrderDetails::where('order_id',$id)->delete();
+            $old = OrderDetails::where('order_id',$id)->get();
+            $oldids = $old->pluck('id');
+            $log = '';
+            //OrderDetails::where('order_id',$id)->delete();
             foreach($request->products as $p){
+                foreach($old as $o){
+                    if($o->product_id == $p['product_id'] && $o->order_id == $id && $o->qty != $p['qty']){
+                        $prod = Product::where('product_id',$p['product_id'])->first();
+                        $log .= '&bull; Updated '.$prod->product_name.' qty from '.$o->qty.' to '.$p['qty']. '<br>';
+                    }                   
+                }
+
+                $new = OrderDetails::whereIn('id',$oldids)->where('product_id',$p['product_id'])->count();
+                if($new == 0){
+                    $prod = Product::where('product_id',$p['product_id'])->first();
+                    $log .= '&bull; Added '.$prod->product_name.' qty '.$p['qty']. '<br>';
+                }
+
+
                 $order_detail = new OrderDetails;
                 $order_detail->order_id = $id;
                 $order_detail->product_id = $p['product_id'];
@@ -237,6 +266,19 @@ class OrdersController extends Controller
                 $order_detail->unit_price = $p['unit_price'];
                 $order_detail->total_price = $p['total_price'];
                 $order_detail->save();
+            }
+
+            OrderDetails::whereIn('id',$oldids)->delete();
+
+            if($log !=''){
+                if(Auth::check()) {
+                    //Insert new order log
+                    $name = Auth::user()->first_name;
+                    $log = $name.' updated order. <br><br>'.$log;
+                    $log_data['order_id'] = $id;
+                    $log_data['log'] = $log;
+                    OrderLog::insert($log_data);
+                }
             }
 
             $response['status'] = 'Success';
