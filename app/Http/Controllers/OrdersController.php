@@ -334,7 +334,7 @@ class OrdersController extends Controller
               $log_data['trans_desc'] = $trans_desc;
               $log_data['cat_type'] = 'delivery';
               $log_data['chmoney_paid'] = $order->rmb_received;
-              FinancingDelivery::insert($log_data);
+              // FinancingDelivery::insert($log_data); //deactivate
             }
 
             $checkID = FinancingDelivery::where('record_id',$request->order_id)->count();
@@ -346,7 +346,7 @@ class OrdersController extends Controller
               $log_data['trans_desc'] = $trans_desc;
               $log_data['cat_type'] = 'delivery';
               $log_data['delivery_budget'] = $request->delivery_budget;
-              FinancingDelivery::insert($log_data);
+              // FinancingDelivery::insert($log_data);//deactivate
             }
 
 
