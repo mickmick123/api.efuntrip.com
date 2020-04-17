@@ -14,4 +14,11 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('/get-req-users', 'FinancingController@getRequestingUsers');
 
+	// financing delivery
+	Route::get('/delivery/show/{date}', 'FinancingDeliveryController@show');
+	Route::post('/add-purchasing-budget', 'FinancingDeliveryController@addPurchasingBudget');
+	Route::post('/add-delivery-finance', 'FinancingDeliveryController@store');
+	Route::patch('/update-delivery-finance/{finance_id}', 'FinancingDeliveryController@update');
+	Route::get('/get-return-list/{trans_type}', 'FinancingDeliveryController@getReturnList');
+
 });

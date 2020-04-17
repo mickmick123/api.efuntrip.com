@@ -9,6 +9,7 @@ use App\OrderLog;
 use App\OrderDetails;
 use App\Product;
 use App\ProductCategory;
+use App\FinancingDelivery;
 
 use Illuminate\Http\Request;
 
@@ -170,6 +171,7 @@ class OrdersController extends Controller
             $order->name = $request->name;
             $order->last_name = $request->last_name;
             $order->user_id = $client_id;
+            $order->rmb_received = $request->rmb;
             $order->wechat_id = $request->wechat_id;
             $order->telegram = $request->telegram;
             $order->address = $request->address;
@@ -291,6 +293,7 @@ class OrdersController extends Controller
     public function delete($id){
             Order::where('order_id',$id)->delete();
             OrderDetails::where('order_id',$id)->delete();
+            FinancingDelivery::where('record_id',$id)->delete();
             $response['status'] = 'Success';
             $response['code'] = 200;
 
@@ -316,9 +319,37 @@ class OrdersController extends Controller
             $is_delivered = ($request->is_delivered == 'no' ? 0 : 1);
             $order->is_delivered = $is_delivered;
             // $order->remarks = $request->remarks;
-            $order->money_received = $request->money_received;
+            if($order->rmb_received ==null){
+                $order->money_received = $request->money_received;
+            }
             $order->delivered_by = $request->delivered_by;
             $order->save();
+
+            $checkID = FinancingDelivery::where('record_id',$request->order_id)->count();
+
+            if($request->delivered_by != '' && $order->rmb_received > 0 && $checkID == 0){
+                $trans_desc = $request->delivered_by.' for order #'.$request->order_id.', paid chinese money';
+              $log_data['user_sn'] = Auth::user()->id;
+              $log_data['record_id'] = $request->order_id;
+              $log_data['trans_desc'] = $trans_desc;
+              $log_data['cat_type'] = 'delivery';
+              $log_data['chmoney_paid'] = $order->rmb_received;
+              FinancingDelivery::insert($log_data);
+            }
+
+            $checkID = FinancingDelivery::where('record_id',$request->order_id)->count();
+
+            if($request->delivered_by != '' && $request->delivery_budget > 0 && $checkID == 0){
+              $trans_desc = $request->delivered_by.' budget for delivery ('.$request->delivery_budget.'p) for order #'.$request->order_id;
+              $log_data['user_sn'] = Auth::user()->id;
+              $log_data['record_id'] = $request->order_id;
+              $log_data['trans_desc'] = $trans_desc;
+              $log_data['cat_type'] = 'delivery';
+              $log_data['delivery_budget'] = $request->delivery_budget;
+              FinancingDelivery::insert($log_data);
+            }
+
+
             $response['status'] = 'Success';
             $response['code'] = 200;
         }
