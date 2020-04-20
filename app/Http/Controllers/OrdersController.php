@@ -317,17 +317,22 @@ class OrdersController extends Controller
 
             $order = Order::where('order_id',$request->order_id)->first();
             $is_delivered = ($request->is_delivered == 'no' ? 0 : 1);
+            $is_received = ($request->is_received == 'no' ? 0 : 1);
             $order->is_delivered = $is_delivered;
+            $order->is_received = $is_received;
             // $order->remarks = $request->remarks;
-            if($order->rmb_received ==null){
+            if($order->rmb_received ==null || $order->rmb_received == ''){
                 $order->money_received = $request->money_received;
+            }
+            else{
+                $order->rmb_received = $request->rmb_received;
             }
             $order->delivered_by = $request->delivered_by;
             $order->save();
 
             $checkID = FinancingDelivery::where('record_id',$request->order_id)->count();
 
-            if($request->delivered_by != '' && $order->rmb_received > 0 && $checkID == 0){
+            if($request->delivered_by != '' && $order->rmb_received > 0 && $checkID == 0 && $is_received){
                 $trans_desc = $request->delivered_by.' for order #'.$request->order_id.', paid chinese money';
               $log_data['user_sn'] = Auth::user()->id;
               $log_data['record_id'] = $request->order_id;
