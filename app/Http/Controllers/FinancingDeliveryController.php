@@ -189,7 +189,15 @@ class FinancingDeliveryController extends Controller
             'message' => 'Amount entered is lower than the delivery amount'
         ]);
       }else{
-         FinancingDelivery::where('id', intval($request->finance_id))->update([$update_field=>$request->amount]);
+        if($update_field == 'add_purchasing_budget'){
+          $f = FinancingDelivery::where('id', intval($request->finance_id))->first();
+          $f->trans_desc = $f->trans_desc.'<br>&bull; Additional Purchasing Budget : '.$request->amount;
+          $f->purchasing_budget = $f->purchasing_budget + $request->amount;
+          $f->save();
+        }
+        else{
+          FinancingDelivery::where('id', intval($request->finance_id))->update([$update_field=>$request->amount]);
+        }
 
 
           if($oldMonth!=$curMonth){
@@ -207,7 +215,7 @@ class FinancingDeliveryController extends Controller
 
     public function getReturnList($trans){
 
-      if($trans == 'purchasing_budget_return'){
+      if($trans == 'purchasing_budget_return' || $trans == 'add_purchasing_budget'){
 
             return FinancingDelivery::where('cat_type','purchasing')
             		->whereRaw('(purchasing_budget != "")')
