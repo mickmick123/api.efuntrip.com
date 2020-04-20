@@ -404,7 +404,11 @@ class OrdersController extends Controller
         } else {
 
             $prod = Product::where('product_id',$request->product_id)->first();
-            $prod->product_price = $request->price;
+            // $prod->product_price = $request->price;
+            $prod->product_price = $request->orig_price * $request->multiplier;
+            $prod->orig_price = $request->orig_price;
+            $prod->unit = $request->unit;
+            $prod->multiplier = $request->multiplier;
             $prod->product_name = $request->name;
             $prod->product_name_chinese = $request->name_chinese;
             $prod->save();
