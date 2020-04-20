@@ -123,8 +123,8 @@ class FinancingDeliveryController extends Controller
         }
       }
     }
-    public function store(Request $request){ //deactivate
-           //FinancingDelivery::create($request->all());
+    public function store(Request $request){
+           FinancingDelivery::create($request->all());
            $response['status'] = 'Success';
            $response['code'] = 200;
            $response['data'] = $request->all();
@@ -148,7 +148,7 @@ class FinancingDeliveryController extends Controller
           $log_data['trans_desc'] = $trans_desc;
           $log_data['cat_type'] = 'purchasing';
           $log_data['purchasing_budget'] = $request->purchasing_budget;
-          // FinancingDelivery::insert($log_data); //deactivate
+          FinancingDelivery::insert($log_data);
 
            $response['status'] = 'Success';
            $response['code'] = 200;
@@ -189,7 +189,7 @@ class FinancingDeliveryController extends Controller
             'message' => 'Amount entered is lower than the delivery amount'
         ]);
       }else{
-         // FinancingDelivery::where('id', intval($request->finance_id))->update([$update_field=>$request->amount]); //deactivate
+         FinancingDelivery::where('id', intval($request->finance_id))->update([$update_field=>$request->amount]);
 
 
           if($oldMonth!=$curMonth){
