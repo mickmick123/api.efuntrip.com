@@ -191,7 +191,8 @@ class FinancingDeliveryController extends Controller
       }else{
         if($update_field == 'add_purchasing_budget'){
           $f = FinancingDelivery::where('id', intval($request->finance_id))->first();
-          $f->trans_desc = $f->trans_desc.'<br>&bull; '.$request->req_user.' additional purchasing budget : '.$request->amount;
+          $remarks = ($request->remarks != '' ? '"'.$request->remarks.'"' : '');
+          $f->trans_desc = $f->trans_desc.'<br>&bull; '.$request->req_user.' additional purchasing budget : '.$request->amount.'.'.$remarks;
           $f->purchasing_budget = $f->purchasing_budget + $request->amount;
           $f->save();
         }

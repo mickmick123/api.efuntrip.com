@@ -314,6 +314,11 @@ class OrdersController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
+            if($request->delivered_by == 'Grab' && ($request->grab_fee == '' || $request->grab_fee == null)){
+                $response['status'] = 'Failed';
+                $response['code'] = 422;
+                return Response::json($response);
+            }
 
             $order = Order::where('order_id',$request->order_id)->first();
             $is_delivered = ($request->is_delivered == 'no' ? 0 : 1);
@@ -330,22 +335,29 @@ class OrdersController extends Controller
             $order->delivered_by = $request->delivered_by;
             $order->save();
 
+            $total = OrderDetails::where('order_id',$request->order_id)->sum('total_price');
+
             $checkID = FinancingDelivery::where('record_id',$request->order_id)->count();
 
             if($request->delivered_by != '' && $order->rmb_received > 0 && $checkID == 0 && $is_received){
                 $trans_desc = $request->delivered_by.' for order #'.$request->order_id.', paid chinese money';
+                if($request->delivered_by == 'Grab'){
+                    $trans_desc = $trans_desc.'. grab fee : '.$request->grab_fee;
+                }
               $log_data['user_sn'] = Auth::user()->id;
               $log_data['record_id'] = $request->order_id;
               $log_data['trans_desc'] = $trans_desc;
               $log_data['cat_type'] = 'delivery';
               $log_data['chmoney_paid'] = $order->rmb_received;
+              $log_data['other_cost'] = $request->grab_fee;
               FinancingDelivery::insert($log_data); 
             }
 
             $checkID = FinancingDelivery::where('record_id',$request->order_id)->count();
 
-            if($request->delivered_by != '' && $request->delivery_budget > 0 && $checkID == 0){
-              $trans_desc = $request->delivered_by.' budget for delivery ('.$request->delivery_budget.'p) for order #'.$request->order_id;
+            if(($request->delivered_by != ''&& $request->delivered_by != 'Picked up') && $request->delivery_budget > 0 && $checkID == 0){
+                $rem = $request->delivery_budget + $total;
+              $trans_desc = $request->delivered_by.' budget for delivery ('.$request->delivery_budget.'p) for order #'.$request->order_id.', and '.$rem.' to be remitted.';
               $log_data['user_sn'] = Auth::user()->id;
               $log_data['record_id'] = $request->order_id;
               $log_data['trans_desc'] = $trans_desc;
