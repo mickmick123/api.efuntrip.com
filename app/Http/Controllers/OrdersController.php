@@ -381,13 +381,15 @@ class OrdersController extends Controller
     public function roundFunction($n)  
     {  
         // Smaller multiple  
-        $a = (int)($n / 1000) * 1000;  
+        $a = (int)($n / 1000) * 1000; 
+        // \Log::info('A : '.$a); 
           
         // Larger multiple  
         $b = ($a + 1000);  
+        // \Log::info('B : '.$b); 
       
-        // Return of closest of two  
-        return ($n - $a > $b - $n) ? $a : $b;  
+        // Return whichever is higher
+        return $b;  
     } 
 
     public function addProduct(Request $request){
