@@ -233,6 +233,7 @@ class OrdersController extends Controller
             $order = Order::where('order_id',$id)->first();
             $order->name = $request->name;
             $order->last_name = $request->last_name;
+            $order->rmb_received = $request->rmb;
             $order->wechat_id = $request->wechat_id;
             $order->telegram = $request->telegram;
             $order->address = $request->address;
@@ -322,15 +323,17 @@ class OrdersController extends Controller
 
             $order = Order::where('order_id',$request->order_id)->first();
             $is_delivered = ($request->is_delivered == 'no' ? 0 : 1);
-            $is_received = ($request->is_received == 'no' ? 0 : 1);
+            // $is_received = ($request->is_received == 'no' ? 0 : 1);
             $order->is_delivered = $is_delivered;
-            $order->is_received = $is_received;
+            // $order->is_received = $is_received;
             // $order->remarks = $request->remarks;
-            if($order->rmb_received ==null || $order->rmb_received == ''){
+            if($request->currency == 'peso'){
                 $order->money_received = $request->money_received;
+                $order->rmb_received = '';
             }
-            else{
+            if($request->currency == 'rmb'){
                 $order->rmb_received = $request->rmb_received;
+                $order->money_received = '';
             }
             $order->delivered_by = $request->delivered_by;
             $order->save();
@@ -339,7 +342,7 @@ class OrdersController extends Controller
 
             $checkID = FinancingDelivery::where('record_id',$request->order_id)->count();
 
-            if($request->delivered_by != '' && $order->rmb_received > 0 && $checkID == 0 && $is_received){
+            if($request->delivered_by != '' && $order->rmb_received > 0 && $checkID == 0){
                 $trans_desc = $request->delivered_by.' for order #'.$request->order_id.', paid chinese money';
                 if($request->delivered_by == 'Grab'){
                     $trans_desc = $trans_desc.'. grab fee : '.$request->grab_fee;
@@ -355,14 +358,15 @@ class OrdersController extends Controller
 
             $checkID = FinancingDelivery::where('record_id',$request->order_id)->count();
 
-            if(($request->delivered_by != ''&& $request->delivered_by != 'Picked up') && $request->delivery_budget > 0 && $checkID == 0){
-                $rem = $request->delivery_budget + $total;
-              $trans_desc = $request->delivered_by.' budget for delivery ('.$request->delivery_budget.'p) for order #'.$request->order_id.', and '.$rem.' to be remitted.';
+            if(($request->delivered_by != ''&& $request->delivered_by != 'Picked up') && $checkID == 0){
+                $delivery_budget = $this->roundFunction($total) - $total;
+                $rem = $delivery_budget + $total;
+              $trans_desc = $request->delivered_by.' budget for delivery ('.$delivery_budget.'p) for order #'.$request->order_id.', and '.$rem.' to be remitted.';
               $log_data['user_sn'] = Auth::user()->id;
               $log_data['record_id'] = $request->order_id;
               $log_data['trans_desc'] = $trans_desc;
               $log_data['cat_type'] = 'delivery';
-              $log_data['delivery_budget'] = $request->delivery_budget;
+              $log_data['delivery_budget'] = $delivery_budget;
               FinancingDelivery::insert($log_data);
             }
 
@@ -373,6 +377,18 @@ class OrdersController extends Controller
 
         return Response::json($response);
     }
+
+    public function roundFunction($n)  
+    {  
+        // Smaller multiple  
+        $a = (int)($n / 1000) * 1000;  
+          
+        // Larger multiple  
+        $b = ($a + 1000);  
+      
+        // Return of closest of two  
+        return ($n - $a > $b - $n) ? $a : $b;  
+    } 
 
     public function addProduct(Request $request){
         $validator = Validator::make($request->all(), [
