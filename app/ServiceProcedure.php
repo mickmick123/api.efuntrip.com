@@ -13,7 +13,7 @@ class ServiceProcedure extends Model
 
     protected $table = 'service_procedures';
 
-    protected $fillable = ['service_id', 'name', 'preposition', 'step', 'action_id', 'category_id', 'is_required', 'required_service_procedure', 'status_upon_completion'];
+    protected $fillable = ['service_id', 'name', 'preposition', 'step', 'action_id', 'category_id', 'is_required', 'required_service_procedure', 'status_upon_completion', 'documents_mode'];
 
     public function action() {
     	return $this->belongsTo('App\Action', 'action_id', 'id');
@@ -31,8 +31,8 @@ class ServiceProcedure extends Model
         return $this->belongsTo('App\Service', 'service_id', 'id');
     }
 
-    public function serviceProcedureDocuments() {
-    	return $this->hasMany('App\ServiceProcedureDocument', 'service_procedure_id', 'id');
+    public function suggestedDocuments() {
+        return $this->hasMany('App\SuggestedDocument', 'service_procedure_id', 'id');
     }
 
 }

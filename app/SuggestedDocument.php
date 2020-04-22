@@ -4,12 +4,14 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 
-class ServiceProcedureDocument extends Model
+class SuggestedDocument extends Model
 {
     
-    protected $table = 'service_procedure_documents';
+    protected $table = 'suggested_documents';
 
-    protected $fillable = ['service_procedure_id', 'document_id', 'is_required', 'mode', 'required_copies'];
+    protected $fillable = ['service_procedure_id', 'document_id', 'points'];
+
+    public $timestamps = false;
 
     public function serviceProcedure() {
     	return $this->belongsTo('App\ServiceProcedure', 'service_procedure_id', 'id');

@@ -51,7 +51,7 @@ class ServiceProcedureController extends Controller
     	if( $serviceProcedure ) {
     		$response['status'] = 'Success';
 			$response['data'] = [
-			    'serviceProcedure' => $serviceProcedure->load('serviceProcedureDocuments.document')
+			    'serviceProcedure' => $serviceProcedure
 			];
 			$response['code'] = 200;
     	} else {
@@ -68,13 +68,7 @@ class ServiceProcedureController extends Controller
             'name' => 'required',
             'action_id' => 'required',
             'category_id' => 'required',
-            'is_required' => 'required',
-            'required_documents_add' => 'nullable|array',
-            'required_documents_remove' => 'nullable|array',
-            'required_documents_stay' => 'nullable|array',
-            'optional_documents_add' => 'nullable|array',
-            'optional_documents_remove' => 'nullable|array',
-            'optional_documents_stay' => 'nullable|array'
+            'is_required' => 'required'
         ]);
 
         if($validator->fails()) {       
@@ -92,7 +86,8 @@ class ServiceProcedureController extends Controller
         			'category_id' => $request->category_id,
         			'is_required' => $request->is_required,
                     'required_service_procedure' => $request->required_service_procedure,
-                    'status_upon_completion' => $request->status_upon_completion
+                    'status_upon_completion' => $request->status_upon_completion,
+                    'documents_mode' => $request->documents_mode
         		]);
 
                 if( $serviceProcedure->step != null && $request->is_required == 0 ) {
@@ -117,74 +112,6 @@ class ServiceProcedureController extends Controller
                     $serviceProcedure->update(['step' => $stepsCount + 1]);
                 }
 
-        		$serviceProcedure->serviceProcedureDocuments()->delete();
-
-        		foreach($request->required_documents_add as $document) {
-                    $serviceProcedure->serviceProcedureDocuments()->create([
-                        'document_id' => $document['id'],
-                        'is_required' => 1,
-                        'mode' => 'add',
-                        'required_copies' => ($request->action_id == 7 && $request->category_id == 28) 
-                            ? null
-                            : $document['required_copies']
-                    ]);
-                }
-
-                foreach($request->required_documents_remove as $document) {
-                    $serviceProcedure->serviceProcedureDocuments()->create([
-                        'document_id' => $document['id'],
-                        'is_required' => 1,
-                        'mode' => 'remove',
-                        'required_copies' => ($request->action_id == 7 && $request->category_id == 28) 
-                            ? null
-                            : $document['required_copies']
-                    ]);
-                }
-
-                foreach($request->required_documents_stay as $document) {
-                    $serviceProcedure->serviceProcedureDocuments()->create([
-                        'document_id' => $document['id'],
-                        'is_required' => 1,
-                        'mode' => 'stay',
-                        'required_copies' => ($request->action_id == 7 && $request->category_id == 28) 
-                            ? null
-                            : $document['required_copies']
-                    ]);
-                }
-
-                foreach($request->optional_documents_add as $document) {
-                    $serviceProcedure->serviceProcedureDocuments()->create([
-                        'document_id' => $document['id'],
-                        'is_required' => 0,
-                        'mode' => 'add',
-                        'required_copies' => ($request->action_id == 7 && $request->category_id == 28) 
-                            ? null
-                            : $document['required_copies']
-                    ]);
-                }
-
-                foreach($request->optional_documents_remove as $document) {
-                    $serviceProcedure->serviceProcedureDocuments()->create([
-                        'document_id' => $document['id'],
-                        'is_required' => 0,
-                        'mode' => 'remove',
-                        'required_copies' => ($request->action_id == 7 && $request->category_id == 28) 
-                            ? null
-                            : $document['required_copies']
-                    ]);
-                }
-
-                foreach($request->optional_documents_stay as $document) {
-                    $serviceProcedure->serviceProcedureDocuments()->create([
-                        'document_id' => $document['id'],
-                        'is_required' => 0,
-                        'mode' => 'stay',
-                        'required_copies' => ($request->action_id == 7 && $request->category_id == 28) 
-                            ? null
-                            : $document['required_copies']
-                    ]);
-                }
-
         		$response['status'] = 'Success';
         		$response['code'] = 200;
         	} else {
@@ -203,13 +130,7 @@ class ServiceProcedureController extends Controller
             'name' => 'required',
             'action_id' => 'required',
             'category_id' => 'required',
-            'is_required' => 'required',
-            'required_documents_add' => 'nullable|array',
-            'required_documents_remove' => 'nullable|array',
-            'required_documents_stay' => 'nullable|array',
-            'optional_documents_add' => 'nullable|array',
-            'optional_documents_remove' => 'nullable|array',
-            'optional_documents_stay' => 'nullable|array'
+            'is_required' => 'required'
         ]);
 
         if($validator->fails()) {       
@@ -225,7 +146,8 @@ class ServiceProcedureController extends Controller
         		'category_id' => $request->category_id,
         		'is_required' => $request->is_required,
                 'required_service_procedure' => $request->required_service_procedure,
-                'status_upon_completion' => $request->status_upon_completion
+                'status_upon_completion' => $request->status_upon_completion,
+                'documents_mode' => $request->documents_mode
         	]);
 
             if( $request->is_required == 1 ) {
@@ -234,72 +156,6 @@ class ServiceProcedureController extends Controller
 
                 $serviceProcedure->update([
                     'step' => $stepsCount + 1
-                ]);
-            }
-
-        	foreach($request->required_documents_add as $document) {
-        		$serviceProcedure->serviceProcedureDocuments()->create([
-        			'document_id' => $document['id'],
-        			'is_required' => 1,
-                    'mode' => 'add',
-                    'required_copies' => ($request->action_id == 7 && $request->category_id == 28) 
-                        ? null
-                        : $document['required_copies']
-        		]);
-        	}
-
-            foreach($request->required_documents_remove as $document) {
-                $serviceProcedure->serviceProcedureDocuments()->create([
-                    'document_id' => $document['id'],
-                    'is_required' => 1,
-                    'mode' => 'remove',
-                    'required_copies' => ($request->action_id == 7 && $request->category_id == 28) 
-                        ? null
-                        : $document['required_copies']
-                ]);
-            }
-
-            foreach($request->required_documents_stay as $document) {
-                $serviceProcedure->serviceProcedureDocuments()->create([
-                    'document_id' => $document['id'],
-                    'is_required' => 1,
-                    'mode' => 'stay',
-                    'required_copies' => ($request->action_id == 7 && $request->category_id == 28) 
-                        ? null
-                        : $document['required_copies']
-                ]);
-            }
-
-            foreach($request->optional_documents_add as $document) {
-                $serviceProcedure->serviceProcedureDocuments()->create([
-                    'document_id' => $document['id'],
-                    'is_required' => 0,
-                    'mode' => 'add',
-                    'required_copies' => ($request->action_id == 7 && $request->category_id == 28) 
-                        ? null
-                        : $document['required_copies']
-                ]);
-            }
-
-            foreach($request->optional_documents_remove as $document) {
-                $serviceProcedure->serviceProcedureDocuments()->create([
-                    'document_id' => $document['id'],
-                    'is_required' => 0,
-                    'mode' => 'remove',
-                    'required_copies' => ($request->action_id == 7 && $request->category_id == 28) 
-                        ? null
-                        : $document['required_copies']
-                ]);
-            }
-
-            foreach($request->optional_documents_stay as $document) {
-                $serviceProcedure->serviceProcedureDocuments()->create([
-                    'document_id' => $document['id'],
-                    'is_required' => 0,
-                    'mode' => 'stay',
-                    'required_copies' => ($request->action_id == 7 && $request->category_id == 28) 
-                        ? null
-                        : $document['required_copies']
                 ]);
             }
 

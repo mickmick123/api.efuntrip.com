@@ -14,15 +14,17 @@ use App\Log;
 
 use App\Report;
 
+use App\ClientReport;
+
 use App\ClientReportDocument;
 
 use App\Service;
 
 use App\ServiceProcedure;
 
-use App\ServiceProcedureDocument;
-
 use App\OnHandDocument;
+
+use App\SuggestedDocument;
 
 use App\User;
 
@@ -139,7 +141,6 @@ class ReportController extends Controller
 
   }
 
-
 	public function clientsServices(Request $request) {
 		$clientIds = $request->input("client_ids") ? $request->client_ids : [];
 		$clientIds = explode("," , $clientIds);
@@ -199,7 +200,7 @@ class ReportController extends Controller
 			})
 			->with([
 				'serviceProcedures' => function($query) {
-					$query->select(['id', 'name', 'service_id', 'step', 'action_id', 'category_id', 'is_required', 'required_service_procedure'])->orderBy('step');
+					$query->select(['id', 'service_id', 'name', 'step', 'action_id', 'category_id', 'is_required', 'required_service_procedure', 'documents_mode'])->orderBy('step');
 				},
 				'serviceProcedures.action' => function($query) {
 					$query->select(['id', 'name']);
@@ -207,10 +208,10 @@ class ReportController extends Controller
 				'serviceProcedures.category' => function($query) {
 					$query->select(['id', 'name']);
 				},
-				'serviceProcedures.serviceProcedureDocuments' => function($query) {
-					$query->select(['service_procedure_id', 'document_id', 'is_required']);
+				'serviceProcedures.suggestedDocuments' => function($query) {
+					$query->select(['id', 'service_procedure_id', 'document_id', 'points'])->where('points', '>', 0);
 				},
-				'serviceProcedures.serviceProcedureDocuments.document' => function($query) {
+				'serviceProcedures.suggestedDocuments.document' => function($query) {
 					$query->select(['id', 'title', 'is_unique', 'is_company_document']);
 				}
 			])
@@ -225,50 +226,22 @@ class ReportController extends Controller
 							$query3->select(['id', 'client_service_id', 'service_procedure_id']);
 						},
 						'clientReports.clientReportDocuments' => function($query4) {
-							$query4->select(['id', 'client_report_id', 'document_id']);
+							$query4->select(['id', 'client_report_id', 'document_id', 'count']);
 						},
 						'clientReports.clientReportDocuments.document' => function($query5) {
 							$query5->select(['id', 'title', 'is_unique']);
-						}
+						},
 					]);
 			}])
 			->select(array('id', 'parent_id', 'detail'))->get();
 
-			$onHandDocuments = User::select(['id'])
-				->whereHas('clientServices', function($query) use($clientServicesId) {
-					$query->whereIn('id', $clientServicesId);
-				})
-				->with([
-					'clientServices' => function($query) use($clientServicesId) {
-						$query->whereIn('id', $clientServicesId)->select(['id', 'client_id', 'group_id']);
-					},
-
-					'clientServices.client' => function($query) {
-						$query->select(['id', 'first_name', 'last_name']);
-					},
-					'clientServices.client.onHandDocuments' => function($query) {
-						$query->select(['id', 'client_id', 'document_id']);
-					},
-					'clientServices.client.onHandDocuments.document' => function($query) {
-						$query->select(['id', 'title', 'is_unique', 'is_company_document']);
-					},
-
-					'clientServices.group' => function($query) {
-						$query->select(['id', 'name']);
-					},
-					'clientServices.group.onHandDocuments' => function($query) {
-						$query->select(['id', 'group_id', 'document_id']);
-					},
-					'clientServices.group.onHandDocuments.document' => function($query) {
-						$query->select(['id', 'title', 'is_unique', 'is_company_document']);
-					}
-				])
-				->get();
+			$documents = Document::select(['id', 'title', 'is_unique', 'is_company_document'])
+		    		->orderBy('title')->get();
 
 			$response['status'] = 'Success';
 			$response['data'] = [
 		    	'services' => $services,
-		    	'onHandDocuments' => $onHandDocuments
+		    	'documents' => $documents
 			];
 			$response['code'] = 200;
 		} else {
@@ -280,142 +253,193 @@ class ReportController extends Controller
 		return Response::json($response);
 	}
 
-	private function generateDetail($report, $clientService) {
+	private function getDetail($clientService, $report) {
 		$serviceProcedure = ServiceProcedure::find($report['service_procedure']);
 
 		$detail = $serviceProcedure->name;
 
 		// Documents
-		if( array_key_exists('documents', $clientService)
-			&& is_array($clientService['documents'])
-			&& count($clientService['documents']) > 0
-		) {
-			$documents = Document::whereIn('id', $clientService['documents'])->pluck('title')->toArray();
+		if( count($clientService['documents']) > 0 ) {
+			$selectedDocumentsWithCount = collect($clientService['documents'])->filter(function($item) {
+				return $item['count'] > 0;
+			})->values()->toArray();
 
-			$documents = ' (' . trim(implode(',', $documents)) . ')';
+			foreach( $selectedDocumentsWithCount as $index => $document ) {
+				$documentTitle = Document::findOrFail($document['id'])->title;
 
-			$detail .= $documents . '.';
+				if( $index == 0 ) { 
+					$detail .= ' ('; 
+				}
+
+				$detail .= '[' . $document['count'] . ']' . $documentTitle;
+
+				if( $index == count($selectedDocumentsWithCount) - 1 ) { 
+					$detail .= ').'; 
+				} else { 
+					$detail .= ', '; 
+				}
+			}
 		}
 
 		// Extensions
-		if( array_key_exists('extensions', $report) ) {
-			if( array_key_exists('estimated_releasing_date', $report['extensions']) ) {
-				$estimatedReleasingDate = $report['extensions']['estimated_releasing_date'];
-				$estimatedReleasingDate = Carbon::parse($estimatedReleasingDate)->format('F d, Y');
+		if( $report['extensions']['estimated_releasing_date'] ) {
+			$estimatedReleasingDate = $report['extensions']['estimated_releasing_date'];
+			$estimatedReleasingDate = Carbon::parse($estimatedReleasingDate)->format('F d, Y');
 
-				$detail .= ' Estimated releasing date is ' . $estimatedReleasingDate . '.';
-			}
+			$detail .= ' Estimated releasing date is ' . $estimatedReleasingDate . '.';
+		}
+		if( count($report['extensions']['scheduled_hearing_date_and_time']) > 0 ) {
+			$scheduledHearingDateAndTimes = $report['extensions']['scheduled_hearing_date_and_time'];
+			$count = count($scheduledHearingDateAndTimes);
 
-			if( array_key_exists('scheduled_hearing_date_and_time', $report['extensions'])
-				&& is_array($report['extensions']['scheduled_hearing_date_and_time'])
-				&& count($report['extensions']['scheduled_hearing_date_and_time']) > 0
-			) {
-				$scheduledHearingDateAndTimes = $report['extensions']['scheduled_hearing_date_and_time'];
-				$count = count($scheduledHearingDateAndTimes);
+			$detail .= ' The scheduled hearing date are as follows: ';
+			foreach($scheduledHearingDateAndTimes as $index => $scheduledHearingDateAndTime) {
+				$s = Carbon::parse($scheduledHearingDateAndTime['value'])->format('F d, Y h:i A');
 
-				$detail .= ' The scheduled hearing date are as follows: ';
-				foreach($scheduledHearingDateAndTimes as $index => $scheduledHearingDateAndTime) {
-					$s = Carbon::parse($scheduledHearingDateAndTime['value'])->format('F d, Y h:i A');
-
-					$detail .= $s;
-					if( $index+1 != $count ) {
-						$detail .= ', ';
-					}
+				$detail .= $s;
+				if( $index+1 != $count ) {
+					$detail .= ', ';
 				}
-				$detail .= '.';
 			}
+			$detail .= '.';
 		}
 
 		// Extras
-		if( array_key_exists('extras', $report) ) {
-			// Reason
-			if( array_key_exists('reason', $report['extras']) ) {
-				$detail .= ' With a reason of ' . $report['extras']['reason'] . '.';
-			}
-			// Cost
-			if( array_key_exists('cost', $report['extras']) ) {
-				$_clientService = ClientService::findOrFail($clientService['id']);
+		if( $report['extras']['reason'] ) {
+			$detail .= ' With a reason of ' . $report['extras']['reason'] . '.';
+		}
+		if( $report['extras']['cost'] ) {
+			$cs = ClientService::findOrFail($clientService['id']);
 
-				$oldCost = number_format($_clientService->cost, 2);
-				$newCost = number_format($report['extras']['cost'], 2);
+			$oldCost = number_format($cs->cost, 2);
+			$newCost = number_format($report['extras']['cost'], 2);
 
-				$detail .= ' from  ' . $oldCost . ' to ' . $newCost . '.';
-			}
+			$detail .= ' from  ' . $oldCost . ' to ' . $newCost . '.';
 		}
 
 		return $detail;
 	}
 
-	private function getDetail($report, $clientService) {
-		$detail = '';
+	private function handleReports($processorId) {
+		$report = Report::create([
+       		'processor_id' => $processorId
+        ]);
 
-		$cs = ClientService::find($clientService['id']);
-
-		if( $cs ) {
-			$serviceParentId = ClientService::find($clientService['id'])->service->parent_id;
-
-			// 63 = 9A Visa Extension
-			// 70 = 9G Working Visa Conversion
-			if( $serviceParentId == 63 || $serviceParentId == 70 ) {
-				$detail = $this->generateDetail($report, $clientService);
-			}
-		}
-
-		return $detail;
+        return $report;
 	}
 
-	private function handleStatusUponCompletion($clientService, $serviceProcedureId) {
-		$clientService_id = $clientService->id;
-		$clientService_serviceId = $clientService->service_id;
-		$clientService_status = $clientService->status;
+	private function handleClientReports($report, $detail, $clientService, $serviceProcedureId) {
+		$clientServiceId = $clientService['id'];
 
-		$service = Service::with([
-				'serviceProcedures' => function($query) use($serviceProcedureId) {
-					$query->where('id', $serviceProcedureId);
-				},
-				'serviceProcedures.serviceProcedureDocuments' => function($query) {
-					$query->where('is_required', 1);
-				}
-			])
-			->findOrFail($clientService_serviceId);
+		$clientReport = $report->clientReports()->create([
+        	'detail' => $detail,
+	        'client_service_id' => $clientServiceId,
+	        'service_procedure_id' => $serviceProcedureId
+	    ]);
 
-		if( count($service->serviceProcedures) == 1 ) {
-			$serviceProcedure = $service->serviceProcedures[0];
+		return $clientReport;
+	}
 
-			if( $serviceProcedure->status_upon_completion != null ) {
-				$statuses = ['pending','on process','complete', 'released'];
+	private function handleClientReportDocuments($clientReport, $clientService, $serviceProcedureId) {
+		$clientServiceId = $clientService['id'];
+		$documents = $clientService['documents'];
 
-				$currentStatus = $clientService_status;
-				$currentStatusIndex = array_search($currentStatus, $statuses, true);
+		foreach( $documents as $document ) {
+			$found = ClientReportDocument::whereHas('clientReport', 
+					function($query) use($clientServiceId, $serviceProcedureId) {
+						$query->where('client_service_id', $clientServiceId)
+							->where('service_procedure_id', $serviceProcedureId);
+					}
+				)
+				->where('document_id', $document['id'])
+				->where('count', '<>', 0)
+				->count();
 
-				$targetStatus = $serviceProcedure->status_upon_completion;
-				$targetStatusIndex = array_search($targetStatus, $statuses, true);
+			if( ($document['count'] == 0 && $found == 0) || ($document['count'] > 0) ) {
+				ClientReportDocument::whereHas('clientReport', 
+					function($query) use($clientServiceId, $serviceProcedureId) {
+						$query->where('client_service_id', $clientServiceId)
+							->where('service_procedure_id', $serviceProcedureId);
+					}
+				)
+				->where('document_id', $document['id'])
+				->where('count', 0)
+				->delete();
 
-				if( $targetStatusIndex > $currentStatusIndex ) {
-					$serviceProcedureRequiredDocuments = $serviceProcedure->serviceProcedureDocuments
-						->map(function($item, $key) {
-							return $item['document_id'];
-						})->toArray();
+				$clientReport->clientReportDocuments()->create([
+			 	    'document_id' => $document['id'],
+			 	    'count' => $document['count']
+			 	]);
+			}
+		}
+	}
 
-					// Service procedure: without required documents
-					if( count($serviceProcedureRequiredDocuments) == 0 ) {
-						$clientService->update(['status' => $targetStatus]);
-						ClientController::updatePackageStatus($clientService->tracking);
-					} 
-					// Service procedure: with required documents
-					else {
-						$reportedDocuments = ClientReportDocument::whereHas('clientReport', 
-							function($query) use($clientService_id, $serviceProcedureId) {
-								$query->where('client_service_id', $clientService_id)
-									->where('service_procedure_id', $serviceProcedureId);
-							})
-							->pluck('document_id')->toArray();
+	private function handleLogDocumentLog($clientService, $serviceProcedureId, $processorId) {
+		$clientServiceId = $clientService['id'];
+		$documents = $clientService['documents'];
 
-						$difference = array_diff($serviceProcedureRequiredDocuments, $reportedDocuments);
+		$documents = collect($documents)->filter(function($item) {
+			return $item['count'] > 0;
+		})->values()->toArray();
 
-						if( count($difference) == 0 ) {
-							$clientService->update(['status' => $targetStatus]);
-							ClientController::updatePackageStatus($clientService->tracking);
+		if( count($documents) > 0 ) {
+			$cs = ClientService::findOrFail($clientServiceId);
+			$sp = ServiceProcedure::find($serviceProcedureId);
+	        $today = Carbon::now()->toDateString();
+
+	        $log = Log::updateOrCreate(
+	        	[
+	        		'client_service_id' => $cs->id,
+	        		'service_procedure_id' => $sp->id,
+	        		'log_date' => $today,
+	        		'log_type' => 'Document',
+	        	],
+	        	[
+	        		'client_id' => $cs->client_id,
+	        		'group_id' => $cs->group_id,
+	        		'processor_id' => $processorId,
+	        		'detail' => $sp->name,
+	        	]
+	        );
+
+	        foreach( $documents as $document ) {
+	        	$log->documents()->attach($document['id'], ['count' => $document['count']]);
+	        }
+		}
+	}
+
+	private function handleOnHandDocuments($clientService, $serviceProcedureId) {
+		$clientServiceId = $clientService['id'];
+		$documents = $clientService['documents'];
+
+		$documents = collect($documents)->filter(function($item) {
+			return $item['count'] > 0;
+		})->values()->toArray();
+
+		if( count($documents) > 0 ) {
+			$cs = ClientService::findOrFail($clientServiceId);
+			$mode = ServiceProcedure::findOrFail($serviceProcedureId)->documents_mode;
+
+			foreach( $documents as $document ) {
+				$onHand = OnHandDocument::where('client_id', $cs->client_id)
+					->where('document_id', $document['id'])->first();
+
+				if( $mode == 'add' ) {
+					if( $onHand ) {
+						$onHand->increment('count', $document['count']);
+					} else {
+						OnHandDocument::create([
+							'client_id' => $cs->client_id,
+							'document_id' => $document['id'],
+							'count' => $document['count']
+						]);
+					}
+				} elseif( $mode == 'remove' ) {
+					if( $onHand ) {
+						if( $onHand->count -  $document['count'] < 1 ) {
+							$onHand->delete();
+						} else {
+							$onHand->decrement('count', $document['count']);
 						}
 					}
 				}
@@ -423,137 +447,132 @@ class ReportController extends Controller
 		}
 	}
 
-	private function handleCancelledService($clientService, $serviceProcedureId) {
-		$serviceProcedure = ServiceProcedure::with('action', 'category')->findOrFail($serviceProcedureId);
+	private function handleStatusUponCompletion($clientService, $serviceProcedureId) {
+		$clientServiceId = $clientService['id'];
 
-		if( $serviceProcedure->action->name == 'Cancelled' && $serviceProcedure->category->name == 'Service' ) {
-			$clientService->update([
-				'status' => 'cancelled',
-				'active' => 0, 
-				'cost' => 0,
-				'charge' => 0,
-				'tip' => 0
-			]);
-			ClientController::updatePackageStatus($clientService->tracking);
+		$serviceProcedure = ServiceProcedure::findOrFail($serviceProcedureId);
+		$action = $serviceProcedure->action->name;
+		$category = $serviceProcedure->category->name;
+		$statusUponCompletion = $serviceProcedure->status_upon_completion;
+		$documentsMode = $serviceProcedure->documents_mode;
+
+		if( $statusUponCompletion ) {
+			$cs = ClientService::findOrFail($clientServiceId);
+
+			if( $documentsMode ) {
+				$pendingDocumentsCount = ClientReportDocument::whereHas('clientReport', 
+					function($query) use($clientServiceId, $serviceProcedureId) {
+						$query->where('client_service_id', $clientServiceId)
+							->where('service_procedure_id', $serviceProcedureId);
+					}
+				)
+				->where('count', 0)
+				->count();
+
+				if( $pendingDocumentsCount == 0 ) {
+					$cs->update(['status' => $statusUponCompletion]);
+
+					if( $action == 'Cancelled' && $category == 'Service' ) {
+						$cs->update([
+							'active' => 0, 
+							'cost' => 0,
+							'charge' => 0,
+							'tip' => 0
+						]);
+					}
+
+					ClientController::updatePackageStatus($cs->tracking);
+				}
+			} else {
+				$cs->update(['status' => $statusUponCompletion]);
+
+				if( $action == 'Cancelled' && $category == 'Service' ) {
+					$cs->update([
+						'active' => 0, 
+						'cost' => 0,
+						'charge' => 0,
+						'tip' => 0
+					]);
+				}
+
+				ClientController::updatePackageStatus($cs->tracking);
+			}
 		}
 	}
 
-	private function handleUpdatedTheCost($clientService, $serviceProcedureId, $report) {
-		$serviceProcedure = ServiceProcedure::with('action', 'category')->findOrFail($serviceProcedureId);
+	private function handleUpdatedTheCost($clientService, $serviceProcedureId, $cost) {
+		$clientServiceId = $clientService['id'];
 
-		if( $serviceProcedure->action->name == 'Updated' && $serviceProcedure->category->name == 'Cost' ) {
-			$clientService->update(['cost' => $report['extras']['cost']]);
+		$serviceProcedure = ServiceProcedure::with('action', 'category')->findOrFail($serviceProcedureId);
+		$action = $serviceProcedure->action->name;
+		$category = $serviceProcedure->category->name;
+
+		if( $action == 'Updated' && $category == 'Cost' ) {
+			$cs = ClientService::findOrFail($clientServiceId);
+
+			$cs->update(['cost' => $cost]);
+		}
+	}
+
+	private function handleSuggestedDocuments($clientService, $serviceProcedureId) {
+		$documents = $clientService['documents'];
+
+		$documents = collect($documents)->map(function($item) {
+			return $item['id'];
+		})->values()->toArray();
+
+		SuggestedDocument::where('service_procedure_id', $serviceProcedureId)
+			->whereNotIn('document_id', $documents)
+			->decrement('points', 5);
+
+		foreach( $documents as $document ) {
+			SuggestedDocument::updateOrCreate(
+			    ['service_procedure_id' => $serviceProcedureId, 'document_id' => $document],
+			    ['points' => DB::raw('points + 1')]
+			);
 		}
 	}
 
 	public function store(Request $request) {
-		$validator = Validator::make($request->all(), [
-            'reports' => 'required|array',
-            'reports.*.service_procedure' => 'required',
-            'reports.*.client_services' => 'required|array',
-            'reports.*.client_services.*.id' => 'required',
-            'reports.*.client_services.*.documents' => 'array'
-        ], [
-        	'reports.*.service_procedure.required' => 'The service procedure field is required.',
-        	'reports.*.client_services.required' => 'The client services field is required.',
-        	'reports.*.client_services.array' => 'The client services field must be an array.',
-        	'reports.*.client_services.*.id.required' => 'The client services id field is required.',
-        	'reports.*.client_services.*.documents.array' => 'The client services documents field must be an array.',
-        ]);
+		$reports = $request->reports;
+        $processorId = Auth::user()->id;
 
-        if($validator->fails()) {
-            $response['status'] = 'Failed';
-            $response['errors'] = $validator->errors();
-            $response['code'] = 422;
-        } else {
-        	$reports = $request->reports;
-        	$processorId = Auth::user()->id;
+        foreach($reports as $report) {
+        	// reports table
+        	$r = $this->handleReports($processorId);
 
-        	foreach($reports as $report) {
-        		$r = Report::create([
-        			'processor_id' => $processorId
-        		]);
+        	$clientServices = $report['client_services'];
 
-        		$clientServices = $report['client_services'];
-        		foreach($clientServices as $clientService) {
-        			$detail = $this->getDetail($report, $clientService);
+        	foreach($clientServices as $clientService) {
+        		$detail = $this->getDetail($clientService, $report);
 
-        			$cr = $r->clientReports()->create([
-        				'detail' => $detail,
-	        			'client_service_id' => $clientService['id'],
-	        			'service_procedure_id' => $report['service_procedure']
-	        		]);
+        		// client_reports table
+	        	$cr = $this->handleClientReports($r, $detail, $clientService, $report['service_procedure']);
 
-        			$cs = ClientService::findOrFail($clientService['id']);
+	        	// client_report_documents table
+	        	$this->handleClientReportDocuments($cr, $clientService, $report['service_procedure']);
 
-        			if( array_key_exists('documents', $clientService) ) {
-	        			$sp = ServiceProcedure::find($report['service_procedure']);
-	        			$today = Carbon::now()->toDateString();
+	        	// logs && document_log table
+	        	$this->handleLogDocumentLog(
+	        		$clientService, 
+	        		$report['service_procedure'],
+	        		$processorId
+	        	);
 
-	        			$log = Log::updateOrCreate(
-	        				[
-	        					'client_service_id' => $cs->id,
-	        					'service_procedure_id' => $sp->id,
-	        					'log_date' => $today,
-	        					'log_type' => 'Document',
-	        				],
-	        				[
-	        					'client_id' => $cs->client_id,
-	        					'group_id' => $cs->group_id,
-	        					'processor_id' => $processorId,
-	        					'detail' => $sp->name,
-	        				]
-	        			);
+	        	// on_hand_documents table
+	        	$this->handleOnHandDocuments($clientService, $report['service_procedure']);
 
-        				$documents = $clientService['documents'];
+	        	// suggested_documents table
+        		$this->handleSuggestedDocuments($clientService, $report['service_procedure']);
 
-        				foreach($documents as $document) {
-	        				$cr->clientReportDocuments()->create([
-			        			'document_id' => $document
-			        		]);
+	        	$this->handleStatusUponCompletion($clientService, $report['service_procedure']);
 
-			        		$log->documents()->attach($document);
-
-			        		$serviceProcedureDocument = ServiceProcedureDocument::where('service_procedure_id', $report['service_procedure'])->where('document_id', $document)->first();
-			        		if( $serviceProcedureDocument ) {
-			        			$mode = $serviceProcedureDocument->mode;
-			        			$isCompanyDocument = Document::findOrFail($document)->is_company_document;
-
-			        			if( $mode == 'add' || $mode == 'stay' ) {
-			        				OnHandDocument::firstOrCreate([
-			        					'client_id' => ($cs->group_id && $isCompanyDocument == 1)
-			        						? null
-			        						: $cs->client_id,
-			        					'group_id' => ($cs->group_id && $isCompanyDocument == 1)
-			        						? $cs->group_id
-			        						: null,
-			        					'document_id' => $document
-			        				]);
-			        			} elseif( $mode == 'remove' ) {
-			        				if( $cs->group_id && $isCompanyDocument == 1 ) {
-			        					OnHandDocument::where('group_id', $cs->group_id)
-			        						->where('document_id', $document)->delete();
-			        				} else {
-			        					OnHandDocument::where('client_id', $cs->client_id)
-				        					->where('document_id', $document)->delete();
-			        				}
-			        				
-			        			}
-			        		}
-	        			}
-        			}
-
-        			$this->handleStatusUponCompletion($cs, $report['service_procedure']);
-
-        			$this->handleCancelledService($cs, $report['service_procedure']);
-
-        			$this->handleUpdatedTheCost($cs, $report['service_procedure'], $report);
-        		}
+  				$this->handleUpdatedTheCost($clientService, $report['service_procedure'], $report['extras']['cost']);
         	}
-
-        	$response['status'] = 'Success';
-			$response['code'] = 200;
         }
+
+		$response['status'] = 'Success';
+		$response['code'] = 200;
 
 		return Response::json($response);
 	}

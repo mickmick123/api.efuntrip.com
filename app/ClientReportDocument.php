@@ -13,7 +13,7 @@ class ClientReportDocument extends Model
 
     protected $table = 'client_report_documents';
 
-    protected $fillable = ['client_report_id', 'document_id'];
+    protected $fillable = ['client_report_id', 'document_id', 'count'];
 
     public function clientReport() {
     	return $this->belongsTo('App\ClientReport', 'client_report_id', 'id');

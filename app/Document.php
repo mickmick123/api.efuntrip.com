@@ -20,11 +20,15 @@ class Document extends Model
     }
 
     public function logs() {
-    	return $this->belongsToMany('App\Log', 'document_log', 'document_id', 'log_id')->withPivot('created_at', 'updated_at');
+    	return $this->belongsToMany('App\Log', 'document_log', 'document_id', 'log_id')->withPivot('count', 'created_at', 'updated_at');
     }
 
     public function onHandDocuments() {
         return $this->hasMany('App\OnHandDocument', 'document_id', 'id');
+    }
+
+    public function suggestedDocuments() {
+        return $this->hasMany('App\SuggestedDocument', 'document_id', 'id');
     }
 
 }
