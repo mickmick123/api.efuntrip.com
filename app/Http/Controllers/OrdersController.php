@@ -519,9 +519,18 @@ class OrdersController extends Controller
 
             $final_total = 0;
             $total_kg = 0;
+            $price_total1 = 0; // total price of vege, fruits, meats combined
+            $kg_total1 = 0; // total kg of vege, fruits, meats combined
+            $price_total2 = 0; // total price of masks
+            $kg_total2 = 0; // total kg price of masks
+            $delivery_charge = 0; // total delivery charge
+
 
             foreach($cats as $c){
+                $kg = 0;
+                $prc =0;
                 $list[$ctr]['category'] = ProductCategory::where('category_id',$c)->first()->name;
+                $list[$ctr]['category_id'] = $c;
 
                 $products = Product::whereIn('product_id',$prod_ids)->where('category_id',$c)->get();
 
@@ -537,14 +546,35 @@ class OrdersController extends Controller
                     $list[$ctr]['products'][$ctr2]['total_kg'] = OrderDetails::whereIn('order_id',$request->order_ids)->where('product_id',$p->product_id)->sum('qty');
                     $final_total += $list[$ctr]['products'][$ctr2]['total'];
                     $total_kg += $list[$ctr]['products'][$ctr2]['total_kg'];
+
+                    $prc += $list[$ctr]['products'][$ctr2]['total'];
+                    $kg += $list[$ctr]['products'][$ctr2]['total_kg'];
+                    if($c >=1 && $c <=5){
+                        $price_total1 += $list[$ctr]['products'][$ctr2]['total'];
+                        $kg_total1 += $list[$ctr]['products'][$ctr2]['total_kg'];
+                    }
+                    if($c == 6){
+                        $delivery_charge += $list[$ctr]['products'][$ctr2]['total'];
+                    }
+                    if($c == 7){
+                        $price_total2 += $list[$ctr]['products'][$ctr2]['total'];
+                        $kg_total2 += $list[$ctr]['products'][$ctr2]['total_kg'];
+                    }
                     $ctr2++;
                 }
+                $list[$ctr]['total_price'] = $prc;
+                $list[$ctr]['total_kg'] = $kg;
                 $ctr++;
             }
 
             $response['data'] = $list;
             $response['total'] = $final_total;
             $response['total_kg'] = $total_kg;
+            $response['price_total1'] = $price_total1;
+            $response['kg_total1'] = $kg_total1;
+            $response['price_total2'] = $price_total2;
+            $response['kg_total2'] = $kg_total2;
+            $response['delivery_charge'] = $delivery_charge;
             $response['status'] = 'Success';
             $response['code'] = 200;
         }
