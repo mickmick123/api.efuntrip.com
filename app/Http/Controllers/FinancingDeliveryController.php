@@ -214,6 +214,26 @@ class FinancingDeliveryController extends Controller
       }
 	}
 
+    public function updateRow(Request $request ,$id){
+      $f = FinancingDelivery::where('id', intval($request->id))->first();
+          $f->trans_desc = $request->trans_desc;
+          $f->purchasing_budget = $request->purchasing_budget;
+          $f->purchasing_budget_return = $request->purchasing_budget_return;
+          $f->delivery_budget = $request->delivery_budget;
+          $f->delivery_budget_return = $request->delivery_budget_return;
+          $f->other_cost = $request->other_cost;
+          $f->other_received = $request->other_received;
+          $f->chmoney_used = $request->chmoney_used;
+          $f->chmoney_paid = $request->chmoney_paid;
+          $f->save();
+          return json_encode([
+             'success' => 'Success',
+             'code'    => 200,
+             'message' => 'Row has been updated!'
+         ]);
+    }
+
+
     public function getReturnList($trans){
 
       if($trans == 'purchasing_budget_return' || $trans == 'add_purchasing_budget'){

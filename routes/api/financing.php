@@ -19,6 +19,7 @@ Route::middleware('auth:api')->group(function() {
 	Route::post('/add-purchasing-budget', 'FinancingDeliveryController@addPurchasingBudget');
 	Route::post('/add-delivery-finance', 'FinancingDeliveryController@store');
 	Route::patch('/update-delivery-finance/{finance_id}', 'FinancingDeliveryController@update');
+	Route::patch('/update-delivery-row/{finance_id}', 'FinancingDeliveryController@updateRow');
 	Route::get('/get-return-list/{trans_type}', 'FinancingDeliveryController@getReturnList');
 
 });
