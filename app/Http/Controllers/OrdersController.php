@@ -536,8 +536,12 @@ class OrdersController extends Controller
 
             $final_total = 0;
             $total_kg = 0;
-            $price_total1 = 0; // total price of vege, fruits, meats combined
-            $kg_total1 = 0; // total kg of vege, fruits, meats combined
+            $total_pc = 0;
+            $total_tali = 0;
+            $tprice = [];
+            $tkg = [];
+            $tpc = [];
+            $tali = [];
             $price_total2 = 0; // total price of masks
             $kg_total2 = 0; // total kg price of masks
             $delivery_charge = 0; // total delivery charge
@@ -545,6 +549,8 @@ class OrdersController extends Controller
 
             foreach($cats as $c){
                 $kg = 0;
+                $pc = 0;
+                $t = 0;
                 $prc =0;
                 $list[$ctr]['category'] = ProductCategory::where('category_id',$c)->first()->name;
                 $list[$ctr]['category_id'] = $c;
@@ -557,19 +563,32 @@ class OrdersController extends Controller
                 $list[$ctr]['products'] = $products;
 
                 $ctr2 = 0;
+                $tprice[$c] = 0;
+                $tkg[$c] = 0;
+                $tpc[$c] = 0;
+                $tali[$c] = 0;
                 foreach($list[$ctr]['products'] as $p){
                     $list[$ctr]['products'][$ctr2]['order_details'] = OrderDetails::whereIn('order_id',$request->order_ids)->where('product_id',$p->product_id)->get();
                     $list[$ctr]['products'][$ctr2]['total'] = OrderDetails::whereIn('order_id',$request->order_ids)->where('product_id',$p->product_id)->sum('total_price');
                     $list[$ctr]['products'][$ctr2]['total_kg'] = OrderDetails::whereIn('order_id',$request->order_ids)->where('product_id',$p->product_id)->sum('qty');
                     $final_total += $list[$ctr]['products'][$ctr2]['total'];
-                    $total_kg += $list[$ctr]['products'][$ctr2]['total_kg'];
+                    // $total_kg += $list[$ctr]['products'][$ctr2]['total_kg'];
 
                     $prc += $list[$ctr]['products'][$ctr2]['total'];
-                    $kg += $list[$ctr]['products'][$ctr2]['total_kg'];
-                    if($c >=1 && $c <=5){
-                        $price_total1 += $list[$ctr]['products'][$ctr2]['total'];
-                        $kg_total1 += $list[$ctr]['products'][$ctr2]['total_kg'];
+                    $tprice[$c] += $list[$ctr]['products'][$ctr2]['total'];
+                    if($p->unit == 'kg'){
+                        $total_kg += $list[$ctr]['products'][$ctr2]['total_kg'];
+                        $tkg[$c] += $list[$ctr]['products'][$ctr2]['total_kg'];
                     }
+                    if($p->unit == 'pc'){
+                        $total_pc += $list[$ctr]['products'][$ctr2]['total_kg'];
+                        $tpc[$c] += $list[$ctr]['products'][$ctr2]['total_kg'];
+                    }
+                    if($p->unit == 'tali'){
+                        $total_tali += $list[$ctr]['products'][$ctr2]['total_kg'];
+                        $tali[$c] += $list[$ctr]['products'][$ctr2]['total_kg'];
+                    }
+                    
                     if($c == 6){
                         $delivery_charge += $list[$ctr]['products'][$ctr2]['total'];
                     }
@@ -580,15 +599,21 @@ class OrdersController extends Controller
                     $ctr2++;
                 }
                 $list[$ctr]['total_price'] = $prc;
-                $list[$ctr]['total_kg'] = $kg;
+                // $list[$ctr]['total_kg'] = $kg;
+                // $list[$ctr]['total_pc'] = $pc;
+                // $list[$ctr]['total_tali'] = $t;
                 $ctr++;
             }
 
             $response['data'] = $list;
             $response['total'] = $final_total;
             $response['total_kg'] = $total_kg;
-            $response['price_total1'] = $price_total1;
-            $response['kg_total1'] = $kg_total1;
+            $response['total_pc'] = $total_pc;
+            $response['total_tali'] = $total_tali;
+            $response['tprice'] = $tprice;
+            $response['tkg'] = $tkg;
+            $response['tpc'] = $tpc;
+            $response['tali'] = $tali;
             $response['price_total2'] = $price_total2;
             $response['kg_total2'] = $kg_total2;
             $response['delivery_charge'] = $delivery_charge;
