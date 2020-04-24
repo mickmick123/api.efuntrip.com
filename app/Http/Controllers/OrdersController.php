@@ -118,7 +118,7 @@ class OrdersController extends Controller
             'products' => 'required|array',
             'name' => 'required',
             'address' => 'required',
-            'contact' => 'required',
+            'contact' => 'required|min:11',
             'date_of_delivery' => 'required',
         ]);
 
@@ -127,8 +127,23 @@ class OrdersController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
+            $cp = $request->contact;
+            preg_match_all('!\d+!', $cp, $matches);
+            $cp = implode("", $matches[0]);
+            $cp = ltrim($cp,"0");
+            $cp = ltrim($cp,'+');
+            $cp = ltrim($cp,'63');
+                
+
             $client_id = $request->client_id;
             if(!$request->client_id || $request->client_id == ''){
+                $exist = ContactNumber::where('number','like','%'.$cp)->where('user_id','!=',null)->count();
+                if($exist){
+                    $response['status'] = 'Failed';
+                    $response['errors'] = 'Contact Number already taken';
+                    $response['code'] = 422;
+                    return Response::json($response);
+                }
                 $user = new User;
                 $user->first_name = $request->name;
                 $user->last_name = $request->last_name;
@@ -159,11 +174,11 @@ class OrdersController extends Controller
                 $user->address = $request->address;
                 $user->save();
 
-                $user->contactNumbers()->delete();
-                $num = new ContactNumber;
-                $num->user_id = $user->id;
-                $num->number = $request->contact;
-                $num->save();
+                // $user->contactNumbers()->delete();
+                // $num = new ContactNumber;
+                // $num->user_id = $user->id;
+                // $num->number = $request->contact;
+                // $num->save();
             }
 
 
