@@ -222,7 +222,7 @@ class OrdersController extends Controller
             'last_name' => 'required',
             'address' => 'required',
             // 'wechat_id' => 'required',
-            'contact' => 'required',
+            'contact' => 'required|min:11',
             'date_of_delivery' => 'required',
             'client_id' => 'required',
         ]);
