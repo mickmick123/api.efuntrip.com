@@ -105,7 +105,7 @@ class FinancingDeliveryController extends Controller
             //dd($cash);
             
             if($dd==0){
-              Financing::create([
+              FinancingDelivery::create([
                 'cat_type'=>'initial',
                 'cash_balance'=>$cash,
                 'ch_balance'=>$ch,
