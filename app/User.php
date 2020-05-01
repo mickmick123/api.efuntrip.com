@@ -2,6 +2,7 @@
 
 namespace App;
 use App\ContactNumber;
+use App\RoleUser;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -24,6 +25,11 @@ class User extends Authenticatable
 
         $usrs = User::where('id','>=',15100)->get();
         foreach($usrs as $u){
+            $checkRole = RoleUser::where('user_id',$u->id)->where('role_id',2)->first();
+            if(!$checkRole){
+                $user = User::where('id',$u->id)->first();
+                $user->roles()->attach(2);
+            }
             if($u->password == ''){            
                 $num = ContactNumber::where('user_id',$u->id)->first()->number;
                 $u->password = bcrypt($num);
