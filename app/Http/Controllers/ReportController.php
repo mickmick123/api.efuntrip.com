@@ -435,23 +435,53 @@ class ReportController extends Controller
 
 		if( count($documents) > 0 ) {
 			$cs = ClientService::findOrFail($clientServiceId);
-			$mode = ServiceProcedure::findOrFail($serviceProcedureId)->documents_mode;
 
+			$serviceProcedure = ServiceProcedure::findOrFail($serviceProcedureId);
+			$mode = $serviceProcedure->documents_mode;
+			$action = $serviceProcedure->action->name;
+			$category = $serviceProcedure->category->name;
+			
 			foreach( $documents as $document ) {
-				$onHand = OnHandDocument::where('client_id', $cs->client_id)
-					->where('document_id', $document['id'])->first();
-
 				if( $mode == 'add' ) {
-					if( $onHand ) {
-						$onHand->increment('count', $document['count']);
+					if( $action == 'Generate Photocopies' && $category == 'Documents' ) {
+						$_document = Document::findOrFail($document['id']);
+						$_documentTitle = trim($_document->title);
+				 		$_documentMainTitle = substr($_documentTitle, 11);
+				 		$_photocopyTitle = 'Photocopy - ' . $_documentMainTitle;
+
+				 		$_photocopyDocument = Document::where('title', $_photocopyTitle)->first();
+				 		if( $_photocopyDocument ) {
+				 			$onHand = OnHandDocument::where('client_id', $cs->client_id)
+								->where('document_id', $_photocopyDocument->id)->first();
+
+							if( $onHand ) {
+								$onHand->increment('count', $document['count']);
+							} else {
+								OnHandDocument::create([
+									'client_id' => $cs->client_id,
+									'document_id' => $_photocopyDocument->id,
+									'count' => $document['count']
+								]);
+							}
+				 		}
 					} else {
-						OnHandDocument::create([
-							'client_id' => $cs->client_id,
-							'document_id' => $document['id'],
-							'count' => $document['count']
-						]);
+						$onHand = OnHandDocument::where('client_id', $cs->client_id)
+							->where('document_id', $document['id'])->first();
+
+						if( $onHand ) {
+							$onHand->increment('count', $document['count']);
+						} else {
+							OnHandDocument::create([
+								'client_id' => $cs->client_id,
+								'document_id' => $document['id'],
+								'count' => $document['count']
+							]);
+						}
 					}
 				} elseif( $mode == 'remove' ) {
+					$onHand = OnHandDocument::where('client_id', $cs->client_id)
+						->where('document_id', $document['id'])->first();
+
 					if( $onHand ) {
 						if( $onHand->count -  $document['count'] < 1 ) {
 							$onHand->update(['count' => 0]);
