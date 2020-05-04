@@ -54,4 +54,6 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('switch-client-cost-level/{client_id}/{service_profile_id?}', 'ClientController@switchCostLevel');
 
+	Route::get('get-documents-on-hand/{id}', 'ClientController@getDocumentsOnHand');
+
 });

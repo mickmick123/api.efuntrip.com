@@ -29,6 +29,8 @@ use App\Updates;
 
 use App\User;
 
+use App\OnHandDocument;
+
 use Auth, DB, Response, Validator;
 
 use App\Http\Controllers\LogController;
@@ -2488,6 +2490,18 @@ class ClientController extends Controller
 			return Response::json($response);
 	}
 
+    public function getDocumentsOnHand($clientId) {
+        $onHandDocuments = OnHandDocument::with('document')->withTrashed()
+            ->where('client_id',$clientId)->orderBy('id', 'desc')->get()
+            ->unique('document_id')->values();
 
+        $response['status'] = 'Success';
+        $response['data'] = [
+            'onHandDocuments' => $onHandDocuments
+        ];
+        $response['code'] = 200;
+
+        return Response::json($response); 
+    }
 
 }

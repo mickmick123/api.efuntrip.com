@@ -42,8 +42,9 @@ class DocumentController extends Controller
 	public function update(Request $request, $id) {
 		$validator = Validator::make($request->all(), [ 
             'title' => 'required|unique:documents,title,'.$id,
+            'shorthand_name' => 'nullable|unique:documents,shorthand_name,'.$id,
             'is_unique' => 'required',
-            'is_company_document' => 'required'
+            // 'is_company_document' => 'required'
         ]);
 
         if($validator->fails()) {       
@@ -56,9 +57,10 @@ class DocumentController extends Controller
         	if( $document ) {
         		$document->update([
         			'title' => $request->title,
-        			'title_cn' => ($request->title_cn) ? $request->title_cn : null,
+        			'title_cn' => $request->title_cn,
+                    'shorthand_name' => $request->shorthand_name,
         			'is_unique' => $request->is_unique,
-                    'is_company_document' => $request->is_company_document
+                    // 'is_company_document' => $request->is_company_document
         		]);
 
         		$response['status'] = 'Success';
@@ -76,8 +78,9 @@ class DocumentController extends Controller
 	public function store(Request $request) {
 		$validator = Validator::make($request->all(), [ 
             'title' => 'required|unique:documents,title',
+            'shorthand_name' => 'nullable|unique:documents,shorthand_name',
             'is_unique' => 'required',
-            'is_company_document' => 'required'
+            // 'is_company_document' => 'required'
         ]);
 
         if($validator->fails()) {       
@@ -87,9 +90,10 @@ class DocumentController extends Controller
         } else {
         	Document::create([
         		'title' => $request->title,
-        		'title_cn' => ($request->title_cn) ? $request->title_cn : null,
+        		'title_cn' => $request->title_cn,
+                'shorthand_name' => $request->shorthand_name,
         		'is_unique' => $request->is_unique,
-                'is_company_document' => $request->is_company_document
+                // 'is_company_document' => $request->is_company_document
         	]);
 
         	$response['status'] = 'Success';

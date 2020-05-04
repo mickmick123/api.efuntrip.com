@@ -200,7 +200,7 @@ class ReportController extends Controller
 			})
 			->with([
 				'serviceProcedures' => function($query) {
-					$query->select(['id', 'service_id', 'name', 'step', 'action_id', 'category_id', 'is_required', 'required_service_procedure', 'documents_mode'])->orderBy('step');
+					$query->select(['id', 'service_id', 'name', 'step', 'action_id', 'category_id', 'is_required', 'required_service_procedure', 'documents_mode', 'documents_to_display'])->orderBy('step');
 				},
 				'serviceProcedures.action' => function($query) {
 					$query->select(['id', 'name']);
@@ -209,10 +209,10 @@ class ReportController extends Controller
 					$query->select(['id', 'name']);
 				},
 				'serviceProcedures.suggestedDocuments' => function($query) {
-					$query->select(['id', 'service_procedure_id', 'document_id', 'points'])->where('points', '>', 0);
+					$query->select(['id', 'service_procedure_id', 'document_id', 'points', 'last_count_reported'])->where('points', '>', 0);
 				},
 				'serviceProcedures.suggestedDocuments.document' => function($query) {
-					$query->select(['id', 'title', 'is_unique', 'is_company_document']);
+					$query->select(['id', 'title', 'shorthand_name', 'is_unique', 'is_company_document']);
 				}
 			])
 			->with(['clientServices' => function($query1) use($clientServicesId) {
@@ -229,19 +229,40 @@ class ReportController extends Controller
 							$query4->select(['id', 'client_report_id', 'document_id', 'count']);
 						},
 						'clientReports.clientReportDocuments.document' => function($query5) {
-							$query5->select(['id', 'title', 'is_unique']);
+							$query5->select(['id', 'title', 'shorthand_name', 'is_unique', 'is_company_document']);
 						},
 					]);
 			}])
 			->select(array('id', 'parent_id', 'detail'))->get();
 
-			$documents = Document::select(['id', 'title', 'is_unique', 'is_company_document'])
-		    		->orderBy('title')->get();
+			$documents = Document::select(['id', 'title', 'shorthand_name', 'is_unique', 'is_company_document'])->get();
+
+		    $onHandDocuments = User::select(['id'])
+				->whereHas('clientServices', function($query) use($clientServicesId) {
+					$query->whereIn('id', $clientServicesId);
+				})
+				->with([
+					'clientServices' => function($query) use($clientServicesId) {
+						$query->whereIn('id', $clientServicesId)->select(['id', 'client_id']);
+					},
+
+					'clientServices.client' => function($query) {
+						$query->select(['id', 'first_name', 'last_name']);
+					},
+					'clientServices.client.onHandDocuments' => function($query) {
+						$query->select(['id', 'client_id', 'document_id', 'count']);
+					},
+					'clientServices.client.onHandDocuments.document' => function($query) {
+						$query->select(['id', 'title', 'shorthand_name', 'is_unique', 'is_company_document']);
+					}
+				])
+				->get();
 
 			$response['status'] = 'Success';
 			$response['data'] = [
 		    	'services' => $services,
-		    	'documents' => $documents
+		    	'documents' => $documents,
+		    	'onHandDocuments' => $onHandDocuments
 			];
 			$response['code'] = 200;
 		} else {
@@ -267,14 +288,10 @@ class ReportController extends Controller
 			foreach( $selectedDocumentsWithCount as $index => $document ) {
 				$documentTitle = Document::findOrFail($document['id'])->title;
 
-				if( $index == 0 ) { 
-					$detail .= ' ('; 
-				}
-
-				$detail .= '[' . $document['count'] . ']' . $documentTitle;
+				$detail .= ' (' . $document['count'] . ')' . $documentTitle;
 
 				if( $index == count($selectedDocumentsWithCount) - 1 ) { 
-					$detail .= ').'; 
+					$detail .= '.'; 
 				} else { 
 					$detail .= ', '; 
 				}
@@ -345,31 +362,31 @@ class ReportController extends Controller
 		$documents = $clientService['documents'];
 
 		foreach( $documents as $document ) {
-			$found = ClientReportDocument::whereHas('clientReport', 
-					function($query) use($clientServiceId, $serviceProcedureId) {
-						$query->where('client_service_id', $clientServiceId)
-							->where('service_procedure_id', $serviceProcedureId);
-					}
-				)
-				->where('document_id', $document['id'])
-				->where('count', '<>', 0)
-				->count();
+			$old = ClientReportDocument::whereHas('clientReport', 
+				function($query) use($clientServiceId, $serviceProcedureId) {
+					$query->where('client_service_id', $clientServiceId)
+						->where('service_procedure_id', $serviceProcedureId);
+				}
+			)
+			->where('document_id', $document['id'])
+			->first();
 
-			if( ($document['count'] == 0 && $found == 0) || ($document['count'] > 0) ) {
-				ClientReportDocument::whereHas('clientReport', 
-					function($query) use($clientServiceId, $serviceProcedureId) {
-						$query->where('client_service_id', $clientServiceId)
-							->where('service_procedure_id', $serviceProcedureId);
-					}
-				)
-				->where('document_id', $document['id'])
-				->where('count', 0)
-				->delete();
+			if( $old ) {
+				if( $old->count == 0 ) {
+					$old->delete();
+				}
 
+				if( $old->count == 0 || ($old->count != 0 && $document['count'] != 0) ) {
+					$clientReport->clientReportDocuments()->create([
+					 	'document_id' => $document['id'],
+					 	'count' => $document['count']
+					]);
+				}
+			} else {
 				$clientReport->clientReportDocuments()->create([
-			 	    'document_id' => $document['id'],
-			 	    'count' => $document['count']
-			 	]);
+				 	'document_id' => $document['id'],
+				 	'count' => $document['count']
+				]);
 			}
 		}
 	}
@@ -437,6 +454,7 @@ class ReportController extends Controller
 				} elseif( $mode == 'remove' ) {
 					if( $onHand ) {
 						if( $onHand->count -  $document['count'] < 1 ) {
+							$onHand->update(['count' => 0]);
 							$onHand->delete();
 						} else {
 							$onHand->decrement('count', $document['count']);
@@ -448,18 +466,16 @@ class ReportController extends Controller
 	}
 
 	private function handleStatusUponCompletion($clientService, $serviceProcedureId) {
-		$clientServiceId = $clientService['id'];
-
 		$serviceProcedure = ServiceProcedure::findOrFail($serviceProcedureId);
-		$action = $serviceProcedure->action->name;
-		$category = $serviceProcedure->category->name;
-		$statusUponCompletion = $serviceProcedure->status_upon_completion;
-		$documentsMode = $serviceProcedure->documents_mode;
 
+		$statusUponCompletion = $serviceProcedure->status_upon_completion;
+		
 		if( $statusUponCompletion ) {
-			$cs = ClientService::findOrFail($clientServiceId);
+			$documentsMode = $serviceProcedure->documents_mode;
 
 			if( $documentsMode ) {
+				$clientServiceId = $clientService['id'];
+
 				$pendingDocumentsCount = ClientReportDocument::whereHas('clientReport', 
 					function($query) use($clientServiceId, $serviceProcedureId) {
 						$query->where('client_service_id', $clientServiceId)
@@ -470,30 +486,29 @@ class ReportController extends Controller
 				->count();
 
 				if( $pendingDocumentsCount == 0 ) {
-					$cs->update(['status' => $statusUponCompletion]);
+					$cs = ClientService::findOrFail($clientServiceId);
 
+					$arr = ['status' => $statusUponCompletion];
+
+					$action = $serviceProcedure->action->name;
+					$category = $serviceProcedure->category->name;
 					if( $action == 'Cancelled' && $category == 'Service' ) {
-						$cs->update([
-							'active' => 0, 
-							'cost' => 0,
-							'charge' => 0,
-							'tip' => 0
-						]);
+						$arr['active'] = 0;
+						$arr['cost'] = 0;
+						$arr['charge'] = 0;
+						$arr['tip'] = 0;
 					}
+
+					$cs->update($arr);
 
 					ClientController::updatePackageStatus($cs->tracking);
 				}
 			} else {
-				$cs->update(['status' => $statusUponCompletion]);
+				$clientServiceId = $clientService['id'];
 
-				if( $action == 'Cancelled' && $category == 'Service' ) {
-					$cs->update([
-						'active' => 0, 
-						'cost' => 0,
-						'charge' => 0,
-						'tip' => 0
-					]);
-				}
+				$cs = ClientService::findOrFail($clientServiceId);
+
+				$cs->update(['status' => $statusUponCompletion]);
 
 				ClientController::updatePackageStatus($cs->tracking);
 			}
@@ -501,13 +516,13 @@ class ReportController extends Controller
 	}
 
 	private function handleUpdatedTheCost($clientService, $serviceProcedureId, $cost) {
-		$clientServiceId = $clientService['id'];
-
 		$serviceProcedure = ServiceProcedure::with('action', 'category')->findOrFail($serviceProcedureId);
 		$action = $serviceProcedure->action->name;
 		$category = $serviceProcedure->category->name;
 
 		if( $action == 'Updated' && $category == 'Cost' ) {
+			$clientServiceId = $clientService['id'];
+
 			$cs = ClientService::findOrFail($clientServiceId);
 
 			$cs->update(['cost' => $cost]);
@@ -517,18 +532,24 @@ class ReportController extends Controller
 	private function handleSuggestedDocuments($clientService, $serviceProcedureId) {
 		$documents = $clientService['documents'];
 
-		$documents = collect($documents)->map(function($item) {
+		$selectedDocuments = collect($documents)->map(function($item) {
 			return $item['id'];
 		})->values()->toArray();
 
 		SuggestedDocument::where('service_procedure_id', $serviceProcedureId)
-			->whereNotIn('document_id', $documents)
+			->whereNotIn('document_id', $selectedDocuments)
 			->decrement('points', 5);
 
 		foreach( $documents as $document ) {
 			SuggestedDocument::updateOrCreate(
-			    ['service_procedure_id' => $serviceProcedureId, 'document_id' => $document],
-			    ['points' => DB::raw('points + 1')]
+				[
+				   	'service_procedure_id' => $serviceProcedureId, 
+				    'document_id' => $document['id']
+				],
+				[
+				    'points' => DB::raw('points + 1'),
+				    'last_count_reported' => $document['count']
+				]
 			);
 		}
 	}

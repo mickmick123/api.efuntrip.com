@@ -4,8 +4,12 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 
+use Illuminate\Database\Eloquent\SoftDeletes;
+
 class OnHandDocument extends Model
 {
+    
+    use SoftDeletes;
     
 	protected $table = 'on_hand_documents';
 
