@@ -425,6 +425,18 @@ class ReportController extends Controller
 		}
 	}
 
+	private function getPhotocopyDocument($originalDocumentId) {
+		$originalDocument = Document::findOrFail($originalDocumentId);
+		$originalDocumentTitle = trim($originalDocument->title);
+
+		$documentTitle = substr($originalDocumentTitle, 11);
+
+		$photocopyDocumentTitle = 'Photocopy - ' . $documentTitle;
+		$photocopyDocument = Document::where('title', $photocopyDocumentTitle)->first();
+
+		return $photocopyDocument;
+	}
+
 	private function handleOnHandDocuments($clientService, $serviceProcedureId) {
 		$clientServiceId = $clientService['id'];
 		$documents = $clientService['documents'];
@@ -438,42 +450,33 @@ class ReportController extends Controller
 
 			$serviceProcedure = ServiceProcedure::findOrFail($serviceProcedureId);
 			$mode = $serviceProcedure->documents_mode;
-			$action = $serviceProcedure->action->name;
-			$category = $serviceProcedure->category->name;
+			$actionName = $serviceProcedure->action->name;
+			$categoryName = $serviceProcedure->category->name;
 			
 			foreach( $documents as $document ) {
 				if( $mode == 'add' ) {
-					if( $action == 'Generate Photocopies' && $category == 'Documents' ) {
-						$_document = Document::findOrFail($document['id']);
-						$_documentTitle = trim($_document->title);
-				 		$_documentMainTitle = substr($_documentTitle, 11);
-				 		$_photocopyTitle = 'Photocopy - ' . $_documentMainTitle;
+					$documentId = null;
 
-				 		$_photocopyDocument = Document::where('title', $_photocopyTitle)->first();
-				 		if( $_photocopyDocument ) {
-				 			$onHand = OnHandDocument::where('client_id', $cs->client_id)
-								->where('document_id', $_photocopyDocument->id)->first();
+					if( $actionName == 'Generate Photocopies' && $categoryName == 'Documents' ) {
+						$photocopyDocument = $this->getPhotocopyDocument($document['id']);
 
-							if( $onHand ) {
-								$onHand->increment('count', $document['count']);
-							} else {
-								OnHandDocument::create([
-									'client_id' => $cs->client_id,
-									'document_id' => $_photocopyDocument->id,
-									'count' => $document['count']
-								]);
-							}
-				 		}
+						if( $photocopyDocument ) {
+							$documentId = $photocopyDocument->id;
+						}
 					} else {
+						$documentId = $document['id'];
+					}
+
+					if( $documentId ) {
 						$onHand = OnHandDocument::where('client_id', $cs->client_id)
-							->where('document_id', $document['id'])->first();
+							->where('document_id', $documentId)->first();
 
 						if( $onHand ) {
 							$onHand->increment('count', $document['count']);
 						} else {
 							OnHandDocument::create([
 								'client_id' => $cs->client_id,
-								'document_id' => $document['id'],
+								'document_id' => $documentId,
 								'count' => $document['count']
 							]);
 						}
