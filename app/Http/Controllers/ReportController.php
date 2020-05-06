@@ -425,14 +425,21 @@ class ReportController extends Controller
 		}
 	}
 
-	private function getPhotocopyDocument($originalDocumentId) {
-		$originalDocument = Document::findOrFail($originalDocumentId);
-		$originalDocumentTitle = trim($originalDocument->title);
+	private function getPhotocopyDocument($id) {
+		$document = Document::findOrFail($id);
+		$documentTitle = trim($document->title);
 
-		$documentTitle = substr($originalDocumentTitle, 11);
+		$isPhotocopy = substr_count($documentTitle, 'Photocopy');
 
-		$photocopyDocumentTitle = 'Photocopy - ' . $documentTitle;
-		$photocopyDocument = Document::where('title', $photocopyDocumentTitle)->first();
+		if( $isPhotocopy > 0 ) {
+			$photocopyDocument = Document::findOrFail($id);
+		} else {
+			$documentTitle = substr($documentTitle, 11);
+
+			$photocopyDocumentTitle = 'Photocopy - ' . $documentTitle;
+
+			$photocopyDocument = Document::where('title', $photocopyDocumentTitle)->first();
+		}
 
 		return $photocopyDocument;
 	}
