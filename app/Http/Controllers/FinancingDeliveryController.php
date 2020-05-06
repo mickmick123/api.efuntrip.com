@@ -214,6 +214,25 @@ class FinancingDeliveryController extends Controller
       }
 	}
 
+    public function deleteRow($id){
+      $f = FinancingDelivery::where('id', intval($id))->first();
+      if($f){
+        $timestamp = strtotime($f->created_at);
+        $oldMonth = date('m', $timestamp);
+        $curMonth = date('m');
+        $f->delete();
+
+        if($oldMonth!=$curMonth){
+            $this->fixInitial(1);
+        }
+      } 
+      return json_encode([
+         'success' => 'Success',
+         'code'    => 200,
+         'message' => 'Data has been deleted!'
+     ]); 
+    }
+
     public function updateRow(Request $request ,$id){
       $f = FinancingDelivery::where('id', intval($request->id))->first();
           $f->trans_desc = $request->trans_desc;
