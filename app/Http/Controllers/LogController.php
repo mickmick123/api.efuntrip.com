@@ -557,20 +557,14 @@ public function getCommissionLogs($client_id, $group_id) {
 
 
     public function getAllLogs($client_service_id) {
-        $logs = DB::table('logs')->where('client_service_id',$client_service_id)->orderBy('id','desc')->get();
+        $logs = Log::with('documents')->where('client_service_id',$client_service_id)
+            ->orderBy('id','desc')->get();
 
         foreach( $logs as $log ) {
             $usr =  User::where('id',$log->processor_id)->select('first_name','last_name')->get();
             $log->processor = ($usr) ? ($usr[0]->first_name ." ".$usr[0]->last_name) : "";
             $log->detail =  ($log->detail !=='' && $log->detail !== null) ? $log->detail : '';
             $log->detail_cn =  ($log->detail_cn !=='' && $log->detail_cn !== null) ? $log->detail_cn : '';
-
-            if($log->log_type === 'Document') {
-                $log->documentLogs = ClientReport::with('report.processor', 'serviceProcedure', 'clientReportDocuments.document')
-                    ->where('client_service_id', $client_service_id)
-                    ->has('clientReportDocuments')
-                    ->orderBy('id', 'desc')->get();
-            }
         }
 
         $response['status'] = 'Success';

@@ -404,20 +404,16 @@ class ReportController extends Controller
 			$sp = ServiceProcedure::find($serviceProcedureId);
 	        $today = Carbon::now()->toDateString();
 
-	        $log = Log::updateOrCreate(
-	        	[
-	        		'client_service_id' => $cs->id,
-	        		'service_procedure_id' => $sp->id,
-	        		'log_date' => $today,
-	        		'log_type' => 'Document',
-	        	],
-	        	[
-	        		'client_id' => $cs->client_id,
-	        		'group_id' => $cs->group_id,
-	        		'processor_id' => $processorId,
-	        		'detail' => $sp->name,
-	        	]
-	        );
+	        $log = Log::create([
+	        	'client_service_id' => $cs->id,
+	        	'client_id' => $cs->client_id,
+	        	'group_id' => $cs->group_id,
+	        	'service_procedure_id' => $sp->id,
+	        	'processor_id' => $processorId,
+	        	'log_type' => 'Document',
+	        	'detail' => $sp->name,
+	        	'log_date' => $today
+	        ]);
 
 	        foreach( $documents as $document ) {
 	        	$log->documents()->attach($document['id'], ['count' => $document['count']]);
