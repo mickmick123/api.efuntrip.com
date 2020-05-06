@@ -8,6 +8,8 @@ use App\User;
 
 use App\ClientService;
 
+use App\ClientReport;
+
 use App\Http\Controllers\ClientController;
 
 use Auth, DB, Response, Validator;
@@ -555,45 +557,27 @@ public function getCommissionLogs($client_id, $group_id) {
 
 
     public function getAllLogs($client_service_id) {
+        $logs = DB::table('logs')->where('client_service_id',$client_service_id)->orderBy('id','desc')->get();
 
+        foreach( $logs as $log ) {
+            $usr =  User::where('id',$log->processor_id)->select('first_name','last_name')->get();
+            $log->processor = ($usr) ? ($usr[0]->first_name ." ".$usr[0]->last_name) : "";
+            $log->detail =  ($log->detail !=='' && $log->detail !== null) ? $log->detail : '';
+            $log->detail_cn =  ($log->detail_cn !=='' && $log->detail_cn !== null) ? $log->detail_cn : '';
 
-      $logs = DB::table('logs')->where('client_service_id',$client_service_id)->orderBy('id','desc')->get();
+            if($log->log_type === 'Document') {
+                $log->documentLogs = ClientReport::with('report.processor', 'serviceProcedure', 'clientReportDocuments.document')
+                    ->where('client_service_id', $client_service_id)
+                    ->has('clientReportDocuments')
+                    ->orderBy('id', 'desc')->get();
+            }
+        }
 
-      foreach( $logs as $log ) {
-          $usr =  User::where('id',$log->processor_id)->select('first_name','last_name')->get();
-          $log->processor = ($usr) ? ($usr[0]->first_name ." ".$usr[0]->last_name) : "";
-          $log->detail =  ($log->detail !=='' && $log->detail !== null) ? $log->detail : '';
-          $log->detail_cn =  ($log->detail_cn !=='' && $log->detail_cn !== null) ? $log->detail_cn : '';
+        $response['status'] = 'Success';
+        $response['data'] = $logs;
+        $response['code'] = 200;
 
-          if($log->log_type === 'Document'){
-            $log->documents = ClientService::select(['id', 'detail', 'status', 'tracking', 'active'])
-                ->with([
-                    'logs' => function($query) use($log) {
-                        $query->select(['id', 'client_service_id', 'detail', 'processor_id'])
-                                    ->where('log_type', 'Document')
-                                    ->where('id',$log->id)
-                                    ->orderBy('id', 'desc');
-                    },
-                    'logs.processor' => function($query) {
-                        $query->select(['id', 'first_name', 'last_name']);
-                    },
-                    'logs.documents' => function($query)  {
-                        $query->select(['title'])->orderBy('document_log.id', 'desc');
-                    }
-                ])
-                ->findorfail($client_service_id);
-          }
-
-      }
-
-      $response['status'] = 'Success';
-      $response['data'] = $logs;
-      $response['code'] = 200;
-
-
-      return Response::json($response);
-
-
+        return Response::json($response);
     }
 
 
