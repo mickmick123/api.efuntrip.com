@@ -209,14 +209,14 @@ class ReportController extends Controller
 					$query->select(['id', 'name']);
 				},
 				'serviceProcedures.suggestedDocuments' => function($query) {
-					$query->select(['id', 'service_procedure_id', 'document_id', 'points', 'last_count_reported'])->where('points', '>', 0);
+					$query->select(['id', 'service_procedure_id', 'document_id', 'points', 'required_count'])->where('points', '>', 0);
 				},
 				'serviceProcedures.suggestedDocuments.document' => function($query) {
 					$query->select(['id', 'title', 'shorthand_name', 'is_unique', 'is_company_document']);
 				}
 			])
 			->with(['clientServices' => function($query1) use($clientServicesId) {
-				$query1->select(['id', 'client_id', 'group_id', 'service_id', 'tracking'])
+				$query1->select(['id', 'client_id', 'group_id', 'service_id', 'tracking', 'status'])
 					->whereIn('id', $clientServicesId)
 					->with([
 						'client' => function($query2) {
@@ -275,7 +275,7 @@ class ReportController extends Controller
 	}
 
 	private function getDetail($clientService, $report) {
-		$serviceProcedure = ServiceProcedure::find($report['service_procedure']);
+		$serviceProcedure = ServiceProcedure::with('action', 'category')->find($report['service_procedure']);
 
 		$detail = $serviceProcedure->name;
 
@@ -322,16 +322,36 @@ class ReportController extends Controller
 		}
 
 		// Extras
-		if( $report['extras']['reason'] ) {
-			$detail .= ' With a reason of ' . $report['extras']['reason'] . '.';
+		if( $serviceProcedure->action->name == 'Cancelled' && $serviceProcedure->category->name == 'Service' ) {
+			if( $report['extras']['reason'] ) {
+				$detail .= ' With a reason of ' . $report['extras']['reason'] . '.';
+			}
 		}
-		if( $report['extras']['cost'] ) {
-			$cs = ClientService::findOrFail($clientService['id']);
 
-			$oldCost = number_format($cs->cost, 2);
-			$newCost = number_format($report['extras']['cost'], 2);
+		if( $serviceProcedure->action->name == 'Updated' && $serviceProcedure->category->name == 'Cost' ) {
+			if( $report['extras']['cost'] ) {
+				$cs = ClientService::findOrFail($clientService['id']);
 
-			$detail .= ' from  ' . $oldCost . ' to ' . $newCost . '.';
+				$oldCost = number_format($cs->cost, 2);
+				$newCost = number_format($report['extras']['cost'], 2);
+
+				$detail .= ' from  ' . $oldCost . ' to ' . $newCost . '.';
+			}
+		}
+
+		if( $serviceProcedure->action->name == 'Conversion' && $serviceProcedure->category->name == 'Status' ) {
+			if( $report['extras']['conversion_of_status'] && $report['extras']['conversion_of_status_reason'] ) {
+				// $report['extras']['conversion_of_status']
+					// 1 = pending to on process
+					// 2 = on process to pending
+				if( $report['extras']['conversion_of_status'] == 1 ) {
+					$detail .= ' from pending to on process ';
+				} elseif( $report['extras']['conversion_of_status'] == 2 ) {
+					$detail .= ' from on process to pending ';
+				}
+
+				$detail .= ' with a reason of ' . $report['extras']['conversion_of_status_reason'] . '.';
+			}
 		}
 
 		return $detail;
@@ -501,8 +521,8 @@ class ReportController extends Controller
 		}
 	}
 
-	private function handleStatusUponCompletion($clientService, $serviceProcedureId) {
-		$serviceProcedure = ServiceProcedure::findOrFail($serviceProcedureId);
+	private function handleStatusUponCompletion($clientService, $serviceProcedureId, $conversionOfStatus) {
+		$serviceProcedure = ServiceProcedure::with('action', 'category')->findOrFail($serviceProcedureId);
 
 		$statusUponCompletion = $serviceProcedure->status_upon_completion;
 		
@@ -544,6 +564,17 @@ class ReportController extends Controller
 
 				$cs = ClientService::findOrFail($clientServiceId);
 
+				if( $serviceProcedure->action->name == 'Conversion' && $serviceProcedure->category->name == 'Status' ) {
+					// $conversionOfStatus
+						// 1 = pending to on process
+						// 2 = on process to pending
+					if( $conversionOfStatus == 1 ) {
+						$statusUponCompletion = 'on process';
+					} elseif( $conversionOfStatus == 2 ) {
+						$statusUponCompletion = 'pending';
+					}
+				}
+
 				$cs->update(['status' => $statusUponCompletion]);
 
 				ClientController::updatePackageStatus($cs->tracking);
@@ -576,6 +607,9 @@ class ReportController extends Controller
 			->whereNotIn('document_id', $selectedDocuments)
 			->decrement('points', 5);
 
+		$serviceProcedure = ServiceProcedure::with('action', 'category')->findOrFail($serviceProcedureId);
+		$action = $serviceProcedure->action->name;
+
 		foreach( $documents as $document ) {
 			SuggestedDocument::updateOrCreate(
 				[
@@ -584,7 +618,7 @@ class ReportController extends Controller
 				],
 				[
 				    'points' => DB::raw('points + 1'),
-				    'last_count_reported' => $document['count']
+				    'required_count' => ($action == 'Filed') ? $document['required_count'] : $document['count']
 				]
 			);
 		}
@@ -622,7 +656,11 @@ class ReportController extends Controller
 	        	// suggested_documents table
         		$this->handleSuggestedDocuments($clientService, $report['service_procedure']);
 
-	        	$this->handleStatusUponCompletion($clientService, $report['service_procedure']);
+	        	$this->handleStatusUponCompletion(
+	        		$clientService, 
+	        		$report['service_procedure'], 
+	        		$report['extras']['conversion_of_status']
+	        	);
 
   				$this->handleUpdatedTheCost($clientService, $report['service_procedure'], $report['extras']['cost']);
         	}
