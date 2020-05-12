@@ -143,9 +143,8 @@ class OrdersController extends Controller
     }
 
     public function getProducts($cat_id) {
-        $cats = DB::table('product_id')
-                ->leftJoin('product', 'product.product_id', '=', 'product_id.product_id')
-                ->where('product_id.category_id', $cat_id)
+        $cats = DB::table('product')
+                ->where('category_id', $cat_id)
                 ->get();
                 
         $response['status'] = 'Success';
