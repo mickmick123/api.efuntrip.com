@@ -464,10 +464,6 @@ class ReportController extends Controller
 		$clientServiceId = $clientService['id'];
 		$documents = $clientService['documents'];
 
-		$documents = collect($documents)->filter(function($item) {
-			return $item['count'] > 0;
-		})->values()->toArray();
-
 		if( count($documents) > 0 ) {
 			$cs = ClientService::findOrFail($clientServiceId);
 
@@ -497,11 +493,15 @@ class ReportController extends Controller
 						if( $onHand ) {
 							$onHand->increment('count', $document['count']);
 						} else {
-							OnHandDocument::create([
+							$query = OnHandDocument::create([
 								'client_id' => $cs->client_id,
 								'document_id' => $documentId,
 								'count' => $document['count']
 							]);
+
+							if( $document['count'] == 0 ) {
+								$query->delete();
+							}
 						}
 					}
 				} elseif( $mode == 'remove' ) {
