@@ -120,7 +120,7 @@ class OrdersController extends Controller
     public function getProductCategories($cat_id){
         $cats = DB::table('product_parent_category')
                 ->leftJoin('product_category', 'product_category.category_id', '=', 'product_parent_category.category_id')
-                ->where('parent_id', $cat_id)
+                ->where('product_parent_category.parent_id', $cat_id)
                 ->get();
 
         $response['status'] = 'Success';
@@ -129,7 +129,7 @@ class OrdersController extends Controller
 
         $catCount = DB::table('product_parent_category')->where('parent_id', $cat_id)->count();
 
-        $hasProd = DB::table('product_id')->where('product_id.category_id', $cat_id)->count();
+        $hasProd = DB::table('product')->where('product.category_id', $cat_id)->count();
 
         if($catCount > 0 && $hasProd > 0) {
             $response['data'][] = array( 
