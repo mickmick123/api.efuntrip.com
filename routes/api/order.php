@@ -4,10 +4,8 @@ use Illuminate\Http\Request;
 	Route::get('/product-category', 'OrdersController@productCategories');
 	Route::get('/products/{category_id}', 'OrdersController@products');
 
-	Route::get('/get-product-category', 'OrdersController@getProductCategories');
-	Route::get('/get-product-child-category/{category_id?}', 'OrdersController@getProductChildCategory');
-	Route::get('/get-product-subcategory/{category_id?}', 'OrdersController@getProductSubCategories');
-	Route::get('/get-products/{category_id?}', 'OrdersController@getProducts');
+	Route::get('/get-product-category/{category_id}', 'OrdersController@getProductCategories');
+	Route::get('/get-products/{category_id}', 'OrdersController@getProducts');
 	
 
 Route::middleware('auth:api')->group(function() {

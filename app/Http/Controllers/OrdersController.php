@@ -13,6 +13,7 @@ use App\FinancingDelivery;
 
 use App\ProductParentCategory;
 use App\ProductMainCategory;
+use App\ProductID;
 
 use Illuminate\Http\Request;
 
@@ -116,70 +117,35 @@ class OrdersController extends Controller
     }
 
     // new api for app
-    public function getProductCategories(){
+    public function getProductCategories($cat_id){
         $cats = DB::table('product_parent_category')
                 ->leftJoin('product_category', 'product_category.category_id', '=', 'product_parent_category.category_id')
+                ->where('parent_id', $cat_id)
                 ->get();
 
         $response['status'] = 'Success';
         $response['code'] = 200;
         $response['data'] = $cats;
+
+        $catCount = DB::table('product_parent_category')->where('parent_id', $cat_id)->count();
+
+        $hasProd = DB::table('product_id')->where('product_id.category_id', $cat_id)->count();
+
+        if($catCount > 0 && $hasProd > 0) {
+            $response['data'][] = array( 
+                'id' => $cat_id,
+                'parent_id' => $cat_id,
+                'name' => 'Others'
+            );
+        }
+       
         return Response::json($response);
     }
 
-    public function getProductChildCategory(Request $request){
-        $parent_id = $request->input('parent_id');
-
-        $cats = DB::table('product_main_category')
-                ->leftJoin('product_category', 'product_category.category_id', '=', 'product_main_category.category_id')
-                ->where('product_main_category.parent_category_id', $parent_id)
-                ->get();
-
-        $products = $this->getProductData($parent_id, 0, 0);
-
-        $response['status'] = 'Success';
-        $response['code'] = 200;
-        $response['data']['category'] = $cats;
-        $response['data']['products'] = $products;
-
-        return Response::json($response);
-    }
-
-    public function getProductSubCategories(Request $request){
-        $parent_id = $request->input('parent_id');
-        $categ_id = $request->input('categ_id');
-
-        // $cats = ProductMainCategory::with('subCategories')
-        //         ->leftJoin('product_category', 'product_category.category_id', '=', 'product_main_category.category_id')
-        //         ->where('product_main_category.parent_category_id', $cat_id)
-        //         ->get();
-
-        $cats = DB::table('product_subcategory')
-                ->leftJoin('product_category', 'product_category.category_id', '=', 'product_subcategory.category_id')
-                ->where('product_subcategory.main_category_id', $categ_id)
-                ->get();
-
-        $products = $this->getProductData($parent_id, $categ_id, 0);
-
-        $response['status'] = 'Success';
-        $response['code'] = 200;
-        $response['data']['subcategory'] = $cats;
-        $response['data']['products'] = $products;
-        
-        return Response::json($response);
-    }
-
-    public function getProducts(Request $request) {
-        $parent_id = $request->input('parent_id');
-        $categ_id = $request->input('categ_id');
-        $sub_id = $request->input('sub_id');
-
-
-        $cats = DB::table('product_category_id')
-                ->where('parent_category_id', $parent_id)
-                ->where('main_category_id', $categ_id)
-                ->where('subcategory_id', $sub_id)
-                ->leftJoin('product', 'product.product_id', '=', 'product_category_id.product_id')
+    public function getProducts($cat_id) {
+        $cats = DB::table('product_id')
+                ->leftJoin('product', 'product.product_id', '=', 'product_id.product_id')
+                ->where('product_id.category_id', $cat_id)
                 ->get();
                 
         $response['status'] = 'Success';
@@ -187,17 +153,6 @@ class OrdersController extends Controller
         $response['data'] = $cats;
         
         return Response::json($response);
-    }
-
-    public function getProductData($parent_id, $main_id, $sub_id){
-        $cats = DB::table('product_category_id')
-                ->where('parent_category_id', $parent_id)
-                ->where('main_category_id', $main_id)
-                ->where('subcategory_id', $sub_id)
-                ->leftJoin('product', 'product.product_id', '=', 'product_category_id.product_id')
-                ->get();
-
-        return $cats;
     }
     // end of new api for app
 
