@@ -506,7 +506,7 @@ class ReportController extends Controller
 					if( $actionName == 'Generate Photocopies' && $categoryName == 'Documents' ) {
 						$photocopyDocument = $this->getPhotocopyDocument($document['id']);
 
-						if( $photocopyDocument ) {
+						if( $photocopyDocument && $document['count'] > 0 ) {
 							$documentId = $photocopyDocument->id;
 						}
 					} else {
