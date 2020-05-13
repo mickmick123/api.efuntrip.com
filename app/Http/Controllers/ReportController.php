@@ -411,30 +411,57 @@ class ReportController extends Controller
 		}
 	}
 
-	private function handleLogDocumentLog($clientService, $serviceProcedureId, $processorId) {
-		$clientServiceId = $clientService['id'];
-		$documents = $clientService['documents'];
-
-		$documents = collect($documents)->filter(function($item) {
+	private function handleLogDocumentLog($clientService, $report, $processorId) {
+		// For report with documents
+		$documents = collect($clientService['documents'])->filter(function($item) {
 			return $item['count'] > 0;
 		})->values()->toArray();
 
-		if( count($documents) > 0 ) {
-			$cs = ClientService::findOrFail($clientServiceId);
-			$sp = ServiceProcedure::find($serviceProcedureId);
-	        $today = Carbon::now()->toDateString();
+		// For conversion of status
+		$serviceProcedure = ServiceProcedure::with('action', 'category')->find($report['service_procedure']);
+		$actionName = $serviceProcedure->action->name;
+		$categoryName = $serviceProcedure->category->name;
 
+		if( count($documents) > 0 || ($actionName == 'Conversion' && $categoryName == 'Status') ) {
+			$cs = ClientService::findOrFail($clientService['id']);
+			$detail = $serviceProcedure->name;
+
+			// For report with documents
+			if( count($documents) > 0 ) {
+				$logType = 'Document';
+			} 
+
+			// For conversion of status
+			elseif( $actionName == 'Conversion' && $categoryName == 'Status' ) {
+				$logType = 'Action';
+
+				if( $report['extras']['conversion_of_status'] && $report['extras']['conversion_of_status_reason'] ) {
+					// $report['extras']['conversion_of_status']
+						// 1 = pending to on process
+						// 2 = on process to pending
+					if( $report['extras']['conversion_of_status'] == 1 ) {
+						$detail .= ' from pending to on process ';
+					} elseif( $report['extras']['conversion_of_status'] == 2 ) {
+						$detail .= ' from on process to pending ';
+					}
+
+					$detail .= ' with a reason of ' . $report['extras']['conversion_of_status_reason'] . '.';
+				}
+			}
+
+			// Log
 	        $log = Log::create([
 	        	'client_service_id' => $cs->id,
 	        	'client_id' => $cs->client_id,
 	        	'group_id' => $cs->group_id,
-	        	'service_procedure_id' => $sp->id,
+	        	'service_procedure_id' => $serviceProcedure->id,
 	        	'processor_id' => $processorId,
-	        	'log_type' => 'Document',
-	        	'detail' => $sp->name,
-	        	'log_date' => $today
+	        	'log_type' => $logType,
+	        	'detail' => $detail,
+	        	'log_date' => Carbon::now()->toDateString()
 	        ]);
 
+	        // Document log
 	        foreach( $documents as $document ) {
 	        	$log->documents()->attach($document['id'], ['count' => $document['count']]);
 	        }
@@ -644,11 +671,7 @@ class ReportController extends Controller
 	        	$this->handleClientReportDocuments($cr, $clientService, $report['service_procedure']);
 
 	        	// logs && document_log table
-	        	$this->handleLogDocumentLog(
-	        		$clientService, 
-	        		$report['service_procedure'],
-	        		$processorId
-	        	);
+	        	$this->handleLogDocumentLog($clientService, $report, $processorId);
 
 	        	// on_hand_documents table
 	        	$this->handleOnHandDocuments($clientService, $report['service_procedure']);
