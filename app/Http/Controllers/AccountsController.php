@@ -27,15 +27,15 @@ class AccountsController extends Controller
     //get all Cpanel Users
     public function getCpanelUsers() {
 	 	$role_id = Role::where('name', 'cpanel-admin')->pluck("id");
-	 	$both_branch = Branch::where('name', 'Both')->pluck("id")[0];
+	 	// $both_branch = Branch::where('name', 'Both')->pluck("id")[0];
     	$auth_branch =  $this->getBranchAuth();
 	 	$users = User::select('id', 'email', 'first_name', 'last_name')
 	 				->with(array('roles' => function($query){
 	 					$query->select('roles.id', 'roles.label');
 	 				}))->whereHas('roles', function ($query) use ($role_id) {
                 		$query->where('roles.id', '=', $role_id);
-	 	 	 		})->whereHas('branches', function ($query) use ($auth_branch, $both_branch) {
-                		$query->where('branches.id', '=', $auth_branch)->orWhere('branches.id', '=', $both_branch);
+	 	 	 		})->whereHas('branches', function ($query) use ($auth_branch) {
+                		$query->where('branches.id', '=', $auth_branch);
 	 	 	 		})->get();
 
 	 	$response['status'] = 'Success';
