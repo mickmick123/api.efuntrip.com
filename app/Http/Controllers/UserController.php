@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Device;
 use App\User;
+use App\ContactNumber;
 
 use Auth, Hash, Response, Validator;
 
@@ -14,7 +15,7 @@ class UserController extends Controller
     
 	public function login(Request $request) {
 		$validator = Validator::make($request->all(), [ 
-            'email' => 'required|email',
+            'email' => 'required',
             'password' => 'required',
             'source' => 'required',
             'device_type' => 'required_if:source,mobile',
@@ -26,32 +27,56 @@ class UserController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;   
         } else {
-        	$user = User::where('email', $request->email)->first();
+            $login = $request->email;
+            $result = filter_var( $login, FILTER_VALIDATE_EMAIL);
+
+            if(!$result){
+                preg_match_all('!\d+!', $login, $matches);
+                $login = implode("", $matches[0]);
+                $login = ltrim($login,"0");
+                $login = ltrim($login,'+');
+                $login = ltrim($login,'63');
+
+                if(is_numeric($login)){
+                    
+                    $ids = ContactNumber::where('number','like','%'.$login)->where('user_id','!=',null)->pluck('user_id');
+                    $user = User::whereIn('id', $ids)->get();
+                }else{
+                    $user = NULL; 
+                }
+                
+            }
+            else{
+        	   $user = User::where('email', $request->email)->get();
+            }
 
         	if( $user ) {
-        		if( Hash::check($request->password, $user->password) ) {
-        			if( $request->source == 'mobile' ) {
-        				Device::updateOrCreate(
-        					['user_id' => $user->id, 'device_type' => $request->device_type, 'device_token' => $request->device_token],
-        					[]
-        				);
-        			}
+                foreach($user as $u){
+            		if( Hash::check($request->password, $u->password) ) {
+            			if( $request->source == 'mobile' ) {
+            				Device::updateOrCreate(
+            					['user_id' => $u->id, 'device_type' => $request->device_type, 'device_token' => $request->device_token],
+            					[]
+            				);
+            			}
 
-		            $token = $user->createToken('WYC Visa')->accessToken;
+    		            $token = $u->createToken('WYC Visa')->accessToken;
 
-		            $response['status'] = 'Success';
-		            $response['data'] = [
-		            	'token' => $token
-		            ];
-		            $response['code'] = 200;
-		        } else {
+    		            $response['status'] = 'Success';
+    		            $response['data'] = [
+    		            	'token' => $token
+    		            ];
+    		            $response['code'] = 200;
+    		        } 
+                }  
 		            $response['status'] = 'Failed';
-	            	$response['errors'] = 'Invalid email/password.';
+	            	$response['errors'] = 'Invalid username/password.';
 	            	$response['code'] = 422;
-		        }
-        	} else {
+		        
+            }
+            else {
         		$response['status'] = 'Failed';
-            	$response['errors'] = 'Invalid email/password.';
+            	$response['errors'] = 'Invalid username/password.';
             	$response['code'] = 422;   
         	}
         }
