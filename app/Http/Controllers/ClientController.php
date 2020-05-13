@@ -441,7 +441,7 @@ class ClientController extends Controller
 	public function clientSearch(Request $request) {
         $keyword = $request->input('search');
         $branch_id = $request->input('branch_id');
-				$is_member_search = $request->input('is_member_search');
+		$is_member_search = $request->input('is_member_search');
 
         $branch_ids = DB::connection()->table('branch_user as b')->where('user_id',Auth::user()->id)->pluck('branch_id');
 
@@ -496,9 +496,9 @@ class ClientController extends Controller
                 )
                 ->where('role.role_id', '2')
                 ->when($branch_id != '', function ($q) use($branch_ids, $is_member_search, $branch_id){
-										if($is_member_search){
-											  return $q->where('bu.branch_id', $is_member_search);
-										}
+					if($is_member_search > 0){
+						  return $q->where('bu.branch_id', $is_member_search);
+					}
                     return $q->whereIn('bu.branch_id', $branch_ids);
                 })
                 ->where(function ($query) use($q1, $q2, $keyword) {
@@ -552,18 +552,18 @@ class ClientController extends Controller
                     'bu.user_id', '=', 'a.id'
                 )
                 ->where('role.role_id', '2')
-                ->when($branch_id != '', function ($q) use($branch_ids, $is_member_search, $branch_id){
-											if($is_member_search){
-													return $q->where('bu.branch_id', $is_member_search);
-											}
-											return $q->whereIn('bu.branch_id', $branch_ids);
-                })
                 ->where(function ($query) use($cids, $keyword) {
                         $query->orwhereIn('a.id',$cids)
                               ->orwhere('a.id',$keyword)
                               ->orwhere('first_name','=',$keyword)
                               ->orwhere('last_name','=',$keyword);
                     })
+                ->when($branch_id != '', function ($q) use($branch_ids, $is_member_search, $branch_id){
+						if($is_member_search > 0){
+								return $q->where('bu.branch_id', $is_member_search);
+						}
+						return $q->whereIn('bu.branch_id', $branch_ids);
+                })
                 ->orderBy('sdates2','DESC')
                 ->limit(10)
                 ->get();
