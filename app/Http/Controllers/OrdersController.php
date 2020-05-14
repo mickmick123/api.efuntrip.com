@@ -9,11 +9,8 @@ use App\OrderLog;
 use App\OrderDetails;
 use App\Product;
 use App\ProductCategory;
-use App\FinancingDelivery;
-
 use App\ProductParentCategory;
-use App\ProductMainCategory;
-use App\ProductID;
+use App\FinancingDelivery;
 
 use Illuminate\Http\Request;
 
@@ -153,7 +150,75 @@ class OrdersController extends Controller
         
         return Response::json($response);
     }
+
+    public function getAllCategories() {
+        $cats = ProductParentCategory::with('subCategories')
+                ->leftJoin('product_category', 'product_category.category_id', '=', 'product_parent_category.category_id')
+                ->where('parent_id', '0')
+                ->get();
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $cats;
+        
+        return Response::json($response);
+    }
     // end of new api for app
+
+
+    public function storeCategory(Request $request){
+        $validator = Validator::make($request->all(), [
+            'name' => 'required',
+            'name_chinese' => 'required',
+        ]);
+
+        if($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+            $categ = new ProductCategory;
+
+            $categ->name = $request->name;
+            $categ->name_chinese = $request->name_chinese;
+            $categ->description = $request->description;
+            $categ->category_img = str_replace(' ', '_', $request->name) . date('Ymd_His') . '.' . explode('.', $request->imgName)[1];
+            $categ->save();
+
+            $parentCateg = new ProductParentCategory;
+            $parentCateg->category_id = $categ->id;
+
+            if($request->category_type === '0') {
+                $parentCateg->parent_id = '0';
+            } else {
+                $parentCateg->parent_id = $request->category_parent_id;
+            }
+            $parentCateg->save();
+
+            $this->uploadCategoryAvatar($request);
+
+            
+            
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+            $response['data'] = explode('.', $request->imgName);
+        }
+
+
+        return Response::json($response);
+    }
+
+
+    public function uploadCategoryAvatar($data) {
+        $img64 = $data->imgBase64;
+
+        list($type, $img64) = explode(';', $img64);
+        list(, $img64) = explode(',', $img64); 
+        
+        if($img64!=""){ // storing image in storage/app/public Folder 
+                \Storage::disk('public')->put('storage/products/' . str_replace(' ', '_', $data->name) . date('Ymd_His') . '.' . explode('.', $data->imgName)[1], base64_decode($img64)); 
+        } 
+    }
 
 
     public function store(Request $request){

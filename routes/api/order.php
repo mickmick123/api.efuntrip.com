@@ -6,7 +6,9 @@ use Illuminate\Http\Request;
 
 	Route::get('/get-product-category/{category_id}', 'OrdersController@getProductCategories');
 	Route::get('/get-products/{category_id}', 'OrdersController@getProducts');
+	Route::get('/get-all-product-category', 'OrdersController@getAllCategories');
 	
+	Route::post('/add-product-category', 'OrdersController@storeCategory');
 
 Route::middleware('auth:api')->group(function() {
 
