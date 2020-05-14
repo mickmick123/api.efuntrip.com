@@ -131,7 +131,7 @@ class GroupController extends Controller
         return ($groupTotalCompleteServiceCost) ? ($groupTotalCompleteServiceCost - $discount) : 0;
     }
 
-    private function getGroupTotalBalance($id) {
+    public function getGroupTotalBalance($id) {
         return  (
                     (
                         $this->getGroupDeposit($id)

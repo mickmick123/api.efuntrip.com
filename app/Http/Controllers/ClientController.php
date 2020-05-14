@@ -2381,7 +2381,7 @@ class ClientController extends Controller
         return (($clientTotalCompleteServiceCost) ? $clientTotalCompleteServiceCost : 0) - $discount;
     }
 
-    private function getClientTotalBalance($id) {
+    public function getClientTotalBalance($id) {
         return  (
                     (
                         $this->getClientDeposit($id)

@@ -6,6 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 
 use App\Http\Controllers\GroupController;
 
+use App\Http\Controllers\ClientController;
+
+use App\User;
+use App\Group;
+
 class ClientService extends Model
 {
     
@@ -16,10 +21,38 @@ class ClientService extends Model
     public static function boot() {
         parent::boot();
 
+        static::created(function ($model) {
+            static::updateBalanceAndCollectables($model->client_id, $model->group_id);
+        });
+
         self::updated(function($model) {
             $original = $model->getOriginal();
             GroupController::createOrDeleteCommission($model,$original);
+            static::updateBalanceAndCollectables($model->client_id, $model->group_id);
         });
+    }
+
+    private static function updateBalanceAndCollectables($clientId, $groupId) {
+        if($groupId == null){
+            $collectable = app(ClientController::class)->getClientTotalCollectables($clientId);
+            $balance = app(ClientController::class)->getClientTotalBalance($clientId);
+
+            $collectable = ($collectable < 0 ? $collectable : 0);
+            User::where('id', $clientId)->update([
+                'balance' => $balance,
+                'collectable' => $collectable
+            ]);
+        }
+        else{
+            $collectable = app(GroupController::class)->getGroupTotalCollectables($groupId);
+            $balance = app(GroupController::class)->getGroupTotalBalance($groupId);
+            
+            $collectable = ($collectable < 0 ? $collectable : 0);
+            Group::where('id', $groupId)->update([
+                'balance' => $balance,
+                'collectables' => $collectable
+            ]);
+        }
     }
 
     public function agentCom() {
