@@ -445,7 +445,8 @@ class ClientController extends Controller
 
         $branch_ids = DB::connection()->table('branch_user as b')->where('user_id',Auth::user()->id)->pluck('branch_id');
 
-        $cids = ContactNumber::where("number",'LIKE', '%' . $keyword .'%')->pluck('id');
+        $cids = ContactNumber::where("number",'LIKE', '%' . $keyword .'%')->pluck('user_id');
+
         if(preg_match('/\s/',$keyword)){
             $q = explode(" ", $keyword);
             $q1 = '';
