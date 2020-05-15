@@ -13,9 +13,10 @@ class ProductParentCategory extends Model
 
     public $timestamps = false;
 
-    public function subCategories() {
-        return $this->hasMany('App\ProductParentCategory', 'parent_id', 'id')
-                ->leftJoin('product_category', 'product_category.category_id', '=', 'product_parent_category.category_id');
+    public function subCategories()
+    {
+        return $this->hasMany(self::class, 'parent_id', 'id')->with('subCategories')
+        		->leftJoin('product_category', 'product_category.category_id', '=', 'product_parent_category.category_id');
     }
 
 }
