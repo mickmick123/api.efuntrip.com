@@ -9,7 +9,7 @@ class SuggestedDocument extends Model
     
     protected $table = 'suggested_documents';
 
-    protected $fillable = ['service_procedure_id', 'document_id', 'points', 'required_count'];
+    protected $fillable = ['service_procedure_id', 'document_id', 'points'];
 
     public $timestamps = false;
 

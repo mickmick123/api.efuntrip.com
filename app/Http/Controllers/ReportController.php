@@ -209,7 +209,7 @@ class ReportController extends Controller
 					$query->select(['id', 'name']);
 				},
 				'serviceProcedures.suggestedDocuments' => function($query) {
-					$query->select(['id', 'service_procedure_id', 'document_id', 'points', 'required_count'])->where('points', '>', 0);
+					$query->select(['id', 'service_procedure_id', 'document_id', 'points'])->where('points', '>', 0);
 				},
 				'serviceProcedures.suggestedDocuments.document' => function($query) {
 					$query->select(['id', 'title', 'shorthand_name', 'is_unique', 'is_company_document']);
@@ -324,7 +324,7 @@ class ReportController extends Controller
 		// Extras
 		if( $serviceProcedure->action->name == 'Cancelled' && $serviceProcedure->category->name == 'Service' ) {
 			if( $report['extras']['reason'] ) {
-				$detail .= ' With a reason of ' . $report['extras']['reason'] . '.';
+				$detail .= ' with a reason of ' . $report['extras']['reason'] . '.';
 			}
 		}
 
@@ -366,11 +366,9 @@ class ReportController extends Controller
 	}
 
 	private function handleClientReports($report, $detail, $clientService, $serviceProcedureId) {
-		$clientServiceId = $clientService['id'];
-
 		$clientReport = $report->clientReports()->create([
         	'detail' => $detail,
-	        'client_service_id' => $clientServiceId,
+	        'client_service_id' => $clientService['id'],
 	        'service_procedure_id' => $serviceProcedureId
 	    ]);
 
@@ -392,11 +390,13 @@ class ReportController extends Controller
 			->first();
 
 			if( $old ) {
-				if( $old->count == 0 ) {
+				$oldCount = $old->count;
+
+				if( $oldCount == 0 ) {
 					$old->delete();
 				}
 
-				if( $old->count == 0 || ($old->count != 0 && $document['count'] != 0) ) {
+				if( $oldCount == 0 || ($oldCount != 0 && $document['count'] != 0) ) {
 					$clientReport->clientReportDocuments()->create([
 					 	'document_id' => $document['id'],
 					 	'count' => $document['count']
@@ -516,9 +516,13 @@ class ReportController extends Controller
 					if( $documentId ) {
 						$onHand = OnHandDocument::where('client_id', $cs->client_id)
 							->where('document_id', $documentId)->first();
-
+						
 						if( $onHand ) {
-							$onHand->increment('count', $document['count']);
+							$isUnique = Document::findOrFail($documentId)->is_unique;
+
+							if( $isUnique == 0 ) {
+								$onHand->increment('count', $document['count']);
+							}
 						} else {
 							$query = OnHandDocument::create([
 								'client_id' => $cs->client_id,
@@ -632,22 +636,25 @@ class ReportController extends Controller
 
 		SuggestedDocument::where('service_procedure_id', $serviceProcedureId)
 			->whereNotIn('document_id', $selectedDocuments)
-			->decrement('points', 5);
-
-		$serviceProcedure = ServiceProcedure::with('action', 'category')->findOrFail($serviceProcedureId);
-		$action = $serviceProcedure->action->name;
+			->update(['points' => -1]);
 
 		foreach( $documents as $document ) {
-			SuggestedDocument::updateOrCreate(
-				[
-				   	'service_procedure_id' => $serviceProcedureId, 
-				    'document_id' => $document['id']
-				],
-				[
-				    'points' => DB::raw('points + 1'),
-				    'required_count' => ($action == 'Filed') ? $document['required_count'] : $document['count']
-				]
-			);
+			if( $document['count'] > 0 ) {
+				$suggestedDocument = SuggestedDocument::where('service_procedure_id', $serviceProcedureId)
+					->where('document_id', $document['id'])->first();
+
+				if( $suggestedDocument ) {
+					if( $suggestedDocument->points != 4 ) {
+						$suggestedDocument->increment('points', 1);
+					}
+				} else {
+					SuggestedDocument::create([
+						'service_procedure_id' => $serviceProcedureId,
+						'document_id' => $document['id'],
+						'points' => 1
+					]);
+				}
+			}
 		}
 	}
 
