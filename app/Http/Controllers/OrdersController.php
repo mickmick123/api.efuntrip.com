@@ -105,7 +105,7 @@ class OrdersController extends Controller
     }
 
     public function products($cat_id){
-        $prods = Product::where('category_id',$cat_id)->get();
+        $prods = Product::where('category_id', $cat_id)->get();
 
         $response['status'] = 'Success';
         $response['code'] = 200;
@@ -136,6 +136,20 @@ class OrdersController extends Controller
             );
         }
        
+        return Response::json($response);
+    }
+
+
+    public function getCategoryDetails($cat_id){
+        $cats = DB::table('product_parent_category')
+                ->leftJoin('product_category', 'product_category.category_id', '=', 'product_parent_category.category_id')
+                ->where('product_parent_category.id', $cat_id)
+                ->get();
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $cats;
+
         return Response::json($response);
     }
 
@@ -196,6 +210,50 @@ class OrdersController extends Controller
             $parentCateg->save();
 
             $this->uploadCategoryAvatar($request);
+
+            
+            
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+            $response['data'] = explode('.', $request->imgName);
+        }
+
+
+        return Response::json($response);
+    }
+
+
+    public function updateCategory(Request $request){
+        $validator = Validator::make($request->all(), [
+            'name' => 'required',
+            'name_chinese' => 'required',
+        ]);
+
+        if($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+            ProductCategory::where('category_id', $request->category_id)
+                            ->update([
+                                'name'=>$request->name,
+                                'name_chinese'=>$request->name_chinese,
+                                'description'=>$request->description,
+                            ]);
+
+            if($request->imgName !== null) {
+                ProductCategory::where('category_id', $request->category_id)
+                                ->update([
+                                    'category_img'=>str_replace(' ', '_', $request->name) . date('Ymd_His') . '.' . explode('.', $request->imgName)[1]
+                                ]);
+                $this->uploadCategoryAvatar($request);
+            }
+
+            ProductParentCategory::where('id', $request->id)
+                                ->update([
+                                    'category_id'=>$request->category_id,
+                                    'parent_id'=>$request->category_parent_id
+                                ]);
 
             
             
