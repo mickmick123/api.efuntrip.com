@@ -575,6 +575,22 @@ class ReportController extends Controller
 				if( $pendingDocumentsCount == 0 ) {
 					$cs = ClientService::findOrFail($clientServiceId);
 
+					// Log
+					if( $cs->status != $statusUponCompletion ) {
+						$detail = 'Service status is ' . $statusUponCompletion . '.';
+
+						Log::create([
+				        	'client_service_id' => $cs->id,
+				        	'client_id' => $cs->client_id,
+				        	'group_id' => $cs->group_id,
+				        	'service_procedure_id' => $serviceProcedureId,
+				        	'processor_id' => Auth::user()->id,
+				        	'log_type' => 'Action',
+				        	'detail' => $detail,
+				        	'log_date' => Carbon::now()->toDateString()
+				        ]);
+					}
+
 					$arr = ['status' => $statusUponCompletion];
 
 					$action = $serviceProcedure->action->name;
@@ -604,6 +620,22 @@ class ReportController extends Controller
 					} elseif( $conversionOfStatus == 2 ) {
 						$statusUponCompletion = 'pending';
 					}
+				}
+
+				// Log
+				if( $cs->status != $statusUponCompletion ) {
+					$detail = 'Service status is ' . $statusUponCompletion . '.';
+
+					Log::create([
+			        	'client_service_id' => $cs->id,
+			        	'client_id' => $cs->client_id,
+			        	'group_id' => $cs->group_id,
+			        	'service_procedure_id' => $serviceProcedureId,
+			        	'processor_id' => Auth::user()->id,
+			        	'log_type' => 'Action',
+			        	'detail' => $detail,
+			        	'log_date' => Carbon::now()->toDateString()
+			        ]);
 				}
 
 				$cs->update(['status' => $statusUponCompletion]);
