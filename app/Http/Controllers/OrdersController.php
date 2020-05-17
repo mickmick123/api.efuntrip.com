@@ -115,9 +115,36 @@ class OrdersController extends Controller
 
     // new api for app
     public function getProductCategories($cat_id){
-        $cats = DB::table('product_parent_category')
+        $cats = ProductParentCategory::with('subCategories')
                 ->leftJoin('product_category', 'product_category.category_id', '=', 'product_parent_category.category_id')
                 ->where('product_parent_category.parent_id', $cat_id)
+                ->where('product_category.status', '1')
+                ->get();
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $cats;
+
+        $catCount = DB::table('product_parent_category')->where('parent_id', $cat_id)->count();
+
+        $hasProd = DB::table('product')->where('product.category_id', $cat_id)->count();
+
+        if($catCount > 0 && $hasProd > 0) {
+            $response['data'][] = array( 
+                'id' => $cat_id,
+                'parent_id' => $cat_id,
+                'name' => 'Others'
+            );
+        }
+       
+        return Response::json($response);
+    }
+
+    public function getCategoriesWithProducts($cat_id){
+        $cats = ProductParentCategory::with('products', 'subCategories.products')
+                ->leftJoin('product_category', 'product_category.category_id', '=', 'product_parent_category.category_id')
+                ->where('product_parent_category.parent_id', $cat_id)
+                ->where('product_category.status', '1')
                 ->get();
 
         $response['status'] = 'Success';
@@ -169,6 +196,7 @@ class OrdersController extends Controller
         $cats = ProductParentCategory::with('subCategories')
                 ->leftJoin('product_category', 'product_category.category_id', '=', 'product_parent_category.category_id')
                 ->where('parent_id', '0')
+                ->where('product_category.status', '1')
                 ->get();
 
         $response['status'] = 'Success';
@@ -197,6 +225,7 @@ class OrdersController extends Controller
             $categ->name_chinese = $request->name_chinese;
             $categ->description = $request->description;
             $categ->category_img = str_replace(' ', '_', $request->name) . date('Ymd_His') . '.' . explode('.', $request->imgName)[1];
+            $categ->status = 1;
             $categ->save();
 
             $parentCateg = new ProductParentCategory;
@@ -241,7 +270,7 @@ class OrdersController extends Controller
                                 'description'=>$request->description,
                             ]);
 
-            if($request->imgName !== null) {
+            if($request->imgBase64 !== null) {
                 ProductCategory::where('category_id', $request->category_id)
                                 ->update([
                                     'category_img'=>str_replace(' ', '_', $request->name) . date('Ymd_His') . '.' . explode('.', $request->imgName)[1]
@@ -267,6 +296,16 @@ class OrdersController extends Controller
     }
 
 
+    public function removeCategory(Request $request) {
+        ProductCategory::where('category_id', $request->category_id)->update([ 'status' => 0 ]);
+
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        return Response::json($response);
+    }
+
+
     public function uploadCategoryAvatar($data) {
         $img64 = $data->imgBase64;
 
@@ -274,7 +313,7 @@ class OrdersController extends Controller
         list(, $img64) = explode(',', $img64); 
         
         if($img64!=""){ // storing image in storage/app/public Folder 
-                \Storage::disk('public')->put('storage/products/' . str_replace(' ', '_', $data->name) . date('Ymd_His') . '.' . explode('.', $data->imgName)[1], base64_decode($img64)); 
+                \Storage::disk('public')->put('products/' . str_replace(' ', '_', $data->name) . date('Ymd_His') . '.' . explode('.', $data->imgName)[1], base64_decode($img64)); 
         } 
     }
 

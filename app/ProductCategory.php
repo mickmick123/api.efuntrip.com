@@ -9,7 +9,7 @@ class ProductCategory extends Model
 
     protected $table = 'product_category';
 
-    protected $fillable = ['category_id','name','name_chinese','description','category_img'];
+    protected $fillable = ['category_id','name','name_chinese','description','category_img', 'status'];
 
     public $timestamps = false;
 
