@@ -200,7 +200,7 @@ class ReportController extends Controller
 			})
 			->with([
 				'serviceProcedures' => function($query) {
-					$query->select(['id', 'service_id', 'name', 'step', 'action_id', 'category_id', 'is_required', 'required_service_procedure', 'documents_mode', 'documents_to_display'])->orderBy('step');
+					$query->select(['id', 'service_id', 'name', 'step', 'action_id', 'category_id', 'is_required', 'required_service_procedure', 'documents_mode', 'documents_to_display', 'is_suggested_count'])->orderBy('step');
 				},
 				'serviceProcedures.action' => function($query) {
 					$query->select(['id', 'name']);
@@ -209,7 +209,7 @@ class ReportController extends Controller
 					$query->select(['id', 'name']);
 				},
 				'serviceProcedures.suggestedDocuments' => function($query) {
-					$query->select(['id', 'service_procedure_id', 'document_id', 'points'])->where('points', '>', 0);
+					$query->select(['id', 'service_procedure_id', 'document_id', 'points', 'suggested_count'])->where('points', '>', 0);
 				},
 				'serviceProcedures.suggestedDocuments.document' => function($query) {
 					$query->select(['id', 'title', 'shorthand_name', 'is_unique', 'is_company_document']);
@@ -575,7 +575,7 @@ class ReportController extends Controller
 				if( $pendingDocumentsCount == 0 ) {
 					$cs = ClientService::findOrFail($clientServiceId);
 
-					// Log
+					// Additional Log
 					if( $cs->status != $statusUponCompletion ) {
 						$detail = 'Service status is ' . $statusUponCompletion . '.';
 
@@ -622,7 +622,7 @@ class ReportController extends Controller
 					}
 				}
 
-				// Log
+				// Additional Log
 				if( $cs->status != $statusUponCompletion ) {
 					$detail = 'Service status is ' . $statusUponCompletion . '.';
 
@@ -671,21 +671,24 @@ class ReportController extends Controller
 			->update(['points' => -1]);
 
 		foreach( $documents as $document ) {
-			if( $document['count'] > 0 ) {
-				$suggestedDocument = SuggestedDocument::where('service_procedure_id', $serviceProcedureId)
-					->where('document_id', $document['id'])->first();
+			$suggestedDocument = SuggestedDocument::where('service_procedure_id', $serviceProcedureId)
+				->where('document_id', $document['id'])->first();
 
-				if( $suggestedDocument ) {
-					if( $suggestedDocument->points != 4 ) {
-						$suggestedDocument->increment('points', 1);
-					}
-				} else {
-					SuggestedDocument::create([
-						'service_procedure_id' => $serviceProcedureId,
-						'document_id' => $document['id'],
-						'points' => 1
-					]);
+			if( $suggestedDocument ) {
+				if( $suggestedDocument->points != 4 ) {
+					$suggestedDocument->increment('points', 1);
 				}
+
+				if( $document['count'] != 0 ) {
+					$suggestedDocument->update(['suggested_count' => $document['count']]);
+				}
+			} else {
+				SuggestedDocument::create([
+					'service_procedure_id' => $serviceProcedureId,
+					'document_id' => $document['id'],
+					'points' => 1,
+					'suggested_count' => ($document['count'] != 0) ? $document['count'] : null
+				]);
 			}
 		}
 	}

@@ -88,7 +88,8 @@ class ServiceProcedureController extends Controller
                     'required_service_procedure' => $request->required_service_procedure,
                     'status_upon_completion' => $request->status_upon_completion,
                     'documents_mode' => $request->documents_mode,
-                    'documents_to_display' => $request->documents_to_display
+                    'documents_to_display' => $request->documents_to_display,
+                    'is_suggested_count' => $request->is_suggested_count
         		]);
 
                 if( $serviceProcedure->step != null && $request->is_required == 0 ) {
@@ -149,7 +150,8 @@ class ServiceProcedureController extends Controller
                 'required_service_procedure' => $request->required_service_procedure,
                 'status_upon_completion' => $request->status_upon_completion,
                 'documents_mode' => $request->documents_mode,
-                'documents_to_display' => $request->documents_to_display
+                'documents_to_display' => $request->documents_to_display,
+                'is_suggested_count' => $request->is_suggested_count
         	]);
 
             if( $request->is_required == 1 ) {
