@@ -557,7 +557,7 @@ public function getCommissionLogs($client_id, $group_id) {
 
 
     public function getAllLogs($client_service_id) {
-        $logs = Log::with('documents')->where('client_service_id',$client_service_id)
+        $logs = Log::with('documents', 'serviceProcedure')->where('client_service_id',$client_service_id)
             ->orderBy('id','desc')->get();
 
         foreach( $logs as $log ) {

@@ -429,11 +429,17 @@ class ReportController extends Controller
 			// For report with documents
 			if( count($documents) > 0 ) {
 				$logType = 'Document';
+
+				if( $actionName == 'Released' && $categoryName == 'Client' ) {
+					if( strlen(trim($clientService['recipient'])) > 0 ) {
+						$detail .= '\'s representative ' . $clientService['recipient'];
+					}
+				}
 			} 
 
 			// For conversion of status
 			elseif( $actionName == 'Conversion' && $categoryName == 'Status' ) {
-				$logType = 'Action';
+				$logType = 'Status';
 
 				if( $report['extras']['conversion_of_status'] && $report['extras']['conversion_of_status_reason'] ) {
 					// $report['extras']['conversion_of_status']
@@ -463,7 +469,45 @@ class ReportController extends Controller
 
 	        // Document log
 	        foreach( $documents as $document ) {
-	        	$log->documents()->attach($document['id'], ['count' => $document['count']]);
+	        	$previousOnHand = 0;
+
+	        	$onHandDocument = OnHandDocument::where('client_id', $cs->client_id)
+	        		->where('document_id', $document['id'])->first();
+
+	        	if( $onHandDocument ) {
+	        		$previousOnHand = $onHandDocument->count;
+	        	}
+
+	        	$log->documents()->attach($document['id'], [
+	        		'count' => $document['count'], 
+	        		'previous_on_hand' => $previousOnHand
+	        	]);
+	        }
+
+	        // Missing documents
+	        $clientReports = ClientReport::with(['clientReportDocuments' => function($query) {
+	        		$query->where('count', 0);
+	        	}])
+	        	->where('client_service_id', $cs->id)
+	        	->where('service_procedure_id', $serviceProcedure->id)
+	        	->get();
+
+	        foreach( $clientReports as $clientReport ) {
+	        	foreach( $clientReport->clientReportDocuments as $document ) {
+	        		$previousOnHand = 0;
+
+		        	$onHandDocument = OnHandDocument::where('client_id', $cs->client_id)
+		        		->where('document_id', $document['document_id'])->first();
+
+		        	if( $onHandDocument ) {
+		        		$previousOnHand = $onHandDocument->count;
+		        	}
+
+		        	$log->documents()->attach($document['document_id'], [
+		        		'count' => $document['count'],
+		        		'previous_on_hand' => $previousOnHand
+		        	]);
+	        	}
 	        }
 		}
 	}
@@ -577,7 +621,7 @@ class ReportController extends Controller
 
 					// Additional Log
 					if( $cs->status != $statusUponCompletion ) {
-						$detail = 'Service status is ' . $statusUponCompletion . '.';
+						$detail = 'Documents complete, service is now ' . $statusUponCompletion . '.';
 
 						Log::create([
 				        	'client_service_id' => $cs->id,
@@ -585,7 +629,7 @@ class ReportController extends Controller
 				        	'group_id' => $cs->group_id,
 				        	'service_procedure_id' => $serviceProcedureId,
 				        	'processor_id' => Auth::user()->id,
-				        	'log_type' => 'Action',
+				        	'log_type' => 'Status',
 				        	'detail' => $detail,
 				        	'log_date' => Carbon::now()->toDateString()
 				        ]);
@@ -624,7 +668,7 @@ class ReportController extends Controller
 
 				// Additional Log
 				if( $cs->status != $statusUponCompletion ) {
-					$detail = 'Service status is ' . $statusUponCompletion . '.';
+					$detail = 'Service is now ' . $statusUponCompletion . '.';
 
 					Log::create([
 			        	'client_service_id' => $cs->id,
@@ -632,7 +676,7 @@ class ReportController extends Controller
 			        	'group_id' => $cs->group_id,
 			        	'service_procedure_id' => $serviceProcedureId,
 			        	'processor_id' => Auth::user()->id,
-			        	'log_type' => 'Action',
+			        	'log_type' => 'Status',
 			        	'detail' => $detail,
 			        	'log_date' => Carbon::now()->toDateString()
 			        ]);
@@ -679,15 +723,13 @@ class ReportController extends Controller
 					$suggestedDocument->increment('points', 1);
 				}
 
-				if( $document['count'] != 0 ) {
-					$suggestedDocument->update(['suggested_count' => $document['count']]);
-				}
+				$suggestedDocument->update(['suggested_count' => $document['count']]);
 			} else {
 				SuggestedDocument::create([
 					'service_procedure_id' => $serviceProcedureId,
 					'document_id' => $document['id'],
 					'points' => 1,
-					'suggested_count' => ($document['count'] != 0) ? $document['count'] : null
+					'suggested_count' => $document['count']
 				]);
 			}
 		}

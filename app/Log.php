@@ -32,7 +32,7 @@ class Log extends Model
     }
 
     public function documents() {
-    	return $this->belongsToMany('App\Document', 'document_log', 'log_id', 'document_id')->withPivot('count', 'created_at', 'updated_at');
+    	return $this->belongsToMany('App\Document', 'document_log', 'log_id', 'document_id')->withPivot('count', 'previous_on_hand', 'created_at', 'updated_at');
     }
 
 }
