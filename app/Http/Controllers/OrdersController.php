@@ -104,8 +104,8 @@ class OrdersController extends Controller
         return Response::json($response);
     }
 
-    public function products($cat_id){
-        $prods = Product::where('category_id', $cat_id)->get();
+    public function products($cat_id, $perPage = 20){
+        $prods = Product::where('category_id', $cat_id)->paginate();
 
         $response['status'] = 'Success';
         $response['code'] = 200;
@@ -197,6 +197,7 @@ class OrdersController extends Controller
                 ->leftJoin('product_category', 'product_category.category_id', '=', 'product_parent_category.category_id')
                 ->where('parent_id', '0')
                 ->where('product_category.status', '1')
+                ->orderBy('product_category.name', 'asc')
                 ->get();
 
         $response['status'] = 'Success';
@@ -298,6 +299,16 @@ class OrdersController extends Controller
 
     public function removeCategory(Request $request) {
         ProductCategory::where('category_id', $request->category_id)->update([ 'status' => 0 ]);
+
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        return Response::json($response);
+    }
+
+
+    public function moveCategory(Request $request) {
+        ProductParentCategory::where('id', $request->id)->update([ 'parent_id' => $request->parent_id ]);
 
 
         $response['status'] = 'Success';

@@ -9,11 +9,13 @@ use Illuminate\Http\Request;
 	Route::get('/get-category-and-products/{category_id}', 'OrdersController@getCategoriesWithProducts');
 	Route::get('/get-category-details/{category_id}', 'OrdersController@getCategoryDetails');
 	Route::get('/get-products/{category_id}', 'OrdersController@getProducts');
+	
 	Route::get('/get-all-product-category', 'OrdersController@getAllCategories');
 	
 	Route::post('/add-product-category', 'OrdersController@storeCategory');
 	Route::post('/update-product-category', 'OrdersController@updateCategory');
 	Route::post('/remove-product-category', 'OrdersController@removeCategory');
+	Route::post('/move-product-category', 'OrdersController@moveCategory');
 
 Route::middleware('auth:api')->group(function() {
 

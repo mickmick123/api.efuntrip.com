@@ -16,7 +16,7 @@ class ProductParentCategory extends Model
     public function subCategories()
     {
         return $this->hasMany(self::class, 'parent_id', 'id')->with('products', 'subCategories.products')
-        		->leftJoin('product_category', 'product_category.category_id', '=', 'product_parent_category.category_id');
+        		->leftJoin('product_category', 'product_category.category_id', '=', 'product_parent_category.category_id')->orderBy('product_category.name', 'asc');
     }
 
     public function subCategoriesWithProducts()
