@@ -489,7 +489,7 @@ class ReportController extends Controller
 	        }
 
 	        // Missing documents
-	        if( $actionName != 'Generate Photocopies' && $categoryName != 'Documents' ) {
+	        if( $actionName != 'Generate Photocopies' && $actionName != 'Filed' ) {
 	        	$clientReports = ClientReport::with(['clientReportDocuments' => function($query) {
 		        		$query->where('count', 0);
 		        	}])
