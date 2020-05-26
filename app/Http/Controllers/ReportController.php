@@ -468,6 +468,10 @@ class ReportController extends Controller
 	        ]);
 
 	        // Document log
+	        if( $actionName == 'Generate Photocopies' && $categoryName == 'Documents' ) {
+	        	$documents = $this->convertToPhotocopyDocuments($documents);
+	        }
+
 	        foreach( $documents as $document ) {
 	        	$previousOnHand = 0;
 
@@ -485,31 +489,61 @@ class ReportController extends Controller
 	        }
 
 	        // Missing documents
-	        $clientReports = ClientReport::with(['clientReportDocuments' => function($query) {
-	        		$query->where('count', 0);
-	        	}])
-	        	->where('client_service_id', $cs->id)
-	        	->where('service_procedure_id', $serviceProcedure->id)
-	        	->get();
+	        if( $actionName != 'Generate Photocopies' && $categoryName != 'Documents' ) {
+	        	$clientReports = ClientReport::with(['clientReportDocuments' => function($query) {
+		        		$query->where('count', 0);
+		        	}])
+		        	->where('client_service_id', $cs->id)
+		        	->where('service_procedure_id', $serviceProcedure->id)
+		        	->get();
 
-	        foreach( $clientReports as $clientReport ) {
-	        	foreach( $clientReport->clientReportDocuments as $document ) {
-	        		$previousOnHand = 0;
+		        foreach( $clientReports as $clientReport ) {
+		        	foreach( $clientReport->clientReportDocuments as $document ) {
+		        		$previousOnHand = 0;
 
-		        	$onHandDocument = OnHandDocument::where('client_id', $cs->client_id)
-		        		->where('document_id', $document['document_id'])->first();
+			        	$onHandDocument = OnHandDocument::where('client_id', $cs->client_id)
+			        		->where('document_id', $document['document_id'])->first();
 
-		        	if( $onHandDocument ) {
-		        		$previousOnHand = $onHandDocument->count;
+			        	if( $onHandDocument ) {
+			        		$previousOnHand = $onHandDocument->count;
+			        	}
+
+			        	$log->documents()->attach($document['document_id'], [
+			        		'count' => $document['count'],
+			        		'previous_on_hand' => $previousOnHand
+			        	]);
 		        	}
-
-		        	$log->documents()->attach($document['document_id'], [
-		        		'count' => $document['count'],
-		        		'previous_on_hand' => $previousOnHand
-		        	]);
-	        	}
+		        }
 	        }
 		}
+	}
+
+	private function convertToPhotocopyDocuments($documents) {
+		$temp = [];
+
+	    foreach( $documents as $document ) {
+	       	$photocopyDocument = $this->getPhotocopyDocument($document['id']);
+
+	        if( $photocopyDocument ) {
+	        	$index = -1;
+		        foreach( $temp as $i => $t ) {
+		        	if( $t['id'] == $photocopyDocument->id ) {
+		        		$index = $i;
+		        	}
+		        }
+
+		        if( $index != -1 ) {
+		        	$temp[$index]['count'] += $document['count'];
+		        } else {
+		        	$temp[] = [
+			        	'id' => $photocopyDocument->id,
+			        	'count' => $document['count']
+			        ];
+		        }
+	        }
+	    }
+
+	    return $temp;
 	}
 
 	private function getPhotocopyDocument($id) {
