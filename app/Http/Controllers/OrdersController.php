@@ -105,7 +105,7 @@ class OrdersController extends Controller
     }
 
     public function products($cat_id, $perPage = 20){
-        $prods = Product::where('category_id', $cat_id)->paginate();
+        $prods = Product::where('category_id', $cat_id)->where('status', 1)->paginate();
 
         $response['status'] = 'Success';
         $response['code'] = 200;
@@ -189,6 +189,28 @@ class OrdersController extends Controller
         $response['code'] = 200;
         $response['data'] = $cats;
         
+        return Response::json($response);
+    }
+
+    public function checkProductsInOrderDetails($id) {
+        $prod = DB::table('order_details')
+                ->where('product_id', $id)
+                ->count();
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $prod;
+        
+        return Response::json($response);
+    }
+
+    public function removeProduct(Request $request) {
+        
+        DB::table('product')->where('product_id', $request->product_id)->update([ 'status' => 0 ]);
+
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
         return Response::json($response);
     }
 
@@ -642,10 +664,25 @@ class OrdersController extends Controller
             $prod->product_price = $request->price;
             $prod->product_name = $request->name;
             $prod->product_name_chinese = $request->name_chinese;
+            $prod->status = 1;
             $prod->save();
             $response['status'] = 'Success';
             $response['code'] = 200;
         }
+
+        return Response::json($response);
+    }
+
+    public function moveProduct(Request $request) {
+        DB::table('product')
+            ->where('product_id', $request->product_id)
+            ->update([
+                'category_id'=>$request->category_id
+            ]);
+
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
 
         return Response::json($response);
     }
@@ -684,8 +721,8 @@ class OrdersController extends Controller
         foreach($request->data as $item) {
             $imgData = [
                 'imgBase64' => $item['imgBase64'],
-                'file_path' => $id,
-                'img_name' => $item['file_path']
+                'file_path' => $request->id,
+                'img_name' => date('Ymd_His') . '_' . $item['file_path']
             ];
             $success = $this->uploadDocuments($imgData);
             // return $success;
@@ -693,7 +730,7 @@ class OrdersController extends Controller
                 $product = Product::where('product_id',$id)->first();
                 // return $product;
                 if($product){
-                    $product->product_img = $item['file_path'];
+                    $product->product_img = date('Ymd_His') . '_' . $item['file_path'];
                     $product->save();
                 }
                 return json_encode([
