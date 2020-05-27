@@ -655,7 +655,11 @@ class ReportController extends Controller
 
 					// Additional Log
 					if( $cs->status != $statusUponCompletion ) {
-						$detail = 'Documents complete, service is now ' . $statusUponCompletion . '.';
+						if( $statusUponCompletion == 'released' ) {
+							$detail = 'Service completed and all documents released.';
+						} else {
+							$detail = 'Documents complete, service is now ' . $statusUponCompletion . '.';
+						}
 
 						Log::create([
 				        	'client_service_id' => $cs->id,
