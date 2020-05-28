@@ -2354,7 +2354,7 @@ class ClientController extends Controller
 
     private function getClientTotalCost($id) {
         $clientTotalCost = ClientService::where('client_id', $id)
-            ->where('active', 1)->where('group_id', null)
+            ->where('active', 1)->where('group_id', null)->where('status','!=','cancelled')
             ->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
 
         $discount =  ClientTransaction::where('client_id', $id)->where('group_id', null)->where('type', 'Discount')

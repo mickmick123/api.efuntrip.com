@@ -92,7 +92,7 @@ class GroupController extends Controller
 
     private function getGroupTotalCost($id) {
         $groupTotalCost = ClientService::where('group_id', $id)
-            ->where('active', 1)
+            ->where('active', 1)->where('status','!=','cancelled')
             ->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
 
         $discount =  ClientTransaction::where('group_id', $id)->where('type', 'Discount')
