@@ -219,7 +219,7 @@ class GroupController extends Controller
                     (
                         Select date_format(max(cs.servdates),"%M %e, %Y") as latest_service, date_format(max(cs.servdates),"%Y%m%d") as latest_service2 ,cs.client_id,cs.group_id
                         from( SELECT STR_TO_DATE(created_at, "%Y-%m-%d") as servdates,
-                            group_id, active,client_id
+                            group_id, active,client_id, status
                             FROM client_services
                             ORDER BY servdates desc
                         ) as cs
