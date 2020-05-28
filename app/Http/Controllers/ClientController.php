@@ -235,7 +235,7 @@ class ClientController extends Controller
                             client_services as b
 
                         where
-                            b.active = 1
+                            b.active = 1 and b.status != "cancelled" 
                             and b.group_id is null
 
                         group by

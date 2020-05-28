@@ -223,7 +223,7 @@ class GroupController extends Controller
                             FROM client_services
                             ORDER BY servdates desc
                         ) as cs
-                        where cs.active = 1
+                        where cs.active = 1 and cs.status != "cancelled"
                         group by cs.group_id) as srv'),
                     'srv.group_id', '=', 'g.id')
             ->when($search != '', function ($q) use($search){
