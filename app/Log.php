@@ -9,7 +9,7 @@ class Log extends Model
 
     protected $table = 'logs';
 
-    protected $fillable = ['client_service_id', 'client_id', 'group_id', 'service_procedure_id', 'processor_id', 'log_type', 'log_group', 'detail', 'detail_cn', 'log_date'];
+    protected $fillable = ['client_service_id', 'client_id', 'group_id', 'service_procedure_id', 'processor_id', 'log_type', 'log_group', 'detail', 'detail_cn', 'label', 'log_date'];
 
     public function clientService() {
     	return $this->belongsTo('App\ClientService', 'client_service_id', 'id');

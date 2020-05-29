@@ -411,7 +411,7 @@ class ReportController extends Controller
 		}
 	}
 
-	private function handleLogDocumentLog($clientService, $report, $processorId) {
+	private function handleLogDocumentLog($clientService, $report, $processorId, $detail) {
 		// For report with documents
 		$documents = collect($clientService['documents'])->filter(function($item) {
 			return $item['count'] > 0;
@@ -424,7 +424,7 @@ class ReportController extends Controller
 
 		if( count($documents) > 0 || ($actionName == 'Conversion' && $categoryName == 'Status') ) {
 			$cs = ClientService::findOrFail($clientService['id']);
-			$detail = $serviceProcedure->name;
+			$label = $serviceProcedure->name;
 
 			// For report with documents
 			if( count($documents) > 0 ) {
@@ -432,7 +432,7 @@ class ReportController extends Controller
 
 				if( $actionName == 'Released' && $categoryName == 'Client' ) {
 					if( strlen(trim($clientService['recipient'])) > 0 ) {
-						$detail .= '\'s representative ' . $clientService['recipient'];
+						$label .= '\'s representative ' . $clientService['recipient'];
 					}
 				}
 			} 
@@ -446,12 +446,12 @@ class ReportController extends Controller
 						// 1 = pending to on process
 						// 2 = on process to pending
 					if( $report['extras']['conversion_of_status'] == 1 ) {
-						$detail .= ' from pending to on process ';
+						$label .= ' from pending to on process ';
 					} elseif( $report['extras']['conversion_of_status'] == 2 ) {
-						$detail .= ' from on process to pending ';
+						$label .= ' from on process to pending ';
 					}
 
-					$detail .= ' with a reason of ' . $report['extras']['conversion_of_status_reason'] . '.';
+					$label .= ' with a reason of ' . $report['extras']['conversion_of_status_reason'] . '.';
 				}
 			}
 
@@ -464,6 +464,7 @@ class ReportController extends Controller
 	        	'processor_id' => $processorId,
 	        	'log_type' => $logType,
 	        	'detail' => $detail,
+	        	'label' => $label,
 	        	'log_date' => Carbon::now()->toDateString()
 	        ]);
 
@@ -656,9 +657,11 @@ class ReportController extends Controller
 					// Additional Log
 					if( $cs->status != $statusUponCompletion ) {
 						if( $statusUponCompletion == 'released' ) {
-							$detail = 'Service completed and all documents released.';
+							$detail = 'Service[' . $cs->detail . '] completed and all documents released.';
+							$label = 'Service completed and all documents released.';
 						} else {
-							$detail = 'Documents complete, service is now ' . $statusUponCompletion . '.';
+							$detail = 'Documents complete, service[' . $cs->detail . '] is now ' . $statusUponCompletion . '.';
+							$label = 'Documents complete, service is now ' . $statusUponCompletion . '.';
 						}
 
 						Log::create([
@@ -669,6 +672,7 @@ class ReportController extends Controller
 				        	'processor_id' => Auth::user()->id,
 				        	'log_type' => 'Status',
 				        	'detail' => $detail,
+				        	'label' => $label,
 				        	'log_date' => Carbon::now()->toDateString()
 				        ]);
 					}
@@ -706,7 +710,8 @@ class ReportController extends Controller
 
 				// Additional Log
 				if( $cs->status != $statusUponCompletion ) {
-					$detail = 'Service is now ' . $statusUponCompletion . '.';
+					$detail = 'Service[' . $cs->detail . '] is now ' . $statusUponCompletion . '.';
+					$label = 'Service is now ' . $statusUponCompletion . '.';
 
 					Log::create([
 			        	'client_service_id' => $cs->id,
@@ -716,6 +721,7 @@ class ReportController extends Controller
 			        	'processor_id' => Auth::user()->id,
 			        	'log_type' => 'Status',
 			        	'detail' => $detail,
+			        	'label' => $label,
 			        	'log_date' => Carbon::now()->toDateString()
 			        ]);
 				}
@@ -793,7 +799,7 @@ class ReportController extends Controller
 	        	$this->handleClientReportDocuments($cr, $clientService, $report['service_procedure']);
 
 	        	// logs && document_log table
-	        	$this->handleLogDocumentLog($clientService, $report, $processorId);
+	        	$this->handleLogDocumentLog($clientService, $report, $processorId, $detail);
 
 	        	// on_hand_documents table
 	        	$this->handleOnHandDocuments($clientService, $report['service_procedure']);
