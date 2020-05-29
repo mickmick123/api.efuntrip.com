@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 	
 
 	Route::get('/get-product-category/{category_id}', 'OrdersController@getProductCategories');
-	Route::get('/get-category-and-products/{category_id}', 'OrdersController@getCategoriesWithProducts');
+	Route::get('/get-category-and-products/{category_id}/{page?}', 'OrdersController@getCategoriesWithProducts');
 	Route::get('/get-category-details/{category_id}', 'OrdersController@getCategoryDetails');
 	Route::get('/get-products/{category_id}', 'OrdersController@getProducts');
 	Route::get('/get-all-product-category', 'OrdersController@getAllCategories');

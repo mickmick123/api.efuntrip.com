@@ -104,12 +104,15 @@ class OrdersController extends Controller
         return Response::json($response);
     }
 
-    public function products($cat_id, $perPage = 20){
-        $prods = Product::where('category_id', $cat_id)->where('status', 1)->paginate();
+    public function products($cat_id, Request $request){
+        $perPage = $request->input('size');
+
+        $prods = Product::where('category_id', $cat_id)->where('status', 1)->paginate($perPage);
 
         $response['status'] = 'Success';
         $response['code'] = 200;
         $response['data'] = $prods;
+        // $response['data'] = $cat_id;
         return Response::json($response);
     }
 
@@ -651,6 +654,7 @@ class OrdersController extends Controller
             'price' => 'required',
             'name' => 'required',
             'name_chinese' => 'required',
+            'product_description' => 'required',
         ]);
 
         if($validator->fails()) {
@@ -664,6 +668,7 @@ class OrdersController extends Controller
             $prod->product_price = $request->price;
             $prod->product_name = $request->name;
             $prod->product_name_chinese = $request->name_chinese;
+            $prod->product_description = $request->product_description;
             $prod->status = 1;
             $prod->save();
             $response['status'] = 'Success';
@@ -709,6 +714,7 @@ class OrdersController extends Controller
             $prod->multiplier = $request->multiplier;
             $prod->product_name = $request->name;
             $prod->product_name_chinese = $request->name_chinese;
+            $prod->product_description = $request->product_description;
             $prod->save();
             $response['status'] = 'Success';
             $response['code'] = 200;
