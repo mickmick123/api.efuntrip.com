@@ -425,7 +425,10 @@ class GroupController extends Controller
             $group->leader = DB::table('users')->where('id', $group->leader_id)
                 ->select(array('first_name', 'last_name'))->first();
 
-            $group->contact = DB::table('contact_numbers')->where('group_id', $id)
+            // $group->contact = DB::table('contact_numbers')->where('group_id', $id)
+            //         ->select(array('number'))->first(); //here
+
+            $group->contact = DB::table('contact_numbers')->where('user_id', $group->leader_id)
                     ->select(array('number'))->first(); //here
 
 
@@ -532,8 +535,9 @@ class GroupController extends Controller
         	if( $group ) {
                 $oldName = $group->name;
                 $oldAddress = $group->address;
+                $leader_id = $group->leader_id;
                 $oldNumber = '';
-                $checkNum = ContactNumber::where('group_id', $id)->where('is_primary',1)->first();
+                $checkNum = ContactNumber::where('user_id', $leader_id)->where('is_primary',1)->first();
                 if($checkNum){
                     $oldNumber = $checkNum->number;
                 }
@@ -543,7 +547,7 @@ class GroupController extends Controller
         		$group->save();
 
         		ContactNumber::updateOrCreate(
-        			['group_id' => $id],
+        			['user_id' => $leader_id],
         			[
         				'number' => $request->contact_number['number'],
         				'is_primary' => 1,
