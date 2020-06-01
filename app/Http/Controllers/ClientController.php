@@ -892,8 +892,11 @@ class ClientController extends Controller
                         }
 
                         if($num_duplicate > 0) {
-                            $contact_error['contact_numbers.'.$key.'.number'] = ['The contact number has already been taken.'];
-                            $ce_count++;
+                            $contactUser = ContactNumber::where('user_id',$id)->first();
+                            if($contactUser->number != $contactNumber['number']){
+                                $contact_error['contact_numbers.'.$key.'.number'] = ['The contact number has already been taken.'];
+                                $ce_count++;
+                            }
                         }
 
                     }
