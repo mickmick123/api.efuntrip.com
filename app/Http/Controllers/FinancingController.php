@@ -22,11 +22,13 @@ class FinancingController extends Controller
     public function show($date, $branch_id) {
     	$date = str_replace("-", "/", $date);
     	$dateSelector = Carbon::parse($date.'/01')->toDateTimeString();
+      \Log::info($dateSelector);
     	$now = Carbon::now();
 
     	$checkInitial = DB::table('financing')->where('cat_type','initial')
     						->where('branch_id',$branch_id)
     						->whereRaw('MONTH(created_at) = MONTH("'.$dateSelector.'")')
+                ->whereRaw('YEAR(created_at) = YEAR("'.$dateSelector.'")')
     						->where('deleted_at',null)
     						->orderBy('created_at', 'DESC')->count();
 
@@ -41,6 +43,7 @@ class FinancingController extends Controller
     	$query = DB::table('financing as f')
     				->select(array('f.*'))
     				->whereRaw('MONTH(created_at) = MONTH("'.$dateSelector.'")')
+            ->whereRaw('YEAR(created_at) = YEAR("'.$dateSelector.'")')
     				->where('branch_id',$branch_id)
     				->where('deleted_at',null)->orderBy('created_at', 'DESC')
     				->paginate(5000);
@@ -71,6 +74,7 @@ class FinancingController extends Controller
       if($initial){
         
         $month = Carbon::parse($initial->created_at);
+        $y = $month->year;
         
         $cash = $initial->cash_balance;
         $metrobank = $initial->metrobank;
@@ -81,12 +85,18 @@ class FinancingController extends Controller
         $pnb = $initial->pnb;
 
         for($i=$month->month;$i<$now->month;$i++){
-
-          $query = DB::table('financing')->where('branch_id',$branch_id)->whereRaw('MONTH(created_at) = "'.$i.'"')->where('cat_type','!=','initial')->orderBy('created_at', 'desc')->where('deleted_at',null)->get();
+          \Log::info($i);
+          \Log::info($y);
+          $query = DB::table('financing')->where('branch_id',$branch_id)
+                    ->whereRaw('MONTH(created_at) = "'.$i.'"')
+                    ->whereRaw('YEAR(created_at) = "'.$y.'"')
+                    ->where('cat_type','!=','initial')
+                    ->orderBy('created_at', 'desc')->where('deleted_at',null)->get();
+                \Log::info($query);
             if(count($query)>0){
               foreach($query as $q){
                 $cash = (
-                			$cash+
+                			$cash +
                             + $q->cash_balance
                             + $q->cash_client_depo_payment
                             + ($q->cat_storage=='cash' ? $q->cash_client_process_budget_return:0)
