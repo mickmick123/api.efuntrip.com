@@ -26,6 +26,7 @@ class FinancingDeliveryController extends Controller
 
     	$checkInitial = DB::table('financing_delivery')->where('cat_type','initial')
     						->whereRaw('MONTH(created_at) = MONTH("'.$dateSelector.'")')
+                ->whereRaw('YEAR(created_at) = YEAR("'.$dateSelector.'")')
     						->where('deleted_at',null)
     						->orderBy('created_at', 'DESC')->count();
 
@@ -40,6 +41,7 @@ class FinancingDeliveryController extends Controller
     	$query = DB::table('financing_delivery as f')
     				->select(array('f.*'))
     				->whereRaw('MONTH(created_at) = MONTH("'.$dateSelector.'")')
+            ->whereRaw('YEAR(created_at) = YEAR("'.$dateSelector.'")')
     				->where('deleted_at',null)->orderBy('created_at', 'DESC')
     				->paginate(5000);
     	$ctr = 1;			
@@ -69,13 +71,13 @@ class FinancingDeliveryController extends Controller
       if($initial){
         
         $month = Carbon::parse($initial->created_at);
-        
+        $y = $month->year;
         $cash = $initial->cash_balance;
         $ch = $initial->ch_balance;
 
         for($i=$month->month;$i<$now->month;$i++){
 
-          $query = DB::table('financing_delivery')->whereRaw('MONTH(created_at) = "'.$i.'"')->where('cat_type','!=','initial')->orderBy('created_at', 'desc')->where('deleted_at',null)->get();
+          $query = DB::table('financing_delivery')->whereRaw('MONTH(created_at) = "'.$i.'"')->whereRaw('YEAR(created_at) = "'.$y.'"')->where('cat_type','!=','initial')->orderBy('created_at', 'desc')->where('deleted_at',null)->get();
             if(count($query)>0){
               foreach($query as $q){
                 $cash = (

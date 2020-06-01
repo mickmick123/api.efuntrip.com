@@ -22,7 +22,7 @@ class FinancingController extends Controller
     public function show($date, $branch_id) {
     	$date = str_replace("-", "/", $date);
     	$dateSelector = Carbon::parse($date.'/01')->toDateTimeString();
-      \Log::info($dateSelector);
+      // \Log::info($dateSelector);
     	$now = Carbon::now();
 
     	$checkInitial = DB::table('financing')->where('cat_type','initial')
@@ -85,14 +85,14 @@ class FinancingController extends Controller
         $pnb = $initial->pnb;
 
         for($i=$month->month;$i<$now->month;$i++){
-          \Log::info($i);
-          \Log::info($y);
+          // \Log::info($i);
+          // \Log::info($y);
           $query = DB::table('financing')->where('branch_id',$branch_id)
                     ->whereRaw('MONTH(created_at) = "'.$i.'"')
                     ->whereRaw('YEAR(created_at) = "'.$y.'"')
                     ->where('cat_type','!=','initial')
                     ->orderBy('created_at', 'desc')->where('deleted_at',null)->get();
-                \Log::info($query);
+                // \Log::info($query);
             if(count($query)>0){
               foreach($query as $q){
                 $cash = (
