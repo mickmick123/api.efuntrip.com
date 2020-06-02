@@ -732,47 +732,78 @@ public function members(Request $request, $id, $page = 20) {
     else if($spaces >0){
         $mode = 'fullname';
     }
+    // \Log::info($mode);
 
+    $mems = DB::table('group_user as g_u')
+                ->where('g_u.group_id', $id)
+                ->get();
 
+    $gids = $mems->pluck('user_id');
+    // \Log::info($gids);
 
-    $groups = DB::table('group_user as g_u')
-        ->select(DB::raw('g_u.id, CONCAT(u.first_name, " ", u.last_name) as name, g_u.user_id,  g_u.is_vice_leader, g_u.total_service_cost'))
-        ->leftjoin(DB::raw('(select * from users) as u'),'u.id','=','g_u.user_id')
-        ->orderBy('g_u.id', 'desc')
-        ->where('group_id', $id)
+    // $groups = DB::table('group_user as g_u')
+    //     ->select(DB::raw('g_u.id,g_u.group_id, CONCAT(u.first_name, " ", u.last_name) as name, g_u.user_id,  g_u.is_vice_leader, g_u.total_service_cost, u.id'))
+    //     ->leftjoin(DB::raw('(select * from users) as u'),'u.id','=','g_u.user_id')
+    //     ->whereIn('g_u.user_id', $gids)
+    //     ->when($mode == 'fullname', function ($query) use($q1,$q2){
+    //             return $query->where(function ($query2) use($q1,$q2) {
+    //                         $query2->where('u.first_name', '=', $q1)
+    //                               ->Where('u.last_name', '=', $q2);
+    //                     })->orwhere(function ($query2) use($q1,$q2) {
+    //                         $query2->where('u.last_name', '=', $q1)
+    //                               ->Where('u.first_name', '=', $q2);
+    //                     });
+    //     })
+    //     ->when($mode == 'id', function ($query) use($search){
+    //             return $query->where('u.id','LIKE','%'.$search.'%');
+    //     })
+    //     ->when($mode == 'name', function ($query) use($search){
+    //             return $query->where('first_name' ,'=', $search)
+    //                          ->orwhere('last_name' ,'=', $search);
+    //     })
+    //     ->when($sort != '', function ($q) use($sort){
+    //         $sort = explode('-' , $sort);
+    //         return $q->orderBy($sort[0], $sort[1]);
+    //     })
+    //     ->orderBy('g_u.id', 'desc')
+    //     ->paginate($page);
 
-        ->when($sort != '', function ($q) use($sort){
-            $sort = explode('-' , $sort);
-            return $q->orderBy($sort[0], $sort[1]);
-        })
+    $groups = DB::table('users as u')->select(DB::raw('u.id, CONCAT(u.first_name, " ", u.last_name) as name, g_u.is_vice_leader, g_u.total_service_cost, g_u.id as guid'))
+                    ->leftjoin(DB::raw('(select * from group_user) as g_u'),'g_u.user_id','=','u.id')
+                    ->whereIn('u.id', $gids)
+                    ->when($mode == 'fullname', function ($query) use($q1,$q2){
+                            return $query->where(function ($query2) use($q1,$q2) {
+                                        $query2->where('u.first_name', '=', $q1)
+                                              ->Where('u.last_name', '=', $q2);
+                                    })->orwhere(function ($query2) use($q1,$q2) {
+                                        $query2->where('u.last_name', '=', $q1)
+                                              ->Where('u.first_name', '=', $q2);
+                                    });
+                    })
+                    ->when($mode == 'id', function ($query) use($search){
+                            return $query->where('u.id','LIKE','%'.$search.'%');
+                    })
+                    ->when($mode == 'name', function ($query) use($search){
+                            return $query->where('u.first_name' ,'=', $search)
+                                         ->orwhere('u.last_name' ,'=', $search);
+                    })
+                    ->when($sort != '', function ($q) use($sort){
+                        $sort = explode('-' , $sort);
+                        return $q->orderBy($sort[0], $sort[1]);
+                    })
+                    ->paginate($page);
 
-        ->when($mode == 'fullname', function ($query) use($q1,$q2){
-                return $query->where(function ($query2) use($q1,$q2) {
-                            $query2->where('u.first_name', '=', $q1)
-                                  ->Where('u.last_name', '=', $q2);
-                        })->orwhere(function ($query2) use($q1,$q2) {
-                            $query2->where('u.last_name', '=', $q1)
-                                  ->Where('u.first_name', '=', $q2);
-                        });
-        })
-        ->when($mode == 'id', function ($query) use($search){
-                return $query->where('u.id','LIKE','%'.$search.'%');
-        })
-        ->when($mode == 'name', function ($query) use($search){
-                return $query->where('first_name' ,'=', $search)
-                             ->orwhere('last_name' ,'=', $search);
-        })
-        ->paginate($page);
+        // \Log::info($groups->pluck('id'));
 
         $response = $groups;
 
       $ctr=0;
       $temp = [];
 
-      foreach($groups->items() as $g){
+      foreach($groups as $g){
          $packs = DB::table('packages as p')->select(DB::raw('p.*,g.name as group_name'))
                     ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','p.group_id')
-                     ->where('client_id', $g->user_id)
+                     ->where('client_id', $g->id)
                      ->where('group_id', $id)
                     ->orderBy('id', 'desc')
                     ->get();
@@ -809,10 +840,10 @@ public function members(Request $request, $id, $page = 20) {
         }
 
 
-        $temp['id'] = $g->id;
+        $temp['id'] = $g->guid;
         $temp['name'] = $g->name;
         $temp['is_vice_leader'] = $g->is_vice_leader;
-        $temp['user_id'] = $g->user_id;
+        $temp['user_id'] = $g->id;
         $temp['total_service_cost'] = $totalServiceCost;
         $response[$ctr] =  $temp;
         $ctr++;
