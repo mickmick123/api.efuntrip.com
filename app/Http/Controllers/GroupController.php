@@ -732,7 +732,6 @@ public function members(Request $request, $id, $page = 20) {
     else if($spaces >0){
         $mode = 'fullname';
     }
-    // \Log::info($mode);
 
     $mems = DB::table('group_user as g_u')
                 ->where('g_u.group_id', $id)
@@ -772,20 +771,24 @@ public function members(Request $request, $id, $page = 20) {
                     ->leftjoin(DB::raw('(select * from group_user) as g_u'),'g_u.user_id','=','u.id')
                     ->whereIn('u.id', $gids)
                     ->when($mode == 'fullname', function ($query) use($q1,$q2){
-                            return $query->where(function ($query2) use($q1,$q2) {
+                        return $query->where(function ($query1) use($q1,$q2) {
+                            return $query1->where(function ($query2) use($q1,$q2) {
                                         $query2->where('u.first_name', '=', $q1)
                                               ->Where('u.last_name', '=', $q2);
                                     })->orwhere(function ($query2) use($q1,$q2) {
                                         $query2->where('u.last_name', '=', $q1)
                                               ->Where('u.first_name', '=', $q2);
                                     });
+                        });
                     })
                     ->when($mode == 'id', function ($query) use($search){
                             return $query->where('u.id','LIKE','%'.$search.'%');
                     })
                     ->when($mode == 'name', function ($query) use($search){
-                            return $query->where('u.first_name' ,'=', $search)
+                        return $query->where(function ($query2) use($search) {
+                            $query2->where('u.first_name' ,'=', $search)
                                          ->orwhere('u.last_name' ,'=', $search);
+                        });
                     })
                     ->when($sort != '', function ($q) use($sort){
                         $sort = explode('-' , $sort);
