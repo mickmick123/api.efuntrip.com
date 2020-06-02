@@ -19,7 +19,7 @@ class GroupServiceProfileController extends Controller
 
   public function allServices() {
     $parents = Service::where('parent_id', 0)->where('is_active', 1)->orderBy('detail')
-      ->select(array('id', 'parent_id', 'detail', DB::raw('SUM(cost + charge + tip + com_agent + com_client) as total_service_charge')))
+      ->select(array('id', 'parent_id', 'detail','is_active', DB::raw('SUM(cost + charge + tip + com_agent + com_client) as total_service_charge')))
       ->groupBy('id')
       ->get();
 
@@ -28,7 +28,7 @@ class GroupServiceProfileController extends Controller
             $services[] = $parent;
 
             $children = Service::where('parent_id', $parent->id)->where('is_active', 1)->orderBy('detail')
-        ->select(array('id', 'parent_id', 'detail', DB::raw('SUM(cost + charge + tip + com_agent + com_client) as total_service_charge')))
+        ->select(array('id', 'parent_id', 'detail','is_active', DB::raw('SUM(cost + charge + tip + com_agent + com_client) as total_service_charge')))
         ->groupBy('id')
         ->get();
 
@@ -61,7 +61,7 @@ class GroupServiceProfileController extends Controller
                                       ->orWhere('com_client', '>', 0);
                               })
                               ->pluck('service_id');
-          $profileServices = Service::where('is_active',1)->whereIn('id',$profileServiceIds)
+          $profileServices = Service::whereIn('id',$profileServiceIds)
                                 ->orwhere(function($query) {
                                     return $query->where('cost', 0)
                                         ->where('charge', 0)
