@@ -61,7 +61,15 @@ class GroupServiceProfileController extends Controller
                                       ->orWhere('com_client', '>', 0);
                               })
                               ->pluck('service_id');
-          $profileServices = Service::whereIn('id',$profileServiceIds)->get();
+          $profileServices = Service::whereIn('id',$profileServiceIds)
+                                ->orwhere(function($query) {
+                                    return $query->where('cost', 0)
+                                        ->where('charge', 0)
+                                        ->where('tip', 0)
+                                        ->where('com_agent', 0)
+                                        ->where('com_client', 0);
+                                })
+                                ->get();
 
           $response['status'] = 'Success';
           $response['data'] = [
