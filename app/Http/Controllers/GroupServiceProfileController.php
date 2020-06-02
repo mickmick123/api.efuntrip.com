@@ -61,7 +61,7 @@ class GroupServiceProfileController extends Controller
                                       ->orWhere('com_client', '>', 0);
                               })
                               ->pluck('service_id');
-          $profileServices = Service::whereIn('id',$profileServiceIds)
+          $profileServices = Service::whereIn('id',$profileServiceIds)->where('is_active',1)
                                 ->orwhere(function($query) {
                                     return $query->where('cost', 0)
                                         ->where('charge', 0)
