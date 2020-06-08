@@ -5,7 +5,6 @@ use Illuminate\Http\Request;
 // Visa app
 Route::get('get-all-clients', 'ClientController@getAllClients');
 Route::get('manage-clients', 'ClientController@manageClients');
-Route::get('{id}', 'ClientController@show');
 
 Route::get('get-clients-services/{id}/{tracking?}', 'ClientController@getClientServices');
 
@@ -42,6 +41,8 @@ Route::middleware('auth:api')->group(function() {
 	Route::post('delete-client-package', 'ClientController@deleteClientPackage');
 
 	Route::post('/', 'ClientController@store');
+
+	Route::get('{id}', 'ClientController@show');
 
 	Route::patch('{id}/update-risk', 'ClientController@updateRisk');
 
