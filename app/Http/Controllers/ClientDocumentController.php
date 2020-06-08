@@ -97,7 +97,7 @@ class ClientDocumentController extends Controller
 	public function getDocumentsByClientApp($id) {
         // $clientDocument = ClientDocument::where('client_id',$id)->get();
         $clientDocument = ClientDocument::from('client_documents as cd')
-                                // ->with('clientDocuments')
+                                ->with('clientDocuments')
                                 ->leftjoin('client_document_types', 'cd.client_document_type_id', '=', 'client_document_types.id')
                                 ->where('cd.client_id',$id)
                                 ->where('cd.status', 1)
