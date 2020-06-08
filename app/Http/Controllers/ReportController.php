@@ -823,4 +823,186 @@ class ReportController extends Controller
 		return Response::json($response);
 	}
 
+	private function handleStandAloneLogDocumentLog($action, $user, $documents) {
+		$processorId = Auth::user()->id;
+
+		$detail = $action;
+
+		foreach( $documents as $index => $document ) {
+			$documentTitle = Document::findOrFail($document['id'])->title;
+
+			$detail .= ' (' . $document['count'] . ')' . $documentTitle;
+
+			if( $index == count($documents) - 1 ) { 
+				$detail .= '.'; 
+			} else { 
+				$detail .= ', '; 
+			}
+		}
+
+		// logs
+		$log = Log::create([
+			'client_id' => $user['id'],
+			'processor_id' => $processorId,
+			'log_type' => 'Document',
+			'detail' => $detail,
+			'log_date' => Carbon::now()->toDateString()
+		]);
+
+		// document_log
+		foreach( $documents as $document ) {
+	        $previousOnHand = 0;
+
+	        $onHandDocument = OnHandDocument::where('client_id', $user['id'])
+	        	->where('document_id', $document['id'])->first();
+
+	        if( $onHandDocument ) {
+	        	$previousOnHand = $onHandDocument->count;
+	        }
+
+	        $log->documents()->attach($document['id'], [
+	        	'count' => $document['count'], 
+	        	'previous_on_hand' => $previousOnHand
+	        ]);
+	    }
+	}
+
+	private function handleStandAloneOnHandDocuments($action, $user) {
+		// on_hand_documents
+	    foreach( $user['documents'] as $document ) {
+	    	if( strpos($action, "Received documents") !== false ) {
+	    		$onHand = OnHandDocument::where('client_id', $user['id'])
+					->where('document_id', $document['id'])->first();
+							
+				if( $onHand ) {
+					$isUnique = Document::findOrFail($document['id'])->is_unique;
+
+					if( $isUnique == 0 ) {
+						$onHand->increment('count', $document['count']);
+					}
+				} else {
+					$query = OnHandDocument::create([
+						'client_id' => $user['id'],
+						'document_id' => $document['id'],
+						'count' => $document['count']
+					]);
+				}
+	    	} elseif( strpos($action, "Released documents") !== false ) {
+	    		$onHand = OnHandDocument::where('client_id', $user['id'])
+					->where('document_id', $document['id'])->first();
+
+				if( $onHand ) {
+					if( $onHand->count -  $document['count'] < 1 ) {
+						$onHand->update(['count' => 0]);
+						$onHand->delete();
+					} else {
+						$onHand->decrement('count', $document['count']);
+					}
+				}
+	    	} elseif( strpos($action, "Generate photocopies of documents") !== false ) {
+	    		$documentId = null;
+
+				$photocopyDocument = $this->getPhotocopyDocument($document['id']);
+
+				if( $photocopyDocument ) {
+					$documentId = $photocopyDocument->id;
+				}
+
+				if( $documentId ) {
+					$onHand = OnHandDocument::where('client_id', $user['id'])
+						->where('document_id', $documentId)->first();
+						
+					if( $onHand ) {
+						$isUnique = Document::findOrFail($documentId)->is_unique;
+
+						if( $isUnique == 0 ) {
+							$onHand->increment('count', $document['count']);
+						}
+					} else {
+						$query = OnHandDocument::create([
+							'client_id' => $user['id'],
+							'document_id' => $documentId,
+							'count' => $document['count']
+						]);
+					}
+				}
+	    	}
+	    }
+	}
+
+	public function receivedDocuments(Request $request) {
+		foreach( $request->users as $user ) {
+			$action = 'Received documents';
+
+	        $this->handleStandAloneLogDocumentLog($action, $user, $user['documents']);
+
+	        $this->handleStandAloneOnHandDocuments($action, $user);
+		}
+
+		$response['status'] = 'Success';
+		$response['code'] = 200;
+
+		return Response::json($response);
+	}
+
+	public function releasedDocuments(Request $request) {
+		foreach( $request->users as $user ) {
+	        $action = 'Released documents';
+			
+			if( strlen(trim($user['recipient'])) > 0 ) {
+				$action .= ' to client\'s representative ' . $user['recipient'];
+			}
+
+	        $this->handleStandAloneLogDocumentLog($action, $user, $user['documents']);
+
+	        $this->handleStandAloneOnHandDocuments($action, $user);
+		}
+
+		$response['status'] = 'Success';
+		$response['code'] = 200;
+
+		return Response::json($response);
+	}
+
+	public function generatePhotocopies(Request $request) {
+		foreach( $request->users as $user ) {
+	       	$action = 'Generate photocopies of documents';
+
+	       	$documents = $this->convertToPhotocopyDocuments($user['documents']);
+
+	        $this->handleStandAloneLogDocumentLog($action, $user, $documents);
+
+	        $this->handleStandAloneOnHandDocuments($action, $user);
+		}
+
+		$response['status'] = 'Success';
+		$response['code'] = 200;
+
+		return Response::json($response);
+	}
+
+	public function getDocuments() {
+		$documents = Document::select(['id', 'title', 'shorthand_name', 'is_unique', 'is_company_document'])->get();
+
+		$response['status'] = 'Success';
+		$response['data'] = [
+		    'documents' => $documents
+		];
+		$response['code'] = 200;
+
+		return Response::json($response);
+	}
+
+	public function getOnHandDocuments($id) {
+		$onHandDocuments = OnHandDocument::with('document')->where('client_id', $id)->get();
+
+		$response['status'] = 'Success';
+		$response['data'] = [
+		    'onHandDocuments' => $onHandDocuments
+		];
+		$response['code'] = 200;
+
+		return Response::json($response);
+	}
+
 }
