@@ -15,6 +15,10 @@ class ClientDocument extends Model
     	return $this->belongsTo('App\User', 'client_id', 'id');
     }
 
+    public function clientDocuments() {
+        return $this->hasMany('App\ClientDocument', 'client_document_type_id', 'client_document_type_id')->orderBy('id', 'desc');
+    }
+
     public function clientDocumentType() {
     	return $this->belongsTo('App\ClientDocumentType', 'client_document_type_id', 'id');
     }

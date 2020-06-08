@@ -2,9 +2,16 @@
 
 use Illuminate\Http\Request;
 
+// Visa app
+Route::get('get-all-clients', 'ClientController@getAllClients');
+Route::get('manage-clients', 'ClientController@manageClients');
+Route::get('{id}', 'ClientController@show');
+
+Route::get('get-clients-services/{id}/{tracking?}', 'ClientController@getClientServices');
+
 Route::middleware('auth:api')->group(function() {
 
-	Route::get('manage-clients', 'ClientController@manageClients');
+	// Route::get('manage-clients', 'ClientController@manageClients');
 
 	Route::get('get-pending-services/{perPage?}', 'ClientController@getPendingServices');
 
@@ -13,8 +20,6 @@ Route::middleware('auth:api')->group(function() {
 	Route::get('get-today-services/{perPage?}', 'ClientController@getTodayServices');
 
 	Route::get('manage-clients-paginate/{perPage?}', 'ClientController@manageClientsPaginate');
-
-	Route::get('get-clients-services/{id}/{tracking?}', 'ClientController@getClientServices');
 
 	Route::get('get-clients-packages/{id}', 'ClientController@getClientPackages');
 
@@ -38,8 +43,6 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::post('/', 'ClientController@store');
 
-	Route::get('{id}', 'ClientController@show');
-
 	Route::patch('{id}/update-risk', 'ClientController@updateRisk');
 
 	Route::patch('{id}', 'ClientController@update');
@@ -55,5 +58,8 @@ Route::middleware('auth:api')->group(function() {
 	Route::get('switch-client-cost-level/{client_id}/{service_profile_id?}', 'ClientController@switchCostLevel');
 
 	Route::get('get-documents-on-hand/{id}', 'ClientController@getDocumentsOnHand');
+
+
+	
 
 });

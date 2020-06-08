@@ -82,7 +82,27 @@ class ClientDocumentController extends Controller
         // $clientDocument = ClientDocument::where('client_id',$id)->get();
         $clientDocument = DB::table('client_documents as cd')
                                 ->leftjoin('client_document_types', 'cd.client_document_type_id', '=', 'client_document_types.id')
-                                ->where('cd.client_id',$id)->get();
+                                ->where('cd.client_id',$id)
+                                ->where('cd.status', 1)
+                                ->orderBy('cd.id', 'desc')
+                                ->get();
+
+        $response['status'] = 'Success';
+        $response['data'] = $clientDocument;
+        $response['code'] = 200;
+		
+        return Response::json($response);
+    }
+
+	public function getDocumentsByClientApp($id) {
+        // $clientDocument = ClientDocument::where('client_id',$id)->get();
+        $clientDocument = ClientDocument::from('client_documents as cd')->with('clientDocuments')
+                                ->leftjoin('client_document_types', 'cd.client_document_type_id', '=', 'client_document_types.id')
+                                ->where('cd.client_id',$id)
+                                ->where('cd.status', 1)
+                                ->orderBy('cd.id', 'desc')
+                                ->distinct('cd.client_document_type_id')
+                                ->get();
 
         $response['status'] = 'Success';
         $response['data'] = $clientDocument;
@@ -109,7 +129,7 @@ class ClientDocumentController extends Controller
             $documentType = ClientDocumentType::where('id', $item['client_document_type_id'])->first();
 
             $path = 'client-documents/' . $documentType->name . '/'.$item['file_path'];
-            
+
             $checkDuplicate = ClientDocument::where('client_id',$item['client_id'])
                                 ->where('client_document_type_id',$item['client_document_type_id'])
                                 ->where('file_path',$path)
@@ -153,6 +173,64 @@ class ClientDocumentController extends Controller
         ]);
     }
 
+    
+
+    public function uploadDocumentsByClientApp(Request $request, $id) {
+        $arrayTest = [];
+        $expired_at = ($request['expired_at'] === null) ? '' : $request['expired_at'];
+        $documentType = ClientDocumentType::where('id', $request['client_document_type_id'])->first();
+
+        
+        $checkDuplicate = ClientDocument::where('client_id',$request['client_id'])
+                            ->where('client_document_type_id',$request['client_document_type_id'])
+                            ->where('issued_at',$request['issued_at'])
+                            ->when($expired_at != '', function ($q) use($expired_at){
+                                return $q->where('expired_at',$expired_at);
+                            })
+                            ->count();
+
+        if($checkDuplicate > 0) {
+            ClientDocument::where('client_id',$request['client_id'])
+                            ->where('client_document_type_id',$request['client_document_type_id'])
+                            ->where('issued_at',$request['issued_at'])
+                            ->when($expired_at != '', function ($q) use($expired_at){
+                                return $q->where('expired_at',$expired_at);
+                            })
+                            ->delete();
+        }
+
+        
+        
+        foreach($request->images as $item) {
+            
+            $path = 'client-documents/' . $documentType->name . '/'.$item['file_path'];
+
+            ClientDocument::create([
+                'client_id' => $request['client_id'],
+                'client_document_type_id' => $request['client_document_type_id'], 
+                'file_path' => $path, 
+                'issued_at' => $request['issued_at'], 
+                'expired_at' => $expired_at
+            ]);
+    
+            $imgData = [
+                'imgBase64' => $item['imgBase64'],
+                'file_path' => $documentType->name,
+                'img_name' => $item['file_path']
+            ];
+    
+            $this->uploadDocuments($imgData);
+        }
+
+        
+
+        return json_encode([
+            'success' => true,
+            'message' => 'Successfully saved.',
+            'data' => $request->images
+        ]);
+    }
+
     public function deleteClientDocument(Request $request) {
         $data = $request->data;
         
@@ -169,7 +247,8 @@ class ClientDocumentController extends Controller
                             ->when($expired_at != '', function ($q) use($expired_at){
                                 return $q->where('expired_at',$expired_at);
                             })
-                            ->delete();
+                            ->update([ 'status' => 0 ]);
+                            // ->delete();
 
 
         if($clientResult) {

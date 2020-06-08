@@ -147,7 +147,7 @@ class ClientController extends Controller
                         group by cs.client_id) as srv'),
                     'srv.client_id', '=', 'u.id')
             ->where('role.role_id', '2')
-            ->orderBy('u.id', 'desc')
+            ->orderBy('u.first_name', 'asc')
             ->get();
 
 		$response['status'] = 'Success';
@@ -882,23 +882,24 @@ class ClientController extends Controller
                     }
 
                     $contact = ContactNumber::where('number','LIKE','%'.$number.'%')->get();
+                    $client_contact = ContactNumber::where('user_id', $id)->where('number','LIKE','%'.$number.'%')->count();
 
-                    if($contact) {
-                        $num_duplicate = 0;
-                        foreach($contact as $con) {
-                            if(strval ($con['user_id']) !== strval ($id)) {
-                              $num_duplicate++;
+
+                    if($client_contact === 0) {
+                        if($contact) {
+                            $num_duplicate = 0;
+                            foreach($contact as $con) {
+                                if(strval ($con['user_id']) !== strval ($id)) {
+                                  $num_duplicate++;
+                                }
                             }
-                        }
-
-                        if($num_duplicate > 0) {
-                            $contactUser = ContactNumber::where('user_id',$id)->first();
-                            if($contactUser->number != $contactNumber['number']){
+    
+                            if($num_duplicate > 0) {
                                 $contact_error['contact_numbers.'.$key.'.number'] = ['The contact number has already been taken.'];
                                 $ce_count++;
                             }
+    
                         }
-
                     }
                 }
             }
@@ -2503,6 +2504,18 @@ class ClientController extends Controller
         $response['data'] = [
             'onHandDocuments' => $onHandDocuments
         ];
+        $response['code'] = 200;
+
+        return Response::json($response); 
+    }
+
+
+    /*** Visa App ***/
+    public function getAllClients() {
+        $clients = DB::table('users')->get();
+
+        $response['status'] = 'Success';
+        $response['data'] = $clients;
         $response['code'] = 200;
 
         return Response::json($response); 
