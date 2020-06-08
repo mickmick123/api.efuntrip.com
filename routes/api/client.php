@@ -36,8 +36,6 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::post('/', 'ClientController@store');
 
-	Route::get('{id}', 'ClientController@show');
-
 	Route::patch('{id}/update-risk', 'ClientController@updateRisk');
 
 	Route::patch('{id}', 'ClientController@update');
