@@ -97,7 +97,9 @@ class ClientDocumentController extends Controller
 	public function getDocumentsByClientApp($id) {
         // $clientDocument = ClientDocument::where('client_id',$id)->get();
         $clientDocument = ClientDocument::from('client_documents as cd')
-                                ->with('clientDocuments')
+                                ->with(array('clientDocuments'=>function($query) use ($id){
+                                    $query->select()->where('client_id',$id);
+                                }))
                                 ->leftjoin('client_document_types', 'cd.client_document_type_id', '=', 'client_document_types.id')
                                 ->where('cd.client_id',$id)
                                 ->where('cd.status', 1)
@@ -158,7 +160,8 @@ class ClientDocumentController extends Controller
                 'client_document_type_id' => $item['client_document_type_id'], 
                 'file_path' => $path, 
                 'issued_at' => $item['issued_at'], 
-                'expired_at' => $expired_at
+                'expired_at' => $expired_at,
+                'status' => '1'
             ]);
 
             $imgData = [
@@ -202,27 +205,45 @@ class ClientDocumentController extends Controller
                             ->delete();
         }
 
+        if($request['id'] !== null && $request['id'] !== '') {
+            
+            $checkDuplicate2 = ClientDocument::where('id',$request['id'])
+                                ->count();
+
+
+            if($checkDuplicate2 > 0) {
+                ClientDocument::where('id',$request['id'])
+                                ->delete();
+            }
+        }
         
         
         foreach($request->images as $item) {
             
-            $path = 'client-documents/' . $documentType->name . '/'.$item['file_path'];
+            if($item['imgBase64'] !== null && $item['imgBase64'] !== '') {
+                $path = 'client-documents/' . $documentType->name . '/'.$item['file_path'];
+            } else {
+                $path = $item['file_path'];
+            }
 
             ClientDocument::create([
                 'client_id' => $request['client_id'],
                 'client_document_type_id' => $request['client_document_type_id'], 
                 'file_path' => $path, 
                 'issued_at' => $request['issued_at'], 
-                'expired_at' => $expired_at
+                'expired_at' => $expired_at,
+                'status' => 1
             ]);
-    
-            $imgData = [
-                'imgBase64' => $item['imgBase64'],
-                'file_path' => $documentType->name,
-                'img_name' => $item['file_path']
-            ];
-    
-            $this->uploadDocuments($imgData);
+            
+            if($item['imgBase64'] !== null && $item['imgBase64'] !== '') {
+                $imgData = [
+                    'imgBase64' => $item['imgBase64'],
+                    'file_path' => $documentType->name,
+                    'img_name' => $item['file_path']
+                ];
+        
+                $this->uploadDocuments($imgData);
+            }
         }
 
         
@@ -250,6 +271,26 @@ class ClientDocumentController extends Controller
                             ->when($expired_at != '', function ($q) use($expired_at){
                                 return $q->where('expired_at',$expired_at);
                             })
+                            ->update([ 'status' => 0 ]);
+                            // ->delete();
+
+
+        if($clientResult) {
+            return json_encode([
+                'success' => true,
+                'message' => 'Document successfully deleted.'
+            ]);
+        } else {
+            return json_encode([
+                'success' => false,
+                'message' => 'Failed to delete document.'
+            ]);
+        }
+    }
+
+    public function deleteClientDocumentApp($id) {
+
+        $clientResult = ClientDocument::where('id', $id)
                             ->update([ 'status' => 0 ]);
                             // ->delete();
 
