@@ -96,12 +96,15 @@ class ClientDocumentController extends Controller
 
 	public function getDocumentsByClientApp($id) {
         // $clientDocument = ClientDocument::where('client_id',$id)->get();
-        $clientDocument = ClientDocument::from('client_documents as cd')->with('clientDocuments')
+        $clientDocument = ClientDocument::from('client_documents as cd')
+                                // ->with('clientDocuments')
                                 ->leftjoin('client_document_types', 'cd.client_document_type_id', '=', 'client_document_types.id')
                                 ->where('cd.client_id',$id)
                                 ->where('cd.status', 1)
+                                // ->groupBy('client_document_type_id')
+                                ->distinct('client_document_type_id')
                                 ->orderBy('cd.id', 'desc')
-                                ->distinct('cd.client_document_type_id')
+                                ->select('cd.*', 'client_document_types.name as name')
                                 ->get();
 
         $response['status'] = 'Success';
@@ -175,7 +178,7 @@ class ClientDocumentController extends Controller
 
     
 
-    public function uploadDocumentsByClientApp(Request $request, $id) {
+    public function uploadDocumentsByClientApp(Request $request) {
         $arrayTest = [];
         $expired_at = ($request['expired_at'] === null) ? '' : $request['expired_at'];
         $documentType = ClientDocumentType::where('id', $request['client_document_type_id'])->first();
