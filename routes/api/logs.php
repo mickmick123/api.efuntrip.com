@@ -9,7 +9,10 @@ Route::middleware('auth:api')->group(function() {
 	Route::get('/get-commission-logs/{client_id}/{group_id}', 'LogController@getCommissionLogs');
 	Route::get('/get-action-logs/{client_id}/{group_id}', 'LogController@getActionLogs');
 	Route::get('/get-document-logs/{client_id}', 'LogController@getDocumentLogs');
-  Route::get('/get-all-logs/{client_service_id}', 'LogController@getAllLogs');
+    Route::get('/get-all-logs/{client_service_id}', 'LogController@getAllLogs');
+
+    // OLD LOGS //
+	Route::get('/get-old-transaction-logs/{client_id}/{group_id}', 'LogController@getOldTransactionLogs');
 
 
 });
