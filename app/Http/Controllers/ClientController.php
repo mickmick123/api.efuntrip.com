@@ -2264,7 +2264,7 @@ class ClientController extends Controller
         $countCancelledServices = DB::table('client_services')
             ->select('*')
             ->where('tracking', $tracking)
-            ->where('active', 0)
+            // ->where('active', 0)
             ->where('status', 'cancelled')
             ->count();
 
