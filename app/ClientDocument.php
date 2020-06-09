@@ -19,6 +19,10 @@ class ClientDocument extends Model
         return $this->hasMany('App\ClientDocument', 'client_document_type_id', 'client_document_type_id')->where('status', 1)->orderBy('id', 'desc');
     }
 
+    public function filePath() {
+        return $this->hasMany('App\ClientDocument', 'client_document_type_id', 'client_document_type_id', 'issued_at', 'issued_at')->where('status', 1);
+    }
+
     public function clientDocumentType() {
     	return $this->belongsTo('App\ClientDocumentType', 'client_document_type_id', 'id');
     }

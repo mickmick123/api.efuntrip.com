@@ -205,17 +205,17 @@ class ClientDocumentController extends Controller
                             ->delete();
         }
 
-        if($request['id'] !== null && $request['id'] !== '') {
+        // if($request['id'] !== null && $request['id'] !== '') {
             
-            $checkDuplicate2 = ClientDocument::where('id',$request['id'])
-                                ->count();
+        //     $checkDuplicate2 = ClientDocument::where('id',$request['id'])
+        //                         ->count();
 
 
-            if($checkDuplicate2 > 0) {
-                ClientDocument::where('id',$request['id'])
-                                ->delete();
-            }
-        }
+        //     if($checkDuplicate2 > 0) {
+        //         ClientDocument::where('id',$request['id'])
+        //                         ->delete();
+        //     }
+        // }
         
         
         foreach($request->images as $item) {
@@ -288,11 +288,25 @@ class ClientDocumentController extends Controller
         }
     }
 
-    public function deleteClientDocumentApp($id) {
+    public function deleteClientDocumentApp(Request $request) {
 
-        $clientResult = ClientDocument::where('id', $id)
-                            ->update([ 'status' => 0 ]);
-                            // ->delete();
+        foreach($request->data as $data) {
+            if($data['expired_at'] === '0000-00-00' || $data['issued_at'] === null) {
+                $expired_at = '';
+            } else {
+                $expired_at = $data['expired_at'];
+            }
+    
+            $clientResult = ClientDocument::where('client_id',$data['client_id'])
+                                ->where('client_document_type_id',$data['client_document_type_id'])
+                                ->where('file_path',$data['file_path'])
+                                ->where('issued_at',$data['issued_at'])
+                                ->when($expired_at != '', function ($q) use($expired_at){
+                                    return $q->where('expired_at',$expired_at);
+                                })
+                                ->update([ 'status' => 0 ]);
+        }
+        
 
 
         if($clientResult) {

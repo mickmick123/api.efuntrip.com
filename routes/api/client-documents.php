@@ -18,10 +18,10 @@ Route::middleware('auth:api')->group(function() {
 
     Route::get('client/{id}', 'ClientDocumentController@getDocumentsByClient');
 
-    Route::get('client-docs/{id}', 'ClientDocumentController@getDocumentsByClientApp');
-
     Route::post('upload-docs', 'ClientDocumentController@uploadDocumentsByClientApp');
 
-    Route::get('delete-client-documents/{id}', 'ClientDocumentController@deleteClientDocumentApp');
+    Route::get('client-docs/{id}', 'ClientDocumentController@getDocumentsByClientApp');
+
+    Route::post('delete-client-docs', 'ClientDocumentController@deleteClientDocumentApp');
 
 });
