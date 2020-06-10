@@ -429,12 +429,6 @@ class ReportController extends Controller
 			// For report with documents
 			if( count($documents) > 0 ) {
 				$logType = 'Document';
-
-				if( $actionName == 'Released' && $categoryName == 'Client' ) {
-					if( strlen(trim($clientService['recipient'])) > 0 ) {
-						$label .= '\'s representative ' . $clientService['recipient'];
-					}
-				}
 			} 
 
 			// For conversion of status
@@ -469,10 +463,6 @@ class ReportController extends Controller
 	        ]);
 
 	        // Document log
-	        if( $actionName == 'Generate Photocopies' && $categoryName == 'Documents' ) {
-	        	$documents = $this->convertToPhotocopyDocuments($documents);
-	        }
-
 	        foreach( $documents as $document ) {
 	        	$previousOnHand = 0;
 
@@ -490,31 +480,91 @@ class ReportController extends Controller
 	        }
 
 	        // Missing documents
-	        if( $actionName != 'Generate Photocopies' && $actionName != 'Filed' ) {
-	        	$clientReports = ClientReport::with(['clientReportDocuments' => function($query) {
-		        		$query->where('count', 0);
-		        	}])
-		        	->where('client_service_id', $cs->id)
-		        	->where('service_procedure_id', $serviceProcedure->id)
-		        	->get();
+	        if( $actionName != 'Filed' ) {
+	        	if( $actionName == 'Prepared' && $categoryName == 'Documents' ) {
+	        		$preparedDocuments = ClientReport::with('clientReportDocuments')
+						->where('client_service_id', $cs->id)
+						->where('service_procedure_id', $serviceProcedure->id)
+						->orderBy('id', 'desc')
+						->get();
 
-		        foreach( $clientReports as $clientReport ) {
-		        	foreach( $clientReport->clientReportDocuments as $document ) {
-		        		$previousOnHand = 0;
+					$onHandDocuments = OnHandDocument::where('client_id', $cs->client_id)->get();
 
-			        	$onHandDocument = OnHandDocument::where('client_id', $cs->client_id)
-			        		->where('document_id', $document['document_id'])->first();
+					$temp = [];
+					$missingDocuments = [];
+					foreach( $preparedDocuments as $preparedDocument ) {
+						foreach( $preparedDocument->clientReportDocuments as $document ) {
+							
+							if( !in_array($document['document_id'], $temp)) {
+								$temp[] = $document['document_id'];
 
-			        	if( $onHandDocument ) {
-			        		$previousOnHand = $onHandDocument->count;
+								$reportDocumentId = $document['document_id'];
+								$reportCount = $document['count'];
+
+								$arr = collect($onHandDocuments)->filter(function($item) use($reportDocumentId) {
+									return $item['document_id'] == $reportDocumentId;
+								})->values()->toArray();
+
+								if( count($arr) == 0 ) {
+									$missingDocuments[] = [
+										'document_id' => $reportDocumentId,
+										'count' => 0,
+										'pending_count' => $reportCount
+									];
+								} elseif( count($arr) == 1 && $arr[0]['count'] < $reportCount ) {
+									$missingDocuments[] = [
+										'document_id' => $reportDocumentId,
+										'count' => 0,
+										'pending_count' => $reportCount - $arr[0]['count']
+									];
+								}
+							}
+
+						}
+					}
+
+					foreach( $missingDocuments as $missingDocument ) {
+						$previousOnHand = 0;
+
+				        $onHandDocument = OnHandDocument::where('client_id', $cs->client_id)
+				        		->where('document_id', $missingDocument['document_id'])->first();
+
+				        if( $onHandDocument ) {
+				        	$previousOnHand = $onHandDocument->count;
+				        }
+
+				        $log->documents()->attach($missingDocument['document_id'], [
+				        	'count' => $missingDocument['count'],
+				        	'previous_on_hand' => $previousOnHand,
+				        	'pending_count' => $missingDocument['pending_count']
+				        ]);
+					}
+	        	} else {
+	        		$clientReports = ClientReport::with(['clientReportDocuments' => function($query) {
+			        		$query->where('count', 0);
+			        	}])
+			        	->where('client_service_id', $cs->id)
+			        	->where('service_procedure_id', $serviceProcedure->id)
+			        	->get();
+
+			        foreach( $clientReports as $clientReport ) {
+			        	foreach( $clientReport->clientReportDocuments as $document ) {
+			        		$previousOnHand = 0;
+
+				        	$onHandDocument = OnHandDocument::where('client_id', $cs->client_id)
+				        		->where('document_id', $document['document_id'])->first();
+
+				        	if( $onHandDocument ) {
+				        		$previousOnHand = $onHandDocument->count;
+				        	}
+
+				        	$log->documents()->attach($document['document_id'], [
+				        		'count' => $document['count'],
+				        		'previous_on_hand' => $previousOnHand
+				        	]);
 			        	}
-
-			        	$log->documents()->attach($document['document_id'], [
-			        		'count' => $document['count'],
-			        		'previous_on_hand' => $previousOnHand
-			        	]);
-		        	}
-		        }
+			        }
+	        	}
 	        }
 		}
 	}
@@ -580,38 +630,24 @@ class ReportController extends Controller
 			
 			foreach( $documents as $document ) {
 				if( $mode == 'add' ) {
-					$documentId = null;
+					$onHand = OnHandDocument::where('client_id', $cs->client_id)
+						->where('document_id', $document['id'])->first();
+						
+					if( $onHand ) {
+						$isUnique = Document::findOrFail($document['id'])->is_unique;
 
-					if( $actionName == 'Generate Photocopies' && $categoryName == 'Documents' ) {
-						$photocopyDocument = $this->getPhotocopyDocument($document['id']);
-
-						if( $photocopyDocument && $document['count'] > 0 ) {
-							$documentId = $photocopyDocument->id;
+						if( $isUnique == 0 ) {
+							$onHand->increment('count', $document['count']);
 						}
 					} else {
-						$documentId = $document['id'];
-					}
+						$query = OnHandDocument::create([
+							'client_id' => $cs->client_id,
+							'document_id' => $document['id'],
+							'count' => $document['count']
+						]);
 
-					if( $documentId ) {
-						$onHand = OnHandDocument::where('client_id', $cs->client_id)
-							->where('document_id', $documentId)->first();
-						
-						if( $onHand ) {
-							$isUnique = Document::findOrFail($documentId)->is_unique;
-
-							if( $isUnique == 0 ) {
-								$onHand->increment('count', $document['count']);
-							}
-						} else {
-							$query = OnHandDocument::create([
-								'client_id' => $cs->client_id,
-								'document_id' => $documentId,
-								'count' => $document['count']
-							]);
-
-							if( $document['count'] == 0 ) {
-								$query->delete();
-							}
+						if( $document['count'] == 0 ) {
+							$query->delete();
 						}
 					}
 				} elseif( $mode == 'remove' ) {
@@ -633,6 +669,8 @@ class ReportController extends Controller
 
 	private function handleStatusUponCompletion($clientService, $serviceProcedureId, $conversionOfStatus) {
 		$serviceProcedure = ServiceProcedure::with('action', 'category')->findOrFail($serviceProcedureId);
+		$action = $serviceProcedure->action->name;
+		$category = $serviceProcedure->category->name;
 
 		$statusUponCompletion = $serviceProcedure->status_upon_completion;
 		
@@ -656,13 +694,8 @@ class ReportController extends Controller
 
 					// Additional Log
 					if( $cs->status != $statusUponCompletion ) {
-						if( $statusUponCompletion == 'released' ) {
-							$detail = 'Service[' . $cs->detail . '] completed and all documents released.';
-							$label = 'Service completed and all documents released.';
-						} else {
-							$detail = 'Documents complete, service[' . $cs->detail . '] is now ' . $statusUponCompletion . '.';
-							$label = 'Documents complete, service is now ' . $statusUponCompletion . '.';
-						}
+						$detail = 'Documents complete, service[' . $cs->detail . '] is now ' . $statusUponCompletion . '.';
+						$label = 'Documents complete, service is now ' . $statusUponCompletion . '.';
 
 						Log::create([
 				        	'client_service_id' => $cs->id,
@@ -678,9 +711,7 @@ class ReportController extends Controller
 					}
 
 					$arr = ['status' => $statusUponCompletion];
-
-					$action = $serviceProcedure->action->name;
-					$category = $serviceProcedure->category->name;
+					
 					if( $action == 'Cancelled' && $category == 'Service' ) {
 						$arr['active'] = 0;
 						$arr['cost'] = 0;
@@ -697,7 +728,7 @@ class ReportController extends Controller
 
 				$cs = ClientService::findOrFail($clientServiceId);
 
-				if( $serviceProcedure->action->name == 'Conversion' && $serviceProcedure->category->name == 'Status' ) {
+				if( $action == 'Conversion' && $category == 'Status' ) {
 					// $conversionOfStatus
 						// 1 = pending to on process
 						// 2 = on process to pending
@@ -705,6 +736,40 @@ class ReportController extends Controller
 						$statusUponCompletion = 'on process';
 					} elseif( $conversionOfStatus == 2 ) {
 						$statusUponCompletion = 'pending';
+					}
+				} elseif( $action == 'Prepared' && $category == 'Documents' ) {
+					$preparedDocuments = ClientReport::with('clientReportDocuments')
+						->where('client_service_id', $clientServiceId)
+						->where('service_procedure_id', $serviceProcedureId)
+						->orderBy('id', 'desc')
+						->get();
+
+					$onHandDocuments = OnHandDocument::where('client_id', $cs->client_id)->get();
+
+					$withPending = false;
+					$temp = [];
+					foreach( $preparedDocuments as $preparedDocument ) {
+						foreach( $preparedDocument->clientReportDocuments as $document ) {
+							if( !in_array($document['document_id'], $temp ) ) {
+								$temp[] = $document['document_id'];
+
+								$reportDocumentId = $document['document_id'];
+								$reportCount = $document['count'];
+
+								$arr = collect($onHandDocuments)->filter(function($item) use($reportDocumentId, $reportCount) {
+									return $item['document_id'] == $reportDocumentId && $item['count'] >= $reportCount;
+								})->values()->toArray();
+
+								if( count($arr) == 0 ) {
+									$withPending = true;
+								}
+							}
+						}
+					}
+
+					$statusUponCompletion = $cs->status;
+					if( $cs->status == 'pending' && !$withPending ) {
+						$statusUponCompletion = 'on process';
 					}
 				}
 
@@ -724,11 +789,11 @@ class ReportController extends Controller
 			        	'label' => $label,
 			        	'log_date' => Carbon::now()->toDateString()
 			        ]);
+
+			        $cs->update(['status' => $statusUponCompletion]);
+
+					ClientController::updatePackageStatus($cs->tracking);
 				}
-
-				$cs->update(['status' => $statusUponCompletion]);
-
-				ClientController::updatePackageStatus($cs->tracking);
 			}
 		}
 	}

@@ -20,8 +20,7 @@ class Document extends Model
     }
 
     public function logs() {
-    	//return $this->belongsToMany('App\Log', 'document_log', 'document_id', 'log_id')->withPivot('count', 'pending_count', 'previous_on_hand', 'created_at', 'updated_at');
-        return $this->belongsToMany('App\Log', 'document_log', 'document_id', 'log_id')->withPivot('count', 'previous_on_hand', 'created_at', 'updated_at');
+    	return $this->belongsToMany('App\Log', 'document_log', 'document_id', 'log_id')->withPivot('count', 'pending_count', 'previous_on_hand', 'created_at', 'updated_at');
     }
 
     public function onHandDocuments() {
