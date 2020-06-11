@@ -8,6 +8,8 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('on-hand-documents/{id}', 'ReportController@getOnHandDocuments');
 
+	Route::get('document-logs/{id}', 'ReportController@documentLogs');
+
 	Route::get('clients/services', 'ReportController@clientsServices');
 
 	Route::get('report-services', 'ReportController@reportServices');

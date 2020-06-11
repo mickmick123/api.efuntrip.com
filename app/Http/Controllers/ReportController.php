@@ -424,7 +424,12 @@ class ReportController extends Controller
 
 		if( count($documents) > 0 || ($actionName == 'Conversion' && $categoryName == 'Status') ) {
 			$cs = ClientService::findOrFail($clientService['id']);
-			$label = $serviceProcedure->name;
+
+			if( $actionName == 'Prepared' && $categoryName == 'Documents' ) {
+				$label = 'Prepare required documents, the following documents are needed';
+			} else {
+				$label = $serviceProcedure->name;
+			}
 
 			// For report with documents
 			if( count($documents) > 0 ) {
@@ -738,43 +743,15 @@ class ReportController extends Controller
 						$statusUponCompletion = 'pending';
 					}
 				} elseif( $action == 'Prepared' && $category == 'Documents' ) {
-					$preparedDocuments = ClientReport::with('clientReportDocuments')
-						->where('client_service_id', $clientServiceId)
-						->where('service_procedure_id', $serviceProcedureId)
-						->orderBy('id', 'desc')
-						->get();
-
-					$onHandDocuments = OnHandDocument::where('client_id', $cs->client_id)->get();
-
-					$withPending = false;
-					$temp = [];
-					foreach( $preparedDocuments as $preparedDocument ) {
-						foreach( $preparedDocument->clientReportDocuments as $document ) {
-							if( !in_array($document['document_id'], $temp ) ) {
-								$temp[] = $document['document_id'];
-
-								$reportDocumentId = $document['document_id'];
-								$reportCount = $document['count'];
-
-								$arr = collect($onHandDocuments)->filter(function($item) use($reportDocumentId, $reportCount) {
-									return $item['document_id'] == $reportDocumentId && $item['count'] >= $reportCount;
-								})->values()->toArray();
-
-								if( count($arr) == 0 ) {
-									$withPending = true;
-								}
-							}
-						}
-					}
-
-					$statusUponCompletion = $cs->status;
-					if( $cs->status == 'pending' && !$withPending ) {
-						$statusUponCompletion = 'on process';
+					if( $cs->status == 'pending' ) {
+						$this->handleUpdateStatus($cs->client_id, 1, $clientServiceId);
+					} elseif( $cs->status == 'on process' ) {
+						$this->handleUpdateStatus($cs->client_id, 2, $clientServiceId);
 					}
 				}
 
 				// Additional Log
-				if( $cs->status != $statusUponCompletion ) {
+				if( $cs->status != $statusUponCompletion && $action != 'Prepared' && $category != 'Documents' ) {
 					$detail = 'Service[' . $cs->detail . '] is now ' . $statusUponCompletion . '.';
 					$label = 'Service is now ' . $statusUponCompletion . '.';
 
@@ -911,6 +888,7 @@ class ReportController extends Controller
 			'processor_id' => $processorId,
 			'log_type' => 'Document',
 			'detail' => $detail,
+			'label' => $action,
 			'log_date' => Carbon::now()->toDateString()
 		]);
 
@@ -1002,6 +980,8 @@ class ReportController extends Controller
 	        $this->handleStandAloneLogDocumentLog($action, $user, $user['documents']);
 
 	        $this->handleStandAloneOnHandDocuments($action, $user);
+
+	        $this->handleUpdateStatus($user['id'], 1);
 		}
 
 		$response['status'] = 'Success';
@@ -1038,6 +1018,8 @@ class ReportController extends Controller
 	        $this->handleStandAloneLogDocumentLog($action, $user, $documents);
 
 	        $this->handleStandAloneOnHandDocuments($action, $user);
+
+	        $this->handleUpdateStatus($user['id'], 1);
 		}
 
 		$response['status'] = 'Success';
@@ -1068,6 +1050,116 @@ class ReportController extends Controller
 		$response['code'] = 200;
 
 		return Response::json($response);
+	}
+
+	public function documentLogs($id) {
+		$documentLogs = Log::with('documents', 'processor')
+			->where('client_service_id', null)->where('client_id', $id)
+			->where('service_procedure_id', null)->where('log_type', 'Document')
+			->orderBy('id', 'desc')->get();
+
+		$response['status'] = 'Success';
+		$response['data'] = [
+		    'documentLogs' => $documentLogs
+		];
+		$response['code'] = 200;
+
+		return Response::json($response);
+	}
+
+	private function handleUpdateStatus($clientId, $type, $_clientServiceId = null) {
+		if( $type == 1 ) {
+			$status = 'pending';
+		} elseif( $type == 2 ) {
+			$status = 'on process';
+		}
+
+		if( $_clientServiceId ) {
+			$clientServicesId = ClientService::where('id', $_clientServiceId)
+				->where('active', 1)->where('status', $status)->pluck('id')->toArray();
+		} else {
+			$clientServicesId = ClientService::where('client_id', $clientId)
+				->where('active', 1)->where('status', $status)->pluck('id')->toArray();
+		}
+		
+		$clientReports = ClientReport::with('clientReportDocuments')
+			->whereIn('client_service_id', $clientServicesId)
+			->whereHas('serviceProcedure', function($query) {
+				$query->where('step', 1);
+			})
+			->orderBy('id', 'desc')
+			->get();
+
+		if( count($clientReports) > 0 ) {
+			$onHandDocuments = OnHandDocument::where('client_id', $clientId)->get();
+
+			$temp = [];
+
+			foreach( $clientReports as $clientReport ) {
+				$field1 = $clientReport->client_service_id;
+				$field2 = $clientReport->service_procedure_id;
+
+				$found = collect($temp)->filter(function($item) use($field1, $field2) {
+				 	return $item['client_service_id'] == $field1 && $item['service_procedure_id'] == $field2;
+				});
+
+				if( count($found) == 0 ) {
+					$temp[] = [
+						'client_service_id' => $field1,
+						'service_procedure_id' => $field2
+					];
+
+					$counter = 0;
+
+					foreach( $clientReport->clientReportDocuments as $clientReportDocument ) {
+						$index = -1;
+
+						foreach( $onHandDocuments as $i => $onHandDocument ) {
+							if( $clientReportDocument->document_id == $onHandDocument->document_id ) {
+								$index = $i;
+							}
+						}
+
+						if( $index == -1 ) {
+							$counter++;
+						} elseif( $clientReportDocument->count > $onHandDocuments[$index]->count ) {
+							$counter++;
+						}
+					}
+
+					if( $counter == 0 ) {
+						$newStatus = 'on process';
+
+						$label = 'Documents complete, service is now ' . $newStatus . '.';
+					} elseif( $counter != 0 ) {
+						$newStatus = 'pending';
+
+						$label = 'Documents incomplete, service is now ' . $newStatus . '.';
+					}
+
+					$cs = ClientService::findOrfail($clientReport->client_service_id);
+
+					if( $cs->status != $newStatus ) {
+						$cs->update(['status' => $newStatus]);
+
+						ClientController::updatePackageStatus($cs->tracking);
+
+						$detail = 'Service[' . $cs->detail . '] is now ' . $newStatus . '.';
+							
+						Log::create([
+						    'client_service_id' => $cs->id,
+						    'client_id' => $cs->client_id,
+						    'group_id' => $cs->group_id,
+						    'processor_id' => Auth::user()->id,
+						    'log_type' => 'Status',
+						    'detail' => $detail,
+						    'label' => $label,
+						    'log_date' => Carbon::now()->toDateString()
+						]);
+					}	
+				}
+			}
+		}
 	}
 
 }
