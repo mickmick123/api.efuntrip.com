@@ -1065,10 +1065,22 @@ class ReportController extends Controller
 	}
 
 	public function documentLogs($id) {
-		$documentLogs = Log::with('documents', 'processor')
-			->where('client_service_id', null)->where('client_id', $id)
-			->where('service_procedure_id', null)->where('log_type', 'Document')
-			->orderBy('id', 'desc')->get();
+		$documentLogs = Log::with('documents', 'processor', 'serviceProcedure', 'clientService')
+			->where(function($query) use($id) {
+				$query->where('client_id', $id)
+					->where('log_type', 'Document')
+					->where('client_service_id', null)
+					->where('service_procedure_id', null);
+			})
+			->orWhere(function($query) use($id) {
+				$query->where('client_id', $id)
+					->where('log_type', 'Document')
+					->whereHas('serviceProcedure', function($query2) {
+						$query2->whereNotNull('documents_mode');
+					});
+			})
+			->orderBy('id', 'desc')
+			->get();
 
 		$response['status'] = 'Success';
 		$response['data'] = [
