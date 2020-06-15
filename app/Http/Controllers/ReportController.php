@@ -577,6 +577,10 @@ class ReportController extends Controller
 	private function convertToPhotocopyDocuments($documents) {
 		$temp = [];
 
+		$documents = collect($documents)->filter(function($item) {
+			return $item['count'] > 0;
+		})->values()->toArray();
+
 	    foreach( $documents as $document ) {
 	       	$photocopyDocument = $this->getPhotocopyDocument($document['id']);
 
@@ -870,6 +874,10 @@ class ReportController extends Controller
 
 		$detail = $action;
 
+		$documents = collect($documents)->filter(function($item) {
+			return $item['count'] > 0;
+		})->values()->toArray();
+
 		foreach( $documents as $index => $document ) {
 			$documentTitle = Document::findOrFail($document['id'])->title;
 
@@ -911,8 +919,12 @@ class ReportController extends Controller
 	}
 
 	private function handleStandAloneOnHandDocuments($action, $user) {
+		$documents = collect($user['documents'])->filter(function($item) {
+			return $item['count'] > 0;
+		})->values()->toArray();
+
 		// on_hand_documents
-	    foreach( $user['documents'] as $document ) {
+	    foreach( $documents as $document ) {
 	    	if( strpos($action, "Received documents") !== false ) {
 	    		$onHand = OnHandDocument::where('client_id', $user['id'])
 					->where('document_id', $document['id'])->first();
