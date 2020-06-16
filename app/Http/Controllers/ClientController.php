@@ -1219,9 +1219,10 @@ class ClientController extends Controller
 
                 // save transaction logs
                 $totalAmount = $cs->cost + $cs->tip + $cs->charge;
+                $detail_cn = ($service->detail_cn!='' ? $service->detail_cn : $service->detail);
 
-                $detail = 'Added a service. Total service cost is Php' . $totalAmount. '. Service status is pending.';
-                $detail_cn = '已添加服务. 总服务费 Php' . $totalAmount. '. 服务状态为 待办。';
+                $detail = 'Added service "'.$service->detail.'", Service status is pending.';
+                $detail_cn = '已添加服务 "'.$detail_cn.'" 服务状态为 待办。';
                 $log_data = array(
                     'client_service_id' => $cs->id,
                     'client_id' => $cs->client_id,
