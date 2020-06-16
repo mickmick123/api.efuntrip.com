@@ -216,11 +216,35 @@ class LogController extends Controller
                     $servs = DB::table('client_services')
                                 ->where('service_id', $currentService)
                                 ->where('group_id', $t->group_id)
-                                ->where('created_at','LIKE', '%'.$t->log_date.'%')
+                                // ->where('created_at','LIKE', '%'.$t->log_date.'%')
                                 ->orderBy('id','Desc')
                                 ->get();
 
                     $servs_id = $servs->pluck('id');
+
+                    // $body = DB::table('logs as l')->select(DB::raw('l.detail, l.log_date, pr.first_name'))
+                    // ->where('client_service_id', $cs->id)->where('group_id',$t->group_id)
+                    // ->where('l.id','!=', $t->id)
+                    // ->leftjoin(
+                    //     DB::raw('
+                    //         (
+                    //             Select id,first_name, last_name
+                    //             from users as u
+                    //         ) as pr
+                    //     '),
+                    //     'pr.id', '=', 'l.processor_id'
+                    // )
+                    // ->where('l.id','!=', $t->id)
+                    // ->where('log_type','Transaction')
+                    // ->orderBy('l.id', 'desc')
+                    // //->distinct('detail')
+                    // ->get();
+                    // //\Log::info($body);
+
+                    // $data = collect($body->toArray())->flatten()->all();
+                    
+                    // $body = $data;
+
                     $head = [];
                     $ctr = 0;
                     $total_cost = 0;
@@ -664,11 +688,11 @@ class LogController extends Controller
 
 
     public function groupOldTransactionLogs($groupId, $limit = 0) {
-        $transaction =  TransactionLogs::with('user')->where('group_id', $groupId)
+        $transaction =  DB::table('old_logs_transaction')->where('group_id', $groupId)
                         ->where('display',0)
                         ->orderBy('id', 'desc')->get();
         if($limit > 0){
-            $transaction =  TransactionLogs::with('user')->where('group_id', $groupId)
+            $transaction =  DB::table('old_logs_transaction')->where('group_id', $groupId)
                             ->where('display',0)
                             ->orderBy('id', 'desc')->limit($limit)->get();
         }
@@ -676,7 +700,7 @@ class LogController extends Controller
         $month = null;
         $day = null;
         $year = null;
-        $currentBalance = $this->groupCompleteBalance($groupId);
+        $currentBalance = app(GroupController::class)->getGroupTotalCollectables($groupId);
         foreach($transaction as $a){
 
             $usr =  User::where('id',$a->user_id)->select('id','first_name','last_name')->limit(1)->get()->makeHidden(['full_name', 'avatar', 'permissions', 'access_control', 'binded', 'unread_notif', 'group_binded', 'document_receive', 'is_leader', 'total_points', 'total_deposit', 'total_discount', 'total_refund', 'total_payment', 'total_cost', 'total_complete_cost', 'total_balance', 'collectable', 'branch', 'three_days']);
@@ -742,7 +766,7 @@ class LogController extends Controller
                 )
             );
         }
-        return json_encode($arraylogs);
+        return $arraylogs;
     }
 
 
