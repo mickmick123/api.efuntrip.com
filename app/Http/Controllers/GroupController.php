@@ -237,7 +237,7 @@ class GroupController extends Controller
                 }
                 return $q->orderBy($sort[0], $sort[1]);
             })
-            ->paginate($perPage);
+            ->paginate($request->input('perPage'));
 
         $response = $groups;
 
@@ -1392,7 +1392,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
      $sort = $request->input('sort');
      $search = $request->input('search');
 
-          $arr = [];
+     $arr = [];
           //$group_members = GroupUser::where('group_id', $groupId)->get();
           $group_members = GroupUser::where('group_id', $groupId)
           ->when($sort != '', function ($q) use($sort){
@@ -1413,6 +1413,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
               if($usr){
                   $arr[$ctr] = $gm;
                   $arr[$ctr]['client'] =$usr[0];
+                //  $arr[$ctr]['client']['packages'] = Package::where('client_id',$gm->user_id)->where('group_id',$gm->group_id)->get();
                   $arr[$ctr]['client']['packages'] = Package::where('client_id',$gm->user_id)->where('group_id',$gm->group_id)->get();
 
                 $ctr++;
@@ -1517,6 +1518,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
       $trackingArray = [];
       $oldNewArray = [];
       $oldNewArrayChinese = [];
+      $clientServicesIdArray = [];
 
       for($i=0; $i<count($request->clients); $i++) {
 
@@ -1656,7 +1658,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
                 // save transaction logs for group
                 $detail = 'Added a service. Service status is pending.';
                 $detail_cn = '已添加服务. 服务状态为 待办。';
-                $log_data = array(
+               $log_data = array(
                     'client_service_id' => $clientService->id,
                     'client_id' => null,
                     'group_id' => $request->group_id,
