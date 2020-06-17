@@ -706,6 +706,13 @@ class ReportController extends Controller
 						$detail = 'Documents complete, service[' . $cs->detail . '] is now ' . $statusUponCompletion . '.';
 						$label = 'Documents complete, service is now ' . $statusUponCompletion . '.';
 
+						if( $statusUponCompletion == 'complete' ) {
+							$totalCharge = $cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent;
+
+							$detail .= ' Total charge is PHP' . $totalCharge . '.';
+							$label .= ' Total charge is PHP' . $totalCharge . '.';
+						}
+
 						Log::create([
 				        	'client_service_id' => $cs->id,
 				        	'client_id' => $cs->client_id,
