@@ -688,6 +688,8 @@ class LogController extends Controller
 
 
     public function groupOldTransactionLogs($groupId, $limit = 0) {
+        $transtotal = DB::table('logs')->where('group_id',$groupId)->where('log_type','Transaction')->sum('amount');
+
         $transaction =  DB::table('old_logs_transaction')->where('group_id', $groupId)
                         ->where('display',0)
                         ->orderBy('id', 'desc')->get();
@@ -700,7 +702,7 @@ class LogController extends Controller
         $month = null;
         $day = null;
         $year = null;
-        $currentBalance = app(GroupController::class)->getGroupTotalCollectables($groupId);
+        $currentBalance = app(GroupController::class)->getGroupTotalCollectables($groupId) - $transtotal;
         foreach($transaction as $a){
 
             $usr =  User::where('id',$a->user_id)->select('id','first_name','last_name')->limit(1)->get()->makeHidden(['full_name', 'avatar', 'permissions', 'access_control', 'binded', 'unread_notif', 'group_binded', 'document_receive', 'is_leader', 'total_points', 'total_deposit', 'total_discount', 'total_refund', 'total_payment', 'total_cost', 'total_complete_cost', 'total_balance', 'collectable', 'branch', 'three_days']);
