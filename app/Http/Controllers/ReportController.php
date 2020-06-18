@@ -279,6 +279,13 @@ class ReportController extends Controller
 
 		$detail = $serviceProcedure->name;
 
+		// Immigration Branch
+		if( $serviceProcedure->action->name == 'Filed' && $serviceProcedure->category->name == 'Immigration' ) {
+			if( $report['extras']['immigration_branch'] ) {
+				$detail .= '[' . $report['extras']['immigration_branch'] . ']';
+			}
+		}
+
 		// Documents
 		if( count($clientService['documents']) > 0 ) {
 			$selectedDocumentsWithCount = collect($clientService['documents'])->filter(function($item) {
@@ -427,6 +434,12 @@ class ReportController extends Controller
 
 			if( $actionName == 'Prepared' && $categoryName == 'Documents' ) {
 				$label = 'Prepare required documents, the following documents are needed';
+			} elseif( $actionName == 'Filed' && $categoryName == 'Immigration' ) {
+				$label = $serviceProcedure->name;
+
+				if( $report['extras']['immigration_branch'] ) {
+					$label .= '[' . $report['extras']['immigration_branch'] . ']';
+				}
 			} else {
 				$label = $serviceProcedure->name;
 			}
