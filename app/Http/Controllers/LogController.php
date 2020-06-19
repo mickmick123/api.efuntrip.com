@@ -6,6 +6,7 @@ use App\Log;
 
 use App\User;
 
+use App\Service;
 use App\ClientService;
 
 use App\ClientReport;
@@ -205,6 +206,9 @@ class LogController extends Controller
                 $total_cost = 0;
                 if($cs){
                     $csdetail = $cs->detail;
+                    $service = Service::findorfail($cs->service_id);
+                    $detail_cn = ($service->detail_cn!='' ? $service->detail_cn : $service->detail);
+                    $csdetail_cn = $detail_cn;
                     $cstracking =  $cs->tracking;
                     $csstatus =  $cs->status;
                     $csactive =  $cs->active;
@@ -254,11 +258,14 @@ class LogController extends Controller
                         $head[$ctr]['status'] = $csstatus;
                         $head[$ctr]['id'] = $s->client_id;
                         $head[$ctr]['client'] = $client->first_name.' '.$client->last_name;
-                        $head[$ctr]['details'] =  DB::table('logs')->where('client_service_id', $s->id)->where('group_id',"!=",null)
+                        $loghead =  DB::table('logs')->where('client_service_id', $s->id)->where('group_id',"!=",null)
                                     ->where('log_type', 'Transaction')
                                     ->orderBy('id', 'desc')
-                                    ->distinct('detail')
-                                    ->pluck('detail');
+                                    ->distinct('detail')->get();
+                                    // ->pluck('detail');
+
+                        $head[$ctr]['details'] = $loghead->pluck('detail');
+                        $head[$ctr]['details_cn'] = $loghead->pluck('detail_cn');
 
                         if($s->status == 'complete' && $s->active != 0){
                             $total_disc = DB::table('client_transactions')
@@ -275,11 +282,13 @@ class LogController extends Controller
                 }
                 else{
                     $csdetail = ucfirst($t->log_group);
+                    $csdetail_cn = ucfirst($t->log_group);
                     $cstracking = '';
                     $csstatus = '';
                     $csactive = 'none';
                     $head = [];
                     $head[0]['details'] = $t->detail;
+                    $head[0]['details_cn'] = $t->detail_cn;
                     $body = '';
                     //$currentService = null;
                 }
@@ -301,9 +310,11 @@ class LogController extends Controller
                         'processor' => $usr[0]->first_name,
                         'date' => Carbon::parse($t->log_date)->format('F d,Y'),
                         'title' => $csdetail,
+                        'title_cn' => $csdetail_cn,
                         'tracking' => $cstracking,
                         'status' => $csstatus,
                         'active' => $csactive,
+                        'datetime' => $t->created_at,
 
                     )
                 );
