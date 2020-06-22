@@ -28,6 +28,8 @@ use App\SuggestedDocument;
 
 use App\User;
 
+use App\ClientTransaction;
+
 use Auth, Carbon\Carbon, DB, Response, Validator;
 
 use Illuminate\Http\Request;
@@ -361,6 +363,15 @@ class ReportController extends Controller
 			}
 		}
 
+		if( $serviceProcedure->action->name == 'Discounted' && $serviceProcedure->category->name == 'Service' ) {
+			if( $report['extras']['discount_amount'] && $report['extras']['discount_reason'] ) {
+				$discountAmount = $report['extras']['discount_amount'];
+				$discountReason = $report['extras']['discount_reason'];
+				
+				$detail .= ' with an amount of ' . $discountAmount . ' and with a reason of ' . $discountReason . '.';
+			} 
+		}
+
 		return $detail;
 	}
 
@@ -429,7 +440,7 @@ class ReportController extends Controller
 		$actionName = $serviceProcedure->action->name;
 		$categoryName = $serviceProcedure->category->name;
 
-		if( count($documents) > 0 || ($actionName == 'Conversion' && $categoryName == 'Status') ) {
+		if( count($documents) > 0 || ($actionName == 'Conversion' && $categoryName == 'Status') || ($actionName == 'Discounted' && $categoryName == 'Service') ) {
 			$cs = ClientService::findOrFail($clientService['id']);
 
 			if( $actionName == 'Prepared' && $categoryName == 'Documents' ) {
@@ -439,6 +450,17 @@ class ReportController extends Controller
 
 				if( $report['extras']['immigration_branch'] ) {
 					$label .= '[' . $report['extras']['immigration_branch'] . ']';
+				}
+			} elseif( $actionName == 'Discounted' && $categoryName == 'Service' ) {
+				$logType = 'Transaction';
+
+				$label = $serviceProcedure->name;
+
+				if( $report['extras']['discount_amount'] && $report['extras']['discount_reason'] ) {
+					$discountAmount = $report['extras']['discount_amount'];
+					$discountReason = $report['extras']['discount_reason'];
+				
+					$label .= ' with an amount of ' . $discountAmount . ' and with a reason of ' . $discountReason . '.';
 				}
 			} else {
 				$label = $serviceProcedure->name;
@@ -722,6 +744,12 @@ class ReportController extends Controller
 						if( $statusUponCompletion == 'complete' ) {
 							$totalCharge = $cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent;
 
+							$discounts = ClientTransaction::where('type', 'Discount')
+								->where('client_service_id', $cs->id)->get();
+							foreach( $discounts as $discount ) {
+								$totalCharge -= $discount->amount;
+							}
+
 							$detail .= ' Total charge is PHP' . $totalCharge . '.';
 							$label .= ' Total charge is PHP' . $totalCharge . '.';
 						}
@@ -813,6 +841,26 @@ class ReportController extends Controller
 		}
 	}
 
+	private function handleDiscountedService($clientService, $serviceProcedureId, $discountAmount, $discountReason) {
+		$serviceProcedure = ServiceProcedure::with('action', 'category')->findOrFail($serviceProcedureId);
+		$action = $serviceProcedure->action->name;
+		$category = $serviceProcedure->category->name;
+
+		if( $action == 'Discounted' && $category == 'Service' ) {
+			$cs = ClientService::findOrFail($clientService['id']);
+
+			ClientTransaction::create([
+				'type' => 'Discount',
+				'client_id' => $cs->client_id,
+				'group_id' => $cs->group_id,
+				'client_service_id' => $cs->id,
+				'amount' => $discountAmount,
+				'tracking' => $cs->tracking,
+				'reason' => $discountReason
+			]);
+		}
+	}
+
 	private function handleSuggestedDocuments($clientService, $serviceProcedureId) {
 		$documents = $clientService['documents'];
 
@@ -880,6 +928,13 @@ class ReportController extends Controller
 	        	);
 
   				$this->handleUpdatedTheCost($clientService, $report['service_procedure'], $report['extras']['cost']);
+
+  				$this->handleDiscountedService(
+  					$clientService, 
+  					$report['service_procedure'], 
+  					$report['extras']['discount_amount'],
+  					$report['extras']['discount_reason']
+  				);
         	}
         }
 
