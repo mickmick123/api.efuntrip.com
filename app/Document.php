@@ -16,11 +16,12 @@ class Document extends Model
     protected $fillable = ['title', 'title_cn', 'shorthand_name', 'is_unique', 'is_company_document'];
 
     public function clientReportDocuments() {
-    	return $this->hasMany('App\ClientReportDocument', 'document_id', 'id');
+        return $this->hasMany('App\ClientReportDocument', 'document_id', 'id');
     }
 
     public function logs() {
-    	return $this->belongsToMany('App\Log', 'document_log', 'document_id', 'log_id')->withPivot('count', 'pending_count', 'previous_on_hand', 'created_at', 'updated_at');
+        //return $this->belongsToMany('App\Log', 'document_log', 'document_id', 'log_id')->withPivot('count', 'pending_count', 'previous_on_hand', 'created_at', 'updated_at');
+        return $this->belongsToMany('App\Log', 'document_log', 'document_id', 'log_id')->withPivot('count', 'previous_on_hand', 'created_at', 'updated_at');
     }
 
     public function onHandDocuments() {
