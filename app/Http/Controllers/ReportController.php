@@ -1005,4 +1005,154 @@ class ReportController extends Controller
 		return Response::json($response);
 	}
 
+	public function documentLogs($id) {
+		$documentLogs = Log::with('documents', 'processor', 'serviceProcedure', 'clientService')
+			->where(function($query) use($id) {
+				$query->where('client_id', $id)
+					->where('log_type', 'Document')
+					->where('client_service_id', null)
+					->where('service_procedure_id', null);
+			})
+			->orWhere(function($query) use($id) {
+				$query->where('client_id', $id)
+					->where('log_type', 'Document')
+					->whereHas('serviceProcedure', function($query2) {
+						$query2->whereNotNull('documents_mode');
+					});
+			})
+			->orderBy('id', 'desc')
+			->get();
+
+		$response['status'] = 'Success';
+		$response['data'] = [
+		    'documentLogs' => $documentLogs
+		];
+		$response['code'] = 200;
+
+		return Response::json($response);
+	}
+
+	private function handleUpdateStatus($clientId, $type, $_clientServiceId = null) {
+		if( $type == 1 ) {
+			$status = 'pending';
+		} elseif( $type == 2 ) {
+			$status = 'on process';
+		}
+
+		if( $_clientServiceId ) {
+			$clientServicesId = ClientService::where('id', $_clientServiceId)
+				->where('active', 1)->where('status', $status)->pluck('id')->toArray();
+		} else {
+			$clientServicesId = ClientService::where('client_id', $clientId)
+				->where('active', 1)->where('status', $status)->pluck('id')->toArray();
+		}
+		
+		$clientReports = ClientReport::with('clientReportDocuments')
+			->whereIn('client_service_id', $clientServicesId)
+			->whereHas('serviceProcedure', function($query) {
+				$query->where('step', 1);
+			})
+			->orderBy('id', 'desc')
+			->get();
+
+		if( count($clientReports) > 0 ) {
+			$onHandDocuments = OnHandDocument::where('client_id', $clientId)->get();
+
+			$temp = [];
+
+			foreach( $clientReports as $clientReport ) {
+				$field1 = $clientReport->client_service_id;
+				$field2 = $clientReport->service_procedure_id;
+
+				$found = collect($temp)->filter(function($item) use($field1, $field2) {
+				 	return $item['client_service_id'] == $field1 && $item['service_procedure_id'] == $field2;
+				});
+
+				if( count($found) == 0 ) {
+					$temp[] = [
+						'client_service_id' => $field1,
+						'service_procedure_id' => $field2
+					];
+
+					$counter = 0;
+
+					foreach( $clientReport->clientReportDocuments as $clientReportDocument ) {
+						$index = -1;
+
+						foreach( $onHandDocuments as $i => $onHandDocument ) {
+							if( $clientReportDocument->document_id == $onHandDocument->document_id ) {
+								$index = $i;
+							}
+						}
+
+						if( $index == -1 ) {
+							$counter++;
+						} elseif( $clientReportDocument->count > $onHandDocuments[$index]->count ) {
+							$counter++;
+						}
+					}
+
+					if( $counter == 0 ) {
+						$newStatus = 'on process';
+
+						$label = 'Documents complete, service is now ' . $newStatus . '.';
+					} elseif( $counter != 0 ) {
+						$newStatus = 'pending';
+
+						$label = 'Documents incomplete, service is now ' . $newStatus . '.';
+					}
+
+					$cs = ClientService::findOrfail($clientReport->client_service_id);
+
+					if( $cs->status != $newStatus ) {
+						$cs->update(['status' => $newStatus]);
+
+						ClientController::updatePackageStatus($cs->tracking);
+
+						$detail = 'Service[' . $cs->detail . '] is now ' . $newStatus . '.';
+							
+						Log::create([
+						    'client_service_id' => $cs->id,
+						    'client_id' => $cs->client_id,
+						    'group_id' => $cs->group_id,
+						    'processor_id' => Auth::user()->id,
+						    'log_type' => 'Status',
+						    'detail' => $detail,
+						    'label' => $label,
+						    'log_date' => Carbon::now()->toDateString()
+						]);
+					}	
+				}
+			}
+		}
+	}
+
+	public function getFiledReports(){
+		$csIds = ClientReport::where('id','>=',133)->whereHas('serviceProcedure.action', function($query) {
+		 				$query->where('name', 'Filed');
+				})->groupBy('client_service_id')->orderBy('client_service_id','DESC')->pluck('client_service_id');
+
+		$testAccts = [8724, 8725, 8726, 8727, 8728, 10499, 10504, 12006, 15055, 15654, 15666];
+
+		$filed = ClientService::with('client')->whereNotIn('client_services.client_id', $testAccts)->whereIn('client_services.id',$csIds)
+				->with(array('client.groups' => function($query){
+                    $query->select('name');
+                }))
+				->leftjoin('group_user', 'client_services.client_id', '=', 'group_user.user_id')
+                ->leftjoin('groups', 'group_user.group_id', '=', 'groups.id')
+                ->select('client_services.*', 'groups.name as group_name')
+                ->where('client_services.active',1)->where('client_services.status','!=','cancelled')->orderBy('client_services.id','DESC')->get();
+
+		$response['status'] = 'Success';
+		$response['data'] = [
+		    'charge' => $filed->sum('charge'),
+		    'cost' => $filed->sum('cost'),
+		    'tip' => $filed->sum('tip'),
+		    'com_client' => $filed->sum('com_client'),
+		    'com_agent' => $filed->sum('com_agent'),
+		    'services_filed' => $filed,
+		];
+		$response['code'] = 200;
+		return Response::json($response);
+	}
 }
