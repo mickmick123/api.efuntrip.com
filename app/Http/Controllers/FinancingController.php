@@ -226,7 +226,7 @@ class FinancingController extends Controller
       if($trans_type != 'admin_add_budget' && $trans_type != 'process_add_budget'){
         	$nAmount = $nAmount + 
         			($finance->additional_budget != null && $finance->additional_budget != '' ? 
-        				$financing->additional_budget : 
+        				$finance->additional_budget : 
         				0 
         			);
       }
