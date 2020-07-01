@@ -57,5 +57,7 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('switch-cost-level/{group_id}/{service_profile_id?}', 'GroupController@switchCostLevel');
 
+	Route::post('group-summary', 'GroupController@getGroupSummary');
+
 
 });
