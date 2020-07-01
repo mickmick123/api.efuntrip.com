@@ -117,7 +117,7 @@ class FinancingController extends Controller
 
                 $metrobank = ( floatval($metrobank) + floatval($q->metrobank) + $this->bankComputation('metrobank', $q));
 
-                $securitybank = ( floatval($securitybank) + floatval($q->aub) + $this->bankComputation('aub', $q));
+                $securitybank = ( floatval($securitybank) + floatval($q->securitybank) + $this->bankComputation('securitybank', $q));
 
                 $aub = ( floatval($aub) + floatval($q->aub) + $this->bankComputation('aub', $q));
 
