@@ -29,8 +29,19 @@ use App\ServiceProfile;
 
 
 use Auth, DB, Response, Validator;
-
+//Excel
 use Illuminate\Http\Request;
+
+use Maatwebsite\Excel\Facades\Excel;
+//Macoy
+
+use App\Exports\ByServiceExport;
+use App\Exports\ByMemberExport;
+use App\Exports\ByBatchExport;
+
+
+
+
 
 class GroupController extends Controller
 {
@@ -240,6 +251,7 @@ class GroupController extends Controller
             ->paginate($request->input('perPage'));
 
         $response = $groups;
+
 
         return Response::json($response);
     }
@@ -2593,6 +2605,44 @@ public function getClientPackagesByGroup($client_id, $group_id){
         }
 
     }
+
+
+    public function getGroupSummary(Request $request){
+
+      $getGroupMembers = GroupUser::where('group_id',$request->id)->pluck('user_id');
+
+      $filename = Carbon::now();
+
+      $groupInfo = [];
+      $groupInfo['total_complete_service_cost'] = $this->getGroupTotalCompleteServiceCost($request->id);
+      $groupInfo['total_cost'] = $this->getGroupTotalCost($request->id);
+      $groupInfo['total_payment'] = $this->getGroupPayment($request->id);
+      $groupInfo['total_discount'] = $this->getGroupTotalDiscount($request->id);
+      $groupInfo['total_refund'] = $this->getGroupTotalRefund($request->id);
+      $groupInfo['total_balance'] = $this->getGroupTotalBalance($request->id);
+      $groupInfo['total_collectables'] = $this->getGroupTotalCollectables($request->id);
+      $groupInfo['total_deposit'] = $this->getGroupDeposit($request->id);
+
+      $export = null;
+      switch($request->type){
+
+        case 'by-service':
+              $export = new ByServiceExport($request->id, $request->lang, $getGroupMembers->toArray(), $groupInfo, $request);
+        break;
+
+        case 'by-members':
+              $export = new ByMemberExport($request->id, $request->lang, $getGroupMembers->toArray(), $groupInfo);
+        break;
+
+        case 'by-batch':
+              $export = new ByBatchExport($request->id, $request->lang, $getGroupMembers->toArray(), $groupInfo);
+        break;
+      }
+
+      return Excel::download($export, 'users.xls');
+
+    }
+
 
 
 }
