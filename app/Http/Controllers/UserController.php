@@ -69,9 +69,6 @@ class UserController extends Controller
     		            $response['code'] = 200;
     		        } 
                 }  
-		            $response['status'] = 'Failed';
-	            	$response['errors'] = 'Invalid username/password.';
-	            	$response['code'] = 422;
 		        
             }
             else {
