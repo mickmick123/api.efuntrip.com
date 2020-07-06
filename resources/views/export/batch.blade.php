@@ -70,15 +70,6 @@
         <td></td>
         <td></td>
         <td></td>
-        <td colspan="2"><b>{{ $lang['_total_complete_cost'] }} {{ $group['total_complete_service_cost'] }}</b></td>
-        <td></td>
-    </tr>
-
-    <tr>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
         <td colspan="2"><b>{{ $lang['_total_deposit'] }} {{ $group['total_deposit'] }}</b></td>
         <td></td>
     </tr>
@@ -88,7 +79,7 @@
         <td></td>
         <td></td>
         <td></td>
-        <td colspan="2"><b>{{ $lang['_total_cost'] }} {{ $group['total_cost'] }}</b></td>
+        <td colspan="2"><b>{{ $lang['_total_cost'] }} {{ $group['total_complete_service_cost'] }}</b></td>
         <td></td>
     </tr>
 
@@ -138,29 +129,7 @@
         <td colspan="5"></td>
     </tr>
 
-    <tr>
-        <td colspan="5"><b>{{ $lang['_transcation_history'] }}</b></td>
-    </tr>
-
-    <tr>
-          <td style="text-align:center"><b>{{ $lang['_amount'] }}</b></td>
-          <td style="text-align:center"><b>{{ $lang['_date'] }}</b></td>
-          <td style="text-align:center"><b>{{ $lang['_type'] }}</b></td>
-          <td></td>
-          <td></td>
-    </tr>
-
-
-
-    @foreach($transactions as $transaction)
-    <tr>
-          <td style="text-align:center">{{ $transaction->amount }}</td>
-          <td style="text-align:center">{{ $transaction->created_at }}</td>
-          <td style="text-align:center">{{ $transaction->type }}</td>
-          <td></td>
-          <td></td>
-    </tr>
-    @endforeach
+  
 
     </tbody>
 </table>
