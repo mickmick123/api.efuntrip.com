@@ -194,7 +194,7 @@ class ByMemberExport implements FromView, WithEvents, ShouldAutoSize
                     foreach($services as $s){
 
                       $s->package_cost = $s->cost+ $s->charge + $s->tip + $s->com_agent + $s->com_client;
-
+                    //  $s->package_cost = $s->package_cost.number_format($s->package_cost, 2, '.', ',');
 
                     //  print_r($s->status);
                     //  print_r("---");
@@ -246,6 +246,7 @@ class ByMemberExport implements FromView, WithEvents, ShouldAutoSize
 
                       $s->total_service_cost = $tempTotal;
 
+
                     }
                     $packs = $services;
           //  }
@@ -263,7 +264,12 @@ class ByMemberExport implements FromView, WithEvents, ShouldAutoSize
           $response[$ctr] =  $temp;
           $ctr++;
         }
-        $this->group['total_complete_service_cost'] = $tempTotal;
+        if($tempTotal > 0){
+            $this->group['total_complete_service_cost'] = number_format(-$tempTotal, 2);
+        }else{
+            $this->group['total_complete_service_cost'] = number_format($tempTotal, 2);
+        }
+
 
         return $response;
   }
@@ -282,6 +288,7 @@ class ByMemberExport implements FromView, WithEvents, ShouldAutoSize
     foreach($response as $s){
       $datetime = new DateTime($s->created_at);
       $getdate = $datetime->format('M d,Y');
+      $s->amount = number_format($s->amount,2);
 
       if($this->lang === 'EN'){
           $s->created_at = $getdate;
@@ -364,8 +371,6 @@ class ByMemberExport implements FromView, WithEvents, ShouldAutoSize
       $data = $this->members($this->id);
 
       $transactions = $this->transactions($this->id);
-
-      //print_r($data);
 
       return view('export.user', [
           'transactions' => $transactions,

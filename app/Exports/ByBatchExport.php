@@ -175,7 +175,14 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
           $ctr++;
         }
 
-        $this->group['total_complete_service_cost'] = $tempTotal;
+
+        //print_r($response);
+
+        if($tempTotal > 0){
+            $this->group['total_complete_service_cost'] = number_format(-$tempTotal, 2);
+        }else{
+            $this->group['total_complete_service_cost'] = number_format($tempTotal, 2);
+        }
 
         return $response;
   }
@@ -191,6 +198,20 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
                       ->where('group_id', $id)
                       ->orderBy('created_at','DESC')
                       ->get();
+
+    foreach($response as $s){
+      $datetime = new DateTime($s->created_at);
+      $getdate = $datetime->format('M d,Y');
+      $s->amount = number_format($s->amount,2);
+
+      if($this->lang === 'EN'){
+          $s->created_at = $getdate;
+
+      }else{
+          $s->created_at = $this->DateChinese($getdate);
+          $s->type = $this->typeChinese($s->type);
+      }
+    }
 
     return $response;
   }
@@ -282,6 +303,33 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
 
       $transactions = $this->transactions($this->id);
 
+      $response = DB::table('client_transactions as a')
+                    ->select(DB::raw('
+                        a.amount,a.type, a.created_at'))
+                        ->where('group_id', $this->id)
+                        ->orderBy('created_at','DESC')
+                        ->get();
+
+      $temp = [];
+      $ctr = 0;
+      foreach($response as $s){
+        //$tempObj = {};
+        $datetime = new DateTime($s->created_at);
+        $getdate = $datetime->format('M d,Y');
+
+        $tempObj['detail'] = $s->type;
+        $tempObj['service_date'] = $s->created_at;
+        $tempObj['sdate'] = $s->created_at;
+        $tempObj['group_id'] = $this->id;
+
+        $tempObj['total_service_cost'] = $s->amount;
+        $tempObj['members'] = [];
+
+        $temp[$ctr] = $tempObj;
+        $ctr++;
+      }
+      //$res = array_merge($data->toArray(), $temp->toArray());
+
 
       $lang = [];
 
@@ -349,7 +397,6 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
           $lang['_charge'] = '收费';
           $lang['_group_total_bal'] = '总余额';
       }
-
 
 
       return view('export.batch', [

@@ -2614,14 +2614,14 @@ public function getClientPackagesByGroup($client_id, $group_id){
       $filename = Carbon::now();
 
       $groupInfo = [];
-      $groupInfo['total_complete_service_cost'] = $this->getGroupTotalCompleteServiceCost($request->id);
-      $groupInfo['total_cost'] = $this->getGroupTotalCost($request->id);
-      $groupInfo['total_payment'] = $this->getGroupPayment($request->id);
-      $groupInfo['total_discount'] = $this->getGroupTotalDiscount($request->id);
-      $groupInfo['total_refund'] = $this->getGroupTotalRefund($request->id);
-      $groupInfo['total_balance'] = $this->getGroupTotalBalance($request->id);
-      $groupInfo['total_collectables'] = $this->getGroupTotalCollectables($request->id);
-      $groupInfo['total_deposit'] = $this->getGroupDeposit($request->id);
+      $groupInfo['total_complete_service_cost'] = number_format($this->getGroupTotalCompleteServiceCost($request->id),2);
+      $groupInfo['total_cost'] = number_format($this->getGroupTotalCost($request->id),2);
+      $groupInfo['total_payment'] = number_format($this->getGroupPayment($request->id),2);
+      $groupInfo['total_discount'] = number_format($this->getGroupTotalDiscount($request->id),2);
+      $groupInfo['total_refund'] = number_format($this->getGroupTotalRefund($request->id),2);
+      $groupInfo['total_balance'] = number_format($this->getGroupTotalBalance($request->id),2);
+      $groupInfo['total_collectables'] = number_format($this->getGroupTotalCollectables($request->id),2);
+      $groupInfo['total_deposit'] = number_format($this->getGroupDeposit($request->id),2);
 
       $export = null;
       switch($request->type){
@@ -2640,7 +2640,6 @@ public function getClientPackagesByGroup($client_id, $group_id){
       }
 
       return Excel::download($export, 'users.xls');
-
     }
 
 

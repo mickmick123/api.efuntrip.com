@@ -143,15 +143,39 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
 
   public function service($id){
 
-    //$search = $request->input('search');
 
-    $clientServices = DB::table('client_services')
-      ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, created_at'))
-      ->where('group_id',$id)
-      //->whereIn('service_id', $this->services)
-      ->groupBy('service_id')
-      ->orderBy('created_at','DESC')
-      ->get();
+    if(count($this->services) > 0 && $this->year !== 0 && $this->month !== 0){
+
+      $month2 = $this->month;
+      $year = $this->year;
+      $month = $this->month;
+      if($this->month < 10){
+          $month2 = ltrim($month2, "0");
+      }
+
+      $clientServices = DB::table('client_services')
+        ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, created_at'))
+        ->where('group_id',$id)
+        ->whereIn('service_id', $this->services)
+        //->where(function($q) use($month,$year,$month2){
+            //$q->where('created_at','LIKE', $month.'%')->where('created_at','LIKE', '%'.$year);
+            //$q->orWhere('created_at','LIKE', $month2.'%')->where('created_at','LIKE', '%'.$year);
+        //})
+        ->groupBy('service_id')
+        ->orderBy('created_at','DESC')
+        ->get();
+
+    }
+    else{
+      $clientServices = DB::table('client_services')
+        ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, created_at'))
+        ->where('group_id',$id)
+        ->groupBy('service_id')
+        ->orderBy('created_at','DESC')
+        ->get();
+    }
+
+
 
     $ctr = 0;
     $temp = [];
@@ -213,8 +237,15 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
           $memberByDate = [];
           $ctr2 = 0;
 
+          //Here
+          $datetime = new DateTime($sd->sdate);
+          $getdate = $datetime->format('M d,Y');
 
-
+          if($this->lang == 'EN'){
+            $sd->sdate =  $getdate;
+          }else{
+            $sd->sdate = $this->DateChinese($getdate);
+          }
 
 
           foreach($queryClients as $m){
@@ -273,7 +304,13 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
         $response[$ctr] = $temp;
         $ctr++;
     }
-    $this->group['total_complete_service_cost'] = $tempTotal;
+
+    if($tempTotal > 0){
+        $this->group['total_complete_service_cost'] = number_format(-$tempTotal, 2);
+    }else{
+        $this->group['total_complete_service_cost'] = number_format($tempTotal, 2);
+    }
+
 
     return $response;
 
@@ -293,6 +330,7 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
     foreach($response as $s){
       $datetime = new DateTime($s->created_at);
       $getdate = $datetime->format('M d,Y');
+      $s->amount = number_format($s->amount,2);
 
       if($this->lang === 'EN'){
           $s->created_at = $getdate;
