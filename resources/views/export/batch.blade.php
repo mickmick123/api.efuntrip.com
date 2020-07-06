@@ -79,7 +79,7 @@
         <td></td>
         <td></td>
         <td></td>
-        <td colspan="2"><b>{{ $lang['_total_cost'] }} {{ $group['total_complete_service_cost'] }}</b></td>
+        <td colspan="2"><b>{{ $lang['_total_cost'] }} -{{ $group['total_complete_service_cost'] }}</b></td>
         <td></td>
     </tr>
 
@@ -129,7 +129,7 @@
         <td colspan="5"></td>
     </tr>
 
-  
+
 
     </tbody>
 </table>
