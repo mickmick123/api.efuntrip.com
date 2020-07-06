@@ -23,6 +23,7 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::post('/product-upload/{product_id}', 'OrdersController@uploadProduct');
 	Route::get('/list/{perPage?}', 'OrdersController@list');
+	Route::get('/order-list/{user_id}', 'OrdersController@userOrderList');
 	Route::get('/view-log/{order_id?}', 'OrdersController@viewOrderLog');
 	// Route::get('/product-category', 'OrdersController@productCategories');
 	Route::post('/mark-complete', 'OrdersController@markComplete');

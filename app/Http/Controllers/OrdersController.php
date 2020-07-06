@@ -882,4 +882,36 @@ class OrdersController extends Controller
 
         return Response::json($response);
     }
+
+
+    public function userOrderList($user_id){
+        $orders = Order::where('user_id', $user_id)->orderBy('date_of_delivery','DESC')->orderBy('order_id','DESC')->get();
+
+        foreach($orders as $o){
+            //$prio = 0;
+            $total_price = OrderDetails::where('order_id',$o->order_id)->where('order_status',1)->sum('total_price');
+            $o->total_price = $total_price;
+            $products = OrderDetails::where('order_id',$o->order_id)->where('order_status',1)
+                            ->leftJoin('product', 'product.product_id', '=', 'order_details.product_id')
+                            ->get();
+            $prods = $products->pluck('product_id');
+            $prio = Product::whereIn('product_id',$prods)
+                        ->where(function($q){
+                                    $q->where('category_id', 3);
+                                    $q->orwhere('category_id', 5);
+                                })
+                        ->count();
+            $o->products = $products;
+            $o->prio = 0;
+            if($prio > 0 && $o->is_delivered == 0){
+                $o->prio = 1;
+            }
+        }
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $orders;
+        
+        return Response::json($response);
+    }
 }
