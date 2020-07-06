@@ -314,8 +314,6 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
       $ctr = 0;
       foreach($response as $s){
         //$tempObj = {};
-        $datetime = new DateTime($s->created_at);
-        $getdate = $datetime->format('M d,Y');
 
         $tempObj['detail'] = $s->type;
         $tempObj['service_date'] = $s->created_at;
@@ -328,7 +326,9 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
         $temp[$ctr] = $tempObj;
         $ctr++;
       }
-      //$res = array_merge($data->toArray(), $temp->toArray());
+
+      //var_dump($temp);
+      $res = array_merge($temp, $temp);
 
 
       $lang = [];
@@ -381,8 +381,6 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
           $lang['_servic_name'] = '服务明细';
           $lang['_latest_date'] = '最近的服务日期';
           $lang['_total_service_cost'] = '总服务费';
-
-
           $lang['_transcation_history'] = '交易记录 : ';
 
           $lang['_amount'] = '共计';

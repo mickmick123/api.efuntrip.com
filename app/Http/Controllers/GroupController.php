@@ -2638,7 +2638,6 @@ public function getClientPackagesByGroup($client_id, $group_id){
               $export = new ByBatchExport($request->id, $request->lang, $getGroupMembers->toArray(), $groupInfo);
         break;
       }
-
       return Excel::download($export, 'users.xls');
     }
 
