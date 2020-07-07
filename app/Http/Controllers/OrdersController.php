@@ -884,8 +884,10 @@ class OrdersController extends Controller
     }
 
 
-    public function userOrderList($user_id){
-        $orders = Order::where('user_id', $user_id)->orderBy('date_of_delivery','DESC')->orderBy('order_id','DESC')->get();
+    public function userOrderList($user_id, Request $request){
+        $perPage = $request->input('size');
+
+        $orders = Order::where('user_id', $user_id)->orderBy('date_of_delivery','DESC')->orderBy('order_id','DESC')->paginate($perPage);
 
         foreach($orders as $o){
             //$prio = 0;
