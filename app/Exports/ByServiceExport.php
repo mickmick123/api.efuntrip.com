@@ -305,12 +305,12 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
         $ctr++;
     }
 
-    if($tempTotal > 0){
-        $this->group['total_complete_service_cost'] = number_format(-$tempTotal, 2);
-    }else{
-        $this->group['total_complete_service_cost'] = number_format($tempTotal, 2);
-    }
-
+    // if($tempTotal > 0){
+    //     $this->group['total_complete_service_cost'] = number_format(-$tempTotal, 2);
+    // }else{
+    //     $this->group['total_complete_service_cost'] = number_format($tempTotal, 2);
+    // }
+    $this->group['total_complete_service_cost'] = $this->group['total_cost'];
 
     return $response;
 

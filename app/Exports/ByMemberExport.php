@@ -152,10 +152,9 @@ class ByMemberExport implements FromView, WithEvents, ShouldAutoSize
                   ->where('g_u.group_id', $id)
                   ->get();
 
-       $gids = $mems->pluck('user_id');
+      $gids = $mems->pluck('user_id');
 
-
-       $groups = DB::table('users as u')->select(DB::raw('u.id, CONCAT(u.first_name, " ", u.last_name) as name, g_u.is_vice_leader, g_u.total_service_cost, g_u.id as guid'))
+      $groups = DB::table('users as u')->select(DB::raw('u.id, CONCAT(u.first_name, " ", u.last_name) as name, g_u.is_vice_leader, g_u.total_service_cost, g_u.id as guid'))
                       ->leftjoin(DB::raw('(select * from group_user) as g_u'),'g_u.user_id','=','u.id')
                       ->whereIn('u.id', $gids)->get();
 
@@ -264,11 +263,12 @@ class ByMemberExport implements FromView, WithEvents, ShouldAutoSize
           $response[$ctr] =  $temp;
           $ctr++;
         }
-        if($tempTotal > 0){
-            $this->group['total_complete_service_cost'] = number_format(-$tempTotal, 2);
-        }else{
-            $this->group['total_complete_service_cost'] = number_format($tempTotal, 2);
-        }
+        // if($tempTotal > 0){
+        //     $this->group['total_complete_service_cost'] = number_format(-$tempTotal, 2);
+        // }else{
+        //     $this->group['total_complete_service_cost'] = number_format($tempTotal, 2);
+        // }
+        $this->group['total_complete_service_cost'] = $this->group['total_cost'];
 
 
         return $response;

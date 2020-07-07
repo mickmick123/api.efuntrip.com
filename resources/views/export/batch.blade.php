@@ -20,7 +20,7 @@
           @foreach($service['members'] as $member)
           <tr>
                 <td></td>
-                <td style="text-align:center"><b >{{ $member->first_name." ".$member->last_name }}</b></td>
+                <td style="text-align:center"><b >{{ $member->name }}</b></td>
                 <td></td>
                 <td></td>
                 <td></td>
@@ -35,9 +35,8 @@
                     <td></td>
                     <td style="text-align:center">{{ $service->tracking }}</td>
                     <td style="text-align:center">{{ $service->status }}</td>
-                    <td style="text-align:center">{{ $service->detail }}</td>
-                    <td style="text-align:center">{{ ($service->cost + $service->charge + $service->tip) - $service->discount  }}</td>
-
+                    <td style="text-align:center"><b>{{ $service->detail }}</b></td>
+                    <td style="text-align:center"><b>{{ ($service->detail === "Deposit") ? "+".$service->total_charge  : "-" .$service->total_charge  }}</b></td>
                     <td style="text-align:center">-{{ $service->total_service_cost }}</td>
               </tr>
 

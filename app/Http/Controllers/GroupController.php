@@ -2638,6 +2638,10 @@ public function getClientPackagesByGroup($client_id, $group_id){
               $export = new ByBatchExport($request->id, $request->lang, $getGroupMembers->toArray(), $groupInfo);
         break;
       }
+
+      //$response  = User::where('id',1)->select('first_name','last_name')->first();
+      //print_r($response);
+      //return Response::json($response);
       return Excel::download($export, 'users.xls');
     }
 
