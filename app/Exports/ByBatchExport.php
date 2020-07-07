@@ -338,20 +338,18 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
         }
 
         $services[0]['total_charge'] = $s->amount;
-        $services[0]['total_service_cost'] = 0;
+        $services[0]['total_service_cost'] = $s->amount;
         $services[0]['remarks'] = "";
 
         $members[0] = User::where('id',1)->select('first_name','last_name')->first();
 
         $members[0]['name'] = '';
         $members[0]['services'] = $services;
-
         $tempObj['members'] = $members;
 
         $temp[$ctr] = $tempObj;
         $ctr++;
       }
-
 
       $merged = $data->merge($temp);
       $result = $merged->all();
@@ -368,7 +366,6 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
         else{
             $result2[$ctr]['service_date'] = $this->DateChinese($getdate);
         }
-
         $ctr++;
       }
 

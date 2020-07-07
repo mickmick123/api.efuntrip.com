@@ -37,7 +37,7 @@
                     <td style="text-align:center">{{ $service->status }}</td>
                     <td style="text-align:center"><b>{{ $service->detail }}</b></td>
                     <td style="text-align:center"><b>{{ ($service->detail === "Deposit") ? "+".$service->total_charge  : "-" .$service->total_charge  }}</b></td>
-                    <td style="text-align:center">-{{ $service->total_service_cost }}</td>
+                    <td style="text-align:center">{{ $service->total_service_cost }}</td>
               </tr>
 
               <tr>
