@@ -21,15 +21,15 @@
 
           @foreach($member['packages'] as $service)
           <tr>
-                <td style="text-align:center">{{ $service->datetime }}</td>
-                <td style="text-align:center">{{ $service->detail }}</td>
-                <td style="text-align:center">{{ $service->status }}</td>
-                <td style="text-align:center">{{ $service->package_cost }}</td>
-                <td style="text-align:center">-{{ $service->total_service_cost }}</td>
+                <td style="text-align:center">{{ $service['datetime'] }}</td>
+                <td style="text-align:center">{{ $service['detail'] }}</td>
+                <td style="text-align:center">{{ $service['status'] }}</td>
+                <td style="text-align:center">{{ $service['package_cost'] }}</td>
+                <td style="text-align:center">-{{ $service['total_service_cost'] }}</td>
           </tr>
 
           <tr >
-              <td colspan="5" style="text-align:center"><b>{{ $service->remarks }}</b></td>
+              <td colspan="5" style="text-align:center"><b>{{ $service['remarks'] }}</b></td>
           </tr>
 
           @endforeach

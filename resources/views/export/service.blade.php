@@ -34,20 +34,20 @@
           @foreach($service['bydates'] as $bydate)
 
            <tr>
-                <td colspan="7" style="text-align:center; background-color:#d5d0b5">{{ $bydate->sdate }}</td>
+                <td colspan="7" style="text-align:center; background-color:#d5d0b5">{{ $bydate['sdate'] }}</td>
            </tr>
 
-            @foreach($bydate->members as $member)
+            @foreach($bydate['members'] as $member)
 
              <tr>
-                  <td colspan="2" style="text-align:center"><b>{{ $member->first_name." ".$member->last_name }}</b></td>
+                  <td colspan="2" style="text-align:center"><b>{{ $member['name'] }}</b></td>
                   <td colspan="5"></td>
              </tr>
              <tr>
-                   <td colspan="2"  style="text-align:center">{{ $member->service->tracking }}</td>
-                   <td colspan="1" style="text-align:center">{{ $member->service->status  }}</td>
-                   <td colspan="2" style="text-align:center">{{ ($member->service->cost + $member->service->charge + $member->service->tip) - $member->service->discount  }}</td>
-                   <td colspan="2" style="text-align:center">-{{ $member->service->total_service_cost }}</td>
+                   <td colspan="2"  style="text-align:center">{{ $member['service']['tracking'] }}</td>
+                   <td colspan="1" style="text-align:center">{{ $member['service']['status']  }}</td>
+                   <td colspan="2" style="text-align:center">{{ ($member['service']['cost'] + $member['service']['charge'] + $member['service']['tip']) - $member['service']['discount']  }}</td>
+                   <td colspan="2" style="text-align:center">-{{ $member['service']['total_service_cost'] }}</td>
              </tr>
 
              <tr>

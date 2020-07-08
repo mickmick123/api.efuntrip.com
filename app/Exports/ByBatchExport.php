@@ -22,11 +22,12 @@ use DB, Response, DateTime;
 class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
 {
 
-  public function __construct(int $id, string $lang, array $ids, array $group)
+  public function __construct(int $id, string $lang, array $data, array $group)
   {
       $this->id = $id;
       $this->lang = $lang;
-      $this->ids = $ids;
+      //$this->ids = $ids;
+      $this->data = $data;
       $this->users = [];
       $this->services = [];
       $this->group = $group;
@@ -65,7 +66,7 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
 
   public function byBatch($groupId){
 
-        $clientServices = DB::table('client_services')
+      /*  $clientServices = DB::table('client_services')
           ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, id, detail, created_at, service_id'))
           ->where('active',1)->where('group_id',$groupId)
           ->groupBy(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'))
@@ -180,7 +181,66 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
 
         $this->group['total_complete_service_cost'] = $this->group['total_cost'];
 
-        return $response;
+        return $response;*/
+
+
+        $temp = [];
+        $ctr = 0;
+        $response = [];
+
+
+        foreach($this->data as $data){
+
+            $temp['sdate'] = $data['sdate'];
+            $temp['total_service_cost'] = $data['total_service_cost'];
+            $temp['group_id'] = $data['group_id'];
+            $temp['detail'] = $data['detail'];
+            $temp['service_date'] = $data['service_date'];
+            // $datetime = new DateTime($data['service_date']);
+            // $getdate = $datetime->format('M d,Y');
+
+            // if($this->lang == 'EN'){
+            //     $temp['service_date']=  $getdate;
+            // }else{
+            //     $temp['service_date']=  $this->DateChinese($getdate);
+            // }
+
+            $temPackage = [];
+            $j = 0;
+            $members = [];
+           foreach($data['members'] as $p){
+            //
+               $p['name'] = $p['first_name']. " " . $p['last_name'];
+            //
+            //   $services = [];
+            //   $ctrM = 0;
+            //   foreach($p['services'] as $m){
+            //     $clientServices = [];
+            //     $tmpCtr = 0;
+            //
+            //
+            //
+            //
+            //     // if($this->lang === 'EN'){
+            //     //     $m['service']->status = ucfirst($m['service']->status);
+            //     // }else{
+            //     //     $m['service']->status = $this->statusChinese($m['service']->status);
+            //     // }
+            //
+            //     $members[$ctrM] = $m;
+            //     $ctrM++;
+            //   }
+              $members[$j] =  $p;
+              $j++;
+            }
+
+            $temp['members'] =  $members;
+            //$temp['total_service_cost'] = $totalServiceCost;
+            $response[$ctr] =  $temp;
+            $ctr = $ctr + 1;
+
+        }
+         return $response;
   }
 
 
@@ -299,7 +359,7 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
       $app = app();
 
 
-      $transactions = $this->transactions($this->id);
+     $transactions = $this->transactions($this->id);
 
       $response = DB::table('client_transactions as a')
                     ->select(DB::raw('
@@ -310,6 +370,7 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
 
       $temp = [];
       $ctr = 0;
+
       foreach($response as $s){
         //$tempObj = {};
         $members = [];
@@ -351,7 +412,7 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
         $ctr++;
       }
 
-      $merged = $data->merge($temp);
+      $merged = collect($data)->merge($temp);
       $result = $merged->all();
 
       $result2 = collect($result)->sortBy('service_date')->reverse()->toArray();
@@ -437,8 +498,9 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
 
 
       return view('export.batch', [
-          'transactions' => $transactions,
+        //  'transactions' => $transactions,
           'services' => $result2,
+          //'services' => $data,
           'group' => $this->group,
           'lang' => $lang
       ]);

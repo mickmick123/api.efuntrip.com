@@ -23,11 +23,12 @@ use DateTime;
 class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
 {
 
-  public function __construct(int $id, string $lang, array $ids, array $group, object $req)
+  public function __construct(int $id, string $lang, array $data, array $group, object $req)
   {
       $this->id = $req->id;
       $this->lang = $req->lang;
-      $this->ids = $ids;
+      //$this->ids = $ids;
+      $this->data = $data;
       $this->users = [];
       $this->group = $group;
       $this->year = $req->year;
@@ -144,7 +145,7 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
   public function service($id){
 
 
-    if(count($this->services) > 0 && $this->year !== 0 && $this->month !== 0){
+    /*if(count($this->services) > 0 && $this->year !== 0 && $this->month !== 0){
 
       $month2 = $this->month;
       $year = $this->year;
@@ -313,6 +314,75 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
     $this->group['total_complete_service_cost'] = $this->group['total_cost'];
 
     return $response;
+    */
+
+
+   $temp = [];
+   $ctr = 0;
+   $response = [];
+
+
+   foreach($this->data as $data){
+
+       $temp['total_service'] = $data['total_service'];
+       $temp['total_service_cost'] = $data['total_service_cost'];
+       $temp['service_count'] = $data['service_count'];
+       $temp['group_id'] = $data['group_id'];
+       $temp['detail'] = $data['detail'];
+
+       $datetime = new DateTime($data['service_date']);
+       $getdate = $datetime->format('M d,Y');
+
+       if($this->lang == 'EN'){
+           $temp['service_date']=  $getdate;
+       }else{
+           $temp['service_date']=  $this->DateChinese($getdate);
+       }
+
+       $temPackage = [];
+       $j = 0;
+
+       foreach($data['bydates'] as $p){
+
+         $datetime = new DateTime($p['sdate']);
+         $getdate = $datetime->format('M d,Y');
+
+         if($this->lang == 'EN'){
+           $p['sdate'] =  $getdate;
+         }else{
+           $p['sdate'] = $this->DateChinese($getdate);
+         }
+
+         $members = [];
+         $ctrM = 0;
+         foreach($p['members'] as $m){
+           $clientServices = [];
+           $tmpCtr = 0;
+
+           $m['name'] = $m['first_name']. " " . $m['last_name'];
+
+
+           // if($this->lang === 'EN'){
+           //     $m['service']->status = ucfirst($m['service']->status);
+           // }else{
+           //     $m['service']->status = $this->statusChinese($m['service']->status);
+           // }
+
+           $members[$ctrM] = $m;
+           $ctrM++;
+         }
+         $p['members'] =  $members;
+         $temPackage[$j] = $p;
+         $j++;
+       }
+
+       $temp['bydates'] =  $temPackage;
+       //$temp['total_service_cost'] = $totalServiceCost;
+       $response[$ctr] =  $temp;
+       $ctr = $ctr + 1;
+
+   }
+    return $response;
 
   }
 
@@ -410,7 +480,7 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
 
       return view('export.service', [
           'transactions' => $transactions,
-          'services' => $data->toArray(),
+          'services' => $data,
           'group' => $this->group,
           'lang' => $lang
       ]);

@@ -20,7 +20,7 @@
           @foreach($service['members'] as $member)
           <tr>
                 <td></td>
-                <td style="text-align:center"><b >{{ $member->name }}</b></td>
+                <td style="text-align:center"><b >{{ $member['name'] }}</b></td>
                 <td></td>
                 <td></td>
                 <td></td>
@@ -30,18 +30,18 @@
           <tr>
              <td colspan="5"></td>
           </tr>
-             @foreach($member->services as $service)
+             @foreach($member['services'] as $service)
               <tr>
                     <td></td>
-                    <td style="text-align:center">{{ $service->tracking }}</td>
-                    <td style="text-align:center">{{ $service->status }}</td>
-                    <td style="text-align:center"><b>{{ $service->detail }}</b></td>
-                    <td style="text-align:center"><b>{{ ($service->detail === "Deposit") ? "+".$service->total_charge  : "-" .$service->total_charge  }}</b></td>
-                    <td style="text-align:center">{{ $service->total_service_cost }}</td>
+                    <td style="text-align:center">{{ $service['tracking'] }}</td>
+                    <td style="text-align:center">{{ $service['status'] }}</td>
+                    <td style="text-align:center"><b>{{ $service['detail'] }}</b></td>
+                    <td style="text-align:center"><b>{{ ($service['detail'] === "Deposit") ? "+".$service['total_charge']  : "-" .$service['total_charge']  }}</b></td>
+                    <td style="text-align:center">{{ $service['total_service_cost'] }}</td>
               </tr>
 
               <tr>
-                  <td colspan="5" align="center"><b>{{ $service->remarks }}</b></td>
+                  <td colspan="5" align="center"><b>{{ $service['remarks'] }}</b></td>
               </tr>
 
 

@@ -24,14 +24,15 @@ use DateTime;
 class ByMemberExport implements FromView, WithEvents, ShouldAutoSize
 {
 
-  public function __construct(int $id, string $lang, array $ids, array $group)
+  public function __construct(int $id, string $lang, array $data, array $group)
   {
       $this->id = $id;
       $this->lang = $lang;
-      $this->ids = $ids;
+      //$this->ids = $ids;
       $this->users = [];
       $this->services = [];
       $this->group = $group;
+      $this->data = $data;
   }
 
   public function registerEvents(): array
@@ -51,16 +52,6 @@ class ByMemberExport implements FromView, WithEvents, ShouldAutoSize
 
               $sheet = $event->sheet->getDelegate();
 
-            //  $sheet->getStyle($cellRange)->getFont()->setSize(14);
-
-              // $sheet->getStyle('A1:E1')->getFont()
-              //       ->setSize(12)
-              //       ->setBold(true)
-              //       ->getColor()->setRGB('000000');
-              //
-              // $sheet->getStyle('A1:E1')->getFill()
-              //           ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-              //           ->getStartColor()->setARGB('6fcddc');
 
           },
       ];
@@ -148,7 +139,7 @@ class ByMemberExport implements FromView, WithEvents, ShouldAutoSize
 
   public function members($id) {
 
-      $mems = DB::table('group_user as g_u')
+    /* $mems = DB::table('group_user as g_u')
                   ->where('g_u.group_id', $id)
                   ->get();
 
@@ -158,7 +149,7 @@ class ByMemberExport implements FromView, WithEvents, ShouldAutoSize
                       ->leftjoin(DB::raw('(select * from group_user) as g_u'),'g_u.user_id','=','u.id')
                       ->whereIn('u.id', $gids)->get();
 
-       $response = $groups;
+      $response = $groups;
 
         $ctr=0;
         $temp = [];
@@ -166,6 +157,7 @@ class ByMemberExport implements FromView, WithEvents, ShouldAutoSize
         $chrg = 0;
         $tempTotal = 0;
         $bal = 0;
+
         foreach($groups as $g){
            $packs = DB::table('packages as p')->select(DB::raw('p.*,g.name as group_name'))
                       ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','p.group_id')
@@ -193,14 +185,7 @@ class ByMemberExport implements FromView, WithEvents, ShouldAutoSize
                     foreach($services as $s){
 
                       $s->package_cost = $s->cost+ $s->charge + $s->tip + $s->com_agent + $s->com_client;
-                    //  $s->package_cost = $s->package_cost.number_format($s->package_cost, 2, '.', ',');
-
-                    //  print_r($s->status);
-                    //  print_r("---");
                       $chrg = ($s->active == 0 || $s->status !== 'complete') ? 0 : ($s->charge + $s->cost + $s->tip);
-                      // if($s->active == 0 || $s->status !== 'complete'){
-                      //     $chrg = 0;
-                      // }
 
                       $translated = Service::where('id',$s->service_id)->first();
 
@@ -263,14 +248,83 @@ class ByMemberExport implements FromView, WithEvents, ShouldAutoSize
           $response[$ctr] =  $temp;
           $ctr++;
         }
-        // if($tempTotal > 0){
-        //     $this->group['total_complete_service_cost'] = number_format(-$tempTotal, 2);
-        // }else{
-        //     $this->group['total_complete_service_cost'] = number_format($tempTotal, 2);
-        // }
+
+
         $this->group['total_complete_service_cost'] = $this->group['total_cost'];
 
+      */
+      $ctr = 0;
+      $temp = [];
+      $response = [];
+      $i = 0;
 
+      $chrg = 0;
+      $tempTotal = 0;
+      $bal = 0;
+
+
+      foreach($this->data as $data){
+          $temp['id'] = $data['user_id'];
+          $temp['name'] = $data['name'];
+          $temp['is_vice_leader'] = $data['is_vice_leader'];
+          $temp['user_id'] = $data['id'];
+
+          $temp['packages'] = [];
+          $temPackage = [];
+          $j = 0;
+
+          $totalServiceCost = 0;
+
+          foreach($data['packages'] as $p){
+
+            $datetime = new DateTime($p['created_at']);
+            $getdate = $datetime->format('M d,Y');
+            $gettime = $datetime->format('h:i A');
+
+            $chrg = ($p['active'] == 0 || $p['status'] !== 'complete') ? 0 : ($p['charge'] + $p['cost'] + $p['tip']);
+
+            if($p['active'] == 0){
+                 $sub = 0;
+            }
+            //
+            if($p['active'] !== 0){
+                $totalServiceCost += ($p['package_cost'] - $p['discount']);
+            }
+            //
+            //Subtotal
+            $sub = $chrg;
+
+            //Per Person Balance
+            if($p['active'] == 0){
+                $sub = 0;
+            }
+
+            $bal += $sub;
+
+            $tempTotal +=$sub;
+
+            $p['total_service_cost'] = $tempTotal;
+
+            if($this->lang === 'EN'){
+                $p['datetime'] = $getdate;
+                $p['status'] = ucfirst($p['status']);
+            }else{
+                $p['datetime'] = $this->DateChinese($getdate);
+                $p['status'] = $this->statusChinese($p['status']);
+            }
+
+
+            $temPackage[$j] = $p;
+            $j++;
+          }
+
+          $temp['packages'] =  $temPackage;
+          $temp['total_service_cost'] = $totalServiceCost;
+          $response[$ctr] =  $temp;
+          $ctr = $ctr + 1;
+
+        }
+      //  $response = $this->data;
         return $response;
   }
 
@@ -374,7 +428,7 @@ class ByMemberExport implements FromView, WithEvents, ShouldAutoSize
 
       return view('export.user', [
           'transactions' => $transactions,
-          'members' => $data->toArray(),
+          'members' => $data,
           'group' => $this->group,
           'lang' => $lang
       ]);
