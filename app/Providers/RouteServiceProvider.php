@@ -92,6 +92,7 @@ class RouteServiceProvider extends ServiceProvider
 
             $this->mapUserRoutes();
 
+            $this->mapInventoryRoutes();
     }
 
     /**
@@ -327,5 +328,13 @@ class RouteServiceProvider extends ServiceProvider
                  ->middleware('api')
                  ->namespace($this->namespace)
                  ->group(base_path('routes/api/user.php'));
+        }
+
+        protected function mapInventoryRoutes()
+        {
+            Route::prefix('api/v1/inventory')
+                ->middleware('api')
+                ->namespace($this->namespace)
+                ->group(base_path('routes/api/inventory.php'));
         }
 }
