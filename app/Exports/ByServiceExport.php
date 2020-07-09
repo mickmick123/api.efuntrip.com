@@ -23,11 +23,12 @@ use DateTime;
 class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
 {
 
-  public function __construct(int $id, string $lang, array $ids, array $group, object $req)
+  public function __construct(int $id, string $lang, array $data, array $group, object $req)
   {
       $this->id = $req->id;
       $this->lang = $req->lang;
-      $this->ids = $ids;
+      //$this->ids = $ids;
+      $this->data = $data;
       $this->users = [];
       $this->group = $group;
       $this->year = $req->year;
@@ -143,15 +144,39 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
 
   public function service($id){
 
-    //$search = $request->input('search');
 
-    $clientServices = DB::table('client_services')
-      ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, created_at'))
-      ->where('group_id',$id)
-      //->whereIn('service_id', $this->services)
-      ->groupBy('service_id')
-      ->orderBy('created_at','DESC')
-      ->get();
+    /*if(count($this->services) > 0 && $this->year !== 0 && $this->month !== 0){
+
+      $month2 = $this->month;
+      $year = $this->year;
+      $month = $this->month;
+      if($this->month < 10){
+          $month2 = ltrim($month2, "0");
+      }
+
+      $clientServices = DB::table('client_services')
+        ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, created_at'))
+        ->where('group_id',$id)
+        ->whereIn('service_id', $this->services)
+        //->where(function($q) use($month,$year,$month2){
+            //$q->where('created_at','LIKE', $month.'%')->where('created_at','LIKE', '%'.$year);
+            //$q->orWhere('created_at','LIKE', $month2.'%')->where('created_at','LIKE', '%'.$year);
+        //})
+        ->groupBy('service_id')
+        ->orderBy('created_at','DESC')
+        ->get();
+
+    }
+    else{
+      $clientServices = DB::table('client_services')
+        ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, created_at'))
+        ->where('group_id',$id)
+        ->groupBy('service_id')
+        ->orderBy('created_at','DESC')
+        ->get();
+    }
+
+
 
     $ctr = 0;
     $temp = [];
@@ -213,8 +238,15 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
           $memberByDate = [];
           $ctr2 = 0;
 
+          //Here
+          $datetime = new DateTime($sd->sdate);
+          $getdate = $datetime->format('M d,Y');
 
-
+          if($this->lang == 'EN'){
+            $sd->sdate =  $getdate;
+          }else{
+            $sd->sdate = $this->DateChinese($getdate);
+          }
 
 
           foreach($queryClients as $m){
@@ -273,8 +305,83 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
         $response[$ctr] = $temp;
         $ctr++;
     }
-    $this->group['total_complete_service_cost'] = $tempTotal;
 
+    // if($tempTotal > 0){
+    //     $this->group['total_complete_service_cost'] = number_format(-$tempTotal, 2);
+    // }else{
+    //     $this->group['total_complete_service_cost'] = number_format($tempTotal, 2);
+    // }
+    $this->group['total_complete_service_cost'] = $this->group['total_cost'];
+
+    return $response;
+    */
+
+
+   $temp = [];
+   $ctr = 0;
+   $response = [];
+
+
+   foreach($this->data as $data){
+
+       $temp['total_service'] = $data['total_service'];
+       $temp['total_service_cost'] = $data['total_service_cost'];
+       $temp['service_count'] = $data['service_count'];
+       $temp['group_id'] = $data['group_id'];
+       $temp['detail'] = $data['detail'];
+
+       $datetime = new DateTime($data['service_date']);
+       $getdate = $datetime->format('M d,Y');
+
+       if($this->lang == 'EN'){
+           $temp['service_date']=  $getdate;
+       }else{
+           $temp['service_date']=  $this->DateChinese($getdate);
+       }
+
+       $temPackage = [];
+       $j = 0;
+
+       foreach($data['bydates'] as $p){
+
+         $datetime = new DateTime($p['sdate']);
+         $getdate = $datetime->format('M d,Y');
+
+         if($this->lang == 'EN'){
+           $p['sdate'] =  $getdate;
+         }else{
+           $p['sdate'] = $this->DateChinese($getdate);
+         }
+
+         $members = [];
+         $ctrM = 0;
+         foreach($p['members'] as $m){
+           $clientServices = [];
+           $tmpCtr = 0;
+
+           $m['name'] = $m['first_name']. " " . $m['last_name'];
+
+
+           // if($this->lang === 'EN'){
+           //     $m['service']->status = ucfirst($m['service']->status);
+           // }else{
+           //     $m['service']->status = $this->statusChinese($m['service']->status);
+           // }
+
+           $members[$ctrM] = $m;
+           $ctrM++;
+         }
+         $p['members'] =  $members;
+         $temPackage[$j] = $p;
+         $j++;
+       }
+
+       $temp['bydates'] =  $temPackage;
+       //$temp['total_service_cost'] = $totalServiceCost;
+       $response[$ctr] =  $temp;
+       $ctr = $ctr + 1;
+
+   }
     return $response;
 
   }
@@ -293,6 +400,7 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
     foreach($response as $s){
       $datetime = new DateTime($s->created_at);
       $getdate = $datetime->format('M d,Y');
+      $s->amount = number_format($s->amount,2);
 
       if($this->lang === 'EN'){
           $s->created_at = $getdate;
@@ -372,7 +480,7 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
 
       return view('export.service', [
           'transactions' => $transactions,
-          'services' => $data->toArray(),
+          'services' => $data,
           'group' => $this->group,
           'lang' => $lang
       ]);

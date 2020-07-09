@@ -22,11 +22,12 @@ use DB, Response, DateTime;
 class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
 {
 
-  public function __construct(int $id, string $lang, array $ids, array $group)
+  public function __construct(int $id, string $lang, array $data, array $group)
   {
       $this->id = $id;
       $this->lang = $lang;
-      $this->ids = $ids;
+      //$this->ids = $ids;
+      $this->data = $data;
       $this->users = [];
       $this->services = [];
       $this->group = $group;
@@ -65,7 +66,7 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
 
   public function byBatch($groupId){
 
-        $clientServices = DB::table('client_services')
+      /*  $clientServices = DB::table('client_services')
           ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, id, detail, created_at, service_id'))
           ->where('active',1)->where('group_id',$groupId)
           ->groupBy(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'))
@@ -77,7 +78,6 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
         $response = $clientServices;
 
 
-
         foreach($clientServices as $s){
 
           $query = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId);
@@ -85,22 +85,22 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
 
           $temp['detail'] = $s->detail;
 
-
           $temp['service_date'] = $s->sdate;
           $temp['sdate'] = $s->sdate;
           $temp['group_id'] = $groupId;
 
 
           $datetime = new DateTime($s->sdate);
-          $getdate = $datetime->format('M d,Y');
+          //$getdate = $datetime->format('M d,Y');
+          $getdate = $datetime->format('Y-m-d');
 
-          if($this->lang === 'EN'){
-              $temp['sdate'] =  $getdate;
-              $temp['service_date'] = $getdate;
-          }else{
-              $temp['sdate'] =  $this->DateChinese($getdate);
-              $temp['service_date'] = $this->DateChinese($getdate);
-          }
+        //  if($this->lang === 'EN'){
+             $temp['sdate'] =  $getdate;
+             $temp['service_date'] = $getdate;
+        //  }else{
+          //    $temp['sdate'] =  $this->DateChinese($getdate);
+          //    $temp['service_date'] = $this->DateChinese($getdate);
+        //  }
 
 
           $queryMembers = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->orderBy('created_at','DESC')->orderBy('client_id')->groupBy('client_id')->get();
@@ -158,15 +158,19 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
                   $tempTotal +=$sub;
 
                   $cs->total_service_cost = $tempTotal;
+                  $cs->total_charge = (($cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent)) - $cs->discount;
 
                   $clientServices[$tmpCtr] = $cs;
                   $tmpCtr++;
                 }
 
-                $members[$ctr2] = User::where('id',$m->client_id)->select('first_name','last_name')->first();
+                //$member = User::where('id',$m->client_id)->select('first_name','last_name')->first();
+
+                $member = ($members[$ctr2] = User::where('id',$m->client_id)->select('first_name','last_name')->first());
+                //  $members[$ctr2]['tcost']
+                $members[$ctr2]['name'] =  $member->first_name ." ". $member->last_name;
                 $members[$ctr2]['tcost'] = $query->where('client_id',$m->client_id)->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)"));
                 $members[$ctr2]['services'] = $clientServices;
-
               $ctr2++;
           }
           $temp['total_service_cost'] = $totalCost;
@@ -175,9 +179,68 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
           $ctr++;
         }
 
-        $this->group['total_complete_service_cost'] = $tempTotal;
+        $this->group['total_complete_service_cost'] = $this->group['total_cost'];
 
-        return $response;
+        return $response;*/
+
+
+        $temp = [];
+        $ctr = 0;
+        $response = [];
+
+
+        foreach($this->data as $data){
+
+            $temp['sdate'] = $data['sdate'];
+            $temp['total_service_cost'] = $data['total_service_cost'];
+            $temp['group_id'] = $data['group_id'];
+            $temp['detail'] = $data['detail'];
+            $temp['service_date'] = $data['service_date'];
+            // $datetime = new DateTime($data['service_date']);
+            // $getdate = $datetime->format('M d,Y');
+
+            // if($this->lang == 'EN'){
+            //     $temp['service_date']=  $getdate;
+            // }else{
+            //     $temp['service_date']=  $this->DateChinese($getdate);
+            // }
+
+            $temPackage = [];
+            $j = 0;
+            $members = [];
+           foreach($data['members'] as $p){
+            //
+               $p['name'] = $p['first_name']. " " . $p['last_name'];
+            //
+            //   $services = [];
+            //   $ctrM = 0;
+            //   foreach($p['services'] as $m){
+            //     $clientServices = [];
+            //     $tmpCtr = 0;
+            //
+            //
+            //
+            //
+            //     // if($this->lang === 'EN'){
+            //     //     $m['service']->status = ucfirst($m['service']->status);
+            //     // }else{
+            //     //     $m['service']->status = $this->statusChinese($m['service']->status);
+            //     // }
+            //
+            //     $members[$ctrM] = $m;
+            //     $ctrM++;
+            //   }
+              $members[$j] =  $p;
+              $j++;
+            }
+
+            $temp['members'] =  $members;
+            //$temp['total_service_cost'] = $totalServiceCost;
+            $response[$ctr] =  $temp;
+            $ctr = $ctr + 1;
+
+        }
+         return $response;
   }
 
 
@@ -191,6 +254,20 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
                       ->where('group_id', $id)
                       ->orderBy('created_at','DESC')
                       ->get();
+
+    foreach($response as $s){
+      $datetime = new DateTime($s->created_at);
+      $getdate = $datetime->format('M d,Y');
+      $s->amount = number_format($s->amount,2);
+
+      if($this->lang === 'EN'){
+          $s->created_at = $getdate;
+
+      }else{
+          $s->created_at = $this->DateChinese($getdate);
+          $s->type = $this->typeChinese($s->type);
+      }
+    }
 
     return $response;
   }
@@ -279,8 +356,79 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
   public function view(): View
   {
       $data = $this->byBatch($this->id);
+      $app = app();
 
-      $transactions = $this->transactions($this->id);
+
+     $transactions = $this->transactions($this->id);
+
+      $response = DB::table('client_transactions as a')
+                    ->select(DB::raw('
+                        a.amount,a.type, a.created_at'))
+                        ->where('group_id', $this->id)
+                        ->orderBy('created_at','DESC')
+                        ->get();
+
+      $temp = [];
+      $ctr = 0;
+
+      foreach($response as $s){
+        //$tempObj = {};
+        $members = [];
+
+        $services = [];
+
+        $tempObj['detail'] = $s->type;
+        $tempObj['group_id'] = $this->id;
+
+        $datetime = new DateTime($s->created_at);
+        $tempObj['sdate'] = $datetime->format('Y-m-d');
+        $tempObj['service_date'] = $datetime->format('Y-m-d');
+        $tempObj['total_service_cost'] = $s->amount;
+
+        $services[0] =  User::where('id',1)->select('first_name','last_name')->first();
+
+        $services[0]['tracking']=  "";
+        $services[0]['status']=  "";
+        $services[0]['name']= "";
+
+
+        if($this->lang === 'EN'){
+           $services[0]['detail'] = $s->type;
+        }else{
+           $services[0]['detail'] = $this->typeChinese($s->type);
+        }
+
+        $services[0]['total_charge'] = $s->amount;
+        $services[0]['total_service_cost'] = $s->amount;
+        $services[0]['remarks'] = "";
+
+        $members[0] = User::where('id',1)->select('first_name','last_name')->first();
+
+        $members[0]['name'] = '';
+        $members[0]['services'] = $services;
+        $tempObj['members'] = $members;
+
+        $temp[$ctr] = $tempObj;
+        $ctr++;
+      }
+
+      $merged = collect($data)->merge($temp);
+      $result = $merged->all();
+
+      $result2 = collect($result)->sortBy('service_date')->reverse()->toArray();
+      $ctr = 0;
+      foreach($result2 as $r){
+        $datetime = new DateTime($r['service_date']);
+        $getdate = $datetime->format('M d,Y');
+
+        if($this->lang === 'EN'){
+            $result2[$ctr]['service_date'] = $getdate;
+        }
+        else{
+            $result2[$ctr]['service_date'] = $this->DateChinese($getdate);
+        }
+        $ctr++;
+      }
 
 
       $lang = [];
@@ -333,8 +481,6 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
           $lang['_servic_name'] = '服务明细';
           $lang['_latest_date'] = '最近的服务日期';
           $lang['_total_service_cost'] = '总服务费';
-
-
           $lang['_transcation_history'] = '交易记录 : ';
 
           $lang['_amount'] = '共计';
@@ -351,10 +497,10 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
       }
 
 
-
       return view('export.batch', [
-          'transactions' => $transactions,
-          'services' => $data->toArray(),
+        //  'transactions' => $transactions,
+          'services' => $result2,
+          //'services' => $data,
           'group' => $this->group,
           'lang' => $lang
       ]);

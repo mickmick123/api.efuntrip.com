@@ -40,7 +40,7 @@ use App\Exports\ByMemberExport;
 use App\Exports\ByBatchExport;
 
 
-
+use DateTime;
 
 
 class GroupController extends Controller
@@ -783,6 +783,7 @@ public function members(Request $request, $id, $page = 20) {
     $groups = DB::table('users as u')->select(DB::raw('u.id, CONCAT(u.first_name, " ", u.last_name) as name, g_u.is_vice_leader, g_u.total_service_cost, g_u.id as guid'))
                     ->leftjoin(DB::raw('(select * from group_user) as g_u'),'g_u.user_id','=','u.id')
                     ->whereIn('u.id', $gids)
+                    ->where('g_u.group_id', $id)
                     ->when($mode == 'fullname', function ($query) use($q1,$q2){
                         return $query->where(function ($query1) use($q1,$q2) {
                             return $query1->where(function ($query2) use($q1,$q2) {
@@ -2609,40 +2610,282 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
     public function getGroupSummary(Request $request){
 
-      $getGroupMembers = GroupUser::where('group_id',$request->id)->pluck('user_id');
-
       $filename = Carbon::now();
 
+
       $groupInfo = [];
-      $groupInfo['total_complete_service_cost'] = $this->getGroupTotalCompleteServiceCost($request->id);
-      $groupInfo['total_cost'] = $this->getGroupTotalCost($request->id);
-      $groupInfo['total_payment'] = $this->getGroupPayment($request->id);
-      $groupInfo['total_discount'] = $this->getGroupTotalDiscount($request->id);
-      $groupInfo['total_refund'] = $this->getGroupTotalRefund($request->id);
-      $groupInfo['total_balance'] = $this->getGroupTotalBalance($request->id);
-      $groupInfo['total_collectables'] = $this->getGroupTotalCollectables($request->id);
-      $groupInfo['total_deposit'] = $this->getGroupDeposit($request->id);
+      $groupInfo['total_complete_service_cost'] = number_format($this->getGroupTotalCompleteServiceCost($request->id),2);
+      $groupInfo['total_cost'] = number_format($this->getGroupTotalCost($request->id),2);
+      $groupInfo['total_payment'] = number_format($this->getGroupPayment($request->id),2);
+      $groupInfo['total_discount'] = number_format($this->getGroupTotalDiscount($request->id),2);
+      $groupInfo['total_refund'] = number_format($this->getGroupTotalRefund($request->id),2);
+      $groupInfo['total_balance'] = number_format($this->getGroupTotalBalance($request->id),2);
+      $groupInfo['total_collectables'] = number_format($this->getGroupTotalCollectables($request->id),2);
+      $groupInfo['total_deposit'] = number_format($this->getGroupDeposit($request->id),2);
 
       $export = null;
       switch($request->type){
 
         case 'by-service':
-              $export = new ByServiceExport($request->id, $request->lang, $getGroupMembers->toArray(), $groupInfo, $request);
+              $export = new ByServiceExport($request->id, $request->lang, $request->data, $groupInfo, $request);
         break;
 
         case 'by-members':
-              $export = new ByMemberExport($request->id, $request->lang, $getGroupMembers->toArray(), $groupInfo);
+              $export = new ByMemberExport($request->id, $request->lang, $request->data, $groupInfo);
         break;
 
         case 'by-batch':
-              $export = new ByBatchExport($request->id, $request->lang, $getGroupMembers->toArray(), $groupInfo);
+              $export = new ByBatchExport($request->id, $request->lang, $request->data, $groupInfo);
         break;
       }
 
       return Excel::download($export, 'users.xls');
-
     }
 
 
+ //getClientPackagesByService
+ public function getByService(Request $request, $id, $page = 20){
+
+   $year = $request->input('year');
+   $month = $request->input('month');
+   $hasNoServiceId = $request->input('hasNoServiceId');
+
+   if($hasNoServiceId == "1" ){
+        $services = explode(',', $request->input('services'));
+   }
+
+   if($hasNoServiceId == "1"){
+
+     $month2 = $month;
+     $year = $year;
+     $month = $month;
+     if($month < 10){
+         $month2 = ltrim($month2, "0");
+     }
+
+     $clientServices = DB::table('client_services')
+       ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, created_at'))
+       ->where('group_id',$id)
+       ->whereIn('service_id', $services)
+       //->where(function($q) use($month,$year,$month2){
+           //$q->where('created_at','LIKE', $month.'%')->where('created_at','LIKE', '%'.$year);
+           //$q->orWhere('created_at','LIKE', $month2.'%')->where('created_at','LIKE', '%'.$year);
+       //})
+       ->groupBy('service_id')
+       ->orderBy('created_at','DESC')
+       ->paginate($page);
+
+   }
+   else{
+     $clientServices = DB::table('client_services')
+       ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, created_at'))
+       ->where('group_id',$id)
+       ->groupBy('service_id')
+       ->orderBy('created_at','DESC')
+       ->paginate($page);
+   }
+
+
+   $ctr = 0;
+   $temp = [];
+   $response = $clientServices;
+
+   $chrg = 0;
+   $tempTotal = 0;
+   $bal = 0;
+     foreach($clientServices->items() as $s){
+
+       $query = ClientService::where('created_at', $s->created_at)->where('service_id',$s->service_id)->where('group_id', $id)->where('active', 1);
+
+       $servicesByDate = DB::table('client_services')
+         ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, created_at, client_id'))
+         ->where('group_id',$id)
+         ->where('service_id',$s->service_id)
+         ->groupBy(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'))
+         ->orderBy('created_at','DESC')
+         ->get();
+
+       $translated = Service::where('id',$s->service_id)->first();
+       $temp['detail'] = $s->detail;
+       if($translated){
+             if($request->input('lang') === 'CN'){
+               $temp['detail'] = (($translated->detail_cn != '' && $translated->detail_cn != 'NULL') ? $translated->detail_cn : $s->detail);
+             }
+       }
+
+       $temp['service_date'] = $s->sdate;
+       $temp['group_id'] = $id;
+
+       $discountCtr = 0;
+       $totalServiceCount = 0;
+
+
+
+       foreach($servicesByDate as $sd){
+
+         $queryClients = ClientService::where('service_id', $sd->service_id)->where('created_at', $sd->created_at)->where('group_id', $id)->orderBy('created_at','DESC')->orderBy('client_id')->groupBy('client_id')->get();
+
+         $memberByDate = [];
+         $ctr2 = 0;
+
+         foreach($queryClients as $m){
+
+           $clientServices = [];
+           $tmpCtr = 0;
+
+           $m->discount = ClientTransaction::where('client_service_id', $m->id)->where('type', 'Discount')->sum('amount');
+           $discountCtr += $m->discount;
+
+           $memberByDate[$ctr2] = User::where('id',$m->client_id)->select('first_name','last_name')->first();
+           $memberByDate[$ctr2]['tcost'] = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$sd->sdate)->where('group_id', $id)->where('client_id',$m->client_id)->value(DB::raw("SUM(cost + charge + tip +com_client + com_agent)"));
+           $memberByDate[$ctr2]['service'] = $m;
+           $memberByDate[$ctr2]['created_at'] = $m->created_at;
+
+           $chrg = ($m->active == 0 || strtolower($m->status) !== 'complete') ? 0 : ($m->charge + $m->cost + $m->tip);
+
+           $sub = $chrg;
+
+           //Per Person Balance
+           if($m->active == 0){
+               $sub = 0;
+           }
+
+           $bal += $sub;
+
+           $tempTotal +=$sub;
+
+           $m->total_service_cost = $tempTotal;
+
+           $ctr2++;
+
+           if($m->active && $m->status != "cancelled")
+             $totalServiceCount++;
+        }
+
+        $sd->members = $memberByDate;
+     }
+
+
+       $temp['total_service_cost'] = ($query->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)"))) - $discountCtr;
+       $temp['total_service'] = ($query->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)")));
+       $temp['service_count'] = $totalServiceCount;
+
+       $temp['bydates'] = $servicesByDate;
+       $response[$ctr] = $temp;
+       $ctr++;
+   }
+
+   return Response::json($response);
+ }
+
+
+ public function getByBatch(Request $request, $groupId, $perPage = 10){
+
+       $clientServices = DB::table('client_services')
+         ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, id, detail, created_at, service_id'))
+         ->where('active',1)->where('group_id',$groupId)
+         ->groupBy(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'))
+         ->orderBy('id','DESC')
+         ->paginate($perPage);
+
+       $ctr = 0;
+       $temp = [];
+       $response = $clientServices;
+
+
+      foreach($clientServices->items() as $s){
+
+         $query = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId);
+
+
+         $temp['detail'] = $s->detail;
+
+         $temp['service_date'] = $s->sdate;
+         $temp['sdate'] = $s->sdate;
+         $temp['group_id'] = $groupId;
+
+
+         $datetime = new DateTime($s->sdate);
+         $getdate = $datetime->format('Y-m-d');
+         $temp['sdate'] =  $getdate;
+         $temp['service_date'] = $getdate;
+
+
+         $queryMembers = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->orderBy('created_at','DESC')->orderBy('client_id')->groupBy('client_id')->get();
+
+         $ctr2 = 0;
+         $members = [];
+         $discountCtr = 0;
+         $totalCost = 0;
+
+         //for total complete cost
+         $chrg = 0;
+         $tempTotal = 0;
+         $bal = 0;
+
+         foreach($queryMembers as $m){
+               $ss =  ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->where('client_id',$m->client_id)->get();
+
+               $clientServices = [];
+               $tmpCtr = 0;
+
+               foreach($ss as $cs){
+                 $cs->discount =  ClientTransaction::where('client_service_id', $cs->id)->where('type', 'Discount')->sum('amount');
+                 if($cs->active !== 0){
+                   $discountCtr += $cs->discount;
+                   $totalCost += (($cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent)) - $cs->discount;
+                 }
+
+                 $translated = Service::where('id',$cs->service_id)->first();
+
+                 $cs->detail =  $cs->detail;
+                 if($translated){
+                       if($request->input('lang') === 'CN'){
+                         $cs->detail = (($translated->detail_cn != '' && $translated->detail_cn != 'NULL') ? $translated->detail_cn : $cs->detail);
+                       }
+                 }
+
+                 if($request->input('lang') === 'EN'){
+                     $cs->status = ucfirst($cs->status);
+                 }else{
+                     $cs->status = $this->statusChinese($cs->status);
+                 }
+
+
+                 $chrg = ($cs->active == 0 || strtolower($cs->status) !== 'complete') ? 0 : ($cs->charge + $cs->cost + $cs->tip);
+
+                 $sub = $chrg;
+
+                 //Per Person Balance
+                 if($cs->active == 0){
+                     $sub = 0;
+                 }
+
+                 $bal += $sub;
+
+                 $tempTotal +=$sub;
+
+                 $cs->total_service_cost = $tempTotal;
+                 $cs->total_charge = (($cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent)) - $cs->discount;
+
+                 $clientServices[$tmpCtr] = $cs;
+                 $tmpCtr++;
+               }
+
+               $member = ($members[$ctr2] = User::where('id',$m->client_id)->select('first_name','last_name')->first());
+               //  $members[$ctr2]['tcost']
+               $members[$ctr2]['name'] =  $member->first_name ." ". $member->last_name;
+               $members[$ctr2]['tcost'] = $query->where('client_id',$m->client_id)->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)"));
+               $members[$ctr2]['services'] = $clientServices;
+             $ctr2++;
+         }
+         $temp['total_service_cost'] = $totalCost;
+         $temp['members'] = $members;
+         $response[$ctr] = $temp;
+         $ctr++;
+       }
+
+       return $response;
+ }
 
 }

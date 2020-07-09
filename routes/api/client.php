@@ -2,6 +2,8 @@
 
 use Illuminate\Http\Request;
 
+Route::get('manage-clients', 'ClientController@manageClients');
+
 Route::middleware('auth:api')->group(function() {
 
 	// Route::get('manage-clients', 'ClientController@manageClients');
@@ -55,7 +57,6 @@ Route::middleware('auth:api')->group(function() {
 
 	// Visa app
 	Route::get('get-all-clients', 'ClientController@getAllClients');
-	Route::get('manage-clients', 'ClientController@manageClients');
 	Route::get('{id}', 'ClientController@show');
 
 	Route::get('get-clients-services/{id}/{tracking?}', 'ClientController@getClientServices');

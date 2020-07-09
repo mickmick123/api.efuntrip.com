@@ -31,9 +31,12 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::patch('update-group-commission/{id}', 'GroupController@updateGroupCommission');
 
-	Route::get('members/{id}/{page?}', 'GroupController@members');
+  Route::get('members/{id}/{page?}', 'GroupController@members');
 	Route::get('packages-bybatch/{group_id}/{page?}', 'GroupController@getClientPackagesByBatch');
 	Route::get('packages-byservice/{group_id}/{page?}', 'GroupController@getClientPackagesByService');
+	Route::get('byservice/{group_id}/{page?}', 'GroupController@getByService');
+	Route::get('bybatch/{group_id}/{page?}', 'GroupController@getByBatch');
+
 	Route::get('unpaid-services/{group_id}/{is_auto_generated}/{page?}', 'GroupController@getUnpaidServices');
 
 	Route::get('get-service-dates/{group_id}', 'GroupController@showServiceDates');

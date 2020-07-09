@@ -20,7 +20,7 @@
           @foreach($service['members'] as $member)
           <tr>
                 <td></td>
-                <td style="text-align:center"><b >{{ $member->first_name." ".$member->last_name }}</b></td>
+                <td style="text-align:center"><b >{{ $member['name'] }}</b></td>
                 <td></td>
                 <td></td>
                 <td></td>
@@ -30,19 +30,18 @@
           <tr>
              <td colspan="5"></td>
           </tr>
-             @foreach($member->services as $service)
+             @foreach($member['services'] as $service)
               <tr>
                     <td></td>
-                    <td style="text-align:center">{{ $service->tracking }}</td>
-                    <td style="text-align:center">{{ $service->status }}</td>
-                    <td style="text-align:center">{{ $service->detail }}</td>
-                    <td style="text-align:center">{{ ($service->cost + $service->charge + $service->tip) - $service->discount  }}</td>
-
-                    <td style="text-align:center">-{{ $service->total_service_cost }}</td>
+                    <td style="text-align:center">{{ $service['tracking'] }}</td>
+                    <td style="text-align:center">{{ $service['status'] }}</td>
+                    <td style="text-align:center"><b>{{ $service['detail'] }}</b></td>
+                    <td style="text-align:center"><b>{{ ($service['detail'] === "Deposit") ? "+".$service['total_charge']  : "-" .$service['total_charge']  }}</b></td>
+                    <td style="text-align:center">{{ $service['total_service_cost'] }}</td>
               </tr>
 
               <tr>
-                  <td colspan="5" align="center"><b>{{ $service->remarks }}</b></td>
+                  <td colspan="5" align="center"><b>{{ $service['remarks'] }}</b></td>
               </tr>
 
 
@@ -70,15 +69,6 @@
         <td></td>
         <td></td>
         <td></td>
-        <td colspan="2"><b>{{ $lang['_total_complete_cost'] }} {{ $group['total_complete_service_cost'] }}</b></td>
-        <td></td>
-    </tr>
-
-    <tr>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
         <td colspan="2"><b>{{ $lang['_total_deposit'] }} {{ $group['total_deposit'] }}</b></td>
         <td></td>
     </tr>
@@ -88,7 +78,7 @@
         <td></td>
         <td></td>
         <td></td>
-        <td colspan="2"><b>{{ $lang['_total_cost'] }} {{ $group['total_cost'] }}</b></td>
+        <td colspan="2"><b>{{ $lang['_total_cost'] }} -{{ $group['total_complete_service_cost'] }}</b></td>
         <td></td>
     </tr>
 
@@ -138,29 +128,7 @@
         <td colspan="5"></td>
     </tr>
 
-    <tr>
-        <td colspan="5"><b>{{ $lang['_transcation_history'] }}</b></td>
-    </tr>
 
-    <tr>
-          <td style="text-align:center"><b>{{ $lang['_amount'] }}</b></td>
-          <td style="text-align:center"><b>{{ $lang['_date'] }}</b></td>
-          <td style="text-align:center"><b>{{ $lang['_type'] }}</b></td>
-          <td></td>
-          <td></td>
-    </tr>
-
-
-
-    @foreach($transactions as $transaction)
-    <tr>
-          <td style="text-align:center">{{ $transaction->amount }}</td>
-          <td style="text-align:center">{{ $transaction->created_at }}</td>
-          <td style="text-align:center">{{ $transaction->type }}</td>
-          <td></td>
-          <td></td>
-    </tr>
-    @endforeach
 
     </tbody>
 </table>
