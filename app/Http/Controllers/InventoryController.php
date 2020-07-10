@@ -31,11 +31,10 @@ class InventoryController extends Controller
         foreach($list as $l){
             $l->categories = [];
             $l->categories = InventoryParentCategory::with(['subCategories' => function($q) use($l) {
-                    // Query the name field in status table
-                    $q->where('company_id', '=', $l->company_id); // '=' is optional
+                    $q->where('company_id', '=', $l->company_id); 
                 }])
                 ->where('company_id',$l->company_id)
-                // ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')
+                ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')
                 ->where('parent_id', '0')
                 // ->where('inventory_category.status', '1')
                 // ->orderBy('inventory_category.name', 'asc')
