@@ -28,16 +28,23 @@ class InventoryController extends Controller
     public function getAllCompanies()
     {
         $list = Company::all();
-        $cats = InventoryParentCategory::with('subCategories')
-            ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')
-            ->where('parent_id', '0')
-            ->where('inventory_category.status', '1')
-            ->orderBy('inventory_category.name', 'asc')
-            ->get();
+        foreach($list as $l){
+            $l->categories = [];
+            $l->categories = InventoryParentCategory::with(['subCategories' => function($q) use($l) {
+                    // Query the name field in status table
+                    $q->where('company_id', '=', $l->company_id); // '=' is optional
+                }])
+                ->where('company_id',$l->company_id)
+                // ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')
+                ->where('parent_id', '0')
+                // ->where('inventory_category.status', '1')
+                // ->orderBy('inventory_category.name', 'asc')
+                ->get();
+        }
 
         $response['status'] = 'Success';
         $response['code'] = 200;
-        $response['data'] = ['company'=>$list,'category'=>$cats];
+        $response['data'] = ['company'=>$list];
         return Response::json($response);
     }
 
