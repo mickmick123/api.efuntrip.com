@@ -31,7 +31,10 @@ class InventoryController extends Controller
         foreach($list as $l){
             $l->categories = [];
             $l->categories = InventoryParentCategory::with(['subCategories' => function($q) use($l) {
-                    $q->where('company_id', '=', $l->company_id); 
+                    $q->where('company_id', '=', $l->company_id)
+                    ->with(['subCategories' => function($q) use($l) {
+                        $q->where('company_id', '=', $l->company_id); 
+                    }]); 
                 }])
                 ->where('company_id',$l->company_id)
                 ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')

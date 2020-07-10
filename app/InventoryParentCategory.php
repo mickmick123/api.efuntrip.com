@@ -31,7 +31,10 @@ class InventoryParentCategory extends Model
     {
         return $this->hasMany(self::class, 'parent_id', 'category_id')
                 // ->where('company_id', $this->company_id)
-                ->with('subCategories')
+                // ->with('subCategories')
+                // ->with(['subCategories' => function($q) use($com) {
+                //     $q->where('company_id', $com); 
+                // }])
                 // ->with('inventories', 'subCategories.inventories')
                 ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id');
     }
