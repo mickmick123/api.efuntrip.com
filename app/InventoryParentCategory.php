@@ -27,13 +27,20 @@ class InventoryParentCategory extends Model
                     ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id');
     }
 
+    public function children()
+    {
+        return $this->hasMany(self::class, 'parent_id','category_id')
+                    ->where('company_id', $this->company_id)
+                    ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id');
+    }
+
     public function subCategories()
     {
         return $this->hasMany(self::class, 'parent_id', 'category_id')
                 // ->where('company_id', $this->company_id)
                 // ->with('subCategories')
-                // ->with(['subCategories' => function($q) use($com) {
-                //     $q->where('company_id', $com); 
+                // ->with(['subCategories' => function($q) {
+                //     $q->where('company_id', $this->company_id); 
                 // }])
                 // ->with('inventories', 'subCategories.inventories')
                 ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id');
@@ -50,6 +57,17 @@ class InventoryParentCategory extends Model
         return $this->hasMany('App\Inventory', 'category_id', 'id');
     }
 
+    public function getAllChildren()
+    {
+        $sections = collect([]);
+
+        foreach ($this->children as $section) {
+            $sections->push($section);
+            $sections = $sections->merge($section->getAllChildren());
+        }
+
+        return $sections;
+    }
 
     // ** ATTRIBUTES ** //
 
