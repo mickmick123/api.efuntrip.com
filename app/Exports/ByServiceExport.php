@@ -225,14 +225,9 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
            $clientServices = [];
            $tmpCtr = 0;
 
-           $m['name'] = $m['first_name']. " " . $m['last_name'];
-           $m['total_charge'] = (($m['service']['cost']) + ($m['service']['charge']) + ($m['service']['tip'])) - $m['service']['discount'];
+           $m['name'] = ((isset($m['first_name'])) ? $m['first_name'] : ""). " " . (isset($m['last_name']) ? $m['last_name'] : '');
 
-           // if($this->lang === 'EN'){
-           //     $m['service']->status = ucfirst($m['service']->status);
-           // }else{
-           //     $m['service']->status = $this->statusChinese($m['service']->status);
-           // }
+           $m['total_charge'] = (($m['service']['cost']) + ($m['service']['charge']) + ($m['service']['tip'])) - $m['service']['discount'];
 
            $members[$ctrM] = $m;
            $ctrM++;
