@@ -22,7 +22,7 @@ use DB, Response, DateTime;
 class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
 {
 
-  public function __construct(int $id, string $lang, array $data, array $group)
+  public function __construct(int $id, string $lang, array $data, array $group, object $req)
   {
       $this->id = $id;
       $this->lang = $lang;
@@ -31,6 +31,8 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
       $this->users = [];
       $this->services = [];
       $this->group = $group;
+      $this->year = $req->year;
+      $this->month = $req->month;
   }
 
   public function registerEvents(): array
@@ -46,142 +48,28 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
           },
 
           AfterSheet::class    => function(AfterSheet $event) {
-              // $cellRange = 'A1:F1'; // All headers
               //
-              // $sheet = $event->sheet->getDelegate();
-              //
-              // $sheet->getStyle('A1:F1')->getFont()
-              //       ->setSize(14)
-              //       ->setBold(true)
-              //       ->getColor()->setRGB('000000');
-              //
-              // $sheet->getStyle('A1:F1')->getFill()
-              //           ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-              //           ->getStartColor()->setARGB('6fcddc');
+               $sheet = $event->sheet->getDelegate();
+               $sheet->getColumnDimension('A')->setAutoSize(false);
+               $sheet->getColumnDimension('A')->setWidth(30);
 
+               $sheet->getColumnDimension('B')->setAutoSize(false);
+               $sheet->getColumnDimension('B')->setWidth(30);
+
+               $sheet->getColumnDimension('C')->setAutoSize(false);
+               $sheet->getColumnDimension('C')->setWidth(20);
+
+               $sheet->getColumnDimension('E')->setAutoSize(false);
+               $sheet->getColumnDimension('E')->setWidth(20);
+
+               $sheet->getColumnDimension('F')->setAutoSize(false);
+               $sheet->getColumnDimension('F')->setWidth(20);
           },
       ];
   }
 
 
   public function byBatch($groupId){
-
-      /*  $clientServices = DB::table('client_services')
-          ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, id, detail, created_at, service_id'))
-          ->where('active',1)->where('group_id',$groupId)
-          ->groupBy(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'))
-          ->orderBy('id','DESC')
-          ->get();
-
-        $ctr = 0;
-        $temp = [];
-        $response = $clientServices;
-
-
-        foreach($clientServices as $s){
-
-          $query = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId);
-
-
-          $temp['detail'] = $s->detail;
-
-          $temp['service_date'] = $s->sdate;
-          $temp['sdate'] = $s->sdate;
-          $temp['group_id'] = $groupId;
-
-
-          $datetime = new DateTime($s->sdate);
-          //$getdate = $datetime->format('M d,Y');
-          $getdate = $datetime->format('Y-m-d');
-
-        //  if($this->lang === 'EN'){
-             $temp['sdate'] =  $getdate;
-             $temp['service_date'] = $getdate;
-        //  }else{
-          //    $temp['sdate'] =  $this->DateChinese($getdate);
-          //    $temp['service_date'] = $this->DateChinese($getdate);
-        //  }
-
-
-          $queryMembers = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->orderBy('created_at','DESC')->orderBy('client_id')->groupBy('client_id')->get();
-
-          $ctr2 = 0;
-          $members = [];
-          $discountCtr = 0;
-          $totalCost = 0;
-
-          //for total complete cost
-          $chrg = 0;
-          $tempTotal = 0;
-          $bal = 0;
-
-          foreach($queryMembers as $m){
-                $ss =  ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->where('client_id',$m->client_id)->get();
-
-                $clientServices = [];
-                $tmpCtr = 0;
-
-                foreach($ss as $cs){
-                  $cs->discount =  ClientTransaction::where('client_service_id', $cs->id)->where('type', 'Discount')->sum('amount');
-                  if($cs->active !== 0){
-                    $discountCtr += $cs->discount;
-                    $totalCost += (($cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent)) - $cs->discount;
-                  }
-
-                  $translated = Service::where('id',$cs->service_id)->first();
-
-                  $cs->detail =  $cs->detail;
-                  if($translated){
-                        if($this->lang === 'CN'){
-                          $cs->detail = (($translated->detail_cn != '' && $translated->detail_cn != 'NULL') ? $translated->detail_cn : $cs->detail);
-                        }
-                  }
-
-                  if($this->lang === 'EN'){
-                      $cs->status = ucfirst($cs->status);
-                  }else{
-                      $cs->status = $this->statusChinese($cs->status);
-                  }
-
-
-                  $chrg = ($cs->active == 0 || strtolower($cs->status) !== 'complete') ? 0 : ($cs->charge + $cs->cost + $cs->tip);
-
-                  $sub = $chrg;
-
-                  //Per Person Balance
-                  if($cs->active == 0){
-                      $sub = 0;
-                  }
-
-                  $bal += $sub;
-
-                  $tempTotal +=$sub;
-
-                  $cs->total_service_cost = $tempTotal;
-                  $cs->total_charge = (($cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent)) - $cs->discount;
-
-                  $clientServices[$tmpCtr] = $cs;
-                  $tmpCtr++;
-                }
-
-                //$member = User::where('id',$m->client_id)->select('first_name','last_name')->first();
-
-                $member = ($members[$ctr2] = User::where('id',$m->client_id)->select('first_name','last_name')->first());
-                //  $members[$ctr2]['tcost']
-                $members[$ctr2]['name'] =  $member->first_name ." ". $member->last_name;
-                $members[$ctr2]['tcost'] = $query->where('client_id',$m->client_id)->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)"));
-                $members[$ctr2]['services'] = $clientServices;
-              $ctr2++;
-          }
-          $temp['total_service_cost'] = $totalCost;
-          $temp['members'] = $members;
-          $response[$ctr] = $temp;
-          $ctr++;
-        }
-
-        $this->group['total_complete_service_cost'] = $this->group['total_cost'];
-
-        return $response;*/
 
 
         $temp = [];
@@ -196,14 +84,6 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
             $temp['group_id'] = $data['group_id'];
             $temp['detail'] = $data['detail'];
             $temp['service_date'] = $data['service_date'];
-            // $datetime = new DateTime($data['service_date']);
-            // $getdate = $datetime->format('M d,Y');
-
-            // if($this->lang == 'EN'){
-            //     $temp['service_date']=  $getdate;
-            // }else{
-            //     $temp['service_date']=  $this->DateChinese($getdate);
-            // }
 
             $temPackage = [];
             $j = 0;
@@ -217,10 +97,6 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
             //   foreach($p['services'] as $m){
             //     $clientServices = [];
             //     $tmpCtr = 0;
-            //
-            //
-            //
-            //
             //     // if($this->lang === 'EN'){
             //     //     $m['service']->status = ucfirst($m['service']->status);
             //     // }else{
@@ -252,6 +128,8 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
                   ->select(DB::raw('
                       a.amount,a.type, a.created_at'))
                       ->where('group_id', $id)
+                      ->whereYear('created_at', '=', $this->year)
+                      ->whereMonth('created_at', '=', $this->month)
                       ->orderBy('created_at','DESC')
                       ->get();
 
@@ -365,7 +243,10 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
                     ->select(DB::raw('
                         a.amount,a.type, a.created_at'))
                         ->where('group_id', $this->id)
+                        ->whereYear('created_at', '=', $this->year)
+                        ->whereMonth('created_at', '=', $this->month)
                         ->orderBy('created_at','DESC')
+
                         ->get();
 
       $temp = [];

@@ -746,11 +746,20 @@ public function members(Request $request, $id, $page = 20) {
         $mode = 'fullname';
     }
 
-    $mems = DB::table('group_user as g_u')
-                ->where('g_u.group_id', $id)
-                ->get();
+    $ids = $request->input('ids');
 
-    $gids = $mems->pluck('user_id');
+
+    if($ids != ''){
+      $gids = $services = explode(',', $request->input('ids'));
+    }else{
+      $mems = DB::table('group_user as g_u')
+                  ->where('g_u.group_id', $id)
+                  ->get();
+
+      $gids = $mems->pluck('user_id');
+    }
+
+
     // \Log::info($gids);
 
     // $groups = DB::table('group_user as g_u')
@@ -2532,13 +2541,20 @@ public function getClientPackagesByGroup($client_id, $group_id){
             return $dates;
     }
 
-    public function showServiceAdded($group_id, $date = 0){
+    public function showServiceAdded(Request $request, $group_id, $date = 0){
+
+
+            $from = $request->input('from_date');
+            $to = $request->input('to_date');
 
             $groupServices = ClientService::where('group_id',$group_id)
                                 ->groupBy('service_id')
-                                ->where(function($q) use($date){
-                                    $q->where('created_at','LIKE', '%'.$date.'%');
-                                    $q->where('created_at','LIKE', '%'.$date.'%');
+                                ->where(function($q) use($from, $to, $date){
+                                  if($to != ''){
+                                      $q->whereBetween('created_at', [date($from."-1"), date($to."-31")])->get();
+                                  }else{
+                                      $q->where('created_at','LIKE', '%'.$from.'%');
+                                  }
                                 })
                                 ->pluck('service_id');
 
@@ -2610,6 +2626,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
     public function getGroupSummary(Request $request){
 
+
       $filename = Carbon::now();
 
 
@@ -2635,42 +2652,46 @@ public function getClientPackagesByGroup($client_id, $group_id){
         break;
 
         case 'by-batch':
-              $export = new ByBatchExport($request->id, $request->lang, $request->data, $groupInfo);
+              $export = new ByBatchExport($request->id, $request->lang, $request->data, $groupInfo, $request);
         break;
       }
 
-      return Excel::download($export, 'users.xls');
+      return Excel::download($export, 'users.xlsx');
     }
 
 
- //getClientPackagesByService
+
  public function getByService(Request $request, $id, $page = 20){
 
-   $year = $request->input('year');
-   $month = $request->input('month');
-   $hasNoServiceId = $request->input('hasNoServiceId');
+   $from = $request->input('from_date');
+   $to = $request->input('to_date');
 
-   if($hasNoServiceId == "1" ){
-        $services = explode(',', $request->input('services'));
-   }
 
-   if($hasNoServiceId == "1"){
+   if($from != '' || $to != ''){
 
-     $month2 = $month;
-     $year = $year;
-     $month = $month;
-     if($month < 10){
-         $month2 = ltrim($month2, "0");
+     if($request->input('ids') != ''){
+       $services = explode(',', $request->input('ids'));
+     }else{
+       $services = [];
      }
+
 
      $clientServices = DB::table('client_services')
        ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, created_at'))
        ->where('group_id',$id)
-       ->whereIn('service_id', $services)
-       //->where(function($q) use($month,$year,$month2){
-           //$q->where('created_at','LIKE', $month.'%')->where('created_at','LIKE', '%'.$year);
-           //$q->orWhere('created_at','LIKE', $month2.'%')->where('created_at','LIKE', '%'.$year);
-       //})
+
+       ->where(function($q) use($from, $to, $services){
+
+         if(count($services) > 0){
+           $q->whereIn('service_id', $services);
+         }
+
+         if($to != '' && $from != ''){
+             $q->whereBetween('created_at', [date($from."-1"), date($to."-31")])->get();
+         }else{
+             $q->where('created_at','LIKE', '%'.$from.'%');
+         }
+       })
        ->groupBy('service_id')
        ->orderBy('created_at','DESC')
        ->paginate($page);
@@ -2720,7 +2741,6 @@ public function getClientPackagesByGroup($client_id, $group_id){
        $totalServiceCount = 0;
 
 
-
        foreach($servicesByDate as $sd){
 
          $queryClients = ClientService::where('service_id', $sd->service_id)->where('created_at', $sd->created_at)->where('group_id', $id)->orderBy('created_at','DESC')->orderBy('client_id')->groupBy('client_id')->get();
@@ -2736,9 +2756,10 @@ public function getClientPackagesByGroup($client_id, $group_id){
            $m->discount = ClientTransaction::where('client_service_id', $m->id)->where('type', 'Discount')->sum('amount');
            $discountCtr += $m->discount;
 
-           $memberByDate[$ctr2] = User::where('id',$m->client_id)->select('first_name','last_name')->first();
+           $mem = ($memberByDate[$ctr2] = User::where('id',$m->client_id)->select('first_name','last_name')->first());
            $memberByDate[$ctr2]['tcost'] = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$sd->sdate)->where('group_id', $id)->where('client_id',$m->client_id)->value(DB::raw("SUM(cost + charge + tip +com_client + com_agent)"));
            $memberByDate[$ctr2]['service'] = $m;
+           $memberByDate[$ctr2]['name'] = $mem['first_name']. " " . $mem['last_name'];
            $memberByDate[$ctr2]['created_at'] = $m->created_at;
 
            $chrg = ($m->active == 0 || strtolower($m->status) !== 'complete') ? 0 : ($m->charge + $m->cost + $m->tip);
@@ -2781,12 +2802,28 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
  public function getByBatch(Request $request, $groupId, $perPage = 10){
 
-       $clientServices = DB::table('client_services')
-         ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, id, detail, created_at, service_id'))
-         ->where('active',1)->where('group_id',$groupId)
-         ->groupBy(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'))
-         ->orderBy('id','DESC')
-         ->paginate($perPage);
+
+      $year = $request->input('year');
+      $month = $request->input('month');
+
+      if($year != '' && $month != ''){
+            $clientServices = DB::table('client_services')
+              ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, id, detail, created_at, service_id'))
+              ->where('active',1)->where('group_id',$groupId)
+              ->whereYear('created_at', '=', $year)
+              ->whereMonth('created_at', '=', $month)
+              ->groupBy(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'))
+              ->orderBy('id','DESC')
+              ->paginate($perPage);
+      }else{
+            $clientServices = DB::table('client_services')
+              ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, id, detail, created_at, service_id'))
+              ->where('active',1)->where('group_id',$groupId)
+              ->groupBy(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'))
+              ->orderBy('id','DESC')
+              ->paginate($perPage);
+      }
+
 
        $ctr = 0;
        $temp = [];
@@ -2839,6 +2876,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
                  $translated = Service::where('id',$cs->service_id)->first();
 
                  $cs->detail =  $cs->detail;
+
                  if($translated){
                        if($request->input('lang') === 'CN'){
                          $cs->detail = (($translated->detail_cn != '' && $translated->detail_cn != 'NULL') ? $translated->detail_cn : $cs->detail);
@@ -2850,6 +2888,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
                  }else{
                      $cs->status = $this->statusChinese($cs->status);
                  }
+
+                 $cs->remarks = strip_tags($cs->remarks);
 
 
                  $chrg = ($cs->active == 0 || strtolower($cs->status) !== 'complete') ? 0 : ($cs->charge + $cs->cost + $cs->tip);
@@ -2886,6 +2926,83 @@ public function getClientPackagesByGroup($client_id, $group_id){
        }
 
        return $response;
+ }
+
+
+
+ public function getMembers(Request $request, $id, $page = 20) {
+
+     $sort = $request->input('sort');
+     $search = $request->input('search');
+
+     $search_id = 0;
+     $q1 = '';  $q2 = ''; $spaces = 0;
+     if (preg_match("/^\d+$/", $search)) {
+         $search_id = 1;
+     }
+
+     if(preg_match('/\s/',$search)){
+         $q = explode(" ", $search);
+         $spaces = substr_count($search, ' ');
+         if($spaces == 2){
+             $q1 = $q[0]." ".$q[1];
+             $q2 = $q[2];
+         }
+         if($spaces == 1){
+             $q1 = $q[0];
+             $q2 = $q[1];
+         }
+     }
+
+     $mode = '';
+     if($search_id == 1 && $spaces == 0){
+         $mode = 'id';
+     }
+     else if($search_id == 0 && $spaces == 0 && $search != ''){
+         $mode = 'name';
+     }
+     else if($spaces >0){
+         $mode = 'fullname';
+     }
+
+     $mems = DB::table('group_user as g_u')
+                 ->where('g_u.group_id', $id)
+                 ->get();
+
+     $gids = $mems->pluck('user_id');
+
+
+     $response = DB::table('users as u')->select(DB::raw('u.id, CONCAT(u.first_name, " ", u.last_name) as name, g_u.is_vice_leader, g_u.total_service_cost, g_u.id as guid'))
+                     ->leftjoin(DB::raw('(select * from group_user) as g_u'),'g_u.user_id','=','u.id')
+                     ->whereIn('u.id', $gids)
+                     ->where('g_u.group_id', $id)
+                     ->when($mode == 'fullname', function ($query) use($q1,$q2){
+                         return $query->where(function ($query1) use($q1,$q2) {
+                             return $query1->where(function ($query2) use($q1,$q2) {
+                                         $query2->where('u.first_name', '=', $q1)
+                                               ->Where('u.last_name', '=', $q2);
+                                     })->orwhere(function ($query2) use($q1,$q2) {
+                                         $query2->where('u.last_name', '=', $q1)
+                                               ->Where('u.first_name', '=', $q2);
+                                     });
+                         });
+                     })
+                     ->when($mode == 'id', function ($query) use($search){
+                             return $query->where('u.id','LIKE','%'.$search.'%');
+                     })
+                     ->when($mode == 'name', function ($query) use($search){
+                         return $query->where(function ($query2) use($search) {
+                             $query2->where('u.first_name' ,'=', $search)
+                                          ->orwhere('u.last_name' ,'=', $search);
+                         });
+                     })
+                     ->when($sort != '', function ($q) use($sort){
+                         $sort = explode('-' , $sort);
+                         return $q->orderBy($sort[0], $sort[1]);
+                     })
+                     ->paginate($page);
+
+       return Response::json($response);
  }
 
 }

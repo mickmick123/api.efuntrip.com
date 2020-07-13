@@ -16,6 +16,10 @@ use Maatwebsite\Excel\Events\BeforeExport;
 use Maatwebsite\Excel\Events\AfterSheet;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithMultipleSheets;
+
+//use App\Exports\Sheets\ServiceSheet;
+//, WithMultipleSheets
 
 use DB, Response;
 use DateTime;
@@ -34,6 +38,7 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
       $this->year = $req->year;
       $this->month = $req->month;
       $this->services = $req->services;
+
   }
 
   public function registerEvents(): array
@@ -45,7 +50,6 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
             $event->writer->getProperties()->setCreator('4ways')
                 ->setTitle("Group By Service")
                 ->setSubject("Office 2007 XLSX Test Document");
-
           },
 
           AfterSheet::class    => function(AfterSheet $event) {
@@ -54,10 +58,44 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
 
               $sheet = $event->sheet->getDelegate();
 
-            //  $sheet->getStyle($cellRange)->getFont()->setSize(14);
-              foreach ($columns as $col) {
-                  $sheet->getColumnDimension($col)->setWidth(30);
-              }
+              $sheet = $event->sheet->getDelegate();
+              $sheet->getColumnDimension('A')->setAutoSize(false);
+              $sheet->getColumnDimension('A')->setWidth(20);
+
+              $sheet->getColumnDimension('B')->setAutoSize(false);
+              $sheet->getColumnDimension('B')->setWidth(20);
+
+              $sheet->getColumnDimension('C')->setAutoSize(false);
+              $sheet->getColumnDimension('C')->setWidth(20);
+
+              $sheet->getColumnDimension('D')->setAutoSize(false);
+              $sheet->getColumnDimension('D')->setWidth(20);
+
+              $sheet->getColumnDimension('E')->setAutoSize(false);
+              $sheet->getColumnDimension('E')->setWidth(15);
+
+              $sheet->getColumnDimension('F')->setAutoSize(false);
+              $sheet->getColumnDimension('F')->setWidth(15);
+
+              $sheet->getColumnDimension('G')->setAutoSize(false);
+              $sheet->getColumnDimension('G')->setWidth(15);
+
+             // $ctr = 2;
+             //
+             // foreach($this->data as $data){
+             //    $ctr = $ctr+3;
+             //    foreach($data['bydates'] as $p){
+             //        $ctr++;
+             //         foreach($p['members'] as $m){
+             //           $ctr = $ctr+2;
+             //           $sheet->mergeCells('A'.$ctr.':B'.$ctr);
+             //           //$sheet->mergeCells('D'.$ctr.':E'.$ctr);
+             //          // $sheet->mergeCells('F'.$ctr.':G'.$ctr);
+             //           $ctr++;
+             //         }
+             //    }
+             //    $ctr++;
+             // }
 
           },
       ];
@@ -145,178 +183,6 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
   public function service($id){
 
 
-    /*if(count($this->services) > 0 && $this->year !== 0 && $this->month !== 0){
-
-      $month2 = $this->month;
-      $year = $this->year;
-      $month = $this->month;
-      if($this->month < 10){
-          $month2 = ltrim($month2, "0");
-      }
-
-      $clientServices = DB::table('client_services')
-        ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, created_at'))
-        ->where('group_id',$id)
-        ->whereIn('service_id', $this->services)
-        //->where(function($q) use($month,$year,$month2){
-            //$q->where('created_at','LIKE', $month.'%')->where('created_at','LIKE', '%'.$year);
-            //$q->orWhere('created_at','LIKE', $month2.'%')->where('created_at','LIKE', '%'.$year);
-        //})
-        ->groupBy('service_id')
-        ->orderBy('created_at','DESC')
-        ->get();
-
-    }
-    else{
-      $clientServices = DB::table('client_services')
-        ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, created_at'))
-        ->where('group_id',$id)
-        ->groupBy('service_id')
-        ->orderBy('created_at','DESC')
-        ->get();
-    }
-
-
-
-    $ctr = 0;
-    $temp = [];
-    $response = $clientServices;
-
-    $chrg = 0;
-    $tempTotal = 0;
-    $bal = 0;
-    foreach($clientServices as $s){
-
-        $query = ClientService::where('created_at', $s->created_at)->where('service_id',$s->service_id)->where('group_id', $id)->where('active', 1);
-
-        $servicesByDate = DB::table('client_services')
-          ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, created_at, client_id'))
-          ->where('group_id',$id)
-          ->where('service_id',$s->service_id)
-          ->groupBy(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'))
-          ->orderBy('created_at','DESC')
-          ->get();
-
-        //$temp['detail'] = $s->detail;
-
-        $translated = Service::where('id',$s->service_id)->first();
-
-        $temp['detail'] =  $s->detail;
-        if($translated){
-              if($this->lang === 'CN'){
-                $temp['detail'] = (($translated->detail_cn != '' && $translated->detail_cn != 'NULL') ? $translated->detail_cn : $s->detail);
-              }
-        }
-
-
-
-        $temp['service_date'] = $s->sdate;
-        //$temp['sdate'] = $s->sdate;
-
-        $datetime = new DateTime($s->sdate);
-        $getdate = $datetime->format('M d,Y');
-
-        if($this->lang == 'EN'){
-            $temp['sdate'] =  $getdate;
-            $temp['service_date']=  $getdate;
-        }else{
-            $temp['sdate'] =  $this->DateChinese($getdate);
-            $temp['service_date']=  $this->DateChinese($getdate);
-        }
-
-
-        $temp['group_id'] = $id;
-
-        $discountCtr = 0;
-        $totalServiceCount = 0;
-
-
-        foreach($servicesByDate as $sd){
-
-          $queryClients = ClientService::where('service_id', $sd->service_id)->where('created_at', $sd->created_at)->where('group_id', $id)->orderBy('created_at','DESC')->orderBy('client_id')->groupBy('client_id')->get();
-
-          $memberByDate = [];
-          $ctr2 = 0;
-
-          //Here
-          $datetime = new DateTime($sd->sdate);
-          $getdate = $datetime->format('M d,Y');
-
-          if($this->lang == 'EN'){
-            $sd->sdate =  $getdate;
-          }else{
-            $sd->sdate = $this->DateChinese($getdate);
-          }
-
-
-          foreach($queryClients as $m){
-
-            $clientServices = [];
-            $tmpCtr = 0;
-
-            $m->discount = ClientTransaction::where('client_service_id', $m->id)->where('type', 'Discount')->sum('amount');
-            $discountCtr += $m->discount;
-
-
-            $memberByDate[$ctr2] = User::where('id',$m->client_id)->select('first_name','last_name')->first();
-            $memberByDate[$ctr2]['tcost'] = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$sd->sdate)->where('group_id', $id)->where('client_id',$m->client_id)->value(DB::raw("SUM(cost + charge + tip +com_client + com_agent)"));
-            $memberByDate[$ctr2]['service'] = $m;
-
-            $memberByDate[$ctr2]['created_at'] = $m->created_at;
-
-            if($this->lang === 'EN'){
-                $m->status = ucfirst($m->status);
-            }else{
-                $m->status = $this->statusChinese($m->status);
-            }
-
-            $chrg = ($m->active == 0 || strtolower($m->status) !== 'complete') ? 0 : ($m->charge + $m->cost + $m->tip);
-
-            $sub = $chrg;
-
-            //Per Person Balance
-            if($m->active == 0){
-                $sub = 0;
-            }
-
-            $bal += $sub;
-
-            $tempTotal +=$sub;
-
-            $m->total_service_cost = $tempTotal;
-
-
-            $ctr2++;
-
-            if($m->active && $m->status != "cancelled")
-              $totalServiceCount++;
-         }
-
-         $sd->members = $memberByDate;
-      }
-
-
-        $temp['total_service_cost'] = ($query->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)"))) - $discountCtr;
-        $temp['total_service'] = ($query->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)")));
-        $temp['service_count'] = $totalServiceCount;
-
-
-        $temp['bydates'] = $servicesByDate;
-        $response[$ctr] = $temp;
-        $ctr++;
-    }
-
-    // if($tempTotal > 0){
-    //     $this->group['total_complete_service_cost'] = number_format(-$tempTotal, 2);
-    // }else{
-    //     $this->group['total_complete_service_cost'] = number_format($tempTotal, 2);
-    // }
-    $this->group['total_complete_service_cost'] = $this->group['total_cost'];
-
-    return $response;
-    */
-
-
    $temp = [];
    $ctr = 0;
    $response = [];
@@ -360,7 +226,7 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
            $tmpCtr = 0;
 
            $m['name'] = $m['first_name']. " " . $m['last_name'];
-
+           $m['total_charge'] = (($m['service']['cost']) + ($m['service']['charge']) + ($m['service']['tip'])) - $m['service']['discount'];
 
            // if($this->lang === 'EN'){
            //     $m['service']->status = ucfirst($m['service']->status);
@@ -383,6 +249,8 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
 
    }
     return $response;
+    //return  $this->data;
+
 
   }
 
@@ -404,7 +272,6 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
 
       if($this->lang === 'EN'){
           $s->created_at = $getdate;
-
       }else{
           $s->created_at = $this->DateChinese($getdate);
           $s->type = $this->typeChinese($s->type);
@@ -486,6 +353,20 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
       ]);
 
   }
+
+  // public function sheets(): array
+  //   {
+  //       $sheets = [];
+  //
+  //
+  //
+  //       foreach ($this->logs as $key => $value) {
+  //           $name = $value['first_name'];
+  //           $sheets[] = new ServiceSheet(, $name);
+  //       }
+  //
+  //       return $sheets;
+  //   }
 
 
 

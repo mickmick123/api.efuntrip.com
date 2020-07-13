@@ -48,10 +48,19 @@ class ByMemberExport implements FromView, WithEvents, ShouldAutoSize
           },
 
           AfterSheet::class    => function(AfterSheet $event) {
-              $cellRange = 'A1:E1'; // All headers
 
               $sheet = $event->sheet->getDelegate();
+              $sheet->getColumnDimension('A')->setAutoSize(false);
+              $sheet->getColumnDimension('A')->setWidth(25);
 
+              $sheet->getColumnDimension('C')->setAutoSize(false);
+              $sheet->getColumnDimension('C')->setWidth(20);
+
+              $sheet->getColumnDimension('D')->setAutoSize(false);
+              $sheet->getColumnDimension('D')->setWidth(15);
+
+              $sheet->getColumnDimension('E')->setAutoSize(false);
+              $sheet->getColumnDimension('E')->setWidth(15);
 
           },
       ];
@@ -139,120 +148,6 @@ class ByMemberExport implements FromView, WithEvents, ShouldAutoSize
 
   public function members($id) {
 
-    /* $mems = DB::table('group_user as g_u')
-                  ->where('g_u.group_id', $id)
-                  ->get();
-
-      $gids = $mems->pluck('user_id');
-
-      $groups = DB::table('users as u')->select(DB::raw('u.id, CONCAT(u.first_name, " ", u.last_name) as name, g_u.is_vice_leader, g_u.total_service_cost, g_u.id as guid'))
-                      ->leftjoin(DB::raw('(select * from group_user) as g_u'),'g_u.user_id','=','u.id')
-                      ->whereIn('u.id', $gids)->get();
-
-      $response = $groups;
-
-        $ctr=0;
-        $temp = [];
-
-        $chrg = 0;
-        $tempTotal = 0;
-        $bal = 0;
-
-        foreach($groups as $g){
-           $packs = DB::table('packages as p')->select(DB::raw('p.*,g.name as group_name'))
-                      ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','p.group_id')
-                       ->where('client_id', $g->id)
-                       ->where('group_id', $id)
-                      ->orderBy('id', 'desc')
-                      ->get();
-
-          $totalServiceCost = 0;
-
-
-          if(count($packs) > 0){
-
-          //  foreach($packs as $p){
-
-                $services = DB::table('client_services as cs')
-                    ->select(DB::raw('cs.*'))
-                    ->where('client_id',$g->id)
-                    ->where('group_id',$id)
-                    ->orderBy('id', 'desc')
-                    ->get();
-
-                  $ctr2 = 0;
-
-                    foreach($services as $s){
-
-                      $s->package_cost = $s->cost+ $s->charge + $s->tip + $s->com_agent + $s->com_client;
-                      $chrg = ($s->active == 0 || $s->status !== 'complete') ? 0 : ($s->charge + $s->cost + $s->tip);
-
-                      $translated = Service::where('id',$s->service_id)->first();
-
-                      $s->detail =  $s->detail;
-                      if($translated){
-                            if($this->lang === 'CN'){
-                              $s->detail = (($translated->detail_cn != '' && $translated->detail_cn != 'NULL') ? $translated->detail_cn : $s->detail);
-                            }
-                      }
-
-                      $datetime = new DateTime($s->created_at);
-                      $getdate = $datetime->format('M d,Y');
-                      $gettime = $datetime->format('h:i A');
-
-
-                      $s->discount =  ClientTransaction::where('client_service_id', $s->id)->where('type', 'Discount')->sum('amount');
-                      if($s->active !== 0){
-                          $totalServiceCost += ($s->package_cost - $s->discount);
-                      }
-
-
-                      if($this->lang === 'EN'){
-                          $s->datetime = $getdate;
-                          $s->status = ucfirst($s->status);
-                      }else{
-                          $s->datetime = $this->DateChinese($getdate);
-                          $s->status = $this->statusChinese($s->status);
-                      }
-
-
-                      //Subtotal
-                      $sub = $chrg;
-
-                      //Per Person Balance
-                      if($s->active == 0){
-                          $sub = 0;
-                      }
-
-                      $bal += $sub;
-
-                      $tempTotal +=$sub;
-
-                      $s->total_service_cost = $tempTotal;
-
-
-                    }
-                    $packs = $services;
-          //  }
-            $temp['packages'] = $packs;
-          }else{
-            $temp['packages'] = [];
-          }
-
-
-          $temp['id'] = $g->guid;
-          $temp['name'] = $g->name;
-          $temp['is_vice_leader'] = $g->is_vice_leader;
-          $temp['user_id'] = $g->id;
-          $temp['total_service_cost'] = $totalServiceCost;
-          $response[$ctr] =  $temp;
-          $ctr++;
-        }
-
-
-        $this->group['total_complete_service_cost'] = $this->group['total_cost'];
-
-      */
       $ctr = 0;
       $temp = [];
       $response = [];

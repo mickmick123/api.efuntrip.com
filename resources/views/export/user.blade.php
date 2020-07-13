@@ -29,7 +29,7 @@
           </tr>
 
           <tr >
-              <td colspan="5" style="text-align:center"><b>{{ $service['remarks'] }}</b></td>
+              <td colspan="5" style="text-align:center"><b>{{{ $service['remarks'] }}}</b></td>
           </tr>
 
           @endforeach

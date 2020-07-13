@@ -36,6 +36,8 @@ Route::middleware('auth:api')->group(function() {
 	Route::get('packages-byservice/{group_id}/{page?}', 'GroupController@getClientPackagesByService');
 	Route::get('byservice/{group_id}/{page?}', 'GroupController@getByService');
 	Route::get('bybatch/{group_id}/{page?}', 'GroupController@getByBatch');
+	Route::get('group-members/{id}/{page?}', 'GroupController@getMembers');
+
 
 	Route::get('unpaid-services/{group_id}/{is_auto_generated}/{page?}', 'GroupController@getUnpaidServices');
 

@@ -27,7 +27,6 @@
             <td colspan="1" style="text-align:center"><b>{{ $lang['_status'] }}</b></td>
             <td colspan="2" style="text-align:center"><b>{{ $lang['_charge'] }}</b></td>
             <td colspan="2" style="text-align:center"><b>{{ $lang['_group_total_bal'] }}</b></td>
-
         </tr>
 
 
@@ -38,30 +37,29 @@
            </tr>
 
             @foreach($bydate['members'] as $member)
-
              <tr>
                   <td colspan="2" style="text-align:center"><b>{{ $member['name'] }}</b></td>
                   <td colspan="5"></td>
              </tr>
              <tr>
-                   <td colspan="2"  style="text-align:center">{{ $member['service']['tracking'] }}</td>
-                   <td colspan="1" style="text-align:center">{{ $member['service']['status']  }}</td>
-                   <td colspan="2" style="text-align:center">{{ ($member['service']['cost'] + $member['service']['charge'] + $member['service']['tip']) - $member['service']['discount']  }}</td>
-                   <td colspan="2" style="text-align:center">-{{ $member['service']['total_service_cost'] }}</td>
-             </tr>
+                  <td style="text-align:center;">{{ $member['service']['tracking'] }}</td>
+                  <td></td>
+                  <td style="text-align:center;" >{{ $member['service']['status']  }}</td>
 
+                  <td style="text-align:center;" colspan="2">{{ $member['total_charge']  }}</td>
+                  <td style="text-align:center;" colspan="2">-{{ $member['service']['total_service_cost'] }}</td>
+
+             </tr>
              <tr>
                    <td colspan="7" ></td>
              </tr>
-
-
            @endforeach
 
           @endforeach
 
 
           <tr>
-              <td></td>
+              <td colspan="7"></td>
           </tr>
 
 
@@ -79,7 +77,7 @@
         <td></td>
         <td></td>
         <td colspan="3"><b>{{ $lang['_total_deposit'] }} {{ $group['total_deposit'] }}</b></td>
-        <td></td>
+
     </tr>
 
     <tr>
@@ -88,7 +86,7 @@
         <td></td>
         <td></td>
         <td colspan="3"><b>{{ $lang['_total_cost'] }} -{{ $group['total_complete_service_cost'] }}</b></td>
-        <td></td>
+
     </tr>
 
     <tr>
@@ -97,7 +95,7 @@
         <td></td>
         <td></td>
         <td colspan="3"><b>{{ $lang['_total_promo'] }} {{ $group['total_discount'] }}</b></td>
-        <td></td>
+
     </tr>
 
     <tr>
@@ -106,7 +104,7 @@
         <td></td>
         <td></td>
         <td colspan="3"><b>{{ $lang['_total_refund'] }}  {{ $group['total_refund'] }}</b></td>
-        <td></td>
+
     </tr>
 
 
@@ -116,7 +114,7 @@
         <td></td>
         <td></td>
         <td colspan="3"><b>{{ $lang['_total_collectables'] }} {{ $group['total_collectables'] }}</b></td>
-        <td></td>
+
     </tr>
 
     <tr>
@@ -125,7 +123,7 @@
         <td></td>
         <td></td>
         <td colspan="3" style="background-color:#63b8d5"><b>{{ $lang['_total_balance'] }} {{ $group['total_balance'] }}</b></td>
-        <td></td>
+
     </tr>
 
 
@@ -160,6 +158,7 @@
           <td></td>
     </tr>
     @endforeach
+
 
     </tbody>
 </table>
