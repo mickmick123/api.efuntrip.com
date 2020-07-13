@@ -783,4 +783,129 @@ class LogController extends Controller
     }
 
 
+    public function getTransactionHistory($client_id, $group_id) {
+        if($group_id == 0){
+            $group_id = null;
+        }
+
+        $translogs = DB::table('logs')->where('client_id',$client_id)->where('group_id',$group_id)->where('log_type','Ewallet')->orderBy('id','desc')->get();
+
+        $arraylogs = [];
+        $month = null;
+        $day = null;
+        $year = null;
+        $currentBalance = app(ClientController::class)->getClientEwallet($client_id);
+        $currentService = null;
+
+        foreach($translogs as $t){
+            if(($t->log_group == 'service' && $t->client_service_id != $currentService) || $t->log_group != 'service'){
+                $body = "";
+                $usr =  User::where('id',$t->processor_id)->select('id','first_name','last_name')->get();
+
+                $cs = ClientService::where('id',$t->client_service_id)->first();
+
+                $t->balance = $currentBalance;
+
+                $currentBalance -= ($t->amount);
+
+                $cdate = Carbon::parse($t->log_date)->format('M d Y');
+                $dt = explode(" ", $cdate);
+                $m = $dt[0];
+                $d = $dt[1];
+                $y = $dt[2];
+                if($y == $year){
+                    $y = null;
+                    if($m == $month && $d == $day){
+                        $m = null;
+                        $d = null;
+                        $y = null;
+                    }
+                    else{
+                        $month = $m;
+                        $day = $d;
+                        $y = $year;
+                    }
+                }
+                else{
+                    $year = $y;
+                    $month = $m;
+                    $day = $d;
+                }
+
+
+                if($cs){
+                    $csdetail = $cs->detail;
+                    $cstracking =  $cs->tracking;
+                    $csstatus =  $cs->status;
+                    $csactive =  $cs->active;
+                    if($csactive == 0 && $csstatus != 'cancelled'){
+                        $csstatus =  'Disabled';
+                    }
+                    $currentService = $cs->id;
+
+                    $body = DB::table('logs as l')->select(DB::raw('l.detail, l.log_date, pr.first_name'))
+                    ->where('client_service_id', $cs->id)->where('group_id',null)
+                    ->where('l.id','!=', $t->id)
+                    ->leftjoin(
+                        DB::raw('
+                            (
+                                Select id,first_name, last_name
+                                from users as u
+                            ) as pr
+                        '),
+                        'pr.id', '=', 'l.processor_id'
+                    )
+                    ->where('l.id','!=', $t->id)
+                    ->where('log_type','Transaction')
+                    ->orderBy('l.id', 'desc')
+                    //->distinct('detail')
+                    ->get();
+                    //\Log::info($body);
+
+                    $data = collect($body->toArray())->flatten()->all();
+                    
+                    $body = $data;
+                }
+                else{
+                    $csdetail = ucfirst($t->log_group);
+                    $cstracking = '';
+                    $csstatus = '';
+                    $csactive = 'none';
+                    $body = '';
+                    //$currentService = null;
+                }
+
+                $arraylogs[] = array(
+                    'month' => $m,
+                    'day' => $d,
+                    'year' => $y,
+                    'display_date' => Carbon::parse($t->log_date)->format('F d,Y'),
+                    'data' => array (
+                        'id' => $t->id,
+                        'head' => $t->detail,
+                        'body' => $body,
+                        'balance' => $t->balance,
+                        'prevbalance' => $currentBalance,
+                        'amount' => $t->amount,
+                        'type' => $t->log_group,
+                        'processor' => $usr[0]->first_name,
+                        'date' => Carbon::parse($t->log_date)->format('F d,Y'),
+                        'title' => $csdetail,
+                        'tracking' => $cstracking,
+                        'status' => $csstatus,
+                        'active' => $csactive,
+
+                    )
+                );
+            }
+        }
+
+        $response['status'] = 'Success';
+        $response['data'] = $arraylogs;
+        $response['code'] = 200;
+
+        return Response::json($response);
+    }
+
+
 }
