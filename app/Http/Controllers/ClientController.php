@@ -1631,6 +1631,17 @@ class ClientController extends Controller
                 $payment->amount = $amount;
                 $payment->save();
 
+                $service = ClientService::findOrFail($cs_id);
+                if($service->payment_amount > 0){
+                    $service->payment_amount += $amount;
+                }
+                else{
+                    $service->payment_amount = $amount;
+                }
+                if($amount == $request->get('total_cost')){
+                    $service->is_full_payment = 1;
+                }
+                $service->save();
                 //for financing
                 // $finance = new Financing;
                 // $finance->user_sn = Auth::user()->id;
