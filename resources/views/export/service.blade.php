@@ -15,7 +15,6 @@
         <tr >
             <td colspan="4" style="text-align:center; background-color:#63b8d5"><b>{{ $service['detail'] }}</b></td>
             <td colspan="3" style="text-align:center; background-color:#63b8d5; border-left: 1px solid #000000; border-right: 1px solid red;"><b>-{{ $service['total_service_cost'] }}</b></td>
-
         </tr>
 
         <tr>
@@ -68,66 +67,6 @@
     <tr >
         <td colspan="7"></td>
     </tr>
-
-
-
-    <tr>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td colspan="3"><b>{{ $lang['_total_deposit'] }} {{ $group['total_deposit'] }}</b></td>
-
-    </tr>
-
-    <tr>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td colspan="3"><b>{{ $lang['_total_cost'] }} -{{ $group['total_complete_service_cost'] }}</b></td>
-
-    </tr>
-
-    <tr>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td colspan="3"><b>{{ $lang['_total_promo'] }} {{ $group['total_discount'] }}</b></td>
-
-    </tr>
-
-    <tr>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td colspan="3"><b>{{ $lang['_total_refund'] }}  {{ $group['total_refund'] }}</b></td>
-
-    </tr>
-
-
-    <tr>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td colspan="3"><b>{{ $lang['_total_collectables'] }} {{ $group['total_collectables'] }}</b></td>
-
-    </tr>
-
-    <tr>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td colspan="3" style="background-color:#63b8d5"><b>{{ $lang['_total_balance'] }} {{ $group['total_balance'] }}</b></td>
-
-    </tr>
-
-
-
 
     <tr>
         <td colspan="7"></td>

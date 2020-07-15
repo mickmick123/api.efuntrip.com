@@ -207,7 +207,7 @@ class ByMemberExport implements FromView, WithEvents, ShouldAutoSize
                 $p['datetime'] = $this->DateChinese($getdate);
                 $p['status'] = $this->statusChinese($p['status']);
             }
-
+            $p['remarks'] = strip_tags($p['remarks']);
 
             $temPackage[$j] = $p;
             $j++;
@@ -271,9 +271,6 @@ class ByMemberExport implements FromView, WithEvents, ShouldAutoSize
 
     $lang = [];
     //  $group_summary = ($lang == 'EN' ? 'Group Summary' : '总结报告');
-
-
-
 
     if($this->lang === 'EN'){
         $lang['_date'] = 'Date';

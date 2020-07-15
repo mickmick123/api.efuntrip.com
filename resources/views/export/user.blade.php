@@ -53,7 +53,7 @@
         <td colspan="5"></td>
     </tr>
 
-
+<!--
     <tr>
       <td></td>
       <td></td>
@@ -107,7 +107,8 @@
       <td colspan="2" style="background-color:#63b8d5"><b>{{ $lang['_total_balance'] }} {{ $group['total_balance'] }}</b></td>
       <td></td>
     </tr>
-
+    !-->
+    
     <tr>
         <td colspan="5"></td>
     </tr>

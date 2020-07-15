@@ -182,11 +182,9 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
 
   public function service($id){
 
-
    $temp = [];
    $ctr = 0;
    $response = [];
-
 
    foreach($this->data as $data){
 
@@ -227,7 +225,8 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
 
            $m['name'] = ((isset($m['first_name'])) ? $m['first_name'] : ""). " " . (isset($m['last_name']) ? $m['last_name'] : '');
 
-           $m['total_charge'] = (($m['service']['cost']) + ($m['service']['charge']) + ($m['service']['tip'])) - $m['service']['discount'];
+           $m['service']['status'] = ($m['service']['active'] == 0) ? 'CANCELLED' : $m['service']['status'];
+           $m['total_charge'] =  ($m['service']['active'] == 1) ? ((($m['service']['cost']) + ($m['service']['charge']) + ($m['service']['tip'])) - $m['service']['discount']) : 0;
 
            $members[$ctrM] = $m;
            $ctrM++;

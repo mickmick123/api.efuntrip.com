@@ -65,63 +65,6 @@
 
 
     <tr>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td colspan="2"><b>{{ $lang['_total_deposit'] }} {{ $group['total_deposit'] }}</b></td>
-        <td></td>
-    </tr>
-
-    <tr>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td colspan="2"><b>{{ $lang['_total_cost'] }} -{{ $group['total_complete_service_cost'] }}</b></td>
-        <td></td>
-    </tr>
-
-    <tr>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td colspan="2"><b>{{ $lang['_total_promo'] }} {{ $group['total_discount'] }}</b></td>
-        <td></td>
-    </tr>
-
-    <tr>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td colspan="2"><b>{{ $lang['_total_refund'] }}  {{ $group['total_refund'] }}</b></td>
-        <td></td>
-    </tr>
-
-    <tr>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td colspan="2"><b>{{ $lang['_total_collectables'] }} {{ $group['total_collectables'] }}</b></td>
-        <td></td>
-    </tr>
-
-
-    <tr>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td colspan="2" style="background-color:#63b8d5"><b>{{ $lang['_total_balance'] }} {{ $group['total_balance'] }}</b></td>
-        <td></td>
-    </tr>
-
-
-
-    <tr>
         <td colspan="5"></td>
     </tr>
     <tr>
