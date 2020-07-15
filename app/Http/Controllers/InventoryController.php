@@ -14,39 +14,51 @@ use App\Helpers\PageHelper;
 
 class InventoryController extends Controller
 {
-    public function getAllInventoryCategories(){
-        $list = Company::all();
-        foreach($list as $l){
-            $l->categories = [];
-            $l->categories = InventoryParentCategory::with(['subCategories' => function($q) use($l) {
-                    $q->where('company_id', '=', $l->company_id)
-                    ->with(['subCategories' => function($q) use($l) {
-                        $q->where('company_id', '=', $l->company_id)
-                        ->with(['subCategories' => function($q) use($l) {
-                            $q->where('company_id', '=', $l->company_id)
-                            ->with(['subCategories' => function($q) use($l) {
-                                $q->where('company_id', '=', $l->company_id)
-                                ->with(['subCategories' => function($q) use($l) {
-                                    $q->where('company_id', '=', $l->company_id);
-                                }]);
-                            }]);
-                        }]);
-                    }]);
-                }])
-                ->where('company_id',$l->company_id)
-                ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')
-                ->where('parent_id', '0')
-                ->orderBy('inventory_category.name')
-                ->get();
-        }
+    public function getAllInventoryCategories(Request $request){
+        $list = DB::table('inventory_parent_category AS ipcat')
+            ->leftJoin('company AS com','ipcat.company_id','=','com.company_id')
+            ->leftJoin('inventory_category AS icat','ipcat.category_id','=','icat.category_id')
+            ->where('ipcat.company_id','LIKE', '%'.$request->company_id.'%')
+            ->where('ipcat.parent_id','LIKE', '%'.$request->category_id.'%')
+            ->get();
 
         $response['status'] = 'Success';
         $response['code'] = 200;
-        $response['data'] = ['company'=>$list];
+        $response['data'] = $list;
         return Response::json($response);
+//        $list = Company::all();
+//        foreach($list as $l){
+//            $l->categories = [];
+//            $l->categories = InventoryParentCategory::with(['subCategories' => function($q) use($l) {
+//                    $q->where('company_id', '=', $l->company_id)
+//                    ->with(['subCategories' => function($q) use($l) {
+//                        $q->where('company_id', '=', $l->company_id)
+//                        ->with(['subCategories' => function($q) use($l) {
+//                            $q->where('company_id', '=', $l->company_id)
+//                            ->with(['subCategories' => function($q) use($l) {
+//                                $q->where('company_id', '=', $l->company_id)
+//                                ->with(['subCategories' => function($q) use($l) {
+//                                    $q->where('company_id', '=', $l->company_id)
+//                                    ->with(['subCategories' => function($q) use($l) {
+//                                        $q->where('company_id', '=', $l->company_id);
+//                                    }]);
+//                                }]);
+//                            }]);
+//                        }]);
+//                    }]);
+//                }])
+//                ->where('company_id',$l->company_id)
+//                ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')
+//                ->where('parent_id', '0')
+//                ->orderBy('inventory_category.name')
+//                ->get();
+//        }
+//
+//        $response['status'] = 'Success';
+//        $response['code'] = 200;
+//        $response['data'] = ['companies'=>$list];
+//        return Response::json($response);
     }
-
-    //Start-------------------------------------------
 
     public function list(Request $request)
     {
@@ -396,17 +408,45 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
-    // End---------------------------------------------
+    public function moveInventoryCategory(Request $request){
+        $validator = Validator::make($request->all(), [
+            'id' => 'required',
+            'parent_id' => 'required',
+        ]);
+
+        if($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+            $mov = InventoryParentCategory::find($request->id);
+            $mov->parent_id = $request->parent_id;
+            $mov->save();
+
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+            $response['data'] = $mov;
+        }
+
+        return Response::json($response);
+    }
 
     public function addInventory(Request $request){
         $validator = Validator::make($request->all(), [
+//            'serial_no' => 'required',
+//            'date_purchased' => 'required',
+//            'status' => 'required',
             'company_id' => 'required',
             'category_id' => 'required',
-            'serial_no' => 'required',
             'model' => 'required',
-            'date_purchased' => 'required',
-            'status' => 'required',
-            'note' => 'nullable',
+            'notes' => 'required',
+            'type' => 'required',
+            'location_site' => 'required',
+            'location_detail' => 'required',
+            'purchase_price' => 'required',
+            'or' => 'required',
+            'qty' => 'required',
+            'unit' => 'required',
         ]);
 
         if($validator->fails()) {
@@ -420,14 +460,23 @@ class InventoryController extends Controller
             $inv->serial_no = $request->serial_no;
             $inv->model = $request->model;
             $inv->date_purchased = strtotime($request->date_purchased);
-            $inv->inventory_img = md5($request->imgBase64) . '.' . explode('.', $request->imgName)[1];
-            $inv->status = $request->status;
+            if($request->imgBase64 !== null && $request->imgBase64 !== 'undefined') {
+                $inv->inventory_img = md5($request->imgBase64) . '.' . explode('.', $request->imgName)[1];
+                $this->uploadCategoryAvatar($request,'inventories/');
+            }
+//            $inv->status = $request->status;
             $inv->notes = $request->notes;
             $inv->assigned_to = 0;
+            $inv->type = $request->type;
+            $inv->location_site = $request->location_site;
+            $inv->location_detail = $request->location_detail;
+            $inv->purchase_price = $request->purchase_price;
+            $inv->or = $request->or;
+            $inv->qty = $request->qty;
+            $inv->unit = $request->unit;
             $inv->created_at = strtotime("now");
             $inv->updated_at = strtotime("now");
             $inv->save();
-            $this->uploadCategoryAvatar($request,'inventories/');
 
             $response['status'] = 'Success';
             $response['code'] = 200;
@@ -435,6 +484,8 @@ class InventoryController extends Controller
         }
         return Response::json($response);
     }
+
+
 
     public function addInventoryCategory(Request $request){
         $validator = Validator::make($request->all(), [
@@ -459,10 +510,9 @@ class InventoryController extends Controller
                 $categ = new InventoryCategory();
                 $categ->name = $request->name;
                 $categ->name_chinese = $request->name_chinese;
-                $categ->description = $request->description;
-                $categ->category_img = md5($request->imgBase64) . '.' . explode('.', $request->imgName)[1];
-                $this->uploadCategoryAvatar($request,'inventories/categories/');
                 $categ->status = 1;
+                $categ->created_at = strtotime("now");
+                $categ->updated_at = strtotime("now");
                 $categ->save();
             }
             $parentExist = InventoryParentCategory::where([
@@ -569,43 +619,26 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
-    public function test()
-    {
-        $cats = InventoryParentCategory::with('subCategories')
-            ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')
-//            ->where('parent_id', '0')
-            ->where('inventory_category.status', '1')
-            ->orderBy('inventory_category.name', 'asc')
+    public function test(Request $request){
+        $validator = Validator::make($request->all(), [
+            'company_id' => 'nullable',
+            'category_id' => 'nullable',
+        ]);
+        $list = DB::table('inventory_parent_category AS ipcat')
+            ->leftJoin('company AS com','ipcat.company_id','=','com.company_id')
+            ->leftJoin('inventory_category AS icat','ipcat.category_id','=','icat.category_id')
+            ->where('ipcat.company_id','LIKE', '%'.$request->company_id.'%')
+            ->where(function ($query) use ($request) {
+                $query
+                    ->where('ipcat.category_id', 'LIKE', '%'.$request->category_id.'%')
+                    ->orWhere('ipcat.parent_id', 'LIKE', '%'.$request->category_id.'%');
+            })
             ->get();
 
         $response['status'] = 'Success';
         $response['code'] = 200;
-        $response['data'] = $cats;
-
+        $response['data'] = $list;
         return Response::json($response);
-//        $list = DB::table('inventory_parent_category AS ipcat')
-//            ->leftJoin('company AS com','ipcat.company_id','=','com.company_id')
-//            ->leftJoin('inventory_category AS icatpa','ipcat.parent_id','=','icatpa.category_id')
-//            ->leftJoin('inventory_category AS icat','ipcat.category_id','=','icat.category_id')
-//            ->leftJoin('inventory AS inv', function($join){
-//                $join->on('com.company_id', '=', 'inv.company_id');
-//                $join->on('icat.category_id','=','inv.category_id');
-//            })
-////            ->where('com.name','=','Mart')
-//            ->where('icatpa.name','=','Computer')
-//            ->get(['inv.inventory_id AS InventoryID',
-//                'com.name AS CompanyName',
-//                'icatpa.name AS Tree',
-//                'icat.name AS ItemName',
-//                'inv.date_purchased AS DatePurchased',
-//                'inv.status AS Status',
-//                'inv.assigned_to AS AssignedTo']);
-//
-//
-//        $response['status'] = 'Success';
-//        $response['code'] = 200;
-//        $response['data'] = $list;
-//        return Response::json($response);
     }
 
     public function uploadCategoryAvatar($data,$folder) {
