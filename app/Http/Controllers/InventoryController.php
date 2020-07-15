@@ -46,27 +46,39 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    //Start-------------------------------------------
+
     public function list(Request $request)
     {
         $name = $request->input("q", "");
         $id = intval($request->input("inventory_id", 0));
+        $co_id = intval($request->input("company_id", 0));
+        $ca_id = intval($request->input("category_id", 0));
         $page = intval($request->input("page", 1));
-        $pageSize = intval($request->input("limit", 3));
+        $pageSize = intval($request->input("limit", 20));
 
         $any = array();
         if ($name != "")
         {
             $any[] = ["name", "LIKE", "%$name%"];
         }
-        $inventoryId = array();
+
+        $filter = array();
         if ($id != 0)
         {
-            $inventoryId[] = ["inventory_id", $id];
+            $filter[] = ["inventory_id", $id];
+        }
+        if ($co_id != 0)
+        {
+            $filter[] = ["inventory.company_id", $co_id];
         }
 
-        $category_ids = InventoryCategory::where($any)->pluck('category_id');
-
-//        $company_ids = Company::where("name", "LIKE", "%Mart%")->pluck('company_id');
+        if ($ca_id != 0)
+        {
+            $category_ids = array($ca_id);
+        }else {
+            $category_ids = InventoryCategory::where($any)->pluck('category_id');
+        }
 
         if (count($category_ids)==0)
         {
@@ -103,7 +115,8 @@ class InventoryController extends Controller
         if (empty($page_obj)) {
             return array();
         }
-        $count = DB::table('inventory')->wherein('category_id',$item_found)->count();
+        $count = DB::table('inventory')->where($filter)
+            ->wherein('category_id',$item_found)->count();
         $page_obj->set_count($count);
         if (empty($count)) {
             return array();
@@ -112,42 +125,26 @@ class InventoryController extends Controller
         $page = $page_obj->curr_page;
 
         $list = DB::table('inventory')
-            ->select(DB::raw('inventory_id, co.name as companyName,
-                    CASE WHEN assigned_to = 0 THEN "Not Yet Consumed"
-                    ELSE CONCAT(u.first_name, " ",  u.last_name)
-                    END AS assignedTo,
-                    category_id, inventory.company_id, serial_no, model, date_purchased, inventory_img as inventoryImg, notes,
-                    CASE
-                        WHEN status = 1 THEN "Brand New"
-                        WHEN status = 2 THEN "Second Hand"
-                    END as status
-                '))
+            ->select(DB::raw('co.name as company_name, inventory.*'))
             ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
-            ->leftJoin('users as u', 'inventory.assigned_to', '=', 'u.id')
-            ->where($inventoryId)
+            ->where($filter)
             ->whereIn('category_id',$item_found)
-            ->orderBy('inventory_id','DESC')
             ->limit($limit)->offset(($page - 1) * $limit)->get()->toArray();
 
         foreach($list as $n){
             $nparent = InventoryParentCategory::where('inventory_parent_category.category_id',$n->category_id)
                 ->where('inventory_parent_category.company_id',$n->company_id)
                 ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')->get();
-            $n->itemName = '';
-            $n->datePurchased = gmdate("F j, Y", $n->date_purchased);
+            $n->date_purchased = gmdate("F j, Y", $n->date_purchased);
+            $n->created_at = gmdate("F j, Y", $n->created_at);
+            $n->updated_at = gmdate("F j, Y", $n->updated_at);
             foreach($nparent as $np){
                 $tree = $np->parents->reverse();
-                $n->itemName = $np->name;
-                $n->categoryName = '';
-                foreach($tree as $key => $val){
-                    if($key === 0) continue;
-                    $n->categoryName = $val->name;
-                }
-                $j=1;
-                foreach ($tree as $key => $val){
-                    $x[$j] = $val->name;
-                    if($key === 1) continue;
-                    $n->assetName = implode(" ", $x);
+                $n->item_name = $np->name;
+                $j=0;
+                foreach($tree as $t){
+                    $x[$j] = $t->name;
+                    $n->asset_name = implode(" ", $x);
                     $j++;
                 }
             }
@@ -182,10 +179,12 @@ class InventoryController extends Controller
                 ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')->get();
             foreach($nparent as $np){
                 $tree = $np->parents->reverse();
-                $x = [];
+                $n->item_name = $np->name;
+                $j=0;
                 foreach($tree as $t){
-                    $x[] = $t->name;
-                    $n->asset_name = implode(" ", $x)." ".$np->name;
+                    $x[$j] = $t->name;
+                    $n->asset_name = implode(" ", $x);
+                    $j++;
                 }
             }
         }
@@ -205,7 +204,7 @@ class InventoryController extends Controller
         if (empty($page_obj)) {
             return array();
         }
-        $count = DB::table('inventory')->where("assigned_to", "!=", 0)->count();
+        $count = DB::table('inventory')->where("is_assigned", "!=", 0)->count();
 
         if ($count === 0)
         {
@@ -222,47 +221,40 @@ class InventoryController extends Controller
         $limit = $page_obj->page_size;
         $page = $page_obj->curr_page;
 
-        $list = DB::table('inventory')
-            ->select(DB::raw('inventory_id, co.name as companyName,
-                    CASE WHEN assigned_to = 0 THEN "Not Yet Consumed"
-                    ELSE CONCAT(u.first_name, " ",  u.last_name)
-                    END AS assignedTo,
-                    category_id, inventory.company_id, serial_no, model, date_purchased, inventory_img as inventoryImg, notes,
-                    CASE
-                        WHEN status = 1 THEN "Brand New"
-                        WHEN status = 2 THEN "Second Hand"
-                    END as status
-                '))
-            ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
-            ->leftJoin('users as u', 'inventory.assigned_to', '=', 'u.id')
-            ->where("assigned_to", "!=", 0)
+        $ln = DB::table('inventory')
+            ->where("is_assigned", "!=", 0)
             ->orderBy('inventory_id','DESC')
             ->limit($limit)->offset(($page - 1) * $limit)->get()->toArray();
-        foreach($list as $n){
+        foreach($ln as $n){
             $nparent = InventoryParentCategory::where('inventory_parent_category.category_id',$n->category_id)
                 ->where('inventory_parent_category.company_id',$n->company_id)
                 ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')->get();
             $n->datePurchased = gmdate("F j, Y", $n->date_purchased);
-            $n->itemName = '';
             foreach($nparent as $np){
                 $tree = $np->parents->reverse();
-                $x = [];
                 $n->itemName = $np->name;
-                $n->categoryName = '';
-                foreach($tree as $key => $val){
-                    if($key === 0) continue;
-                    $n->categoryName = $val->name;
-                }
-                $j=1;
-                foreach ($tree as $key => $val){
-                    $x[$j] = $val->name;
-                    if($key === 1) continue;
-                    $n->assetName = implode(" ", $x);
-                    $j++;
+                $i=0;
+                foreach($tree as $t){
+                    $x[$i] = $t->name;
+                    $n->categoryName = implode(" ", $x);
+                    $i++;
                 }
             }
         }
 
+        $j=0; $list = [];
+        foreach ($ln as $d)
+        {
+            $list[$j]['inventory_id'] = $d->inventory_id;
+            $list[$j]['itemName'] = $d->itemName;
+            $list[$j]['type'] = $d->type;
+            $list[$j]['model'] = $d->model;
+            $list[$j]['qty'] = $d->qty;
+            $list[$j]['unit'] = $d->unit;
+            $list[$j]['date_purchased'] = gmdate("F j, Y", $d->date_purchased);
+            $list[$j]['assigned_to'] = $d->assigned_to;
+            $j++;
+        }
         $data = array(
             "totalNum" => $page_obj->total_num,
             "currPage" => $page_obj->curr_page,
@@ -270,13 +262,141 @@ class InventoryController extends Controller
             "pageSize" => $page_obj->page_size,
             "totalPage" => $page_obj->total_page,
         );
-
-        $response['status'] = 'Success';
+        $response['status'] = 'success';
         $response['code'] = 200;
         $response['data'] = $data;
 
         return Response::json($response);
     }
+
+    public function updateImage(Request $request){
+        $validator = Validator::make($request->all(), [
+                'inventory_id' => 'required'
+            ]
+        );
+        $response = array();
+        if($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+            $inv = Inventory::find($request->inventory_id);
+            $inv->inventory_img = md5($request->imgBase64) . '.' . explode('.', $request->imgName)[1];
+            $inv->save();
+            $this->uploadCategoryAvatar($request,'inventories/');
+
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+            $response['data'] = $inv;
+        }
+
+        return Response::json($response);
+    }
+
+    public function editInventory(Request $request){
+        $validator = Validator::make($request->all(), [
+            'inventory_id' => 'required',
+            'notes' => 'nullable',
+            'model' => 'required',
+            'type' => 'required',
+            'qty' => 'required',
+            'unit' => 'required',
+            'location_site' => 'required',
+            'location_detail' => 'required',
+            'purchase_price' => 'required|numeric',
+            'or' => 'required',
+            'assigned_to' => 'nullable',
+
+            // 'serial_no' => 'required',
+            // 'date_purchased' => 'required',
+        ]);
+        $response = [];
+        if($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+            $filter = array(
+                '', 'NA', 'N/A', 'N A', 'Not Applicable', 'Not Yet Consumed'
+            );
+
+            $inv = Inventory::find($request->inventory_id);
+            $inv->model = $request->model;
+            $inv->type = $request->type;
+            $inv->qty = $request->qty;
+            $inv->unit = $request->unit;
+            $inv->location_site = $request->location_site;
+            $inv->location_detail = $request->location_detail;
+            $inv->purchase_price = $request->purchase_price;
+            $inv->or = $request->or;
+
+            if($request->notes !== null) {
+                $inv->notes = $request->notes;
+            }
+            if($request->assigned_to !== null) {
+                $assigned_to = trim(preg_replace('/\s+/', ' ', $request->assigned_to));
+                $inv->assigned_to = $assigned_to;
+            }
+            if (!in_array($assigned_to, $filter))
+            {
+                $inv->is_assigned = 1;
+            }
+            else
+            {
+                $inv->is_assigned = 0;
+            }
+            $inv->updated_at = strtotime("now");
+            $inv->save();
+
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+            $response['data'] = $inv;
+
+        }
+        return Response::json($response);
+    }
+
+    public function assignInventory(Request $request){
+        $validator = Validator::make($request->all(), [
+                'inventory_id' => 'required',
+                'assigned_to' => 'required'
+            ]
+        );
+
+        $response = [];
+        if($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+            $filter = array(
+                '', 'NA', 'N/A', 'N A', 'Not Applicable', 'Not Yet Consumed'
+            );
+            $assigned_to = trim(preg_replace('/\s+/', ' ', $request->assigned_to));
+
+            $inv = Inventory::find($request->inventory_id);
+            $inv->assigned_to = $assigned_to;
+            if (!in_array($assigned_to, $filter))
+            {
+                $inv->is_assigned = 1;
+            }
+            else
+            {
+                $inv->is_assigned = 0;
+            }
+
+            $inv->updated_at = strtotime("now");
+            $inv->save();
+
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+            $response['data'] = $inv;
+        }
+
+        return Response::json($response);
+    }
+
+    // End---------------------------------------------
 
     public function addInventory(Request $request){
         $validator = Validator::make($request->all(), [
@@ -357,51 +477,6 @@ class InventoryController extends Controller
                 $parentCateg->parent_id = $request->parent_id;
                 $parentCateg->save();
             }
-            $response['status'] = 'Success';
-            $response['code'] = 200;
-            $response['data'] = explode('.', $request->imgName);
-        }
-        return Response::json($response);
-    }
-
-
-    public function editInventory(Request $request){
-        $validator = Validator::make($request->all(), [
-            'inventory_id' => 'required',
-            'company_id' => 'required',
-            'category_id' => 'required',
-            'serial_no' => 'required',
-            'model' => 'required',
-            'date_purchased' => 'required',
-            'status' => 'nullable',
-            'assigned_to' => 'nullable',
-        ]);
-
-        if($validator->fails()) {
-            $response['status'] = 'Failed';
-            $response['errors'] = $validator->errors();
-            $response['code'] = 422;
-        } else {
-            $inv = Inventory::find($request->inventory_id);
-            $inv->company_id = $request->company_id;
-            $inv->category_id = $request->category_id;
-            $inv->serial_no = $request->serial_no;
-            $inv->model = $request->model;
-            $inv->date_purchased = $request->date_purchased;
-
-            if($request->imgBase64 !== null) {
-                $inv->inventory_img = str_replace(' ', '_', $request->serial_no) . date('Ymd_His') . '.' . explode('.', $request->imgName)[1];
-                $this->uploadCategoryAvatar($request,'inventories/');
-            }
-            if($request->status !== null) {
-                $inv->status = $request->status;
-            }
-            if($request->assigned_to !== null) {
-                $inv->assigned_to = $request->assigned_to;
-            }
-            $inv->updated_at = strtotime("now");
-            $inv->save();
-
             $response['status'] = 'Success';
             $response['code'] = 200;
             $response['data'] = explode('.', $request->imgName);
