@@ -30,6 +30,8 @@ use App\Tasks;
 use App\Updates;
 
 use App\User;
+use App\Order;
+use App\OrderDetails;
 
 use App\OnHandDocument;
 
@@ -1625,23 +1627,40 @@ class ClientController extends Controller
             else if($type == "Payment") {
                 $payment = new ClientTransaction;
                 $payment->client_id = $client_id;
-                $payment->client_service_id = $cs_id;
+                if($request->get('paytype') == 'Service'){
+                    $payment->client_service_id = $cs_id;
+                }
+                else{
+                    $payment->order_id = $cs_id;
+                }
                 $payment->type = 'Payment';
                 $payment->group_id = null;
                 $payment->amount = $amount;
                 $payment->save();
 
-                $service = ClientService::findOrFail($cs_id);
-                if($service->payment_amount > 0){
-                    $service->payment_amount += $amount;
+                if($request->get('paytype') == 'Service'){
+                    $service = ClientService::findOrFail($cs_id);
+                    if($service->payment_amount > 0){
+                        $service->payment_amount += $amount;
+                    }
+                    else{
+                        $service->payment_amount = $amount;
+                    }
+                    if($amount == $request->get('total_cost')){
+                        $service->is_full_payment = 1;
+                    }
+                    $service->save();
                 }
                 else{
-                    $service->payment_amount = $amount;
+                    $order = Order::findOrFail($cs_id);
+                    if($order->money_received > 0){
+                        $order->money_received += $amount;
+                    }
+                    else{
+                        $order->money_received = $amount;
+                    }
+                    $order->save();
                 }
-                if($amount == $request->get('total_cost')){
-                    $service->is_full_payment = 1;
-                }
-                $service->save();
                 //for financing
                 // $finance = new Financing;
                 // $finance->user_sn = Auth::user()->id;
@@ -1673,10 +1692,10 @@ class ClientController extends Controller
                 );
                 LogController::save($log_data);
 
-                $detail = 'Paid a service with an amount of Php'.$amount.'.';
+                $detail = 'Paid '.strtolower($request->get('paytype')).' with an amount of Php'.$amount.'.';
                 $detail_cn = '已支付 Php'.$amount.'.';
                 $log_data = array(
-                    'client_service_id' => $cs_id,
+                    'client_service_id' => ($request->get('paytype') == 'Service' ? $cs_id : null),
                     'client_id' => $client_id,
                     'group_id' => null,
                     'log_type' => 'Ewallet',
@@ -2661,6 +2680,9 @@ class ClientController extends Controller
         $clids = $clientTotalCost->pluck('id');
         $clientTotalCost =   $clientTotalCost->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
 
+        $orderCost = Order::where('user_id', $id)->pluck('order_id');
+
+        $clientTotalCost += OrderDetails::whereIn('order_id',$orderCost)->where('order_status',1)->sum('total_price');
 
         $discount =  ClientTransaction::where('client_id', $id)->where('group_id', null)->where('type', 'Discount')
                     ->where('client_service_id','!=',null)->whereIn('client_service_id', $clids)->sum('amount');
@@ -2817,6 +2839,8 @@ class ClientController extends Controller
         $withdraw = ClientEWallet::where('client_id', $id)->where('group_id', null)->where('type', 'Refund')->sum('amount');
 
         $payment = ClientTransaction::where('client_id', $id)->where('group_id', null)->where('type', 'Payment')->where('client_service_id','!=',null)->sum('amount');
+
+        $payment += ClientTransaction::where('client_id', $id)->where('group_id', null)->where('type', 'Payment')->where('order_id','!=',null)->sum('amount');
 
         return $depo - ($withdraw + $payment);
     }

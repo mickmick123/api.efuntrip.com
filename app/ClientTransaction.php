@@ -19,7 +19,7 @@ class ClientTransaction extends Model
 
     protected $table = 'client_transactions';
 
-    protected $fillable = ['type', 'client_id', 'group_id', 'client_service_id', 'amount', 'tracking', 'reason', 'storage_type', 'alipay_reference', 'is_commission'];
+    protected $fillable = ['type', 'client_id', 'group_id', 'client_service_id','order_id', 'amount', 'tracking', 'reason', 'storage_type', 'alipay_reference', 'is_commission'];
 
     public static function boot(){
         parent::boot();
