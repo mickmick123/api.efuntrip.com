@@ -85,27 +85,16 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
             $temp['detail'] = $data['detail'];
             $temp['service_date'] = $data['service_date'];
 
+
             $temPackage = [];
             $j = 0;
             $members = [];
            foreach($data['members'] as $p){
-            //
-               $p['name'] = $p['first_name']. " " . $p['last_name'];
-            //
-            //   $services = [];
-            //   $ctrM = 0;
-            //   foreach($p['services'] as $m){
-            //     $clientServices = [];
-            //     $tmpCtr = 0;
-            //     // if($this->lang === 'EN'){
-            //     //     $m['service']->status = ucfirst($m['service']->status);
-            //     // }else{
-            //     //     $m['service']->status = $this->statusChinese($m['service']->status);
-            //     // }
-            //
-            //     $members[$ctrM] = $m;
-            //     $ctrM++;
-            //   }
+              if(isset($p['first_name'])){
+                $p['name'] = $p['first_name']. " " . $p['last_name'];
+              }else{
+                $p['name'] = "";
+              }
               $members[$j] =  $p;
               $j++;
             }
@@ -279,8 +268,12 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
            $services[0]['detail'] = $this->typeChinese($s->type);
         }
 
+
         $services[0]['total_charge'] = $s->amount;
         $services[0]['total_service_cost'] = $s->amount;
+
+        //$services[0]['total_service_cost'] =  $this->group['total_balance']; //here
+
         $services[0]['remarks'] = "";
 
         $members[0] = User::where('id',1)->select('first_name','last_name')->first();
@@ -297,7 +290,10 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
       $result = $merged->all();
 
       $result2 = collect($result)->sortBy('service_date')->reverse()->toArray();
+
+
       $ctr = 0;
+      $totalBal = $this->group['total_balance'];
       foreach($result2 as $r){
         $datetime = new DateTime($r['service_date']);
         $getdate = $datetime->format('M d,Y');
@@ -308,6 +304,35 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
         else{
             $result2[$ctr]['service_date'] = $this->DateChinese($getdate);
         }
+
+        $members = [];
+        $j = 0;
+
+
+        foreach($r['members'] as $member){
+            $services = [];
+            $i = 0;
+            foreach($member['services'] as $s){
+
+              if($s['detail'] === 'Deposit' || $s['detail'] === 'Payment'){
+                $totalBal += $s["total_charge"];
+              }else{
+                if($s["active"] == 1 && strtolower($s['status']) == 'complete'){
+                  $totalBal = ((float) $totalBal) - ((float) $s["total_charge"]);
+                }
+              }
+
+              $s["total_service_cost"] = $totalBal;
+
+              $services[$i] = $s;
+              $i++;
+            }
+            $member['services'] = $services;
+            $members[$j] = $member;
+            $j++;
+        }
+        $result2[$ctr]['members'] = $members;
+
         $ctr++;
       }
 

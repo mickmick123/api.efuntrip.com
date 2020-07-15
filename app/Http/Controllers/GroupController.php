@@ -2900,6 +2900,9 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
                  $cs->remarks = strip_tags($cs->remarks);
 
+                 $cs->status = ($cs->active == 0 || strtolower($cs->status) !== 'complete') ? 'CANCELLED' : $cs->status;
+
+
 
                  $chrg = ($cs->active == 0 || strtolower($cs->status) !== 'complete') ? 0 : ($cs->charge + $cs->cost + $cs->tip);
 
@@ -2914,8 +2917,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
                  $tempTotal +=$sub;
 
-                 $cs->total_service_cost = $tempTotal;
-                 $cs->total_charge = (($cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent)) - $cs->discount;
+                 $cs->total_service_cost = 0; //here
+                 $cs->total_charge = ($cs->active == 0 || strtolower($cs->status) !== 'complete') ? 0 : (($cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent)) - $cs->discount;
 
                  $clientServices[$tmpCtr] = $cs;
                  $tmpCtr++;
@@ -2923,7 +2926,15 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
                $member = ($members[$ctr2] = User::where('id',$m->client_id)->select('first_name','last_name')->first());
                //  $members[$ctr2]['tcost']
-               $members[$ctr2]['name'] =  $member->first_name ." ". $member->last_name;
+               if($member){
+                  $members[$ctr2]['name'] =  $member->first_name ." ". $member->last_name;
+               }else{
+                  $members[$ctr2]['name'] = "";
+               }
+
+
+
+
                $members[$ctr2]['tcost'] = $query->where('client_id',$m->client_id)->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)"));
                $members[$ctr2]['services'] = $clientServices;
              $ctr2++;
