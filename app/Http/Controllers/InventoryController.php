@@ -129,6 +129,15 @@ class InventoryController extends Controller
         }
         $count = DB::table('inventory')->where($filter)
             ->wherein('category_id',$item_found)->count();
+
+        if ($count==0)
+        {
+            $response['status'] = 'No results found.';
+            $response['code'] = 404;
+            $response['data'] = '';
+            return Response::json($response);
+        }
+
         $page_obj->set_count($count);
         if (empty($count)) {
             return array();
