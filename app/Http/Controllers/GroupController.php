@@ -2629,7 +2629,6 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
       $filename = Carbon::now();
 
-
       $groupInfo = [];
       $groupInfo['total_complete_service_cost'] = number_format($this->getGroupTotalCompleteServiceCost($request->id),2);
       $groupInfo['total_cost'] = number_format($this->getGroupTotalCost($request->id),2);
@@ -2657,6 +2656,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
       }
 
       return Excel::download($export, 'users.xlsx');
+
+
     }
 
 
@@ -2900,11 +2901,12 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
                  $cs->remarks = strip_tags($cs->remarks);
 
-                 $cs->status = ($cs->active == 0 || strtolower($cs->status) !== 'complete') ? 'CANCELLED' : $cs->status;
-
-
 
                  $chrg = ($cs->active == 0 || strtolower($cs->status) !== 'complete') ? 0 : ($cs->charge + $cs->cost + $cs->tip);
+
+                 if($cs->active == 0){
+                      $cs->status = 'CANCELLED';
+                 }
 
                  $sub = $chrg;
 
