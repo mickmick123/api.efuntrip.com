@@ -1078,9 +1078,17 @@ class ClientController extends Controller
         if($tracking == 0 && strlen($tracking) == 1){
 
             $services = DB::table('client_services as cs')
-                ->select(DB::raw('cs.*,g.name as group_name, ct.amount as discount_amount,ct.reason as discount_reason,s.parent_id, s.form_id, u.arrival_date, u.first_expiration_date, u.extended_expiration_date, u.expiration_date, u.icard_issue_date, u.icard_expiration_date'))
+                ->select(DB::raw('cs.*,g.name as group_name, ct.amount as discount_amount,ct.reason as discount_reason, cp.amount as payment_amount,cp.reason as payment_reason, s.parent_id, s.form_id, u.arrival_date, u.first_expiration_date, u.extended_expiration_date, u.expiration_date, u.icard_issue_date, u.icard_expiration_date'))
                 ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','cs.group_id')
-                ->leftjoin(DB::raw('(select * from client_transactions) as ct'),'ct.client_service_id','=','cs.id')
+                // ->leftjoin(DB::raw('(select * from client_transactions) as ct'),'ct.client_service_id','=','cs.id')
+                ->leftJoin(DB::raw('(select * from client_transactions) as ct'), function($join){
+                    $join->on('ct.client_service_id', '=', 'cs.id');
+                    $join->where('ct.type','=','Discount');
+                })
+                ->leftJoin(DB::raw('(select * from client_transactions) as cp'), function($join){
+                    $join->on('cp.client_service_id', '=', 'cs.id');
+                    $join->where('cp.type','=','Payment');
+                })
                 ->leftjoin(DB::raw('(select * from services) as s'),'s.id','=','cs.service_id')
                 ->leftjoin(DB::raw('(select * from users) as u'),'u.id','=','cs.client_id')
                 ->where('cs.client_id',$id)
@@ -1089,9 +1097,17 @@ class ClientController extends Controller
         }
         else{
             $services = DB::table('client_services as cs')
-                ->select(DB::raw('cs.*,g.name as group_name, ct.amount as discount_amount,ct.reason as discount_reason,s.parent_id, s.form_id, u.arrival_date, u.first_expiration_date, u.extended_expiration_date, u.expiration_date, u.icard_issue_date, u.icard_expiration_date'))
+                ->select(DB::raw('cs.*,g.name as group_name, ct.amount as discount_amount,ct.reason as discount_reason, cp.amount as payment_amount,cp.reason as payment_reason, s.parent_id, s.form_id, u.arrival_date, u.first_expiration_date, u.extended_expiration_date, u.expiration_date, u.icard_issue_date, u.icard_expiration_date'))
                 ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','cs.group_id')
-                ->leftjoin(DB::raw('(select * from client_transactions) as ct'),'ct.client_service_id','=','cs.id')
+                // ->leftjoin(DB::raw('(select * from client_transactions) as ct'),'ct.client_service_id','=','cs.id')
+                ->leftJoin(DB::raw('(select * from client_transactions) as ct'), function($join){
+                    $join->on('ct.client_service_id', '=', 'cs.id');
+                    $join->where('ct.type','=','Discount');
+                })
+                ->leftJoin(DB::raw('(select * from client_transactions) as cp'), function($join){
+                    $join->on('cp.client_service_id', '=', 'cs.id');
+                    $join->where('cp.type','=','Payment');
+                }) 
                 ->leftjoin(DB::raw('(select * from services) as s'),'s.id','=','cs.service_id')
                 ->leftjoin(DB::raw('(select * from users) as u'),'u.id','=','cs.client_id')
                 ->where('cs.client_id',$id)->where('cs.tracking',$tracking)
@@ -1592,24 +1608,29 @@ class ClientController extends Controller
                 $ewallet_depo->amount = $amount;
                 $ewallet_depo->save();
 
-                //save financing
-                // $finance = new Financing;
-                // $finance->user_sn = Auth::user()->id;
-                // $finance->type = "deposit";
-                // $finance->record_id = $depo->id;
-                // $finance->cat_type = "process";
-                // $finance->cat_storage = $storage;
-                // $finance->branch_id = $branch_id;
-                // $finance->storage_type = $bank;
-                // $finance->trans_desc = Auth::user()->first_name.' received deposit from client #'.$client_id.' on Package #'.$tracking;
-                // if($storage=='Alipay'){
-                //     $finance->trans_desc = Auth::user()->first_name.' received deposit from client #'.$client_id.' on Package #'.$tracking.' with Alipay reference: '.$alipay_reference;
-                // }
-                // ((strcasecmp($storage,'Cash')==0) ? $finance->cash_client_depo_payment = $amount : $finance->bank_client_depo_payment = $amount);
-                // $finance->save();
+                // save financing
+                $deptype = $storage;
+                if($storage == 'Bank'){
+                    $deptype = $bank;
+                }
+
+                $finance = new Financing;
+                $finance->user_sn = Auth::user()->id;
+                $finance->type = "deposit";
+                $finance->record_id = $ewallet_depo->id;
+                $finance->cat_type = "process";
+                $finance->cat_storage = $storage;
+                $finance->branch_id = 1;
+                $finance->storage_type = $bank;
+                $finance->trans_desc = Auth::user()->first_name.' received '.$deptype.' deposit from client #'.$client_id;
+                if($storage=='Alipay'){
+                    $finance->trans_desc = Auth::user()->first_name.' received '.$deptype.' deposit from client #'.$client_id.' with Alipay reference: '.$alipay_reference;
+                }
+                ((strcasecmp($storage,'Cash')==0) ? $finance->cash_client_depo_payment = $amount : $finance->bank_client_depo_payment = $amount);
+                $finance->save();
 
                 // save transaction logs
-                $detail = 'Deposited an amount of Php'.$amount.'.';
+                $detail = 'Receive '.$deptype.' deposit with an amount of Php'.$amount.'.';
                 $detail_cn = '预存了款项 Php'.$amount.'.';
                 $log_data = array(
                     'client_service_id' => null,
@@ -1625,18 +1646,27 @@ class ClientController extends Controller
             }
 
             else if($type == "Payment") {
-                $payment = new ClientTransaction;
-                $payment->client_id = $client_id;
-                if($request->get('paytype') == 'Service'){
-                    $payment->client_service_id = $cs_id;
+                $payment = ClientTransaction::where('type','Payment')->where('client_service_id',$cs_id)->first();
+                if($payment){
+                    $payment->amount += $amount;
+                    $payment->reason = $payment->reason.' ; '.$reason;
+                    $payment->save();
                 }
-                else{
-                    $payment->order_id = $cs_id;
+                else{                
+                    $payment = new ClientTransaction;
+                    $payment->client_id = $client_id;
+                    if($request->get('paytype') == 'Service'){
+                        $payment->client_service_id = $cs_id;
+                    }
+                    else{
+                        $payment->order_id = $cs_id;
+                    }
+                    $payment->type = 'Payment';
+                    $payment->group_id = null;
+                    $payment->amount = $amount;
+                    $payment->reason = $reason;
+                    $payment->save();
                 }
-                $payment->type = 'Payment';
-                $payment->group_id = null;
-                $payment->amount = $amount;
-                $payment->save();
 
                 if($request->get('paytype') == 'Service'){
                     $service = ClientService::findOrFail($cs_id);
@@ -1720,17 +1750,17 @@ class ClientController extends Controller
                     $ewallet_refund->save();
 
                     //for financing
-                    // $finance = new Financing;
-                    // $finance->user_sn = Auth::user()->id;
-                    // $finance->type = "refund";
-                    // $finance->record_id = $refund->id;
-                    // $finance->cat_type = "process";
-                    // $finance->cat_storage = $storage;
-                    // $finance->cash_client_refund = $amount;
-                    // $finance->branch_id = $branch_id;
-                    // $finance->trans_desc = Auth::user()->first_name.' refund to client #'.$client_id.' on Package #'.$tracking.' for the reason of '.$reason;
-                    // $finance->storage_type = ($storage!='Cash') ? $bank : null;
-                    // $finance->save();
+                    $finance = new Financing;
+                    $finance->user_sn = Auth::user()->id;
+                    $finance->type = "refund";
+                    $finance->record_id = $refund->id;
+                    $finance->cat_type = "process";
+                    $finance->cat_storage = $storage;
+                    $finance->cash_client_refund = $amount;
+                    $finance->branch_id = $branch_id;
+                    $finance->trans_desc = Auth::user()->first_name.' refund to client #'.$client_id.' on Package #'.$tracking.' for the reason of '.$reason;
+                    $finance->storage_type = ($storage!='Cash') ? $bank : null;
+                    $finance->save();
 
                     // save transaction logs
                     $detail = 'Withdrew an amount of Php'.$amount.' with the reason of <i>"'.$reason.'"</i>.';
