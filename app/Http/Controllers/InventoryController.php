@@ -102,7 +102,7 @@ class InventoryController extends Controller
         if($name !="") {
             $item_found2 = DB::table("inventory as i")
                 ->leftJoin("inventory_category as ca", "i.category_id", "ca.category_id")
-                ->where([["ca.name", "=", "Chair"]])
+                ->where([["ca.name", "=", $name]])
                 ->groupBy("i.category_id")
                 ->pluck("i.category_id");
         }
