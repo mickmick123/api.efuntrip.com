@@ -98,11 +98,21 @@ class InventoryController extends Controller
             $item_found1 = $category_ids;
         }
 
+        $array = array();
+        if($name != "")
+        {
+            $array[] = ["ca.name", "=", $name];
+        }
+        if($ca_id != 0)
+        {
+            $array[] = ["i.category_id", "=", $ca_id];
+        }
+
         $item_found2 = array();
-        if($name !="") {
+        if(count($array) !=0) {
             $item_found2 = DB::table("inventory as i")
                 ->leftJoin("inventory_category as ca", "i.category_id", "ca.category_id")
-                ->where([["ca.name", "=", $name]])
+                ->where($array)
                 ->groupBy("i.category_id")
                 ->pluck("i.category_id");
         }
