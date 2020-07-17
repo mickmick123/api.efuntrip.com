@@ -91,12 +91,28 @@ class InventoryController extends Controller
             }
         }
 
-        $item_found = [];
         if(count($items2)>0){
-            $item_found = $items2;
+            $item_found1 = $items2;
         }
         else{
-            $item_found = $category_ids;
+            $item_found1 = $category_ids;
+        }
+
+        $item_found2 = array();
+        if($name !="") {
+            $item_found2 = DB::table("inventory as i")
+                ->leftJoin("inventory_category as ca", "i.category_id", "ca.category_id")
+                ->where([["ca.name", "=", "Chair"]])
+                ->groupBy("i.category_id")
+                ->pluck("i.category_id");
+        }
+
+        $arr = array_merge(array($item_found1), array($item_found2));
+
+        foreach($arr as $i){
+            foreach($i as $j){
+                $item_found[] = $j;
+            }
         }
 
         $page_obj = new PageHelper($page, $pageSize);
@@ -218,15 +234,17 @@ class InventoryController extends Controller
         $limit = $page_obj->page_size;
         $page = $page_obj->curr_page;
 
-        $ln = DB::table('inventory')
+        $list = DB::table('inventory')
             ->where("is_assigned", "!=", 0)
             ->orderBy('inventory_id','DESC')
             ->limit($limit)->offset(($page - 1) * $limit)->get()->toArray();
-        foreach($ln as $n){
+        foreach($list as $n){
             $nparent = InventoryParentCategory::where('inventory_parent_category.category_id',$n->category_id)
                 ->where('inventory_parent_category.company_id',$n->company_id)
                 ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')->get();
-            $n->datePurchased = gmdate("F j, Y", $n->date_purchased);
+            $n->date_purchased = gmdate("F j, Y", $n->date_purchased);
+            $n->created_at = gmdate("F j, Y", $n->created_at);
+            $n->updated_at = gmdate("F j, Y", $n->updated_at);
             foreach($nparent as $np){
                 $tree = $np->parents->reverse();
                 $n->itemName = $np->name;
@@ -239,19 +257,6 @@ class InventoryController extends Controller
             }
         }
 
-        $j=0; $list = [];
-        foreach ($ln as $d)
-        {
-            $list[$j]['inventory_id'] = $d->inventory_id;
-            $list[$j]['itemName'] = $d->itemName;
-            $list[$j]['type'] = $d->type;
-            $list[$j]['model'] = $d->model;
-            $list[$j]['qty'] = $d->qty;
-            $list[$j]['unit'] = $d->unit;
-            $list[$j]['date_purchased'] = gmdate("F j, Y", $d->date_purchased);
-            $list[$j]['assigned_to'] = $d->assigned_to;
-            $j++;
-        }
         $data = array(
             "totalNum" => $page_obj->total_num,
             "currPage" => $page_obj->curr_page,
@@ -263,6 +268,34 @@ class InventoryController extends Controller
         $response['code'] = 200;
         $response['data'] = $data;
 
+        return Response::json($response);
+    }
+
+    public function getNewlyModified()
+    {
+        $list = DB::table('inventory')
+            ->where([["updated_at","!=","0"]])
+            ->orderBy('updated_at','DESC')
+            ->limit(10)->get();
+        foreach($list as $n){
+            $nparent = InventoryParentCategory::where('inventory_parent_category.category_id',$n->category_id)
+                ->where('inventory_parent_category.company_id',$n->company_id)
+                ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')->get();
+            foreach($nparent as $np){
+                $tree = $np->parents->reverse();
+                $n->item_name = $np->name;
+                $j=0;
+                foreach($tree as $t){
+                    $x[$j] = $t->name;
+                    $n->asset_name = implode(" ", $x);
+                    $j++;
+                }
+            }
+        }
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $list;
         return Response::json($response);
     }
 
@@ -314,7 +347,7 @@ class InventoryController extends Controller
             $response['code'] = 422;
         } else {
             $filter = array(
-                '', 'NA', 'N/A', 'N A', 'Not Applicable', 'Not Yet Consumed'
+                '', '0', 'NA', 'N/A', 'N A', 'Not Applicable', 'Not Yet Consumed'
             );
 
             $inv = Inventory::find($request->inventory_id);
