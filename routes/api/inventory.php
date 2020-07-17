@@ -9,12 +9,15 @@ Route::middleware('auth:api')->group(function() {
     Route::get('/get-newly-added','InventoryController@getNewlyAdded');
     Route::get('/list','InventoryController@list');
     Route::get('/get-consumed','InventoryController@getConsumed');
+    Route::post('/get-company-category','InventoryController@getCompanyCategory');
+    Route::post('/get-category-inventory','InventoryController@getCategoryInventory');
 
     Route::post('/move-inventory-category','InventoryController@moveInventoryCategory');
 
     Route::post('/add-company','InventoryController@addCompany');
     Route::post('/add-inventory','InventoryController@addInventory');
     Route::post('/add-inventory-category','InventoryController@addInventoryCategory');
+    Route::post('/edit-inventory-category','InventoryController@editInventoryCategory');
 
     Route::post('/edit-inventory','InventoryController@editInventory');
     Route::post('/assign-inventory','InventoryController@assignInventory');
