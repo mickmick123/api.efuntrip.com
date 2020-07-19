@@ -36,6 +36,22 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    public function getTabCategory(Request $request){
+        $list = DB::table('inventory_parent_category AS ipcat')
+            ->leftJoin('company AS com','ipcat.company_id','=','com.company_id')
+            ->leftJoin('inventory_category AS icat','ipcat.category_id','=','icat.category_id')
+            ->where('ipcat.company_id','LIKE', $request->company_id.'%')
+            ->where('ipcat.category_id','LIKE', $request->category_id.'%')
+            ->orderBy('icat.name')
+            ->get();
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $list;
+        $response['request'] = $request->all();
+        return Response::json($response);
+    }
+
     public function list(Request $request)
     {
         $name = $request->input("q", "");
