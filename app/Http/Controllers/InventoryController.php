@@ -183,7 +183,11 @@ class InventoryController extends Controller
                 $j=0;
                 foreach($tree as $t){
                     $n->x[$j] = $t->name;
-                    $n->asset_name = implode(" ", $n->x);
+                    $glue = " ";
+                    if ($id != 0) {
+                        $glue = " | ";
+                    }
+                    $n->asset_name = implode($glue, $n->x);
                     $j++;
                 }
             }
