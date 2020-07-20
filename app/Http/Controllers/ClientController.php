@@ -1753,12 +1753,12 @@ class ClientController extends Controller
                     $finance = new Financing;
                     $finance->user_sn = Auth::user()->id;
                     $finance->type = "refund";
-                    $finance->record_id = $refund->id;
+                    $finance->record_id = $ewallet_refund->id;
                     $finance->cat_type = "process";
                     $finance->cat_storage = $storage;
                     $finance->cash_client_refund = $amount;
-                    $finance->branch_id = $branch_id;
-                    $finance->trans_desc = Auth::user()->first_name.' refund to client #'.$client_id.' on Package #'.$tracking.' for the reason of '.$reason;
+                    $finance->branch_id = 1;
+                    $finance->trans_desc = Auth::user()->first_name.' refund to client #'.$client_id.' for the reason of '.$reason;
                     $finance->storage_type = ($storage!='Cash') ? $bank : null;
                     $finance->save();
 
@@ -1857,18 +1857,18 @@ class ClientController extends Controller
                 // $depo->tracking = null;
                 $depo->save();
 
-                //for financing
-                // $finance = new Financing;
-                // $finance->user_sn = Auth::user()->id;
-                // $finance->type = "transfer";
-                // $finance->record_id = $depo->id;
-                // $finance->cat_type = "process";
-                // $finance->cat_storage = $storage;
-                // $finance->branch_id = $branch_id;
-                // ((strcasecmp($storage,'Cash')==0) ? $finance->cash_client_depo_payment = $amount : $finance->bank_client_depo_payment = $amount);
-                // ((strcasecmp($storage,'Cash')==0) ? $finance->cash_client_refund = $amount : $finance->bank_cost = $amount);
-                // $finance->trans_desc = Auth::user()->first_name.' transffered funds from client #'.$client_id.' to '.$request->transfer_to.' '.$transferred.'.';
-                // $finance->save();
+                // for financing
+                $finance = new Financing;
+                $finance->user_sn = Auth::user()->id;
+                $finance->type = "transfer";
+                $finance->record_id = $depo->id;
+                $finance->cat_type = "process";
+                $finance->cat_storage = $storage;
+                $finance->branch_id = 1;
+                ((strcasecmp($storage,'Cash')==0) ? $finance->cash_client_depo_payment = $amount : $finance->bank_client_depo_payment = $amount);
+                ((strcasecmp($storage,'Cash')==0) ? $finance->cash_client_refund = $amount : $finance->bank_cost = $amount);
+                $finance->trans_desc = Auth::user()->first_name.' transferred funds from client #'.$client_id.' to '.$request->transfer_to.' '.$transferred.'.';
+                $finance->save();
 
                  // save transaction logs
                 $client = User::findorfail($client_id);
