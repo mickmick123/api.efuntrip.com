@@ -10,5 +10,5 @@ class InventoryCategory extends Model
     public $primaryKey  = 'category_id';
     public $timestamps = false;
 
-    protected $fillable = ['category_id','name','name_chinese','description','category_img', 'status'];
+    protected $fillable = ['name','name_chinese','created_at','updated_at'];
 }

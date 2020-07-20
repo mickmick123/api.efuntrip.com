@@ -8,7 +8,7 @@ class InventoryParentCategory extends Model
 {
     protected $table = 'inventory_parent_category';
 
-    protected $fillable = ['id','company_id','category_id','parent_id'];
+    protected $fillable = ['company_id','category_id','parent_id'];
 
     public $timestamps = false;
 
@@ -40,7 +40,7 @@ class InventoryParentCategory extends Model
                 // ->where('company_id', $this->company_id)
                 // ->with('subCategories')
                 // ->with(['subCategories' => function($q) {
-                //     $q->where('company_id', $this->company_id); 
+                //     $q->where('company_id', $this->company_id);
                 // }])
                 // ->with('inventories', 'subCategories.inventories')
                 ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id');

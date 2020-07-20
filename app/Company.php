@@ -10,5 +10,5 @@ class Company extends Model
     public $primaryKey  = 'company_id';
     public $timestamps = false;
 
-    protected $fillable = ['company_id','name','chinese_name','company_img','created_at','updated_at'];
+    protected $fillable = ['name','chinese_name','created_at','updated_at'];
 }

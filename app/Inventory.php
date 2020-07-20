@@ -10,5 +10,5 @@ class Inventory extends Model
     public $primaryKey  = 'inventory_id';
     public $timestamps = false;
 
-    protected $fillable = ['category_id', 'company_id', 'inventory_name','inventory_name_chinese','inventory_price','orig_price','unit','multiplier', 'inventory_img', 'inventory_description', 'status'];
+    protected $fillable = ['company_id','category_id','name','name_chinese','serial_no','model','date_purchased','inventory_img','notes','specification','status','is_assigned','assigned_to','type','location_site','location_detail','purchase_price','or','qty','unit','created_at','updated_at'];
 }
