@@ -2692,7 +2692,19 @@ class ClientController extends Controller
     }
 
     private function getClientPayment($id) {
-        return ClientTransaction::where('client_id', $id)->where('group_id', null)->where('type', 'Payment')->sum('amount');
+        $clientActiveServices = ClientService::where('client_id', $id)
+                                    ->where('active', 1)->where('group_id', null)
+                                    ->where(function ($query) {
+                                                $query->where('status','!=', 'cancelled');
+                                            })->pluck('id');
+
+        return ClientTransaction::where('client_id', $id)->where('group_id', null)
+                    ->where(function ($q) use($clientActiveServices){
+                        $q->whereIn('client_service_id', $clientActiveServices);
+                        $q->orwhere('client_service_id',null);
+                    })
+                    ->where('type', 'Payment')
+                    ->sum('amount');
     }
 
     private function getClientTotalDiscount($id) {
@@ -2868,9 +2880,20 @@ class ClientController extends Controller
 
         $withdraw = ClientEWallet::where('client_id', $id)->where('group_id', null)->where('type', 'Refund')->sum('amount');
 
-        $payment = ClientTransaction::where('client_id', $id)->where('group_id', null)->where('type', 'Payment')->where('client_service_id','!=',null)->sum('amount');
+        $clientActiveServices = ClientService::where('client_id', $id)
+                                    ->where('active', 1)->where('group_id', null)
+                                    ->where(function ($query) {
+                                                $query->where('status','!=', 'cancelled');
+                                            })->pluck('id');
 
-        $payment += ClientTransaction::where('client_id', $id)->where('group_id', null)->where('type', 'Payment')->where('order_id','!=',null)->sum('amount');
+        $payment = ClientTransaction::where('client_id', $id)->where('group_id', null)
+                    ->where('type', 'Payment')
+                    ->where(function ($q) {
+                        $q->where('client_service_id','!=',null);
+                        $q->orwhere('order_id','!=',null);
+                    })
+                    ->whereIn('client_service_id', $clientActiveServices)
+                    ->sum('amount');
 
         return $depo - ($withdraw + $payment);
     }
