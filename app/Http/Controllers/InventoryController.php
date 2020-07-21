@@ -62,9 +62,9 @@ class InventoryController extends Controller
         $pageSize = intval($request->input("limit", 20));
 
         $any = array();
-        if ($name != "")
+        if ($ca_id != "")
         {
-            $any[] = ["name", "LIKE", "%$name%"];
+            $any[] = ["category_id", $ca_id];
         }
 
         $filter = array();
@@ -76,23 +76,13 @@ class InventoryController extends Controller
         {
             $filter[] = ["inventory.company_id", $co_id];
         }
-
-        if ($ca_id != 0)
-        {
-            $category_ids = array($ca_id);
-        }else {
-            $category_ids = InventoryCategory::where($any)->pluck('category_id');
+        if($name !="") {
+            $filter[] = ["inventory.name", "LIKE", "%".$name."%"];
         }
 
-        if (count($category_ids)==0)
-        {
-            $response['status'] = 'No results found.';
-            $response['code'] = 404;
-            $response['data'] = '';
-            return Response::json($response);
-        }
+        $category_ids = InventoryCategory::where($any)->pluck('category_id');
 
-        $cats = InventoryParentCategory::whereIn('category_id', $category_ids)->get();
+        $cats = InventoryParentCategory::where('category_id', $ca_id)->get();
 
         $items = [];
         foreach($cats as $c){
@@ -108,37 +98,9 @@ class InventoryController extends Controller
         }
 
         if(count($items2)>0){
-            $item_found1 = $items2;
-        }
-        else{
-            $item_found1 = $category_ids;
-        }
-
-        $array = array();
-        if($name != "")
-        {
-            $array[] = ["ca.name", "=", $name];
-        }
-        if($ca_id != 0)
-        {
-            $array[] = ["i.category_id", "=", $ca_id];
-        }
-
-        $item_found2 = array();
-        if(count($array) !=0) {
-            $item_found2 = DB::table("inventory as i")
-                ->leftJoin("inventory_category as ca", "i.category_id", "ca.category_id")
-                ->where($array)
-                ->groupBy("i.category_id")
-                ->pluck("i.category_id");
-        }
-
-        $arr = array_merge(array($item_found1), array($item_found2));
-
-        foreach($arr as $i){
-            foreach($i as $j){
-                $item_found[] = $j;
-            }
+            $item_found = $items2;
+        }else{
+            $item_found = $category_ids;
         }
 
         $page_obj = new PageHelper($page, $pageSize);
@@ -146,7 +108,7 @@ class InventoryController extends Controller
             return array();
         }
         $count = DB::table('inventory')->where($filter)
-            ->wherein('category_id',$item_found)->count();
+            ->whereIn("category_id", $item_found)->count();
 
         if ($count==0)
         {
@@ -167,7 +129,7 @@ class InventoryController extends Controller
             ->select(DB::raw('co.name as company_name, inventory.*'))
             ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
             ->where($filter)
-            ->whereIn('category_id',$item_found)
+            ->whereIn("category_id", $item_found)
             ->limit($limit)->offset(($page - 1) * $limit)->get()->toArray();
 
         foreach($list as $n){
@@ -211,9 +173,9 @@ class InventoryController extends Controller
     public function getNewlyAdded()
     {
         $newlyAdded = DB::table('inventory')
-            ->select(DB::raw('COUNT(inventory.category_id) as total_asset, co.name as company, category_id, inventory.company_id'))
+            ->select(DB::raw('COUNT(inventory.category_id) as total_asset, co.name as company, category_id, inventory.company_id, inventory.name'))
             ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
-            ->groupBy('category_id','inventory.company_id')
+            ->groupBy('inventory.name','inventory.company_id')
             ->orderBy('inventory_id','DESC')
             ->limit(10)
             ->get();
@@ -221,9 +183,9 @@ class InventoryController extends Controller
             $nparent = InventoryParentCategory::where('inventory_parent_category.category_id',$n->category_id)
                 ->where('inventory_parent_category.company_id',$n->company_id)
                 ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')->get();
+            $n->item_name = $n->name;
             foreach($nparent as $np){
                 $tree = $np->parents->reverse();
-                $n->item_name = $np->name;
                 $j=0;
                 foreach($tree as $t){
                     $x[$j] = $t->name;
@@ -277,8 +239,8 @@ class InventoryController extends Controller
             $n->created_at = gmdate("F j, Y", $n->created_at);
             $n->updated_at = gmdate("F j, Y", $n->updated_at);
             foreach($nparent as $np){
+                $n->item_name = $np->name;
                 $tree = $np->parents->reverse();
-                $n->itemName = $np->name;
                 $i=0;
                 foreach($tree as $t){
                     $x[$i] = $t->name;
