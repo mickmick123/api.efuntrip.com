@@ -98,7 +98,7 @@ class InventoryController extends Controller
 
         $items2 = array_merge(array($ca_id), $items1);
 
-        if(count($items2)>0){
+        if(count($items1)>0){
             $item_found = $items2;
         }else{
             $item_found = $category_ids;
