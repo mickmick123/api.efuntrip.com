@@ -583,7 +583,7 @@ class InventoryController extends Controller
     public function editInventoryCategory(Request $request){
         $validator = Validator::make($request->all(), [
             'category_id' => 'required',
-            'name' => 'required|unique:inventory_category',
+            'name' => 'required',
             'name_chinese' => 'required',
         ]);
 
