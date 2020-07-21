@@ -89,13 +89,14 @@ class InventoryController extends Controller
             $items[] = InventoryParentCategory::where('category_id', $c->category_id)->where('company_id', $c->company_id)->first()->getAllChildren()->pluck('category_id');
         }
 
-        $items2 = [];
-        $test = null;
+        $items1 = [];
         foreach($items as $i){
             foreach($i as $j){
-                $items2[] = $j;
+                $items1[] = $j;
             }
         }
+
+        $items2 = array_merge(array($ca_id), $items1);
 
         if(count($items2)>0){
             $item_found = $items2;
