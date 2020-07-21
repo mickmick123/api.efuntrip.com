@@ -669,20 +669,30 @@ class InventoryController extends Controller
 
     public function deleteInventoryCategory(Request $request){
         $categ = InventoryParentCategory::where('category_id', $request->category_id)->where('company_id', $request->company_id)->first()->getAllChildren()->pluck('category_id');
+
         $ipc = InventoryParentCategory::where('company_id', $request->company_id)
             ->where(function ($q) use ($categ, $request) {
                 $q->whereIn('category_id', $categ);
                 $q->orwhere('category_id', $request->category_id);
             })->delete();
+
+        $icat = InventoryCategory::where(function ($q) use ($categ, $request) {
+                $q->whereIn('category_id', $categ);
+                $q->orwhere('category_id', $request->category_id);
+            })->delete();
+
         $inv = Inventory::where('company_id', $request->company_id)
             ->where(function ($q) use ($categ, $request) {
                 $q->whereIn('category_id', $categ);
                 $q->orwhere('category_id', $request->category_id);
             })->delete();
 
+        $list = [$icat];
+
         $response['status'] = 'Success';
         $response['code'] = 200;
         $response['data'] = 'Category and Inventory has been Deleted!';
+        $response['data1'] = $list;
         return Response::json($response);
     }
 

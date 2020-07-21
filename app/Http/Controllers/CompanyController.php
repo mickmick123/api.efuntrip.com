@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Company;
+use App\Inventory;
+use App\InventoryCategory;
+use App\InventoryParentCategory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Validator;
@@ -72,23 +75,23 @@ class CompanyController extends Controller
 
 
     public function deleteCompany(Request $request){
-        $com = DB::table('company')
-            ->where('company_id',$request->company_id)
+        $com = Company::where('company_id',$request->company_id)
             ->delete();
 
-        $ipcat = DB::table('inventory_parent_category')
-            ->where('company_id',$request->company_id)
+        $icat = DB::table('inventory_category AS icat')
+            ->leftJoin('inventory_parent_category AS ipcat','icat.category_id','=','ipcat.category_id')
+            ->where('ipcat.company_id',$request->company_id)
             ->delete();
 
-        $icat = DB::table('inventory')
-            ->where('company_id',$request->company_id)
+        $ipcat = InventoryParentCategory::where('company_id',$request->company_id)
             ->delete();
 
-        $list = ['COM'=>$com,'IPCAT'=>$ipcat,'ICAT'=>$icat];
+        $inv = Inventory::where('company_id',$request->company_id)
+            ->delete();
 
         $response['status'] = 'Success';
         $response['code'] = 200;
-        $response['data'] = $list;
+        $response['data'] = 'Company, Category and Inventory has been Deleted!';
 
         return Response::json($response);
     }
