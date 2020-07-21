@@ -177,6 +177,7 @@ class InventoryController extends Controller
             $n->date_purchased = gmdate("F j, Y", $n->date_purchased);
             $n->created_at = gmdate("F j, Y", $n->created_at);
             $n->updated_at = gmdate("F j, Y", $n->updated_at);
+            $n->or = (string)$n->or;
             foreach($nparent as $np){
                 $tree = $np->parents->reverse();
                 $n->item_name = $np->name;
@@ -404,6 +405,9 @@ class InventoryController extends Controller
             else
             {
                 $inv->is_assigned = 0;
+            }
+            if($request->specification !== null) {
+                $inv->specification = $request->specification;
             }
             $inv->updated_at = strtotime("now");
             $inv->save();
