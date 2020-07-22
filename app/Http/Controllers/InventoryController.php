@@ -480,19 +480,11 @@ class InventoryController extends Controller
 
     public function addInventory(Request $request){
         $validator = Validator::make($request->all(), [
-//            'serial_no' => 'required',
-//            'date_purchased' => 'required',
-//            'status' => 'required',
             'company_id' => 'required',
             'category_id' => 'required',
             'name' => 'required',
-            'name_chinese' => 'required',
-            'model' => 'required',
-            'notes' => 'required',
+            'description' => 'required',
             'type' => 'required',
-            'location_site' => 'required',
-            'location_detail' => 'required',
-            'purchase_price' => 'required',
             'or' => 'required',
             'qty' => 'required',
             'unit' => 'required',
@@ -508,19 +500,13 @@ class InventoryController extends Controller
             $inv->category_id = $request->category_id;
             $inv->name = $request->name;
             $inv->name_chinese = $request->name_chinese;
-            $inv->serial_no = $request->serial_no;
-            $inv->model = $request->model;
-            $inv->date_purchased = strtotime($request->date_purchased);
             if($request->imgBase64 !== null && $request->imgBase64 !== 'undefined') {
                 $inv->inventory_img = md5($request->imgBase64) . '.' . explode('.', $request->imgName)[1];
                 $this->uploadCategoryAvatar($request,'inventories/');
             }
-//            $inv->status = $request->status;
-            $inv->notes = $request->notes;
-            $inv->assigned_to = 0;
+            $inv->description = $request->description;
+            $inv->specification = $request->specification;
             $inv->type = $request->type;
-            $inv->location_site = $request->location_site;
-            $inv->location_detail = $request->location_detail;
             $inv->purchase_price = $request->purchase_price;
             $inv->or = $request->or;
             $inv->qty = $request->qty;
@@ -697,6 +683,7 @@ class InventoryController extends Controller
     }
 
     public function test(Request $request){
+        return Response::json('Pick a boo');
         $validator = Validator::make($request->all(), [
             'company_id' => 'nullable',
             'category_id' => 'nullable',
