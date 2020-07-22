@@ -3172,6 +3172,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
          //}
 
 
+
          if($to != '' && $from != ''){
              $q->whereBetween('created_at', [date($from), date($to)])->get();
          }else{
@@ -3265,6 +3266,12 @@ public function getClientPackagesByGroup($client_id, $group_id){
            //Per Person Balance
            if($m->active == 0){
                $sub = 0;
+           }
+
+           if($request->lang === 'EN'){
+               $m->status = ucfirst($m->status);
+           }else{
+               $m->status = $this->statusChinese($m->status);
            }
 
            $bal += $sub;
@@ -3390,11 +3397,11 @@ public function getClientPackagesByGroup($client_id, $group_id){
                        }
                  }
 
-                 if($request->input('lang') === 'EN'){
-                     $cs->status = ucfirst($cs->status);
-                 }else{
-                     $cs->status = $this->statusChinese($cs->status);
-                 }
+                 // if($request->input('lang') === 'EN'){
+                 //     $cs->status = ucfirst($cs->status);
+                 // }else{
+                 //     $cs->status = $this->statusChinese($cs->status);
+                 // }
 
                  $cs->remarks = strip_tags($cs->remarks);
 

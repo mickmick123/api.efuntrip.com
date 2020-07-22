@@ -202,6 +202,17 @@ class ByMemberExport implements FromView, WithEvents, ShouldAutoSize
             $p['service_cost'] = $chrg;
 
 
+            $translated = Service::where('id',$p['service_id'])->first();
+
+            $p['detail'] =  $p['detail'];
+
+            if($translated){
+                  if($this->lang === 'CN'){
+                    $p['detail'] = (($translated->detail_cn != '' && $translated->detail_cn != 'NULL') ? $translated->detail_cn : $p['detail']);
+                  }
+            }
+
+
             if($this->lang === 'EN'){
                 $p['datetime'] = $getdate;
                 $p['status'] = ucfirst($p['status']);
