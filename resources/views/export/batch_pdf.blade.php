@@ -1,5 +1,15 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<style type="tet/css">
+  @font-face {
+     font-family: SimHei;
+     src: url('{{base_path().'/public/assets/'}}fonts/simhei.ttf') format('truetype');
+  }
+
+  * {
+    font-family: SimHei !important;
+  }
+</style>
 </head>
 <body>
 <div id="watermark">
@@ -39,7 +49,6 @@
                     <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">{{ $service['service_cost']  }}</td>
                     <td class="borderBottom" style="text-align:center">{{ $service['total_service_cost'] }}</td>
               </tr>
-
               @endforeach
 
           @endforeach
@@ -57,7 +66,6 @@
 </body>
 
 <style type="text/css">
-
 
 table{
   border: 1px solid #e0e0e0;
