@@ -1,3 +1,16 @@
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<style type="tet/css">
+  @font-face {
+     font-family: SimHei;
+     src: url('{{base_path().'/public/assets/'}}fonts/simhei.ttf') format('truetype');
+  }
+
+  * {
+    font-family: SimHei !important;
+  }
+</style>
+</head>
 <body>
 <div id="watermark">
             <img src="{{ $watermark }}" height="100%" width="100%" />
