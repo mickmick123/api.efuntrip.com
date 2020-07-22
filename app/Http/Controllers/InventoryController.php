@@ -519,8 +519,7 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
-
-    public function addQuantity(Request $request){
+    public function addInventoryQuantity(Request $request){
         $validator = Validator::make($request->all(), [
             'inventory_id' => 'required|exists:inventory',
             'qty' => 'required|numeric|gte:0',
@@ -543,6 +542,7 @@ class InventoryController extends Controller
         }
         return Response::json($response);
     }
+
     public function addInventoryCategory(Request $request){
         $validator = Validator::make($request->all(), [
             'company_id' => 'required',
@@ -556,18 +556,13 @@ class InventoryController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
-//            $catExist = InventoryCategory::where('name','=',$request->name)->get();
+            $categ = new InventoryCategory();
+            $categ->name = $request->name;
+            $categ->name_chinese = $request->name_chinese;
+            $categ->created_at = strtotime("now");
+            $categ->updated_at = strtotime("now");
+            $categ->save();
 
-//            if(count($catExist) !== 0){
-//                $categ = InventoryCategory::find($catExist[0]->category_id);
-//            }else{
-                $categ = new InventoryCategory();
-                $categ->name = $request->name;
-                $categ->name_chinese = $request->name_chinese;
-                $categ->created_at = strtotime("now");
-                $categ->updated_at = strtotime("now");
-                $categ->save();
-//            }
             $parentExist = InventoryParentCategory::where([
                 ['company_id','=',$request->company_id],
                 ['category_id','=',$categ->category_id]
@@ -704,26 +699,7 @@ class InventoryController extends Controller
     }
 
     public function test(Request $request){
-        $validator = Validator::make($request->all(), [
-            'inventory_id' => 'required|exists:inventory',
-            'qty' => 'required|numeric|gte:0',
-        ]);
-
-        if($validator->fails()) {
-            $response['status'] = 'Failed';
-            $response['errors'] = $validator->errors();
-            $response['code'] = 422;
-        } else {
-            $oldQty = Inventory::where('inventory_id',$request->inventory_id)->get();
-            $newQty = Inventory::find($request->inventory_id);
-            $newQty->qty = $oldQty[0]->qty + $request->qty;
-            $newQty->save();
-
-            $response['status'] = 'Success';
-            $response['code'] = 200;
-            $response['data'] = $newQty;
-        }
-        return Response::json($response);
+        return Response::json($request->all());
     }
 
     public function uploadCategoryAvatar($data,$folder) {
