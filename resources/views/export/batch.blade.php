@@ -6,14 +6,16 @@
         <th style="text-align:center; background-color:#63b8d5"><b>{{ $lang['_status'] }}</b></th>
         <th style="text-align:center; background-color:#63b8d5"><b>{{ $lang['_details'] }}</b></th>
         <th style="text-align:center; background-color:#63b8d5"><b>{{ $lang['_charge'] }}</b></th>
+        <th style="text-align:center; background-color:#63b8d5"><b>{{ $lang['_discount'] }}</b></th>
+        <th style="text-align:center; background-color:#63b8d5"><b>{{ $lang['_service_sub'] }}</b></th>
         <th style="text-align:center; background-color:#63b8d5"><b>{{ $lang['_group_total_bal'] }}</b></th>
     </tr>
     </thead>
     <tbody>
     @foreach($services as $service)
-        <tr><td colspan="6"/></tr>
+        <tr><td colspan="8"/></tr>
         <tr >
-            <td colspan="6" style="text-align:left; background-color:#d5d0b5"><b>{{ $service['service_date'] }}</b></td>
+            <td colspan="8" style="text-align:left; background-color:#d5d0b5"><b>{{ $service['service_date'] }}</b></td>
         </tr>
 
 
@@ -28,7 +30,7 @@
           </tr>
 
           <tr>
-             <td colspan="5"></td>
+             <td colspan="8"></td>
           </tr>
              @foreach($member['services'] as $service)
               <tr>
@@ -37,17 +39,14 @@
                     <td style="text-align:center">{{ $service['status'] }}</td>
                     <td style="text-align:center"><b>{{ $service['detail'] }}</b></td>
                     <td style="text-align:center"><b>{{ ($service['detail'] === "Deposit" || $service['detail'] === "Payment") ? "+".$service['total_charge']  : "-" .$service['total_charge']  }}</b></td>
+                    <td style="text-align:center">{{ $service['discount']  }}</td>
+                    <td style="text-align:center">{{ $service['service_cost']  }}</td>
                     <td style="text-align:center">{{ $service['total_service_cost'] }}</td>
               </tr>
 
-              <tr>
-                  <td colspan="5" style="text-align:center"><b>{{{ ($service['remarks'] != '') ? "Remarks* ". $service['remarks'] : '' }}}</b></td>
-              </tr>
-
-
               @endforeach
           <tr>
-             <td colspan="5"></td>
+             <td colspan="8"></td>
           </tr>
           @endforeach
 
@@ -58,19 +57,6 @@
 
 
     @endforeach
-
-    <tr >
-        <td colspan="5"></td>
-    </tr>
-
-
-    <tr>
-        <td colspan="5"></td>
-    </tr>
-    <tr>
-        <td colspan="5"></td>
-    </tr>
-
 
 
     </tbody>

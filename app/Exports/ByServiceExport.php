@@ -80,23 +80,6 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
               $sheet->getColumnDimension('G')->setAutoSize(false);
               $sheet->getColumnDimension('G')->setWidth(15);
 
-             // $ctr = 2;
-             //
-             // foreach($this->data as $data){
-             //    $ctr = $ctr+3;
-             //    foreach($data['bydates'] as $p){
-             //        $ctr++;
-             //         foreach($p['members'] as $m){
-             //           $ctr = $ctr+2;
-             //           $sheet->mergeCells('A'.$ctr.':B'.$ctr);
-             //           //$sheet->mergeCells('D'.$ctr.':E'.$ctr);
-             //          // $sheet->mergeCells('F'.$ctr.':G'.$ctr);
-             //           $ctr++;
-             //         }
-             //    }
-             //    $ctr++;
-             // }
-
           },
       ];
   }
@@ -224,7 +207,8 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
            $tmpCtr = 0;
 
            $m['name'] = ((isset($m['first_name'])) ? $m['first_name'] : ""). " " . (isset($m['last_name']) ? $m['last_name'] : '');
-
+           $m['discount'] = ($m['service']['active'] == 1) ? $m['service']['discount'] : 0;
+           $m['service_cost'] = ($m['service']['active'] == 1) ? (($m['service']['cost']) + ($m['service']['charge']) + ($m['service']['tip'])) : 0;
            $m['service']['status'] = ($m['service']['active'] == 0) ? 'CANCELLED' : $m['service']['status'];
            $m['total_charge'] =  ($m['service']['active'] == 1) ? ((($m['service']['cost']) + ($m['service']['charge']) + ($m['service']['tip'])) - $m['service']['discount']) : 0;
 
@@ -307,7 +291,8 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
           $lang['_package'] = 'Package';
 
           $lang['_transcation_history'] = 'Transactions History : ';
-
+          $lang['_discount'] = 'Discount';
+          $lang['_service_sub'] = 'Service Sub Total';
           $lang['_amount'] = 'Amount';
           $lang['_type'] = 'Type';
           $lang['_deposit'] = 'Deposit';
@@ -332,7 +317,8 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
           $lang['_package'] = '查询编号';
 
           $lang['_transcation_history'] = '交易记录 : ';
-
+          $lang['_service_sub'] = 'Service Sub Total';
+          $lang['_discount'] = '折扣';
           $lang['_amount'] = '共计';
           $lang['_type'] = '类型';
           $lang['_deposit'] = '预存款';
@@ -345,23 +331,6 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
           'group' => $this->group,
           'lang' => $lang
       ]);
-
   }
-
-  // public function sheets(): array
-  //   {
-  //       $sheets = [];
-  //
-  //
-  //
-  //       foreach ($this->logs as $key => $value) {
-  //           $name = $value['first_name'];
-  //           $sheets[] = new ServiceSheet(, $name);
-  //       }
-  //
-  //       return $sheets;
-  //   }
-
-
 
 }

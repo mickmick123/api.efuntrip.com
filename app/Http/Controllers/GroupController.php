@@ -38,7 +38,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\ByServiceExport;
 use App\Exports\ByMemberExport;
 use App\Exports\ByBatchExport;
-
+use PDF;
 
 use DateTime;
 
@@ -2655,10 +2655,472 @@ public function getClientPackagesByGroup($client_id, $group_id){
         break;
       }
 
-      return Excel::download($export, 'users.xlsx');
+      if($request->export_type =='excel'){
+          return Excel::download($export, 'xxxx.xlsx');
+      }
+      else if($request->export_type =='preview'){
+
+      }
+      else{
+        PDF::setOptions(['dpi' => 150, 'defaultFont' => 'simhei']);
+
+        switch($request->type){
+
+          case 'by-service':
+                 $export = $this->getExportedByService($request);
+                 $pdf = PDF::loadView('export.service_pdf', $export);
+          break;
+
+          case 'by-members':
+                 $export = $this->getExportedByMember($request);
+                 $pdf = PDF::loadView('export.member_pdf', $export);
+          break;
+
+          case 'by-batch':
+                $export = $this->getExportedByBatch($request);
+                $pdf = PDF::loadView('export.batch_pdf', $export);
+          break;
+        }
+
+         return $pdf->download('xxxx.pdf');
+      }
+
+ }
+
+ public function previewReport(Request $request){
+
+     $response = $this->getExportedByService($request);
+    return $response;
+ }
 
 
+ public function getExportedByBatch($request){
+   $temp = [];
+   $ctr = 0;
+   $response = [];
+
+   foreach($request->data as $data){
+
+      $datetime = new DateTime($data['sdate']);
+      $getdate = $datetime->format('M d,Y');
+
+       $temp['sdate'] = strtotime($data['sdate']);
+       $temp['total_service_cost'] = $data['total_service_cost'];
+       $temp['group_id'] = $data['group_id'];
+       $temp['detail'] = $data['detail'];
+       $temp['service_date'] = $data['service_date'];
+
+       if($request->lang === 'EN'){
+           $temp['service_date'] = $getdate;
+       }
+       else{
+           $temp['service_date'] = $this->DateChinese($getdate);
+       }
+
+       $temPackage = [];
+       $j = 0;
+       $members = [];
+      foreach($data['members'] as $p){
+         if(isset($p['first_name'])){
+           $p['name'] = $p['first_name']. " " . $p['last_name'];
+         }else{
+           $p['name'] = "";
+         }
+         $members[$j] =  $p;
+         $j++;
+       }
+
+       $temp['members'] =  $members;
+       $response[$ctr] =  $temp;
+       $ctr = $ctr + 1;
+
+   }
+
+    $result2 = collect($response)->sortBy('sdate')->reverse()->toArray();
+
+    usort($response, function($a, $b)
+    {
+             if ($a["sdate"] == $b["sdate"])
+               return (0);
+             return (($a["sdate"] > $b["sdate"]) ? -1 : 1);
+    });
+
+    $ctr = 0;
+    $totalBal = 0;
+    $totalPre = 0;
+
+    foreach($result2 as $r){
+      $members = [];
+      $j = 0;
+
+      foreach($r['members'] as $member){
+          $services = [];
+          $i = 0;
+
+          foreach($member['services'] as $s){
+
+              if($s["active"] == -1){
+                 $totalBal = ((float) $totalBal) - ((float) $s["total_charge"]);
+              }else{
+                if($s["active"] == 1 && strtolower($s['status']) == 'complete'){
+                  $totalBal = ((float) $totalBal) - ((float) $s["total_charge"]);
+                }
+              }
+
+            $s["total_service_cost"] = $totalPre;
+
+            $totalPre = $totalBal;
+
+            $services[$i] = $s;
+            $i++;
+          }
+          $member['services'] = $services;
+          $members[$j] = $member;
+          $j++;
+      }
+
+      $result2[$ctr]['members'] = $members;
+      $ctr++;
     }
+
+
+    $lang = [];
+
+    if($request->lang === 'EN'){
+        $lang['_date'] = 'Date';
+        $lang['_service'] = 'Service';
+        $lang['_charge'] = 'Charge';
+
+        $lang['_total_deposit'] = 'Total Deposit : ';
+        $lang['_total_cost'] = 'Total Cost : ';
+        $lang['_total_promo'] = 'Total Promo : ';
+        $lang['_total_refund'] = 'Total Refund : ';
+        $lang['_total_balance'] = 'Total Balance : ';
+        $lang['_total_collectables'] = 'Total Collectables : ';
+        $lang['_total_complete_cost'] = 'Total Complete Cost : ';
+
+        $lang['_servic_name'] = 'Service Name';
+        $lang['_latest_date'] = 'Latest Date';
+        $lang['_total_service_cost'] = 'Total Service Cost';
+
+
+        $lang['_transcation_history'] = 'Transactions History : ';
+
+        $lang['_amount'] = 'Amount';
+        $lang['_type'] = 'Type';
+        $lang['_deposit'] = 'Deposit';
+
+        $lang['_service_date'] = 'Service Date';
+        $lang['_package'] = 'Package';
+        $lang['_status'] = 'Status';
+        $lang['_details'] = 'Details';
+        $lang['_charge'] = 'Charge';
+        $lang['_group_total_bal'] = 'Group Total Balance' ;
+
+        $lang['_discount'] = 'Discount';
+        $lang['_service_sub'] = 'Service Sub Total';
+
+    }else{
+        $lang['_date'] = '建立日期';
+        $lang['_service'] = '服务';
+
+        $lang['_charge'] = '收费';
+        $lang['_group_total_bal'] = '总余额';
+        $lang['_total_deposit'] = '总已付款 : ';
+        $lang['_total_cost'] = '总花费 : ';
+        $lang['_total_promo'] = '总促销 : ';
+        $lang['_total_refund'] = '总退款 : ';
+        $lang['_total_balance'] = '总余额 : ';
+        $lang['_total_collectables'] = '总应收款 : ';
+        $lang['_total_complete_cost'] = '总服务费 : ';
+
+        $lang['_servic_name'] = '服务明细';
+        $lang['_latest_date'] = '最近的服务日期';
+        $lang['_total_service_cost'] = '总服务费';
+        $lang['_transcation_history'] = '交易记录 : ';
+
+        $lang['_amount'] = '共计';
+        $lang['_type'] = '类型';
+        $lang['_deposit'] = '预存款';
+
+        $lang['_service_date'] = '服务日期';
+        $lang['_package'] = '查询编号';
+        $lang['_status'] = '状态';
+
+        $lang['_details'] = '服务明细';
+        $lang['_charge'] = '收费';
+        $lang['_group_total_bal'] = '总余额';
+
+
+        $lang['_service_sub'] = 'Service Sub Total';
+        $lang['_discount'] = '折扣';
+    }
+
+    return [
+        'services' => $result2,
+        'lang' => $lang,
+        'watermark' => public_path()."/images/watermark.jpg",
+        'font'=> public_path()."/assets/fonts/simhei.ttf",
+    ];
+
+ }
+
+
+ public function getExportedByMember($request){
+
+   $ctr = 0;
+   $temp = [];
+   $response = [];
+   $i = 0;
+
+   $chrg = 0;
+   $tempTotal = 0;
+   $bal = 0;
+
+
+   foreach($request->data as $data){
+       $temp['id'] = $data['user_id'];
+       $temp['name'] = $data['name'];
+       $temp['is_vice_leader'] = $data['is_vice_leader'];
+       $temp['user_id'] = $data['id'];
+
+       $temp['packages'] = [];
+       $temPackage = [];
+       $j = 0;
+
+       $totalServiceCost = 0;
+
+       foreach($data['packages'] as $p){
+
+         $datetime = new DateTime($p['created_at']);
+         $getdate = $datetime->format('M d,Y');
+         $gettime = $datetime->format('h:i A');
+
+         $chrg = ($p['active'] == 0 || $p['status'] !== 'complete') ? 0 : ($p['charge'] + $p['cost'] + $p['tip']);
+
+         if($p['active'] == 0){
+              $sub = 0;
+         }
+         //
+         if($p['active'] !== 0){
+             $totalServiceCost += ($p['package_cost'] - $p['discount']);
+         }
+         //
+         //Subtotal
+         $sub = $chrg;
+
+         //Per Person Balance
+         if($p['active'] == 0){
+             $sub = 0;
+         }
+
+         $bal += $sub;
+
+         $tempTotal +=$sub;
+
+         $p['total_service_cost'] = $tempTotal;
+         $p['discount'] = ($p['active'] == 1) ? $p['discount'] : 0;
+         $p['service_cost'] = ($p['active'] == 1) ? (($p['cost']) + ($p['charge']) + ($p['tip'])) : 0;
+
+
+         if($request->lang === 'EN'){
+             $p['datetime'] = $getdate;
+             $p['status'] = ucfirst($p['status']);
+         }else{
+             $p['datetime'] = $this->DateChinese($getdate);
+             $p['status'] = $this->statusChinese($p['status']);
+         }
+         $p['remarks'] = strip_tags($p['remarks']);
+
+         $temPackage[$j] = $p;
+         $j++;
+       }
+
+       $temp['packages'] =  $temPackage;
+       $temp['total_service_cost'] = $totalServiceCost;
+       $response[$ctr] =  $temp;
+       $ctr = $ctr + 1;
+     }
+
+
+     $lang = [];
+
+     if($request->lang === 'EN'){
+         $lang['_date'] = 'Date';
+         $lang['_service'] = 'Service';
+         $lang['_status'] = 'Status';
+         $lang['_charge'] = 'Charge';
+         $lang['_group_total'] = 'Group Total Cost';
+         $lang['_group_summary'] = 'Group Summary';
+         $lang['_member_subtotal'] = '-- Member Subtotal --';
+         $lang['_total_deposit'] = 'Total Deposit : ';
+         $lang['_total_cost'] = 'Total Cost : ';
+         $lang['_total_promo'] = 'Total Promo : ';
+         $lang['_total_refund'] = 'Total Refund : ';
+         $lang['_total_balance'] = 'Total Balance : ';
+         $lang['_total_collectables'] = 'Total Collectables : ';
+         $lang['_total_complete_cost'] = 'Total Complete Cost : ';
+         $lang['_transcation_history'] = 'Transactions History : ';
+         $lang['_amount'] = 'Amount';
+         $lang['_type'] = 'Type';
+         $lang['_deposit'] = 'Deposit';
+         $lang['_discount'] = 'Discount';
+         $lang['_service_sub'] = 'Service Sub Total';
+
+     }else{
+         $lang['_date'] = '建立日期';
+         $lang['_service'] = '服务';
+         $lang['_status'] = '状态';
+         $lang['_charge'] = '收费';
+         $lang['_group_total'] = '总余额' ;
+         $lang['_group_summary'] = '总结报告';
+         $lang['_member_subtotal'] = '-- 成员小计 --';
+         $lang['_total_deposit'] = '总已付款 : ';
+         $lang['_total_cost'] = '总花费 : ';
+         $lang['_total_promo'] = '总促销 : ';
+         $lang['_total_refund'] = '总退款 : ';
+         $lang['_total_balance'] = '总余额 : ';
+         $lang['_total_collectables'] = '总应收款 : ';
+         $lang['_total_complete_cost'] = '总服务费 : ';
+         $lang['_transcation_history'] = '交易记录 : ';
+         $lang['_amount'] = '共计';
+         $lang['_type'] = '类型';
+         $lang['_deposit'] = '预存款';
+         $lang['_service_sub'] = 'Service Sub Total';
+         $lang['_discount'] = '折扣';
+     }
+
+     return [
+         'members' => $response,
+         'lang' => $lang,
+         'watermark' => public_path()."/images/watermark.jpg"
+     ];
+ }
+
+ public function getExportedByService($request){
+
+   $temp = [];
+   $ctr = 0;
+   $response = [];
+
+   foreach($request->data as $data){
+
+       $temp['total_service'] = $data['total_service'];
+       $temp['total_service_cost'] = $data['total_service_cost'];
+       $temp['service_count'] = $data['service_count'];
+       $temp['group_id'] = $data['group_id'];
+       $temp['detail'] = $data['detail'];
+
+       $datetime = new DateTime($data['service_date']);
+       $getdate = $datetime->format('M d,Y');
+
+       if($request->lang == 'EN'){
+           $temp['service_date']=  $getdate;
+       }else{
+           $temp['service_date']=  $this->DateChinese($getdate);
+       }
+
+       $temPackage = [];
+       $j = 0;
+
+       foreach($data['bydates'] as $p){
+
+         $datetime = new DateTime($p['sdate']);
+         $getdate = $datetime->format('M d,Y');
+
+         if($request->lang == 'EN'){
+           $p['sdate'] =  $getdate;
+         }else{
+           $p['sdate'] = $this->DateChinese($getdate);
+         }
+
+         $members = [];
+         $ctrM = 0;
+         foreach($p['members'] as $m){
+           $clientServices = [];
+           $tmpCtr = 0;
+
+           $m['name'] = ((isset($m['first_name'])) ? $m['first_name'] : ""). " " . (isset($m['last_name']) ? $m['last_name'] : '');
+           $m['discount'] = ($m['service']['active'] == 1) ? $m['service']['discount'] : 0;
+           $m['service_cost'] = ($m['service']['active'] == 1) ? (($m['service']['cost']) + ($m['service']['charge']) + ($m['service']['tip'])) : 0;
+           $m['service']['status'] = ($m['service']['active'] == 0) ? 'CANCELLED' : $m['service']['status'];
+           $m['total_charge'] =  ($m['service']['active'] == 1) ? ((($m['service']['cost']) + ($m['service']['charge']) + ($m['service']['tip'])) - $m['service']['discount']) : 0;
+
+           $members[$ctrM] = $m;
+           $ctrM++;
+         }
+         $p['members'] =  $members;
+         $temPackage[$j] = $p;
+         $j++;
+       }
+
+       $temp['bydates'] =  $temPackage;
+       $response[$ctr] =  $temp;
+       $ctr = $ctr + 1;
+    }
+
+    $lang = [];
+
+    if($request->lang === 'EN'){
+        $lang['_date'] = 'Date';
+        $lang['_service'] = 'Service';
+        $lang['_status'] = 'Status';
+        $lang['_charge'] = 'Charge';
+        $lang['_group_total_bal'] = 'Group Total Balance' ;
+        $lang['_total_deposit'] = 'Total Deposit : ';
+        $lang['_total_cost'] = 'Total Cost : ';
+        $lang['_total_promo'] = 'Total Promo : ';
+        $lang['_total_refund'] = 'Total Refund : ';
+        $lang['_total_balance'] = 'Total Balance : ';
+        $lang['_total_collectables'] = 'Total Collectables : ';
+        $lang['_total_complete_cost'] = 'Total Complete Cost : ';
+
+        $lang['_servic_name'] = 'Service Name';
+        $lang['_latest_date'] = 'Latest Date';
+        $lang['_total_service_cost'] = 'Total Service Cost';
+        $lang['_package'] = 'Package';
+
+        $lang['_transcation_history'] = 'Transactions History : ';
+        $lang['_discount'] = 'Discount';
+        $lang['_service_sub'] = 'Service Sub Total';
+        $lang['_amount'] = 'Amount';
+        $lang['_type'] = 'Type';
+        $lang['_deposit'] = 'Deposit';
+
+    }else{
+        $lang['_date'] = '建立日期';
+        $lang['_service'] = '服务';
+        $lang['_status'] = '状态';
+        $lang['_charge'] = '收费';
+        $lang['_group_total_bal'] = '总余额';
+        $lang['_total_deposit'] = '总已付款 : ';
+        $lang['_total_cost'] = '总花费 : ';
+        $lang['_total_promo'] = '总促销 : ';
+        $lang['_total_refund'] = '总退款 : ';
+        $lang['_total_balance'] = '总余额 : ';
+        $lang['_total_collectables'] = '总应收款 : ';
+        $lang['_total_complete_cost'] = '总服务费 : ';
+
+        $lang['_servic_name'] = '服务明细';
+        $lang['_latest_date'] = '最近的服务日期';
+        $lang['_total_service_cost'] = '总服务费';
+        $lang['_package'] = '查询编号';
+
+        $lang['_transcation_history'] = '交易记录 : ';
+        $lang['_service_sub'] = 'Service Sub Total';
+        $lang['_discount'] = '折扣';
+        $lang['_amount'] = '共计';
+        $lang['_type'] = '类型';
+        $lang['_deposit'] = '预存款';
+    }
+
+    return [
+        'services' => $response,
+        'lang' => $lang,
+        'banner' => public_path()."/images/watermark.jpg"
+    ];
+ }
+
 
 
 
@@ -2676,16 +3138,30 @@ public function getClientPackagesByGroup($client_id, $group_id){
        $services = [];
      }
 
+     if($request->input('status') != ''){
+       $status = explode(',', $request->input('status'));
+     }else{
+       $status = [];
+     }
+
 
      $clientServices = DB::table('client_services')
        ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, created_at'))
        ->where('group_id',$id)
 
-       ->where(function($q) use($from, $to, $services){
+       ->where(function($q) use($from, $to, $services, $status){
 
          if(count($services) > 0){
            $q->whereIn('service_id', $services);
          }
+
+         //if(count($status) > 0){
+           $q->whereIn('status', $status);
+         //}
+
+         // foreach($status as $key){
+         //      $q->where('status', '=', $key);
+         // }
 
          if($to != '' && $from != ''){
              $q->whereBetween('created_at', [date($from), date($to)])->get();
@@ -2815,13 +3291,25 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
  public function getByBatch(Request $request, $groupId, $perPage = 10){
 
-      $date = $request->input('date');
+      $dates = $request->input('dates');
 
-      if($date != ''){
+      if($dates != ''){
+
+            $ds = explode(',', $dates);
+
             $clientServices = DB::table('client_services')
               ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, id, detail, created_at, service_id'))
               ->where('active',1)->where('group_id',$groupId)
-              ->where(DB::raw('STR_TO_DATE(created_at, "%Y-%m-%d")'), '=', $date)
+              //->where(DB::raw('STR_TO_DATE(created_at, "%Y-%m-%d")'), '=', $date)
+
+              ->where(function($q) use($ds){
+                //foreach($ds as $key){
+                     $q->whereIn(DB::raw('STR_TO_DATE(created_at, "%Y-%m-%d")'), $ds);
+                     //$q->where(DB::raw('STR_TO_DATE(created_at, "%Y-%m-%d")'), '=', $key);
+                //}
+
+              })
+
               ->groupBy(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'))
               ->orderBy('id','DESC')
               ->paginate($perPage);
@@ -2920,8 +3408,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
                  $tempTotal +=$sub;
 
                  $cs->total_service_cost = 0; //here
-                 $cs->total_charge = ($cs->active == 0 || strtolower($cs->status) !== 'complete') ? 0 : (($cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent)) - $cs->discount;
-
+                 $cs->total_charge = ($cs->active == 0 || strtolower($cs->status) !== 'complete') ? 0 : (($cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent));
+                 $cs->service_cost =  ($cs->active == 0 || strtolower($cs->status) !== 'complete') ? 0 : (($cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent)) - $cs->discount;
                  $clientServices[$tmpCtr] = $cs;
                  $tmpCtr++;
                }

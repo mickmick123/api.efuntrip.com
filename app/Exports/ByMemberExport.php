@@ -199,6 +199,8 @@ class ByMemberExport implements FromView, WithEvents, ShouldAutoSize
             $tempTotal +=$sub;
 
             $p['total_service_cost'] = $tempTotal;
+            $p['service_cost'] = $chrg;
+
 
             if($this->lang === 'EN'){
                 $p['datetime'] = $getdate;
@@ -292,6 +294,8 @@ class ByMemberExport implements FromView, WithEvents, ShouldAutoSize
         $lang['_type'] = 'Type';
         $lang['_deposit'] = 'Deposit';
 
+        $lang['_discount'] = 'Discount';
+        $lang['_service_sub'] = 'Service Sub Total';
     }else{
         $lang['_date'] = '建立日期';
         $lang['_service'] = '服务';
@@ -311,6 +315,9 @@ class ByMemberExport implements FromView, WithEvents, ShouldAutoSize
         $lang['_amount'] = '共计';
         $lang['_type'] = '类型';
         $lang['_deposit'] = '预存款';
+
+        $lang['_service_sub'] = 'Service Sub Total';
+        $lang['_discount'] = '折扣';
     }
 
 
