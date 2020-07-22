@@ -1,5 +1,6 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+</head>
 <body>
 <div id="watermark">
             <img src="{{ $watermark }}" height="100%" width="100%" />
@@ -57,14 +58,6 @@
 
 <style type="text/css">
 
-@font-face {
-   font-family: SimHei;
-   src: url('{{base_path().'/public/report_assets/'}}fonts/simhei.ttf') format('truetype');
-}
-
-* {
-  font-family: SimHei;
-}
 
 table{
   border: 1px solid #e0e0e0;
