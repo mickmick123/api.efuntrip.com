@@ -43,9 +43,9 @@
                 <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">{{ $service['detail'] }}</td>
                 <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">{{ $service['status'] }}</td>
                 <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">{{ $service['package_cost'] }}</td>
-                <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">{{ $service['service_cost']  }}</td>
                 <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">{{ $service['discount']  }}</td>
-                <td class="borderBottom" style="text-align:center">-{{ $service['total_service_cost'] }}</td>
+                <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">{{ $service['service_cost']  }}</td>
+                <td class="borderBottom" style="text-align:center">{{ $service['total_service_cost'] }}</td>
           </tr>
 
           @endforeach
