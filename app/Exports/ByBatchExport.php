@@ -318,7 +318,7 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
           $lang['_charge'] = '收费';
           $lang['_group_total_bal'] = '总余额';
 
-          $lang['_service_sub'] = 'Service Sub Total';
+          $lang['_service_sub'] = '服务小计';
           $lang['_discount'] = '折扣';
       }
 

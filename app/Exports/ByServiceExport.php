@@ -317,7 +317,7 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
           $lang['_package'] = '查询编号';
 
           $lang['_transcation_history'] = '交易记录 : ';
-          $lang['_service_sub'] = 'Service Sub Total';
+          $lang['_service_sub'] = '服务小计';
           $lang['_discount'] = '折扣';
           $lang['_amount'] = '共计';
           $lang['_type'] = '类型';

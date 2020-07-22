@@ -316,7 +316,7 @@ class ByMemberExport implements FromView, WithEvents, ShouldAutoSize
         $lang['_type'] = '类型';
         $lang['_deposit'] = '预存款';
 
-        $lang['_service_sub'] = 'Service Sub Total';
+        $lang['_service_sub'] = '服务小计';
         $lang['_discount'] = '折扣';
     }
 

@@ -2769,6 +2769,12 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
             $s["total_service_cost"] = $totalPre;
 
+            if($request->lang === 'EN'){
+                $s['status'] = ucfirst($s['status']);
+            }else{
+                $s['status'] = $this->statusChinese($s['status']);
+            }
+
             $totalPre = $totalBal;
 
             $services[$i] = $s;
@@ -2852,7 +2858,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $lang['_group_total_bal'] = '总余额';
 
 
-        $lang['_service_sub'] = 'Service Sub Total';
+        $lang['_service_sub'] = '服务小计';
         $lang['_discount'] = '折扣';
     }
 
@@ -2986,7 +2992,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
          $lang['_amount'] = '共计';
          $lang['_type'] = '类型';
          $lang['_deposit'] = '预存款';
-         $lang['_service_sub'] = 'Service Sub Total';
+         $lang['_service_sub'] = '服务小计';
          $lang['_discount'] = '折扣';
      }
 
@@ -3043,8 +3049,14 @@ public function getClientPackagesByGroup($client_id, $group_id){
            $m['name'] = ((isset($m['first_name'])) ? $m['first_name'] : ""). " " . (isset($m['last_name']) ? $m['last_name'] : '');
            $m['discount'] = ($m['service']['active'] == 1) ? $m['service']['discount'] : 0;
            $m['service_cost'] = ($m['service']['active'] == 1) ? (($m['service']['cost']) + ($m['service']['charge']) + ($m['service']['tip'])) : 0;
-           $m['service']['status'] = ($m['service']['active'] == 0) ? 'CANCELLED' : $m['service']['status'];
+           $stat =($m['service']['status'] = ($m['service']['active'] == 0) ? 'CANCELLED' : $m['service']['status']);
            $m['total_charge'] =  ($m['service']['active'] == 1) ? ((($m['service']['cost']) + ($m['service']['charge']) + ($m['service']['tip'])) - $m['service']['discount']) : 0;
+
+           if($request->lang === 'EN'){
+               $m['service']['status'] = ucfirst($stat);
+           }else{
+               $m['service']['status'] = $this->statusChinese($stat);
+           }
 
            $members[$ctrM] = $m;
            $ctrM++;
@@ -3107,7 +3119,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $lang['_package'] = '查询编号';
 
         $lang['_transcation_history'] = '交易记录 : ';
-        $lang['_service_sub'] = 'Service Sub Total';
+        $lang['_service_sub'] = '服务小计';
         $lang['_discount'] = '折扣';
         $lang['_amount'] = '共计';
         $lang['_type'] = '类型';
@@ -3159,9 +3171,6 @@ public function getClientPackagesByGroup($client_id, $group_id){
            $q->whereIn('status', $status);
          //}
 
-         // foreach($status as $key){
-         //      $q->where('status', '=', $key);
-         // }
 
          if($to != '' && $from != ''){
              $q->whereBetween('created_at', [date($from), date($to)])->get();
