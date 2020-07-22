@@ -152,7 +152,8 @@ class ReportController extends Controller
         	$client = DB::table('users')->select(array('id', 'first_name', 'last_name'))->where('id', $clientId)->first();
 
         	if( $client ) {
-        		$services = DB::table('client_services as cs')
+						// $services = DB::table('client_services as cs')
+						$services = ClientService::from('client_services as cs')->with('updatedCost', 'getPoints')
 	                ->select(DB::raw('cs.id, date_format(cs.created_at, "%M %e, %Y") as date, cs.tracking, cs.detail, cs.cost, cs.charge, cs.tip, cs.active, IFNULL(transactions.discount, 0) as discount'))
 	                ->leftjoin(DB::raw('
 	                    (
@@ -1290,4 +1291,14 @@ class ReportController extends Controller
 		return Response::json($response);
 	}
 
+
+	public function checkUpdatedCost($id) {
+		$clientReports = ClientReport::where('client_service_id', $id)
+										->leftjoin('service_procedures', 'client_reports.service_procedure_id', '=', 'service_procedures.id')
+										->where('service_procedures.name', 'Updated Cost')
+										->count();
+
+		$response['data'] = $clientReports;
+		return Response::json($response);
+	}
 }

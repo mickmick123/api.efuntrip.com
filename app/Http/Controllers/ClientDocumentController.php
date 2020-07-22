@@ -80,11 +80,28 @@ class ClientDocumentController extends Controller
 
 	public function getDocumentsByClient($id) {
         // $clientDocument = ClientDocument::where('client_id',$id)->get();
-        $clientDocument = DB::table('client_documents as cd')
+        // $clientDocument = DB::table('client_documents as cd')
+        //                         ->leftjoin('client_document_types', 'cd.client_document_type_id', '=', 'client_document_types.id')
+        //                         ->where('cd.client_id',$id)
+        //                         ->where('cd.status', 1)
+        //                         // ->distinct('client_document_type_id')
+        //                         ->orderBy('cd.id', 'desc')
+        //                         // ->whereIn('client_document_types.name', function ( $query ) {
+        //                         //     $query->select('client_document_types.name')->from('client_document_types')->groupBy('client_document_types.name')->havingRaw('count(*) > 0');
+        //                         // })
+        //                         ->get();
+
+        $clientDocument = ClientDocument::from('client_documents as cd')
+                                ->with(array('clientDocuments'=>function($query) use ($id){
+                                    $query->select('*')->where('client_id',$id);
+                                }))
                                 ->leftjoin('client_document_types', 'cd.client_document_type_id', '=', 'client_document_types.id')
                                 ->where('cd.client_id',$id)
                                 ->where('cd.status', 1)
+                                // ->groupBy('client_document_type_id')
+                                ->distinct('client_document_type_id')
                                 ->orderBy('cd.id', 'desc')
+                                ->select('cd.*', 'client_document_types.name as name')
                                 ->get();
 
         $response['status'] = 'Success';
@@ -266,7 +283,7 @@ class ClientDocumentController extends Controller
 
         $clientResult = ClientDocument::where('client_id',$data['client_id'])
                             ->where('client_document_type_id',$data['client_document_type_id'])
-                            ->where('file_path',$data['file_path'])
+                            // ->where('file_path',$data['file_path'])
                             ->where('issued_at',$data['issued_at'])
                             ->when($expired_at != '', function ($q) use($expired_at){
                                 return $q->where('expired_at',$expired_at);

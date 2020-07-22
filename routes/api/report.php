@@ -2,13 +2,15 @@
 
 use Illuminate\Http\Request;
 
+
+
 Route::middleware('auth:api')->group(function() {
 
 	Route::get('documents', 'ReportController@getDocuments');
 
 	Route::get('on-hand-documents/{id}', 'ReportController@getOnHandDocuments');
 
-    Route::get('document-logs/{id}', 'ReportController@documentLogs');
+	Route::get('document-logs/{id}', 'ReportController@documentLogs');
 
 	Route::get('clients/services', 'ReportController@clientsServices');
 
@@ -20,12 +22,13 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('reports-by-service/{id?}', 'ReportController@reportsByService');
 
+	Route::get('check-updated-cost/{id}', 'ReportController@checkUpdatedCost');
+
 	Route::post('received-documents', 'ReportController@receivedDocuments');
 
 	Route::post('released-documents', 'ReportController@releasedDocuments');
 
 	Route::post('generate-photocopies', 'ReportController@generatePhotocopies');
-
 
 	Route::post('/', 'ReportController@store');
 

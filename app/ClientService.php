@@ -91,4 +91,12 @@ class ClientService extends Model
         return $this->hasMany('App\Log', 'client_service_id', 'id');
     }
 
+    public function getPoints() {
+        return $this->hasOne('App\ClientServicePoints', 'client_service_id', 'id');
+    }
+
+    public function updatedCost() {
+        return $this->hasMany('App\ClientReport', 'client_service_id', 'id')->leftjoin('service_procedures', 'client_reports.service_procedure_id', '=', 'service_procedures.id');
+    }
+
 }
