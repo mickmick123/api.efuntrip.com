@@ -21,9 +21,26 @@
 </style>
 </head>
 <body>
-<div id="watermark">
-            <img src="{{ $watermark }}" height="100%" width="100%" />
-</div>
+  <div id="watermark">
+      <img src="{{ $watermark }}" height="100%" width="100%" />
+      <img src="{{ $logo }}" id="logo" />
+      <div id="header">
+              <div><label class="header-text">ALL DIRECTIONS TRAVEL AND TOUR INC.</label></div>
+              <div><label class="address-text">U110-111 Balagtas St., Balagtas Villas, Brgy. 15 San Isidro, Pasay City, Metro Manila</label><br/></div>
+              <div><label class="address-text">(02)8-354-8021</label></div>
+              <div><label class="address-text">alldirections.travelandtour@gmail.com</label></div>
+      </div>
+  </div>
+
+  <div id="footer">
+    <div id="footer-info">
+    <div><label class="footer-header-text">ALL DIRECTIONS TRAVEL AND TOUR INC.</label></div>
+    <div><label class="address-text">U110-111 Balagtas St., Balagtas Villas, Brgy. 15 San Isidro, Pasay City, Metro Manila</label><br/></div>
+    <div><label class="address-text">(02)8-354-8021</label></div>
+    <div><label class="address-text">alldirections.travelandtour@gmail.com</label></div>
+  </div>
+  </div>
+
 <table>
     <thead>
     <tr>
