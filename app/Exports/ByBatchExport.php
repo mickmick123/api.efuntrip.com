@@ -234,8 +234,8 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
                   }
                 }
 
-              $s["total_service_cost"] = $totalPre;
-              $totalPre = $totalBal;
+              $s["total_service_cost"] = $totalBal;
+              //$totalPre = $totalBal;
 
               $services[$i] = $s;
               $i++;

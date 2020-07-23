@@ -1,5 +1,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta charset="utf-8">
+<meta charset="UTF-8">
 <style type="tet/css">
   @font-face {
      font-family: SimHei;
@@ -8,6 +10,13 @@
 
   * {
     font-family: SimHei !important;
+  }
+  .header-text {
+     font-size: 16px;
+     font-family: Bahnschrift, Arial, Helvetica, sans-serif !important;
+     src: url('{{base_path().'/public/assets/'}}fonts/BAHNSCHRIFT.ttf') format('truetype');
+     font-weight: "bold";
+     text-align: center;
   }
 </style>
 </head>
@@ -70,7 +79,6 @@
 table{
   border: 1px solid #e0e0e0;
   width:100%;
-  font-family: Arial, Helvetica, sans-serif;
   font-size: 11px;
 }
 
@@ -84,35 +92,74 @@ td{
 }
 
 @page {
-               margin: 0cm 0cm;
-           }
+         margin: 0cm 0cm;
+      }
 
-           /**
-           * Define the real margins of the content of your PDF
-           * Here you will fix the margins of the header and footer
-           * Of your background image.
-           **/
-           body {
-               margin-top:    4.4cm;
-               margin-bottom: 2.2cm;
-               margin-left:   1cm;
-               margin-right:  1cm;
-           }
+body {
+     margin-top:    4.4cm;
+     margin-bottom: 2.2cm;
+     margin-left:   1cm;
+     margin-right:  1cm;
+}
 
-           /**
-           * Define the width, height, margins and position of the watermark.
-           **/
-           #watermark {
-               position: fixed;
-               bottom:   0px;
-               left:     0px;
-               /** The width and height may change
-                   according to the dimensions of your letterhead
-               **/
-               width:    21.8cm;
-               height:   30cm;
+#watermark {
+     position: fixed;
+     bottom:   0px;
+     left:     0px;
+     top: 0px;
+     width:    21.1cm;
+     height:   29.73cm;
+     z-index:  -1000;
+ }
+ #header {
+   position: fixed;
+   top: 30px;
+   left: 150px;
+ }
 
-               /** Your watermark should be behind every content**/
-               z-index:  -1000;
-           }
+ #footer {
+   bottom: 0;
+   position: fixed;
+   width:    21.1cm;
+   height:   29.73cm;
+   margin-right: auto;
+   margin-left: auto;
+   z-index:  -900;
+ }
+
+ #footer > div > div {
+   text-align: center;
+ }
+ #footer-info {
+     position: fixed;
+     bottom: 60px;
+     width:    21.1cm;
+ }
+
+ #header > div {
+   text-align: center;
+ }
+
+ #logo{
+   width:80px;
+   height: 82px;
+   position: fixed;
+   top: 28px;
+   left: 80px;
+ }
+
+ .footer-header-text {
+    font-size: 11px;
+    font-family: Arial, Helvetica, sans-serif !important;;
+    font-weight: "bold";
+    text-align: center;
+ }
+
+ .address-text {
+    font-size: 8px;
+    font-family: Arial, Helvetica, sans-serif !important;;
+    text-align: center;
+    width:'100%';
+
+ }
 </style>

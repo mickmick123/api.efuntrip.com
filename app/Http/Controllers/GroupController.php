@@ -2767,7 +2767,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
                 }
               }
 
-            $s["total_service_cost"] = $totalPre;
+            $s["total_service_cost"] = $totalBal;
 
             if($request->lang === 'EN'){
                 $s['status'] = ucfirst($s['status']);
@@ -2865,8 +2865,9 @@ public function getClientPackagesByGroup($client_id, $group_id){
     return [
         'services' => $result2,
         'lang' => $lang,
-        'watermark' => public_path()."/images/watermark.jpg",
-        'font'=> public_path()."/assets/fonts/simhei.ttf",
+        'watermark' => public_path()."/images/watermark.png",
+        'logo' => public_path()."/images/logo.png",
+        'font'=> public_path()."/assets/fonts/simhei.ttf"
     ];
 
  }
@@ -2999,7 +3000,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
      return [
          'members' => $response,
          'lang' => $lang,
-         'watermark' => public_path()."/images/watermark.jpg"
+         'watermark' => public_path()."/images/watermark.png",
+         'logo' => public_path()."/images/logo.png"
      ];
  }
 
@@ -3129,7 +3131,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
     return [
         'services' => $response,
         'lang' => $lang,
-        'banner' => public_path()."/images/watermark.jpg"
+        'watermark' => public_path()."/images/watermark.png",
+        'logo' => public_path()."/images/logo.png"
     ];
  }
 
