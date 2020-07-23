@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <style type="tet/css">
 
+@font-face {
+   font-family: SimHei;
+   src: url('{{base_path().'/public/assets/'}}fonts/simhei.ttf') format('truetype');
+}
+
+* {
+  font-family: SimHei !important;
+}
+
 .header-text {
    font-size: 16px;
    font-family: Bahnschrift, Arial, Helvetica, sans-serif !important;
