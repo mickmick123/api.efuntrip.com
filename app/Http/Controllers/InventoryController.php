@@ -709,7 +709,8 @@ class InventoryController extends Controller
                 ->where("inventory_id", $request->inventory_id)
                 ->groupBy("inventory_id")
                 ->pluck('total_assigned');
-            if($request->qty < (int)$item[0])
+
+            if(count($item) != 0 && $request->qty < (int)$item[0])
             {
                 $response['status'] = 'Failed';
                 $response['errors'] = array("qty" => array("Invalid quantity"));
