@@ -21,7 +21,6 @@ Route::middleware('auth:api')->group(function() {
 
     Route::post('/add-company','InventoryController@addCompany');
     Route::post('/add-inventory','InventoryController@addInventory');
-    Route::post('/add-inventory-quantity','InventoryController@addInventoryQuantity');
     Route::post('/add-inventory-category','InventoryController@addInventoryCategory');
     Route::post('/edit-inventory-category','InventoryController@editInventoryCategory');
 

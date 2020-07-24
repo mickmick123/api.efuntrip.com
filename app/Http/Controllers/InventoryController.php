@@ -155,30 +155,6 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
-    public function addInventoryQuantity(Request $request){
-        $validator = Validator::make($request->all(), [
-            'inventory_id' => 'required|exists:inventory',
-            'qty' => 'required|numeric|gte:0',
-        ]);
-
-        if($validator->fails()) {
-            $response['status'] = 'Failed';
-            $response['errors'] = $validator->errors();
-            $response['code'] = 422;
-        } else {
-            $oldQty = Inventory::where('inventory_id',$request->inventory_id)->get();
-            $newQty = Inventory::find($request->inventory_id);
-            $newQty->qty = $oldQty[0]->qty + $request->qty;
-            $newQty->updated_at = strtotime("now");
-            $newQty->save();
-
-            $response['status'] = 'Success';
-            $response['code'] = 200;
-            $response['data'] = $newQty;
-        }
-        return Response::json($response);
-    }
-
     public function addInventoryCategory(Request $request){
         $validator = Validator::make($request->all(), [
             'company_id' => 'required',
