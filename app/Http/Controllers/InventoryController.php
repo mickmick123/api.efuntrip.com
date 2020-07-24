@@ -25,10 +25,8 @@ class InventoryController extends Controller
             ->get();
 
         foreach ($list as $l) {
-            $l->inventories = [];
-            $l->inventories = DB::table('inventory AS inv')
-                ->where('inv.category_id', '=', $l->category_id)
-                ->get();
+            $l->child_count = [];
+            $l->child_count = InventoryParentCategory::where('parent_id', '=', $l->category_id)->get();
         }
 
         $response['status'] = 'Success';
@@ -548,7 +546,6 @@ class InventoryController extends Controller
             'company_id' => 'required',
             'parent_id' => 'required',
             'name' => 'required',
-            'name_chinese' => 'required',
         ]);
 
         if($validator->fails()) {
@@ -586,7 +583,6 @@ class InventoryController extends Controller
         $validator = Validator::make($request->all(), [
             'category_id' => 'required',
             'name' => 'required',
-            'name_chinese' => 'required',
         ]);
 
         if($validator->fails()) {

@@ -26,7 +26,6 @@ class CompanyController extends Controller
     public function addCompany(Request $request){
         $validator = Validator::make($request->all(), [
             'name' => 'required',
-            'name_chinese' => 'required',
         ]);
 
         if($validator->fails()) {
@@ -52,7 +51,6 @@ class CompanyController extends Controller
         $validator = Validator::make($request->all(), [
             'company_id' => 'required',
             'name' => 'required',
-            'name_chinese' => 'required',
         ]);
 
         if($validator->fails()) {
