@@ -485,17 +485,25 @@ class InventoryController extends Controller
 
     public function editAssignedItem(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-                'id' => 'required',
-                'inventory_id' => 'required',
-                'assigned_to' => 'required',
-                'location_site' => 'required',
-                'location_detail' => 'required',
-                'assigned_qty' => 'required|integer|min:1',
-                'model' => 'nullable',
-                'serial' => 'nullable'
-            ]
-        );
+        $rules = [
+            'inventory_id' => 'required',
+            'assigned_to' => 'required|min:3',
+            'location_site' => 'required|min:3',
+            'location_detail' => 'required|min:3',
+            'assigned_qty' => 'required|integer|min:1',
+            'model' => 'nullable',
+            'serial' => 'nullable'
+        ];
+        $messages = [
+            'required' => 'This field is required.',
+            'integer' => 'Please input numbers only.',
+            'assigned_to.min' => 'Please input minimum of 3 character.',
+            'location_site.min' => 'Please input minimum of 3 character.',
+            'location_detail.min' => 'Please input minimum of 3 character.',
+            'assigned_qty.min' => 'Please input a valid number.',
+        ];
+        $validator = Validator::make($request->all(), $rules, $messages);
+
         $response = array();
         if($validator->fails()) {
             $response['status'] = 'Failed';
@@ -542,16 +550,24 @@ class InventoryController extends Controller
     }
 
     public function assignInventory(Request $request){
-        $validator = Validator::make($request->all(), [
-                'inventory_id' => 'required',
-                'assigned_to' => 'required|min:3',
-                'location_site' => 'required|min:3',
-                'location_detail' => 'required|min:3',
-                'assigned_qty' => 'required|integer|min:1',
-                'model' => 'nullable',
-                'serial' => 'nullable'
-            ]
-        );
+        $rules = [
+            'inventory_id' => 'required',
+            'assigned_to' => 'required|min:3',
+            'location_site' => 'required|min:3',
+            'location_detail' => 'required|min:3',
+            'assigned_qty' => 'required|integer|min:1',
+            'model' => 'nullable',
+            'serial' => 'nullable'
+        ];
+        $messages = [
+            'required' => 'This field is required.',
+            'integer' => 'Please input numbers only.',
+            'assigned_to.min' => 'Please input minimum of 3 character.',
+            'location_site.min' => 'Please input minimum of 3 character.',
+            'location_detail.min' => 'Please input minimum of 3 character.',
+            'assigned_qty.min' => 'Please input a valid number.',
+        ];
+        $validator = Validator::make($request->all(), $rules, $messages);
 
         $response = [];
         if($validator->fails()) {
