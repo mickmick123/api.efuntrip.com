@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Inventory;
-use App\Company;
+use App\InventoryLocation;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\DB;
 use App\InventoryParentCategory;
@@ -122,6 +122,7 @@ class InventoryController extends Controller
             'qty' => 'required',
             'unit' => 'required',
         ]);
+        $list = [];
 
         if ($validator->fails()) {
             $response['status'] = 'Failed';
@@ -147,6 +148,16 @@ class InventoryController extends Controller
             $inv->created_at = strtotime("now");
             $inv->updated_at = strtotime("now");
             $inv->save();
+
+            foreach (json_decode($request->location_storage) as $v) {
+                $loc = new InventoryLocation;
+                $loc->inventory_id = $inv->inventory_id;
+                $loc->qty = $v->quantity;
+                $loc->location = $v->location;
+                $loc->created_at = strtotime("now");
+                $loc->updated_at = strtotime("now");
+                $loc->save();
+            }
 
             $response['status'] = 'Success';
             $response['code'] = 200;
