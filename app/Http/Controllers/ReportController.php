@@ -1128,6 +1128,32 @@ class ReportController extends Controller
 		return Response::json($response);
 	}
 
+	public function getDocumentsById($id) {
+		$logs = Log::where('client_id', $id)->pluck('id');
+
+		$latestDocs = DB::table('document_log')->whereIn('log_id', $logs)->groupBy('document_id')
+						->pluck('document_id');
+
+		$docs1 = Document::select(['id', 'title', 'shorthand_name', 'is_unique', 'is_company_document'])
+					->whereIn('id', $latestDocs)->get();
+
+		$docs2 = Document::select(['id', 'title', 'shorthand_name', 'is_unique', 'is_company_document'])
+					->whereNotIn('id', $latestDocs)->get();
+
+		$d1 = collect($docs1);
+    	$d2 = collect($docs2);
+
+		$allDocs = $d1->merge($d2);
+
+		$response['status'] = 'Success';
+		$response['data'] = [
+		    'documents' => $allDocs
+		];
+		$response['code'] = 200;
+
+		return Response::json($response);
+	}
+
 	public function getOnHandDocuments($id) {
 		$onHandDocuments = OnHandDocument::with('document')->where('client_id', $id)->get();
 

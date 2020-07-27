@@ -6,6 +6,8 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('documents', 'ReportController@getDocuments');
 
+	Route::get('documentsById/{id}', 'ReportController@getDocumentsById');
+
 	Route::get('on-hand-documents/{id}', 'ReportController@getOnHandDocuments');
 
 	Route::get('document-logs/{id}', 'ReportController@documentLogs');
