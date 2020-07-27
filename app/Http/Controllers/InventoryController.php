@@ -122,7 +122,6 @@ class InventoryController extends Controller
             'qty' => 'required',
             'unit' => 'required',
         ]);
-        $list = [];
 
         if ($validator->fails()) {
             $response['status'] = 'Failed';
@@ -149,14 +148,16 @@ class InventoryController extends Controller
             $inv->updated_at = strtotime("now");
             $inv->save();
 
-            foreach (json_decode($request->location_storage) as $v) {
-                $loc = new InventoryLocation;
-                $loc->inventory_id = $inv->inventory_id;
-                $loc->qty = $v->quantity;
-                $loc->location = $v->location;
-                $loc->created_at = strtotime("now");
-                $loc->updated_at = strtotime("now");
-                $loc->save();
+            foreach (json_decode($request->location_storage, true) as $k=>$v) {
+                if($v["quantity".$k] !== 0 && $v["location".$k] !== ''){
+                    $loc = new InventoryLocation;
+                    $loc->inventory_id = $inv->inventory_id;
+                    $loc->qty = $v["quantity".$k];
+                    $loc->location = $v["location".$k];
+                    $loc->created_at = strtotime("now");
+                    $loc->updated_at = strtotime("now");
+                    $loc->save();
+                }
             }
 
             $response['status'] = 'Success';
