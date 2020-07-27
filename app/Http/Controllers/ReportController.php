@@ -261,11 +261,36 @@ class ReportController extends Controller
 				])
 				->get();
 
+				$clientServices = ClientService::from('client_services as cs')->with('updatedCost', 'getPoints')
+	                ->select(DB::raw('cs.id, cs.client_id, date_format(cs.created_at, "%M %e, %Y") as date, cs.tracking, cs.detail, cs.cost, cs.charge, cs.tip, cs.active, IFNULL(transactions.discount, 0) as discount'))
+	                ->leftjoin(DB::raw('
+	                    (
+	                        Select
+	                            SUM(IF(ct.type = "Discount", ct.amount, 0)) as discount,
+	                            ct.client_service_id
+
+	                        from
+	                            client_transactions as ct
+
+	                        where
+	                            ct.deleted_at is null
+
+	                        group by
+	                            ct.client_service_id
+	                    ) as transactions'),
+	                    'transactions.client_service_id', '=', 'cs.id')
+	                ->whereIn('cs.id', $clientServicesId)
+	                ->where('cs.active', 1)
+	                ->where('cs.status', '<>', 'released')
+	                ->orderBy('cs.id', 'desc')
+	                ->get();
+
 			$response['status'] = 'Success';
 			$response['data'] = [
 		    	'services' => $services,
 		    	'documents' => $documents,
-		    	'onHandDocuments' => $onHandDocuments
+					'onHandDocuments' => $onHandDocuments,
+					'clientServices' => $clientServices
 			];
 			$response['code'] = 200;
 		} else {
