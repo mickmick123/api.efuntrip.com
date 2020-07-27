@@ -2,11 +2,9 @@
 
 use Illuminate\Http\Request;
 
-Route::get('manage-clients', 'ClientController@manageClients');
-
 Route::middleware('auth:api')->group(function() {
 
-	// Route::get('manage-clients', 'ClientController@manageClients');
+	Route::get('manage-clients', 'ClientController@manageClients');
 
 	Route::get('get-pending-services/{perPage?}', 'ClientController@getPendingServices');
 

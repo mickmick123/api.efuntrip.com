@@ -1292,13 +1292,54 @@ class ReportController extends Controller
 	}
 
 
-	public function checkUpdatedCost($id) {
-		$clientReports = ClientReport::where('client_service_id', $id)
-										->leftjoin('service_procedures', 'client_reports.service_procedure_id', '=', 'service_procedures.id')
-										->where('service_procedures.name', 'Updated Cost')
-										->count();
+	public function checkUpdatedCost(Request $request) {
+		$clientIds = $request->input("client_ids") ? $request->client_ids : [];
+		$clientIds = explode("," , $clientIds);
 
-		$response['data'] = $clientReports;
+		$data = [];
+		foreach($clientIds as $clientId) {
+			$clientServiceCount = ClientReport::where('client_reports.client_service_id', $clientId)
+														->leftjoin('service_procedures', 'client_reports.service_procedure_id', '=', 'service_procedures.id')
+														->where('service_procedures.name', 'Updated Cost')
+														->first();
+
+			$clientServicePoints = DB::table('client_service_points')->where('client_service_id', $clientId)
+										->first();
+
+			$data[] = [
+				'id' => $clientId,
+				'update_cost' => $clientServiceCount,
+				'points' => $clientServicePoints,
+			];
+		}
+
+		$response['data'] = $data;
+		return Response::json($response);
+	}
+
+	public function updateClientReportScore(Request $request) {
+		$clientServices = $request->data;
+		$status = $request->status;
+
+		$data = '';
+
+		foreach($clientServices as $cs) {
+			$value = 0;
+
+			if($status === 0) {
+				$value = $cs['points']['points'] - 4;
+				
+			} else {
+				if($cs['points']['points'] > 4) {
+					$value = $cs['points']['points'] + 1;
+				}
+			}
+
+			$updateServicePoints = DB::table('client_service_points')->where('client_service_id', $cs['id'])->update(['points' => $value]);
+
+		}
+
+		$response['status'] = 'Success';
 		return Response::json($response);
 	}
 }

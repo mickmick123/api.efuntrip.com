@@ -7,6 +7,8 @@ use App\BranchUser;
 
 use App\ClientService;
 
+use App\ClientServicePoints;
+
 use App\ClientTransaction;
 
 use App\ClientEWallet;
@@ -1235,6 +1237,17 @@ class ClientController extends Controller
                 ]);
 
                 $service_ids[] = $cs->id;
+
+                // DB::table('client_service_points')->insert(
+                //     array(
+                //         'client_service_id' => $cs->id, 
+                //         'points' => 1
+                //     )
+                // );
+                ClientServicePoints::create([
+                    'client_service_id' => $cs->id, 
+                    'points' => 1
+                ]);
 
                 $this->updatePackageStatus($request->tracking); //update package status
 
