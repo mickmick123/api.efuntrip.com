@@ -1660,9 +1660,10 @@ class ClientController extends Controller
 
             else if($type == "Payment") {
                 $payment = ClientTransaction::where('type','Payment')->where('client_service_id',$cs_id)->first();
+                $rson = 'Php'.$amount.' - '.$reason.' ('.date('Y-m-d H:i:s').')<br>';
                 if($payment){
                     $payment->amount += $amount;
-                    $payment->reason = $payment->reason.' ; '.$reason;
+                    $payment->reason = $rson.$payment->reason;
                     $payment->save();
                 }
                 else{                
@@ -1677,7 +1678,7 @@ class ClientController extends Controller
                     $payment->type = 'Payment';
                     $payment->group_id = null;
                     $payment->amount = $amount;
-                    $payment->reason = $reason;
+                    $payment->reason = $rson;
                     $payment->save();
                 }
 
