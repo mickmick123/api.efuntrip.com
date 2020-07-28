@@ -438,11 +438,8 @@ class InventoryController extends Controller
                 $j=0;
                 foreach($tree as $t){
                     $n->x[$j] = $t->name;
-                    $glue = " ";
-                    if ($id != 0) {
-                        $glue = " | ";
-                    }
-                    $n->asset_name = implode($glue, $n->x);
+
+                    $n->asset_name = implode(" | ", $n->x);
                     $j++;
                 }
             }
@@ -465,38 +462,9 @@ class InventoryController extends Controller
     public function listAssigned(Request $request)
     {
         $inventory_id = intval($request->input("id", 0));
-
-        $a = DB::table('inventory as i')
-            ->select(
-                DB::raw('i.qty - CASE
-                                          WHEN (SELECT SUM(assigned_qty) from inventory_assigned a WHERE a.inventory_id = i.inventory_id GROUP BY a.inventory_id) IS NULL THEN 0
-                                          ELSE (SELECT SUM(assigned_qty) from inventory_assigned a WHERE a.inventory_id = i.inventory_id GROUP BY a.inventory_id)
-                                        END AS assigned_qty'))
-            ->where("inventory_id", "=", $inventory_id)
+        $data = InventoryAssigned::where([["inventory_id", "=", $inventory_id],["status", 1]])
+            ->orderBy('created_at','DESC')
             ->get();
-
-        foreach ($a as $n) {
-            $n->assigned_to = "NA";
-            $n->location_site = "NA";
-            $n->location_detail = "NA";
-            $n->model = "NA";
-            $n->serial = "NA";
-            $quantity = (int)$n->assigned_qty;
-        }
-        if ($quantity == 0) {
-            $a = [];
-        }
-
-        $b = InventoryAssigned::where("inventory_id", "=", $inventory_id)->get();
-
-        $list = array_merge(array($b), array($a));
-
-        $data = [];
-        foreach($list as $i){
-            foreach($i as $j){
-                $data[] = $j;
-            }
-        }
 
         $response['status'] = 'Success';
         $response['code'] = 200;
@@ -570,12 +538,68 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    public function retrieveInventory(Request $request) {
+        $rules = [
+            'id' => 'required',
+            'assigned_qty' => 'required|integer|min:1'
+        ];
+        $messages = [
+            'required' => 'This field is required.',
+            'integer' => 'Please input numbers only.',
+            'assigned_qty.min' => 'Please input a valid number.'
+        ];
+        $validator = Validator::make($request->all(), $rules, $messages);
+        $response = [];
+        if($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+            $items = InventoryAssigned::where("id", $request->id)->get();
+
+            if($request->assigned_qty > (int)$items[0]['assigned_qty']) {
+                $response['status'] = 'Failed';
+                $response['errors'] = array('assigned_qty' => array("Invalid quantity."));
+                $response['code'] = 422;
+
+                return Response::json($response);
+            }
+
+            $now = strtotime("now");
+            if((int)$request->assigned_qty < (int)$items[0]['assigned_qty']){
+                $inv = new InventoryAssigned;
+                $inv->inventory_id = (int)$items[0]['inventory_id'];
+                $inv->assigned_to = $items[0]['assigned_to'];
+                $inv->location_site = $items[0]['location_site'];
+                $inv->location_detail = $items[0]['location_detail'];
+                $inv->assigned_qty = (int)$items[0]['assigned_qty'] - $request->assigned_qty;
+                $inv->model = $items[0]['model'];
+                $inv->serial = $items[0]['serial'];
+                $inv->created_at = (int)$items[0]['created_at'];
+                $inv->updated_at = $now;
+                $inv->save();
+            }
+
+            $upd = InventoryAssigned::find($request->id);
+            $upd->assigned_qty = $request->assigned_qty;
+            $upd->status = 2;
+            $upd->updated_at = $now;
+            $upd->save();
+
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+            $response['data'] = [];
+        }
+
+        return Response::json($response);
+    }
+
     public function assignInventory(Request $request){
         $rules = [
             'inventory_id' => 'required',
-            'assigned_to' => 'required|min:3',
-            'location_site' => 'required|min:3',
-            'location_detail' => 'required|min:3',
+            'assigned_to' => 'required',
+            'location_site' => 'required',
+            'location_detail' => 'required',
             'assigned_qty' => 'required|integer|min:1',
             'model' => 'nullable',
             'serial' => 'nullable'
@@ -583,9 +607,6 @@ class InventoryController extends Controller
         $messages = [
             'required' => 'This field is required.',
             'integer' => 'Please input numbers only.',
-            'assigned_to.min' => 'Please input minimum of 3 character.',
-            'location_site.min' => 'Please input minimum of 3 character.',
-            'location_detail.min' => 'Please input minimum of 3 character.',
             'assigned_qty.min' => 'Please input a valid number.',
         ];
         $validator = Validator::make($request->all(), $rules, $messages);
@@ -708,6 +729,52 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    public function locationList(Request $request){
+        $inventory_id = $request->input("inventory_id");
+        $list = InventoryLocation::where("inventory_id", $inventory_id)
+            ->orderBy('id', 'ASC')
+            ->get();
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $list;
+
+        return Response::json($response);
+    }
+
+    public function deleteLocation(Request $request){
+        $loc = InventoryLocation::find($request->id);
+        $loc->delete();
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $loc;
+
+        return Response::json($response);
+    }
+
+    public function checkQty(Request $request){
+        $inventory_id = $request->input("inventory_id");
+        $locQty = DB::table('inventory_location')
+                    ->select(DB::raw('SUM(qty) as locQty'))
+                    ->groupBy('inventory_id')
+                    ->pluck('locQty');
+
+        $invQty = Inventory::where('inventory_id', $inventory_id)
+                    ->select('qty as invQty')
+                    ->pluck('invQty');
+
+        if((int)$locQty[0] != ((int)$invQty[0]))
+        {
+           $response['status'] = 'Failed';
+           $response['errors'] = 'Please save your changes.';
+           $response['code'] = 422;
+
+           return Response::json($response);
+        }
+
+    }
+
     public function editInventory(Request $request){
         $validator = Validator::make($request->all(), [
             'inventory_id' => 'required',
@@ -753,6 +820,26 @@ class InventoryController extends Controller
                 }
                 $inv->updated_at = strtotime("now");
                 $inv->save();
+
+                foreach (json_decode($request->location, true) as $k => $v) {
+                    if($v["id" . $k] != "") {
+                        $locUpd = InventoryLocation::find($v["id" . $k]);
+                        $locUpd->qty = $v["assigned_qty" . $k];
+                        $locUpd->location = $v["location" . $k];
+                        $locUpd->updated_at = strtotime("now");
+                        $locUpd->save();
+                    }
+                    else
+                    {
+                        $locIns = new InventoryLocation;
+                        $locIns->inventory_id = $request->inventory_id;
+                        $locIns->qty = $v["assigned_qty".$k];
+                        $locIns->location = $v["location".$k];
+                        $locIns->created_at = strtotime("now");
+                        $locIns->updated_at = 0;
+                        $locIns->save();
+                    }
+                }
 
                 $response['status'] = 'Success';
                 $response['code'] = 200;

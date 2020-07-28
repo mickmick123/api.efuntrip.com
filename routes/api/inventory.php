@@ -26,7 +26,12 @@ Route::middleware('auth:api')->group(function() {
 
     Route::post('/edit-inventory','InventoryController@editInventory');
     Route::post('/assign-inventory','InventoryController@assignInventory');
+    Route::post('/retrieve-inventory','InventoryController@retrieveInventory');
     Route::post('/update-image','InventoryController@updateImage');
+
+    Route::get('/list-location','InventoryController@locationList');
+    Route::post('/delete-location','InventoryController@deleteLocation');
+    Route::get('/checkQty','InventoryController@checkQty');
 
     Route::post('/delete-inventory','InventoryController@deleteInventory');
     Route::post('/delete-inventory-category','InventoryController@deleteInventoryCategory');
