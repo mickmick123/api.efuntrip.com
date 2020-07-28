@@ -2,6 +2,8 @@
 
 use Illuminate\Http\Request;
 
+Route::get('check-updated-cost', 'ReportController@checkUpdatedCost');
+
 Route::middleware('auth:api')->group(function() {
 
 	Route::get('documents', 'ReportController@getDocuments');
@@ -22,7 +24,7 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('reports-by-service/{id?}', 'ReportController@reportsByService');
 
-	Route::get('check-updated-cost', 'ReportController@checkUpdatedCost');
+	
 
 	Route::post('update-client-report-score', 'ReportController@updateClientReportScore');
 
