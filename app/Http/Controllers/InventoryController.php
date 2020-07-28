@@ -305,18 +305,27 @@ class InventoryController extends Controller
                 $q->orwhere('category_id', $request->category_id);
             })->delete();
 
+        $invId = Inventory::where('company_id', $request->company_id)
+            ->where(function ($q) use ($categ, $request) {
+                $q->whereIn('category_id', $categ);
+                $q->orwhere('category_id', $request->category_id);
+            })->pluck('inventory_id');
+
         $inv = Inventory::where('company_id', $request->company_id)
             ->where(function ($q) use ($categ, $request) {
                 $q->whereIn('category_id', $categ);
                 $q->orwhere('category_id', $request->category_id);
             })->delete();
 
-        $list = [$icat];
+        $loc = InventoryLocation::whereIn('inventory_id',$invId)
+            ->delete();
+
+        $ass = InventoryAssigned::whereIn('inventory_id',$invId)
+            ->delete();
 
         $response['status'] = 'Success';
         $response['code'] = 200;
         $response['data'] = 'Category and Inventory has been Deleted!';
-        $response['data1'] = $list;
         return Response::json($response);
     }
 

@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Company;
 use App\Inventory;
+use App\InventoryAssigned;
 use App\InventoryCategory;
+use App\InventoryLocation;
 use App\InventoryParentCategory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
@@ -84,7 +86,16 @@ class CompanyController extends Controller
         $ipcat = InventoryParentCategory::where('company_id',$request->company_id)
             ->delete();
 
+        $invId = Inventory::where('company_id',$request->company_id)
+            ->pluck('inventory_id');
+
         $inv = Inventory::where('company_id',$request->company_id)
+            ->delete();
+
+        $loc = InventoryLocation::whereIn('inventory_id',$invId)
+            ->delete();
+
+        $ass = InventoryAssigned::whereIn('inventory_id',$invId)
             ->delete();
 
         $response['status'] = 'Success';
