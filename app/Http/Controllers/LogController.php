@@ -808,7 +808,7 @@ class LogController extends Controller
                 $usr =  User::where('id',$t->processor_id)->select('id','first_name','last_name')->get();
 
                 $cs = ClientService::where('id',$t->client_service_id)->where('status','!=','cancelled')
-                        ->where('active',1)->first();
+                        ->first();
 
                 $t->balance = $currentBalance;
 
@@ -891,28 +891,30 @@ class LogController extends Controller
                     //$currentService = null;
                 }
 
-                $arraylogs[] = array(
-                    'month' => $m,
-                    'day' => $d,
-                    'year' => $y,
-                    'display_date' => Carbon::parse($t->log_date)->format('F d,Y'),
-                    'data' => array (
-                        'id' => $t->id,
-                        'head' => $t->detail,
-                        'body' => $body,
-                        'balance' => $t->balance,
-                        'prevbalance' => $currentBalance,
-                        'amount' => $t->amount,
-                        'type' => $t->log_group,
-                        'processor' => $usr[0]->first_name,
-                        'date' => Carbon::parse($t->log_date)->format('F d,Y'),
-                        'title' => $csdetail,
-                        'tracking' => $cstracking,
-                        'status' => $csstatus,
-                        'active' => $csactive,
+                if($cs->active != 0){                
+                    $arraylogs[] = array(
+                        'month' => $m,
+                        'day' => $d,
+                        'year' => $y,
+                        'display_date' => Carbon::parse($t->log_date)->format('F d,Y'),
+                        'data' => array (
+                            'id' => $t->id,
+                            'head' => $t->detail,
+                            'body' => $body,
+                            'balance' => $t->balance,
+                            'prevbalance' => $currentBalance,
+                            'amount' => $t->amount,
+                            'type' => $t->log_group,
+                            'processor' => $usr[0]->first_name,
+                            'date' => Carbon::parse($t->log_date)->format('F d,Y'),
+                            'title' => $csdetail,
+                            'tracking' => $cstracking,
+                            'status' => $csstatus,
+                            'active' => $csactive,
 
-                    )
-                );
+                        )
+                    );
+                }
             }
         }
 
