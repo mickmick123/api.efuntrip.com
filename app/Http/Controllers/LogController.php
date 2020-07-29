@@ -807,7 +807,7 @@ class LogController extends Controller
                 $body = "";
                 $usr =  User::where('id',$t->processor_id)->select('id','first_name','last_name')->get();
 
-                $cs = ClientService::where('id',$t->client_service_id)->where('status','!=','cancelled')
+                $cs = ClientService::where('id',$t->client_service_id)
                         ->first();
 
                 $t->balance = $currentBalance;
@@ -881,6 +881,11 @@ class LogController extends Controller
                     $data = collect($body->toArray())->flatten()->all();
                     
                     $body = $data;
+                    $csshow = 1;
+                    if($cs->active == 0 || $cs->status == 'cancelled'){  
+                        $csshow = 0;
+                    }              
+
                 }
                 else{
                     $csdetail = ucfirst($t->log_group);
@@ -888,10 +893,11 @@ class LogController extends Controller
                     $csstatus = '';
                     $csactive = 'none';
                     $body = '';
+                    $csshow = 1;
                     //$currentService = null;
                 }
 
-                if($cs->active != 0){                
+                if($csshow){            
                     $arraylogs[] = array(
                         'month' => $m,
                         'day' => $d,
@@ -915,6 +921,7 @@ class LogController extends Controller
                         )
                     );
                 }
+                
             }
         }
 
