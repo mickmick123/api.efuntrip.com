@@ -807,7 +807,8 @@ class LogController extends Controller
                 $body = "";
                 $usr =  User::where('id',$t->processor_id)->select('id','first_name','last_name')->get();
 
-                $cs = ClientService::where('id',$t->client_service_id)->first();
+                $cs = ClientService::where('id',$t->client_service_id)->where('status','!=','cancelled')
+                        ->where('is_active',1)->first();
 
                 $t->balance = $currentBalance;
 
