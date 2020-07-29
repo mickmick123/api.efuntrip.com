@@ -149,7 +149,7 @@ class InventoryController extends Controller
             $inv->save();
 
             foreach (json_decode($request->location_storage, true) as $k=>$v) {
-                if($v["quantity".$k] !== 0 && $v["location".$k] !== ''){
+                if($v["quantity".$k] !== null && $v["location".$k] !== null){
                     $loc = new InventoryLocation;
                     $loc->inventory_id = $inv->inventory_id;
                     $loc->qty = $v["quantity".$k];
