@@ -10,6 +10,7 @@ use App\Service;
 use App\ClientService;
 
 use App\ClientReport;
+use App\ClientTransaction;
 
 use App\Http\Controllers\ClientController;
 
@@ -542,9 +543,12 @@ class LogController extends Controller
                 ->whereDate('log_date', '=', $date)
                 ->where('client_id', $client_id)
                 ->where('group_id', null)
+                // ->where('client_service_id','!=', null)
                 ->where('log_type', 'Document')
                 ->orderBy('id', 'desc')
                 ->get();
+
+            \Log::info($logs);
 
             $clientServicesIdArray = [];
             $lastDisplayDate = null;
@@ -589,6 +593,7 @@ class LogController extends Controller
 
         return Response::json($response);
     }
+
 
 
     public function getAllLogs($client_service_id) {
@@ -798,7 +803,7 @@ class LogController extends Controller
         $currentService = null;
 
         foreach($translogs as $t){
-            if(($t->log_group == 'service' && $t->client_service_id != $currentService) || $t->log_group != 'service'){
+            if(($t->log_group == 'payment' && $t->client_service_id != $currentService) || $t->log_group != 'payment'){
                 $body = "";
                 $usr =  User::where('id',$t->processor_id)->select('id','first_name','last_name')->get();
 
@@ -834,7 +839,13 @@ class LogController extends Controller
 
 
                 if($cs){
-                    $csdetail = $cs->detail;
+                    $cst = $cs->cost + $cs->tip + $cs->charge + $cs->com_client + $cs->com_agent;
+                    $disc = ClientTransaction::where('client_service_id', $cs->id)->where('type','Discount')->first();
+                    if($disc){
+                        $cst -=$disc->amount;
+                    }
+
+                    $csdetail = $cs->detail.' <b style="color: red;">(Php'.$cst.')</b>';
                     $cstracking =  $cs->tracking;
                     $csstatus =  $cs->status;
                     $csactive =  $cs->active;
@@ -843,7 +854,7 @@ class LogController extends Controller
                     }
                     $currentService = $cs->id;
 
-                    $body = DB::table('logs as l')->select(DB::raw('l.detail, l.log_date, pr.first_name'))
+                    $body = DB::table('logs as l')->select(DB::raw('l.detail, l.log_date, pr.first_name, l.amount'))
                     ->where('client_service_id', $cs->id)->where('group_id',null)
                     ->where('l.id','!=', $t->id)
                     ->leftjoin(
@@ -856,10 +867,14 @@ class LogController extends Controller
                         'pr.id', '=', 'l.processor_id'
                     )
                     ->where('l.id','!=', $t->id)
-                    ->where('log_type','Transaction')
+                    ->where('log_type','Ewallet')
                     ->orderBy('l.id', 'desc')
                     //->distinct('detail')
                     ->get();
+
+                    $t->amount = DB::table('logs as l')
+                                    ->where('client_service_id', $cs->id)->where('group_id',null)
+                                    ->sum('amount');
                     //\Log::info($body);
 
                     $data = collect($body->toArray())->flatten()->all();
