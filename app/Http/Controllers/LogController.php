@@ -846,7 +846,7 @@ class LogController extends Controller
                         $cst -=$disc->amount;
                     }
 
-                    $csdetail = $cs->detail.' <b style="color: red;">(Php'.$cst.')</b>';
+                    $csdetail = $cs->detail.' <b style="color: red; margin-left: 25px;">Price : Php'.$cst.' , Balance : Php'.($cst - $cs->payment_amount).'</b>';
                     $cstracking =  $cs->tracking;
                     $csstatus =  $cs->status;
                     $csactive =  $cs->active;
@@ -876,7 +876,6 @@ class LogController extends Controller
                     $t->amount = DB::table('logs as l')
                                     ->where('client_service_id', $cs->id)->where('group_id',null)
                                     ->sum('amount');
-                    //\Log::info($body);
 
                     $data = collect($body->toArray())->flatten()->all();
                     
