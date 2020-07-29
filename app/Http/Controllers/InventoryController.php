@@ -778,12 +778,11 @@ class InventoryController extends Controller
     public function editInventory(Request $request){
         $validator = Validator::make($request->all(), [
             'inventory_id' => 'required',
-            'description' => 'nullable',
+            'description' => 'required',
             'specification' => 'nullable',
             'type' => 'required',
             'qty' => 'required|integer|min:1',
             'unit' => 'required',
-            'purchase_price' => 'required|numeric',
             'or' => 'required'
 
         ]);
@@ -809,11 +808,11 @@ class InventoryController extends Controller
                 $inv->type = $request->type;
                 $inv->qty = $request->qty;
                 $inv->unit = $request->unit;
-                $inv->purchase_price = $request->purchase_price;
+                $inv->description = $request->description;
                 $inv->or = $request->or;
 
-                if($request->description !== null) {
-                    $inv->description = $request->description;
+                if($request->purchase_price !== null) {
+                    $inv->purchase_price = $request->purchase_price;
                 }
                 if($request->specification !== null) {
                     $inv->specification = $request->specification;
