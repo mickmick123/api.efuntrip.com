@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Log;
 
 use App\User;
-
+use App\Document;
 use App\Service;
 use App\ClientService;
 
@@ -112,7 +112,7 @@ class LogController extends Controller
                     //\Log::info($body);
 
                     $data = collect($body->toArray())->flatten()->all();
-                    
+
                     $body = $data;
                 }
                 else{
@@ -247,7 +247,7 @@ class LogController extends Controller
                     // //\Log::info($body);
 
                     // $data = collect($body->toArray())->flatten()->all();
-                    
+
                     // $body = $data;
 
                     $head = [];
@@ -529,63 +529,44 @@ class LogController extends Controller
     }
 
     public function getDocumentLogs($client_id) {
-        $dates = DB::table('logs')->where('client_id', $client_id)
+
+       $documentLogs = DB::table('logs')->where('client_id', $client_id)
             ->where('group_id', null)
             ->where('log_type', 'Document')
             ->groupBy('log_date')
             ->orderBy('id', 'desc')
-            ->pluck('log_date');
+            ->get();
 
         $data = [];
-        foreach( $dates as $date ) {
-            $logs = DB::table('logs')
-                ->select(['client_service_id'])
-                ->whereDate('log_date', '=', $date)
-                ->where('client_id', $client_id)
-                ->where('group_id', null)
-                // ->where('client_service_id','!=', null)
-                ->where('log_type', 'Document')
-                ->orderBy('id', 'desc')
-                ->get();
 
-            \Log::info($logs);
+        foreach( $documentLogs as $log ) {
 
-            $clientServicesIdArray = [];
-            $lastDisplayDate = null;
+           $payload = [];
 
-            foreach( $logs as $log ) {
-                $clientServiceId = $log->client_service_id;
+            $payload['documents'] = DB::table('documents as doc')
+                  ->select(DB::raw('doc_log.pending_count, doc_log.count, doc_log.previous_on_hand, doc.title, doc.is_unique, doc.title_cn, doc.shorthand_name, doc_log.document_id'))
+                  ->join('document_log as doc_log', 'doc_log.document_id', 'doc.id')
+                  ->where('doc_log.log_id', $log->id)
+                  ->get();
 
-                if( !in_array($clientServiceId, $clientServicesIdArray) ) {
-                    $service = ClientService::select(['id', 'detail', 'status', 'tracking', 'active'])
-                        ->with([
-                            'logs' => function($query) use($date) {
-                                $query->select(['id', 'client_service_id', 'detail', 'processor_id'])
-                                    ->where('log_type', 'Document')
-                                    ->whereDate('log_date', '=', $date)
-                                    ->orderBy('id', 'desc');
-                            },
-                            'logs.processor' => function($query) {
-                                $query->select(['id', 'first_name', 'last_name']);
-                            },
-                            'logs.documents' => function($query) {
-                                $query->select(['title'])->orderBy('document_log.id', 'desc');
-                            }
-                        ])
-                        ->findorfail($clientServiceId);
+            $payload['processor']  = DB::table('users')
+                  ->select(DB::raw('CONCAT(first_name, " ", last_name) as name'))
+                  ->where('id', $log->processor_id)
+                  ->get();
 
-                    $displayDate = ($lastDisplayDate != $date) ? Carbon::parse($date)->format('F d, Y') : null;
+            $payload['procedure']  = DB::table('service_procedures')
+                        ->select(DB::raw('documents_to_display, documents_mode, is_suggested_count'))
+                        ->where('id', $log->service_procedure_id)
+                        ->get();
 
-                    $data[] = [
-                        'display_date' => $displayDate,
-                        'service' => $service
-                    ];
+            $displayDate = Carbon::parse($log->log_date)->format('F d, Y');
 
-                    $lastDisplayDate = $date;
-                    $clientServicesIdArray[] = $clientServiceId;
-                }
-            }
-        }
+            $data[] = [
+                    'display_date' => $displayDate,
+                    'info' => $log,
+                    'document_logs' =>$payload,
+            ];
+       }
 
         $response['status'] = 'Success';
         $response['data'] = $data;
@@ -619,7 +600,7 @@ class LogController extends Controller
 
     public function getOldTransactionLogs($client_id, $group_id){
         $arraylogs = [];
-        
+
         if($group_id == 0 || $group_id == null){
             $transtotal = DB::table('logs')->where('client_id',$client_id)->where('group_id',null)->where('log_type','Transaction')->sum('amount');
 
@@ -676,7 +657,7 @@ class LogController extends Controller
                     'month' => $m,
                     'day' => $d,
                     'year' => $y,
-                    'data' => array ( 
+                    'data' => array (
                         'id' => $a->id,
                         'title' => $a->detail,
                         'balance' => $a->balance,
@@ -766,7 +747,7 @@ class LogController extends Controller
                 'month' => $m,
                 'day' => $d,
                 'year' => $y,
-                'data' => array ( 
+                'data' => array (
                     'id' => $a->id,
                     'title' => $a->detail,
                     'balance' => $a->balance,
@@ -878,12 +859,12 @@ class LogController extends Controller
                                     ->sum('amount');
 
                     $data = collect($body->toArray())->flatten()->all();
-                    
+
                     $body = $data;
                     $csshow = 1;
-                    if($cs->active == 0 || $cs->status == 'cancelled'){  
+                    if($cs->active == 0 || $cs->status == 'cancelled'){
                         $csshow = 0;
-                    }              
+                    }
 
                 }
                 else{
@@ -896,7 +877,7 @@ class LogController extends Controller
                     //$currentService = null;
                 }
 
-                if($csshow){            
+                if($csshow){
                     $arraylogs[] = array(
                         'month' => $m,
                         'day' => $d,
@@ -920,7 +901,7 @@ class LogController extends Controller
                         )
                     );
                 }
-                
+
             }
         }
 
