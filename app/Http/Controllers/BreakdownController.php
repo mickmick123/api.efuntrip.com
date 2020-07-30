@@ -129,33 +129,33 @@ class BreakdownController extends Controller
         $profiles = ServiceProfileCost::where('service_id', $request->service_id)
                     ->where('branch_id', 1)
                     ->get(); 
-        \Log::info($profiles);
+        // \Log::info($profiles);
 
         foreach($profiles as $p){
-            if($p->cost > 0 || $p->charge > 0 || $p->tip > 0){
+            // if($p->cost > 0 || $p->charge > 0 || $p->tip > 0){
                 $sp = ServiceProfileCost::findorfail($p->id);
-                $spcost = $sp->cost + $amount;
+                // $spcost = $sp->cost + $amount;
                 if($request->type == 'cost'){
-                    if($spcost > 0){
-                        $sp->cost += $amount;
-                    }
-                    else{
-                        $sp->cost = 0;
-                    }
+                    // if($spcost > 0){
+                        $sp->cost = $value;
+                    // }
+                    // else{
+                    //     $sp->cost = 0;
+                    // }
                 } 
 
-                $sptip = $sp->tip + $amount;
+                // $sptip = $sp->tip + $amount;
                 if($request->type == 'tip'){
-                    if($sptip > 0){
-                        $sp->tip += $amount;
-                    }
-                    else{
-                        $sp->tip = 0;
-                    }
+                    // if($sptip > 0){
+                         $sp->tip = $value;
+                    // }
+                    // else{
+                    //     $sp->tip = 0;
+                    // }
                 } 
 
                 $spcharge = $sp->charge + ($amount * -1);
-                if($sp->charge > 0 && $sp->charge > 0){
+                if($spcharge > 0 && $sp->charge > 0){
                     $sp->charge = $spcharge;
                 }
                 else{
@@ -163,7 +163,7 @@ class BreakdownController extends Controller
                 }
 
                 $sp->save();
-            }
+            // }
         }
     }
 
