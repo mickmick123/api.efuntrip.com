@@ -413,6 +413,7 @@ class ServiceController extends Controller
 				$cost = 0;
 				$charge = 0;
 				$tip = 0;
+				$total = 0;
 
 				// Manila
 				if( $branchId == 1 ) {
@@ -431,6 +432,7 @@ class ServiceController extends Controller
 						$tip = $serviceBranchCost->tip;
 					}
 				}
+				$total = $cost + $charge + $tip;
 			} else {
 				// Default Rates
 				if( $item['type'] == 'default' ) {
