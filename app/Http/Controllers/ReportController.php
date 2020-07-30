@@ -1182,15 +1182,16 @@ class ReportController extends Controller
 		$docs2 = Document::select(['id', 'title', 'shorthand_name', 'is_unique', 'is_company_document'])
 					->whereNotIn('id', $latestDocs)->get();
 
-		$d1 = collect($docs1);
-    	$d2 = collect($docs2);
-
-		$allDocs = $d1->merge($d2);
+	  $d1 = collect($docs1);
+    $d2 = collect($docs2);
 
 		$response['status'] = 'Success';
-		$response['data'] = [
-		    'documents' => $allDocs
-		];
+
+    $response['data'] = [
+         'latestDocuments' => $d1,
+         'otherDocuments' => $d2
+     ];
+
 		$response['code'] = 200;
 
 		return Response::json($response);
