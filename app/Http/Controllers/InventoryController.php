@@ -119,7 +119,6 @@ class InventoryController extends Controller
             'description' => 'required',
             'type' => 'required',
             'or' => 'required',
-            'qty' => 'required',
             'unit' => 'required',
         ]);
 
@@ -142,7 +141,6 @@ class InventoryController extends Controller
             $inv->type = $request->type;
             $inv->purchase_price = $request->purchase_price;
             $inv->or = $request->or;
-            $inv->qty = $request->qty;
             $inv->unit = $request->unit;
             $inv->created_at = strtotime("now");
             $inv->updated_at = strtotime("now");
