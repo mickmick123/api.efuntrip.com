@@ -4,6 +4,8 @@ use Illuminate\Http\Request;
 
 Route::get('check-updated-cost', 'ReportController@checkUpdatedCost');
 
+// Route::get('check-ond-handdocs/{id}', 'ReportController@checkOnHandDocs');
+
 Route::middleware('auth:api')->group(function() {
 
 	Route::get('documents', 'ReportController@getDocuments');

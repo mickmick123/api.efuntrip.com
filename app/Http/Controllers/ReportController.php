@@ -197,7 +197,7 @@ class ReportController extends Controller
 	public function reportServices(Request $request) {
 		$clientServicesId = json_decode($request->client_services_id);
 
-		if( is_array($clientServicesId) ) {
+		// if( is_array($clientServicesId) ) {
 
       //Select full paid services
       $fullyPaidServiceId = ClientService::where('id', $clientServicesId)
@@ -310,11 +310,11 @@ class ReportController extends Controller
 					'clientServices' => $clientServices
 			];
 			$response['code'] = 200;
-		} else {
-			$response['status'] = 'Failed';
-        	$response['errors'] = 'No query results.';
-			$response['code'] = 404;
-		}
+		// } else {
+		// 	$response['status'] = 'Failed';
+    //     	$response['errors'] = 'No query results.';
+		// 	$response['code'] = 404;
+		// }
 
 		return Response::json($response);
 	}
@@ -1243,13 +1243,15 @@ class ReportController extends Controller
 			$status = 'on process';
 		}
 
-		if( $_clientServiceId ) {
-			$clientServicesId = ClientService::where('id', $_clientServiceId)
-				->where('active', 1)->where('status', $status)->pluck('id')->toArray();
-		} else {
-			$clientServicesId = ClientService::where('client_id', $clientId)
-				->where('active', 1)->where('status', $status)->pluck('id')->toArray();
-		}
+		// if( $_clientServiceId ) {
+		// 	$clientServicesId = ClientService::where('id', $_clientServiceId)
+		// 		->where('active', 1)->where('status', $status)->pluck('id')->toArray();
+		// } else {
+		// 	$clientServicesId = ClientService::where('client_id', $clientId)
+		// 		->where('active', 1)->where('status', $status)->pluck('id')->toArray();
+		// }
+		$clientServicesId = ClientService::where('client_id', $clientId)
+				->where('active', 1)->pluck('id')->toArray();
 
 		$clientReports = ClientReport::with('clientReportDocuments')
 			->whereIn('client_service_id', $clientServicesId)
@@ -1260,16 +1262,34 @@ class ReportController extends Controller
 			->get();
 
 		if( count($clientReports) > 0 ) {
-			$onHandDocuments = OnHandDocument::where('client_id', $clientId)->get();
+			$onHandDocuments = OnHandDocument::where('client_id', $clientId)->join('documents', 'on_hand_documents.document_id', '=', 'documents.id')->get();
 
-			$temp = [];
+			
+
+			$clientDocsArr = [];
+			$clientArray = [];
+			$allRcvdDocs = [];
 
 			foreach( $clientReports as $clientReport ) {
-				$field1 = $clientReport->client_service_id;
-				$field2 = $clientReport->service_procedure_id;
+				if( !in_array($clientReport->client_service_id, $clientDocsArr) ) {
+
+					array_push($clientDocsArr, $clientReport->client_service_id);
+
+					$clientArray[] = $clientReport;
+
+				}
+			}
+			$temp = [];
+
+			$clientArray = collect($clientArray)->sortBy('client_service_id')->toArray();
+
+			foreach( $clientArray as $clientReport ) {
+
+				$field1 = $clientReport['client_service_id'];
+				$field2 = $clientReport['service_procedure_id'];
 
 				$found = collect($temp)->filter(function($item) use($field1, $field2) {
-				 	return $item['client_service_id'] == $field1 && $item['service_procedure_id'] == $field2;
+					return $item['client_service_id'] == $field1 && $item['service_procedure_id'] == $field2;
 				});
 
 				if( count($found) == 0 ) {
@@ -1280,21 +1300,43 @@ class ReportController extends Controller
 
 					$counter = 0;
 
-					foreach( $clientReport->clientReportDocuments as $clientReportDocument ) {
+					foreach( $clientReport['client_report_documents'] as $cli => $clientReportDocument ) {
 						$index = -1;
 
 						foreach( $onHandDocuments as $i => $onHandDocument ) {
-							if( $clientReportDocument->document_id == $onHandDocument->document_id ) {
+							if( $clientReportDocument['document_id'] == $onHandDocument->document_id ) {
 								$index = $i;
 							}
 						}
 
 						if( $index == -1 ) {
 							$counter++;
-						} elseif( $clientReportDocument->count > $onHandDocuments[$index]->count ) {
-							$counter++;
+						} else {
+							if( $clientReportDocument['count'] > $onHandDocuments[$index]->count ) {
+								$counter++;
+							} else {
+								if( str_contains($onHandDocuments[$index]->title, 'Photocopy') ) {
+									
+									if(!$this->ifDocsExist($allRcvdDocs, $onHandDocuments[$index]->id)) {
+										$allRcvdDocs[] = [
+											'id' => $onHandDocuments[$index]->id,
+											'count' => 0
+										];
+									}
+
+									$docIndex = $this->getDocIndex($allRcvdDocs, $onHandDocuments[$index]->id);
+
+									if( $allRcvdDocs[$docIndex]['count'] < $onHandDocuments[$index]->count ) {
+										$allRcvdDocs[$docIndex]['count'] += $clientReportDocument['count'];
+									} else {
+										$allRcvdDocs[$docIndex]['count'] += $clientReportDocument['count'];
+										$counter++;
+									}
+								}
+							}
 						}
 					}
+
 
 					if( $counter == 0 ) {
 						$newStatus = 'on process';
@@ -1306,7 +1348,7 @@ class ReportController extends Controller
 						$label = 'Documents incomplete, service is now ' . $newStatus . '.';
 					}
 
-					$cs = ClientService::findOrfail($clientReport->client_service_id);
+					$cs = ClientService::findOrfail($clientReport['client_service_id']);
 
 					if( $cs->status != $newStatus ) {
 						$cs->update(['status' => $newStatus]);
@@ -1316,17 +1358,18 @@ class ReportController extends Controller
 						$detail = 'Service[' . $cs->detail . '] is now ' . $newStatus . '.';
 
 						Log::create([
-						    'client_service_id' => $cs->id,
-						    'client_id' => $cs->client_id,
-						    'group_id' => $cs->group_id,
-						    'processor_id' => Auth::user()->id,
-						    'log_type' => 'Status',
-						    'detail' => $detail,
-						    'label' => $label,
-						    'log_date' => Carbon::now()->toDateString()
+								'client_service_id' => $cs->id,
+								'client_id' => $cs->client_id,
+								'group_id' => $cs->group_id,
+								'processor_id' => Auth::user()->id,
+								'log_type' => 'Status',
+								'detail' => $detail,
+								'label' => $label,
+								'log_date' => Carbon::now()->toDateString()
 						]);
 					}
 				}
+
 			}
 		}
 	}
@@ -1411,4 +1454,137 @@ class ReportController extends Controller
 		$response['status'] = 'Success';
 		return Response::json($response);
 	}
+
+	public function checkOnHandDocs($clientId) {
+		// $onHandDocuments = OnHandDocument::where('client_id', $clientId)->join('documents', 'on_hand_documents.document_id', '=', 'documents.id')->get();
+
+
+		// foreach($onHandDocuments as $docs) {
+		// 	if(str_contains($docs->title, 'Photocopy')) {
+		// 		$data[] = [
+		// 			'data' => $docs
+		// 		];
+		// 	}
+			
+		// }
+
+		$clientServicesId = ClientService::where('client_id', $clientId)
+				->where('active', 1)->pluck('id')->toArray();
+
+				$clientReports = ClientReport::with('clientReportDocuments')
+			->whereIn('client_service_id', $clientServicesId)
+			->whereHas('serviceProcedure', function($query) {
+				$query->where('step', 1);
+			})
+			->orderBy('id', 'desc')
+			->get();
+
+			if( count($clientReports) > 0 ) {
+				$onHandDocuments = OnHandDocument::where('client_id', $clientId)->join('documents', 'on_hand_documents.document_id', '=', 'documents.id')->get();
+
+			}
+			
+			$clientDocsArr = [];
+			$clientArray = [];
+			$allRcvdDocs = [];
+
+			foreach( $clientReports as $clientReport ) {
+				if( !in_array($clientReport->client_service_id, $clientDocsArr) ) {
+
+					array_push($clientDocsArr, $clientReport->client_service_id);
+
+					array_push($clientArray, $clientReport);
+
+				}
+			}
+
+			
+			$clientArray = collect($clientArray)->sortBy('client_service_id')->toArray();
+
+			foreach( $clientArray as $clientReport ) {
+
+					$counter = 0;
+
+					foreach( $clientReport['client_report_documents'] as $cli => $clientReportDocument ) {
+						$index = -1;
+
+						foreach( $onHandDocuments as $i => $onHandDocument ) {
+							if( $clientReportDocument['document_id'] == $onHandDocument->document_id ) {
+								$index = $i;
+							}
+						}
+
+						if( $index == -1 ) {
+							$counter++;
+						} else {
+							if( $clientReportDocument['count'] > $onHandDocuments[$index]->count ) {
+								$counter++;
+							} else {
+								if( str_contains($onHandDocuments[$index]->title, 'Photocopy') ) {
+									
+									if(!$this->ifDocsExist($allRcvdDocs, $onHandDocuments[$index]->id)) {
+										$allRcvdDocs[] = [
+											'id' => $onHandDocuments[$index]->id,
+											'count' => 0
+										];
+									}
+
+									$docIndex = $this->getDocIndex($allRcvdDocs, $onHandDocuments[$index]->id);
+
+									if( $allRcvdDocs[$docIndex]['count'] < $onHandDocuments[$index]->count ) {
+										$allRcvdDocs[$docIndex]['count'] += $clientReportDocument['count'];
+									} else {
+										$allRcvdDocs[$docIndex]['count'] += $clientReportDocument['count'];
+										$counter++;
+									}
+								}
+							}
+						}
+					}
+				
+
+			}
+		
+	
+		$response['data'] = $clientDocsArr;
+		$response['array_data'] = $clientArray;
+		$response['docCount'] = $allRcvdDocs;
+		return Response::json($response);
+	}
+
+
+	public function ifDocsExist($array, $data) {
+		$counter = 0;
+
+		if(count($array) > 0) {
+			foreach($array as $arr) {
+				if($arr['id'] === $data) {
+					$counter++;
+				}
+			}
+		}
+
+		if($counter > 0) {
+			return true;
+		}
+
+		return false;
+	}
+	
+
+	public function getDocIndex($array, $data) {
+		$arrIndex = 0;
+
+		if(count($array) > 0) {
+			foreach($array as $i => $arr) {
+				if($arr['id'] === $data) {
+					$arrIndex = $i;
+				}
+			}
+		}
+
+		return $arrIndex;
+	}
 }
+
+
