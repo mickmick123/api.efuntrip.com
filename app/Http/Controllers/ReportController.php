@@ -548,82 +548,253 @@ class ReportController extends Controller
 	        ]);
 
 	        // Document log
-	        foreach( $documents as $document ) {
-	        	$previousOnHand = 0;
+	        // foreach( $documents as $document ) {
+	        // 	$previousOnHand = 0;
 
-	        	$onHandDocument = OnHandDocument::where('client_id', $cs->client_id)
-	        		->where('document_id', $document['id'])->first();
+	        // 	$onHandDocument = OnHandDocument::where('client_id', $cs->client_id)
+	        // 		->where('document_id', $document['id'])->first();
 
-	        	if( $onHandDocument ) {
-	        		$previousOnHand = $onHandDocument->count;
-	        	}
+	        // 	if( $onHandDocument ) {
+	        // 		$previousOnHand = $onHandDocument->count;
+	        // 	}
 
-	        	$log->documents()->attach($document['id'], [
-	        		'count' => $document['count'],
-	        		'previous_on_hand' => $previousOnHand
-	        	]);
-	        }
+	        // 	$log->documents()->attach($document['id'], [
+	        // 		'count' => $document['count'],
+	        // 		'previous_on_hand' => $previousOnHand
+	        // 	]);
+          // }
+          
+          // if($label === 'Prepare required documents, the following documents are needed') {
+          //   $this->handleUpdateStatus($cs->client_id, 1, null, 'Prepare required documents, the following documents are needed');
+          // }
 
 	        // Missing documents
 	        if( $actionName != 'Filed' ) {
 	        	if( $actionName == 'Prepared' && $categoryName == 'Documents' ) {
 	        		$preparedDocuments = ClientReport::with('clientReportDocuments')
-						->where('client_service_id', $cs->id)
-						->where('service_procedure_id', $serviceProcedure->id)
-						->orderBy('id', 'desc')
-						->get();
+                ->where('client_service_id', $cs->id)
+                ->where('service_procedure_id', $serviceProcedure->id)
+                ->orderBy('id', 'desc')
+                ->get();
 
-					$onHandDocuments = OnHandDocument::where('client_id', $cs->client_id)->get();
+              $onHandDocuments = OnHandDocument::where('client_id', $cs->client_id)->get();
 
-					$temp = [];
-					$missingDocuments = [];
-					foreach( $preparedDocuments as $preparedDocument ) {
-						foreach( $preparedDocument->clientReportDocuments as $document ) {
+              // $temp = [];
+              // $missingDocuments = [];
+              // foreach( $preparedDocuments as $preparedDocument ) {
+              //   foreach( $preparedDocument->clientReportDocuments as $document ) {
 
-							if( !in_array($document['document_id'], $temp)) {
-								$temp[] = $document['document_id'];
+              //     if( !in_array($document['document_id'], $temp)) {
+              //       $temp[] = $document['document_id'];
 
-								$reportDocumentId = $document['document_id'];
-								$reportCount = $document['count'];
+              //       $reportDocumentId = $document['document_id'];
+              //       $reportCount = $document['count'];
 
-								$arr = collect($onHandDocuments)->filter(function($item) use($reportDocumentId) {
-									return $item['document_id'] == $reportDocumentId;
-								})->values()->toArray();
+              //       $arr = collect($onHandDocuments)->filter(function($item) use($reportDocumentId) {
+              //         return $item['document_id'] == $reportDocumentId;
+              //       })->values()->toArray();
 
-								if( count($arr) == 0 ) {
-									$missingDocuments[] = [
-										'document_id' => $reportDocumentId,
-										'count' => 0,
-										'pending_count' => $reportCount
-									];
-								} elseif( count($arr) == 1 && $arr[0]['count'] < $reportCount ) {
-									$missingDocuments[] = [
-										'document_id' => $reportDocumentId,
-										'count' => 0,
-										'pending_count' => $reportCount - $arr[0]['count']
-									];
-								}
-							}
+              //       if( count($arr) == 0 ) {
+              //         $missingDocuments[] = [
+              //           'document_id' => $reportDocumentId,
+              //           'count' => 0,
+              //           'pending_count' => $reportCount
+              //         ];
+              //       } elseif( count($arr) == 1 && $arr[0]['count'] < $reportCount ) {
+              //         $missingDocuments[] = [
+              //           'document_id' => $reportDocumentId,
+              //           'count' => 0,
+              //           'pending_count' => $reportCount - $arr[0]['count']
+              //         ];
+              //       }
+              //     }
 
-						}
-					}
+              //   }
+              // }
 
-					foreach( $missingDocuments as $missingDocument ) {
-						$previousOnHand = 0;
+              // foreach( $missingDocuments as $missingDocument ) {
+              //   $previousOnHand = 0;
 
-				        $onHandDocument = OnHandDocument::where('client_id', $cs->client_id)
-				        		->where('document_id', $missingDocument['document_id'])->first();
+              //       $onHandDocument = OnHandDocument::where('client_id', $cs->client_id)
+              //           ->where('document_id', $missingDocument['document_id'])->first();
 
-				        if( $onHandDocument ) {
-				        	$previousOnHand = $onHandDocument->count;
-				        }
+              //       if( $onHandDocument ) {
+              //         $previousOnHand = $onHandDocument->count;
+              //       }
 
-				        $log->documents()->attach($missingDocument['document_id'], [
-				        	'count' => $missingDocument['count'],
-				        	'previous_on_hand' => $previousOnHand,
-				        	'pending_count' => $missingDocument['pending_count']
-				        ]);
-					}
+              //       $log->documents()->attach($missingDocument['document_id'], [
+              //         'count' => $missingDocument['count'],
+              //         'previous_on_hand' => $previousOnHand,
+              //         'pending_count' => $missingDocument['pending_count']
+              //       ]);
+              // }
+
+
+              // Get pending documents
+              $clientServicesId = ClientService::where('client_id', $cs->client_id)
+                                  ->where('active', 1)->pluck('id')->toArray();
+                                  
+              $clientReports = ClientReport::with('clientReportDocuments')
+                              ->whereIn('client_service_id', $clientServicesId)
+                              ->whereHas('serviceProcedure', function($query) {
+                                $query->where('step', 1);
+                              })
+                              ->orderBy('id', 'desc')
+                              ->get();
+
+              if( count($clientReports) > 0 ) {
+                $onHandDocuments = OnHandDocument::where('client_id', $cs->client_id)->join('documents', 'on_hand_documents.document_id', '=', 'documents.id')->get();
+
+                $clientDocsArr = [];
+                $clientArray = [];
+                $allRcvdDocs = [];
+
+                foreach( $clientReports as $clientReport ) {
+                  if( !in_array($clientReport->client_service_id, $clientDocsArr) ) {
+          
+                    array_push($clientDocsArr, $clientReport->client_service_id);
+          
+                    $clientArray[] = $clientReport;
+          
+                  }
+                }
+
+                $clientArray = collect($clientArray)->sortBy('client_service_id')->toArray();
+
+                foreach( $clientArray as $clientReport ) {
+          
+                  $counter = 0;
+                  $docsDetail = '';
+        
+                  $docLogData = [];
+        
+                  foreach( $clientReport['client_report_documents'] as $cli => $clientReportDocument ) {
+                    $index = -1;
+        
+                    foreach( $onHandDocuments as $i => $onHandDocument ) {
+                      if( $clientReportDocument['document_id'] == $onHandDocument->document_id ) {
+                        $index = $i;
+                      }
+                    }
+        
+                    if( $index == -1 ) {
+                      $docLogData[] = [
+                        'document_id' => $clientReportDocument['document_id'], 
+                        'log_id' => 0,
+                        'count' => $clientReportDocument['count'],
+                        'pending_count' => $clientReportDocument['count'],
+                        'previous_on_hand' => 0,
+                        'created_at' => Carbon::now(),
+                        'updated_at' => Carbon::now()
+                      ];
+                      $counter++;
+                    } else {
+                      if( $clientReportDocument['count'] > $onHandDocuments[$index]->count ) {
+                        
+                        $docLogData[] = [
+                          'document_id' => $clientReportDocument['document_id'], 
+                          'log_id' => 0,
+                          'count' => $clientReportDocument['count'],
+                          'pending_count' => $clientReportDocument['count'],
+                          'previous_on_hand' => $onHandDocuments[$index]->count,
+                          'created_at' => Carbon::now(),
+                          'updated_at' => Carbon::now()
+                        ];
+                        $counter++;
+
+                      } else {
+
+                        if( str_contains($onHandDocuments[$index]->title, 'Photocopy') ) {
+        
+                          if(!$this->ifDocsExist($allRcvdDocs, $onHandDocuments[$index]->id)) {
+                            $allRcvdDocs[] = [
+                              'id' => $onHandDocuments[$index]->id,
+                              'count' => 0
+                            ];
+                          }
+        
+                          $docIndex = $this->getDocIndex($allRcvdDocs, $onHandDocuments[$index]->id);
+        
+                          if( ($allRcvdDocs[$docIndex]['count'] + $clientReportDocument['count']) < $onHandDocuments[$index]->count ) {
+                            $allRcvdDocs[$docIndex]['count'] += $clientReportDocument['count'];
+        
+                          } else {
+                            $docLogData[] = [
+                              'document_id' => $clientReportDocument['document_id'], 
+                              'log_id' => 0,
+                              'count' => $clientReportDocument['count'],
+                              'pending_count' => $clientReportDocument['count'],
+                              'previous_on_hand' => $onHandDocuments[$index]->count,
+                              'created_at' => Carbon::now(),
+                              'updated_at' => Carbon::now()
+                            ];
+                            $counter++;
+                          }
+        
+                        } else {
+
+                          $docLogData[] = [
+                            'document_id' => $clientReportDocument['document_id'], 
+                            'log_id' => 0,
+                            'count' => $clientReportDocument['count'],
+                            'pending_count' => 0,
+                            'previous_on_hand' => $onHandDocuments[$index]->count,
+                            'created_at' => Carbon::now(),
+                            'updated_at' => Carbon::now()
+                          ];
+
+                        }
+        
+                      }
+                    }
+                  }
+
+                  // $cs2 = ClientService::findOrfail($clientReport['client_service_id']);
+
+                  // $getLog = Log::where('client_service_id', $cs2->id)
+                  //           ->where('client_id', $cs2->client_id)
+                  //           ->where('group_id', $cs2->group_id)
+                  //           ->where('processor_id', Auth::user()->id)
+                  //           ->where('log_type', 'Document')->latest()->first();
+  
+                  
+
+                 
+                  foreach($docLogData as $dlc) {
+
+                    $getDocLog = DocumentLog::where('document_id', $dlc['document_id'])
+                                ->where('log_id', $log->id)
+                                ->latest()->first();
+
+                    if($getDocLog) {
+                      $updateDocLog = DocumentLog::where('id', $getDocLog->id)
+                                  ->update([
+                                    'count' => $dlc['count'],
+                                    'previous_on_hand' => $dlc['previous_on_hand']
+                                  ]);
+                    } else {
+                      $dlc['log_id'] = $log->id;
+                      $docCounter = 0;
+
+                      foreach($documents as $document) {
+                        if($document['id'] === $dlc['document_id']) {
+                          $docCounter++;
+                        }
+                      }
+
+                      if($docCounter > 0) {
+                        $saveDocLog = DocumentLog::create($dlc);
+                      }
+                    }
+
+                  }
+                  
+          
+                }
+              }
+              // End get pending documents
+
+
 	        	} else {
 	        		$clientReports = ClientReport::with(['clientReportDocuments' => function($query) {
 			        		$query->where('count', 0);
@@ -949,6 +1120,7 @@ class ReportController extends Controller
         	$clientServices = $report['client_services'];
 
         	foreach($clientServices as $clientService) {
+
         		$detail = $this->getDetail($clientService, $report);
 
         		// client_reports table
@@ -972,14 +1144,17 @@ class ReportController extends Controller
 	        		$report['extras']['conversion_of_status']
 	        	);
 
-  				$this->handleUpdatedTheCost($clientService, $report['service_procedure'], $report['extras']['cost']);
+            $this->handleUpdatedTheCost($clientService, $report['service_procedure'], $report['extras']['cost']);
 
-  				$this->handleDiscountedService(
-  					$clientService,
-  					$report['service_procedure'],
-  					$report['extras']['discount_amount'],
-  					$report['extras']['discount_reason']
-  				);
+            $this->handleDiscountedService(
+              $clientService,
+              $report['service_procedure'],
+              $report['extras']['discount_amount'],
+              $report['extras']['discount_reason']
+            );
+
+
+
         	}
         }
 
@@ -1387,16 +1562,21 @@ class ReportController extends Controller
 						}
           }
 
+          $newStatus = 'pending';
+          $label = 'Documents incomplete, service is now ' . $newStatus . '.';
 
-					if( $counter == 0 ) {
-						$newStatus = 'on process';
-
-						$label = 'Documents complete, service is now ' . $newStatus . '.';
-					} elseif( $counter != 0 ) {
-						$newStatus = 'pending';
-
-						$label = 'Documents incomplete, service is now ' . $newStatus . '.';
-					}
+          if($docLogType !== 'Prepare required documents, the following documents are needed') {
+            if( $counter == 0 ) {
+              $newStatus = 'on process';
+  
+              $label = 'Documents complete, service is now ' . $newStatus . '.';
+            } elseif( $counter != 0 ) {
+              $newStatus = 'pending';
+  
+              $label = 'Documents incomplete, service is now ' . $newStatus . '.';
+            }
+          }
+					
 
           $cs = ClientService::findOrfail($clientReport['client_service_id']);
 
@@ -1409,12 +1589,15 @@ class ReportController extends Controller
                 $docsDetail = 'Received Documents from Client:' . "\n" . $docsDetail;
                 $docLogCounter++;
               }
-            } else {
+            } else if($docLogType === 'generate_photocopy') {
               if($docsDetail !== '') {
                 $docLabel = 'Generate Photocopies of Documents';
                 $docsDetail = 'Generate Photocopies of Documents:' . "\n" . $docsDetail;
                 $docLogCounter++;
               }
+            } else if($docLogType === 'Prepare required documents, the following documents are needed') {
+              $docLabel = $docLogType;
+              $docLogCounter++;
             }
 
 
@@ -1423,55 +1606,86 @@ class ReportController extends Controller
 
             if($docLogCounter > 0) {
 
-              // Add service procedure
-              $actionData = DB::table('actions')->where('name', 'Prepared')->first();
-              $categoryData = DB::table('categories')->where('name', 'Documents')->first();
-              
-              $storeActionCategory = DB::table('action_category')
-                                    ->insert([
-                                      'action_id' => $actionData->id,
-                                      'category_id' => $categoryData->id
-                                    ]);
+              if($docLogType !== 'Prepare required documents, the following documents are needed') {
+                // Add service procedure
+                $actionData = DB::table('actions')->where('name', 'Prepared')->first();
+                $categoryData = DB::table('categories')->where('name', 'Documents')->first();
+                
+                $storeActionCategory = DB::table('action_category')
+                                      ->insert([
+                                        'action_id' => $actionData->id,
+                                        'category_id' => $categoryData->id
+                                      ]);
 
-              $storeServiceProcedure = ServiceProcedure::create([
-                    'service_id' => $cs->service_id,
-                    'name' => 'Prepared Documents',
-                    'step' => 1,
-                    'action_id' => $actionData->id,
-                    'category_id' => $categoryData->id,
-                    'is_required' => 1,
-                    'status_upon_completion' => 'on process',
-                    'documents_to_display' => 'suggested',
-                    'is_suggested_count' => 1
+                $storeServiceProcedure = ServiceProcedure::create([
+                      'service_id' => $cs->service_id,
+                      'name' => 'Prepared Documents',
+                      'step' => 1,
+                      'action_id' => $actionData->id,
+                      'category_id' => $categoryData->id,
+                      'is_required' => 1,
+                      'status_upon_completion' => 'on process',
+                      'documents_to_display' => 'suggested',
+                      'is_suggested_count' => 1
 
-              ]);
-              // End of Add service procedure
-
-              if($cs->status === 'pending') {
-
-                $docLogQuery = Log::create([
-                    'client_service_id' => $cs->id,
-                    'client_id' => $cs->client_id,
-                    'group_id' => $cs->group_id,
-                    'service_procedure_id' => $storeServiceProcedure->id,
-                    'processor_id' => Auth::user()->id,
-                    'log_type' => 'Document',
-                    'detail' => $docsDetail,
-                    'label' => $docLabel,
-                    'log_date' => Carbon::now()->toDateString()
                 ]);
-
-                foreach($docLogData as $dlc) {
-
-                  $dlc['log_id'] = $docLogQuery->id;
-
-                  DB::table('document_log')->insert($dlc);
+                // End of Add service procedure
 
 
+                if($cs->status === 'pending') {
 
+                  $docLogQuery = Log::create([
+                      'client_service_id' => $cs->id,
+                      'client_id' => $cs->client_id,
+                      'group_id' => $cs->group_id,
+                      'service_procedure_id' => $storeServiceProcedure->id,
+                      'processor_id' => Auth::user()->id,
+                      'log_type' => 'Document',
+                      'detail' => $docsDetail,
+                      'label' => $docLabel,
+                      'log_date' => Carbon::now()->toDateString()
+                  ]);
+  
+                  foreach($docLogData as $dlc) {
+  
+                    $dlc['log_id'] = $docLogQuery->id;
+  
+                    DB::table('document_log')->insert($dlc);
+  
+  
+  
+                  }
+  
+                } else {
+                  
+                  $getLog = Log::where('client_service_id', $cs->id)
+                            ->where('client_id', $cs->client_id)
+                            ->where('group_id', $cs->group_id)
+                            ->where('processor_id', Auth::user()->id)
+                            ->where('log_type', 'Document')
+                            ->where('label', $docLabel)->latest()->first();
+  
+                  if($getLog) {
+                    foreach($docLogData as $dlc) {
+  
+                      $getDocLog = DocumentLog::where('document_id', $dlc['document_id'])
+                                  ->where('log_id', $getLog['id'])
+                                  ->latest()->first();
+  
+                      if($getDocLog) {
+                        $updateDocLog = DocumentLog::where('id', $getDocLog->id)
+                                    ->update([
+                                      'count' => $dlc['count'],
+                                      'previous_on_hand' => $dlc['previous_on_hand']
+                                    ]);
+                      }
+  
+                    }
+                  }
+  
                 }
-
               } else {
+
                 $getLog = Log::where('client_service_id', $cs->id)
                           ->where('client_id', $cs->client_id)
                           ->where('group_id', $cs->group_id)
@@ -1496,6 +1710,7 @@ class ReportController extends Controller
 
                   }
                 }
+
               }
 
             }
@@ -1637,105 +1852,241 @@ class ReportController extends Controller
 	}
 
 	public function checkOnHandDocs($clientId) {
-		$onHandDocuments = OnHandDocument::where('client_id', $clientId)->join('documents', 'on_hand_documents.document_id', '=', 'documents.id')->get();
+		// $onHandDocuments = OnHandDocument::where('client_id', $clientId)->join('documents', 'on_hand_documents.document_id', '=', 'documents.id')->get();
 
 
-		foreach($onHandDocuments as $docs) {
-			if(str_contains($docs->title, 'Photocopy')) {
-				$data[] = [
-					'data' => $docs
-				];
-			}
+		// foreach($onHandDocuments as $docs) {
+		// 	if(str_contains($docs->title, 'Photocopy')) {
+		// 		$data[] = [
+		// 			'data' => $docs
+		// 		];
+		// 	}
 			
-		}
+		// }
 
-		$clientServicesId = ClientService::where('client_id', $clientId)
-				->where('active', 1)->pluck('id')->toArray();
+		// $clientServicesId = ClientService::where('client_id', $clientId)
+		// 		->where('active', 1)->pluck('id')->toArray();
 
-				$clientReports = ClientReport::with('clientReportDocuments')
-			->whereIn('client_service_id', $clientServicesId)
-			->whereHas('serviceProcedure', function($query) {
-				$query->where('step', 1);
-			})
-			->orderBy('id', 'desc')
-			->get();
+		// 		$clientReports = ClientReport::with('clientReportDocuments')
+		// 	->whereIn('client_service_id', $clientServicesId)
+		// 	->whereHas('serviceProcedure', function($query) {
+		// 		$query->where('step', 1);
+		// 	})
+		// 	->orderBy('id', 'desc')
+		// 	->get();
 
-			if( count($clientReports) > 0 ) {
-				$onHandDocuments = OnHandDocument::where('client_id', $clientId)->join('documents', 'on_hand_documents.document_id', '=', 'documents.id')->get();
+		// 	if( count($clientReports) > 0 ) {
+		// 		$onHandDocuments = OnHandDocument::where('client_id', $clientId)->join('documents', 'on_hand_documents.document_id', '=', 'documents.id')->get();
 
-			}
+		// 	}
 			
-			$clientDocsArr = [];
-			$clientArray = [];
-			$allRcvdDocs = [];
+		// 	$clientDocsArr = [];
+		// 	$clientArray = [];
+		// 	$allRcvdDocs = [];
 
-			foreach( $clientReports as $clientReport ) {
-				if( !in_array($clientReport->client_service_id, $clientDocsArr) ) {
+		// 	foreach( $clientReports as $clientReport ) {
+		// 		if( !in_array($clientReport->client_service_id, $clientDocsArr) ) {
 
-					array_push($clientDocsArr, $clientReport->client_service_id);
+		// 			array_push($clientDocsArr, $clientReport->client_service_id);
 
-					array_push($clientArray, $clientReport);
+		// 			array_push($clientArray, $clientReport);
 
-				}
-			}
+		// 		}
+		// 	}
 
 			
-      $clientArray = collect($clientArray)->sortBy('client_service_id')->toArray();
+    //   $clientArray = collect($clientArray)->sortBy('client_service_id')->toArray();
       
       
 
-			foreach( $clientArray as $clientReport ) {
+		// 	foreach( $clientArray as $clientReport ) {
 
-          $counter = 0;
+    //       $counter = 0;
           
-          $docLogData = [];
+    //       $docLogData = [];
 
-					foreach( $clientReport['client_report_documents'] as $cli => $clientReportDocument ) {
-						$index = -1;
+		// 			foreach( $clientReport['client_report_documents'] as $cli => $clientReportDocument ) {
+		// 				$index = -1;
 
-						foreach( $onHandDocuments as $i => $onHandDocument ) {
-							if( $clientReportDocument['document_id'] == $onHandDocument->document_id ) {
-								$index = $i;
-							}
-						}
+		// 				foreach( $onHandDocuments as $i => $onHandDocument ) {
+		// 					if( $clientReportDocument['document_id'] == $onHandDocument->document_id ) {
+		// 						$index = $i;
+		// 					}
+		// 				}
 
-						if( $index == -1 ) {
-							$counter++;
-						} else {
-							if( $clientReportDocument['count'] > $onHandDocuments[$index]->count ) {
-								$counter++;
-							} else {
-								if( str_contains($onHandDocuments[$index]->title, 'Photocopy') ) {
+		// 				if( $index == -1 ) {
+		// 					$counter++;
+		// 				} else {
+		// 					if( $clientReportDocument['count'] > $onHandDocuments[$index]->count ) {
+		// 						$counter++;
+		// 					} else {
+		// 						if( str_contains($onHandDocuments[$index]->title, 'Photocopy') ) {
 									
-									if(!$this->ifDocsExist($allRcvdDocs, $onHandDocuments[$index]->id)) {
-										$allRcvdDocs[] = [
-											'id' => $onHandDocuments[$index]->id,
-											'count' => 0
-										];
-									}
+		// 							if(!$this->ifDocsExist($allRcvdDocs, $onHandDocuments[$index]->id)) {
+		// 								$allRcvdDocs[] = [
+		// 									'id' => $onHandDocuments[$index]->id,
+		// 									'count' => 0
+		// 								];
+		// 							}
 
-									$docIndex = $this->getDocIndex($allRcvdDocs, $onHandDocuments[$index]->id);
+		// 							$docIndex = $this->getDocIndex($allRcvdDocs, $onHandDocuments[$index]->id);
 
-									if( $allRcvdDocs[$docIndex]['count'] < $onHandDocuments[$index]->count ) {
-                    $allRcvdDocs[$docIndex]['count'] += $clientReportDocument['count'];
+		// 							if( $allRcvdDocs[$docIndex]['count'] < $onHandDocuments[$index]->count ) {
+    //                 $allRcvdDocs[$docIndex]['count'] += $clientReportDocument['count'];
                     
-									} else {
-										$allRcvdDocs[$docIndex]['count'] += $clientReportDocument['count'];
-										$counter++;
-									}
-								}
-							}
-						}
-					}
+		// 							} else {
+		// 								$allRcvdDocs[$docIndex]['count'] += $clientReportDocument['count'];
+		// 								$counter++;
+		// 							}
+		// 						}
+		// 					}
+		// 				}
+		// 			}
 				
 
-			}
+    // 	}
+    
+    $clientServicesId = ClientService::where('client_id', $clientId)
+                        ->where('active', 1)->pluck('id')->toArray();
+                        
+    $clientReports = ClientReport::with('clientReportDocuments')
+                    ->whereIn('client_service_id', $clientServicesId)
+                    ->whereHas('serviceProcedure', function($query) {
+                      $query->where('step', 1);
+                    })
+                    ->orderBy('id', 'desc')
+                    ->get();
+
+    if( count($clientReports) > 0 ) {
+      $onHandDocuments = OnHandDocument::where('client_id', $clientId)->join('documents', 'on_hand_documents.document_id', '=', 'documents.id')->get();
+
+      $clientDocsArr = [];
+      $clientArray = [];
+      $allRcvdDocs = [];
+      $docLogData = [];
+
+      foreach( $clientReports as $clientReport ) {
+        if( !in_array($clientReport->client_service_id, $clientDocsArr) ) {
+
+          array_push($clientDocsArr, $clientReport->client_service_id);
+
+          $clientArray[] = $clientReport;
+
+        }
+      }
+
+      $clientArray = collect($clientArray)->sortBy('client_service_id')->toArray();
+
+      foreach( $clientArray as $clientReport ) {
+
+        $counter = 0;
+        $docsDetail = '';
+
+        // $docLogData = [];
+
+        foreach( $clientReport['client_report_documents'] as $cli => $clientReportDocument ) {
+          $index = -1;
+
+          foreach( $onHandDocuments as $i => $onHandDocument ) {
+            if( $clientReportDocument['document_id'] == $onHandDocument->document_id ) {
+              $index = $i;
+            }
+          }
+
+          if( $index == -1 ) {
+            // $docLogData[] = [
+            //   'type' => 'Dont exist',
+            //   'document_id' => $clientReportDocument['document_id'], 
+            //   'log_id' => 0,
+            //   'count' => 0,
+            //   'pending_count' => $clientReportDocument['count'],
+            //   // 'previous_on_hand' => $onHandDocuments[$index]->count - $allRcvdDocs[$docIndex]['count'],
+            //   'previous_on_hand' => 0,
+            //   'created_at' => Carbon::now(),
+            //   'updated_at' => Carbon::now()
+            // ];
+            $counter++;
+          } else {
+            if( $clientReportDocument['count'] > $onHandDocuments[$index]->count ) {
+              
+              $docLogData[] = [
+                'type' => 'greater than',
+                'document_id' => $clientReportDocument['document_id'], 
+                'log_id' => 0,
+                'count' => $clientReportDocument['count'],
+                'pending_count' => $clientReportDocument['count'],
+                // 'previous_on_hand' => $onHandDocuments[$index]->count - $allRcvdDocs[$docIndex]['count'],
+                'previous_on_hand' => $onHandDocuments[$index]->count,
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now()
+              ];
+              $counter++;
+
+            } else {
+
+              if( str_contains($onHandDocuments[$index]->title, 'Photocopy') ) {
+
+                if(!$this->ifDocsExist($allRcvdDocs, $onHandDocuments[$index]->id)) {
+                  $allRcvdDocs[] = [
+                    'id' => $onHandDocuments[$index]->id,
+                    'count' => 0
+                  ];
+                }
+
+                $docIndex = $this->getDocIndex($allRcvdDocs, $onHandDocuments[$index]->id);
+
+                if( $allRcvdDocs[$docIndex]['count'] < $onHandDocuments[$index]->count ) {
+                  $allRcvdDocs[$docIndex]['count'] += $clientReportDocument['count'];
+
+                } else {
+                  $docLogData[] = [
+                    'type' => 'less than',
+                    'client_report_id' => $clientReport['id'],
+                    'document_id' => $clientReportDocument['document_id'], 
+                    'log_id' => 0,
+                    'count' => $clientReportDocument['count'],
+                    'pending_count' => $clientReportDocument['count'],
+                    // 'previous_on_hand' => $onHandDocuments[$index]->count - $allRcvdDocs[$docIndex]['count'],
+                    'previous_on_hand' => $onHandDocuments[$index]->count,
+                    'created_at' => Carbon::now(),
+                    'updated_at' => Carbon::now()
+                  ];
+                  $counter++;
+                }
+
+              }
+
+            }
+          }
+        }
+
+        
+        // foreach($docLogData as $dlc) {
+
+        //   $getDocLog = DocumentLog::where('document_id', $dlc['document_id'])
+        //               ->where('log_id', $dlc['log_id'])
+        //               ->latest()->first();
+
+        //   if($getDocLog) {
+        //     $updateDocLog = DocumentLog::where('id', $getDocLog->id)
+        //                 ->update([
+        //                   'count' => $dlc['count'],
+        //                   'previous_on_hand' => $dlc['previous_on_hand']
+        //                 ]);
+        //   }
+
+        // }
+        
+
+      }
+    }
 		
 	
 		$response['data'] = $clientDocsArr;
 		$response['array_data'] = $clientArray;
 		$response['docCount'] = $onHandDocuments;
     $response['allReceived'] = $allRcvdDocs;
+    $response['docLogData'] = $docLogData;
     
     // $cs = ClientService::findOrfail($clientId);
 
