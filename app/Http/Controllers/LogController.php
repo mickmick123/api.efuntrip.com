@@ -530,13 +530,13 @@ class LogController extends Controller
 
     public function getDocumentLogs($client_id) {
 
-       $documentLogs = DB::table('logs as l')->where('client_id', $client_id)
-            ->select(DB::raw('l.id,l.label, l.log_type, l.id, l.processor_id, l.service_procedure_id, l.detail, l.detail_cn, l.label, l.amount, l.log_type, l.log_date, l.created_at'))
-            ->join('service_procedures as s_p', 's_p.id', 'l.service_procedure_id')
-            ->whereNotIn('s_p.action_id', [9]) //Action prepared
-            ->where('l.log_type', 'Document')
-            ->groupBy('l.log_date')
-            ->orderBy('l.id', 'desc')
+       $documentLogs = DB::table('logs')->where('client_id', $client_id)
+            ->select(DB::raw('id, label, log_type, processor_id, service_procedure_id, detail, detail_cn, label, amount, log_type, log_date, created_at'))
+            //->where('l.group_id', null)
+            ->where('log_type', 'Document')
+            ->where('label', 'not like', "%Prepare%")
+            ->groupBy('log_date')
+            ->orderBy('id', 'desc')
             ->get();
 
         $data = [];
