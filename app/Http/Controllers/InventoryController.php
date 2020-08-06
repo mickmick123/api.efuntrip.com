@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Inventory;
 use App\InventoryLogs;
+use App\InventoryLocation;
+use App\User;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\DB;
 use App\InventoryParentCategory;
@@ -13,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Helpers\PageHelper;
 use Auth;
+use Carbon\Carbon;
 
 class InventoryController extends Controller
 {
@@ -128,6 +131,7 @@ class InventoryController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
+            $user = auth()->user();
             $inv = new Inventory;
             $inv->company_id = $request->company_id;
             $inv->category_id = $request->category_id;
@@ -140,24 +144,38 @@ class InventoryController extends Controller
             $inv->description = $request->description;
             $inv->specification = $request->specification;
             $inv->type = $request->type;
-            $inv->purchase_price = $request->purchase_price;
-            $inv->or = $request->or;
             $inv->unit = $request->unit;
             $inv->created_at = strtotime("now");
             $inv->updated_at = strtotime("now");
             $inv->save();
 
+            $qty = 0;
             foreach (json_decode($request->location_storage, true) as $k=>$v) {
                 if($v["quantity".$k] !== null && $v["location".$k] !== null){
-                    $loc = new InventoryLocation;
-                    $loc->inventory_id = $inv->inventory_id;
-                    $loc->qty = $v["quantity".$k];
-                    $loc->location = $v["location".$k];
-                    $loc->created_at = strtotime("now");
-                    $loc->updated_at = strtotime("now");
-                    $loc->save();
+                    $qty = $qty + $v["quantity".$k];
+                    for($i = 0; $i < $v["quantity".$k]; $i++){
+                        $ass = new InventoryAssigned;
+                        $ass->inventory_id = $inv->inventory_id;
+                        $ass->model = $request->model;
+                        $ass->serial = $request->serial_no;
+                        $ass->hasOR = $request->or;
+                        $ass->purchase_price = $request->purchase_price;
+                        $ass->location_site = $v["location".$k];
+                        $ass->created_by = $user->id;
+                        $ass->updated_by = $user->id;
+                        $ass->created_at = strtotime("now");
+                        $ass->updated_at = strtotime("now");
+                        $ass->save();
+                    }
                 }
             }
+            $ilog = new InventoryLogs;
+            $ilog->inventory_id = $inv->inventory_id;
+            $ilog->type = 'Stored';
+            $ilog->reason = $qty;
+            $ilog->created_by = $user->id;
+            $ilog->created_at = strtotime("now");
+            $ilog->save();
 
             $response['status'] = 'Success';
             $response['code'] = 200;
@@ -638,30 +656,23 @@ class InventoryController extends Controller
 
     public function getNewlyAdded()
     {
-        $newlyAdded = DB::table('inventory')
-            ->select(DB::raw('co.name as company, category_id, inventory.company_id, inventory.name, inventory.inventory_id'))
-            ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
+        $newlyAdded = DB::table('inventory as in')
+            ->leftjoin('company as co', 'in.company_id', 'co.company_id')
             ->orderBy('inventory_id','DESC')
             ->limit(10)
-            ->get();
+            ->get(['in.*','co.name AS company']);
         $i=0;
         foreach($newlyAdded as $n){
-            $locQty[$i] = DB::table('inventory_location')->select(DB::raw('SUM(qty) AS total_stored'))
-                ->where([["inventory_id", $n->inventory_id],["status", 1]])
-                ->groupBy('inventory_id')
-                ->pluck('total_stored');
-            $a = count($locQty[$i])==1?(int)$locQty[$i][0]:0;
-            $assignedQty[$i] = DB::table('inventory_assigned')->select(DB::raw('SUM(assigned_qty) AS total_assigned'))
-                ->where([["inventory_id", $n->inventory_id],["status", 1]])
-                ->groupBy('inventory_id')
-                ->pluck('total_assigned');
-            $b = count($assignedQty[$i])==1?(int)$assignedQty[$i][0]:0;
-
+            $assignedDate = InventoryAssigned::where('inventory_id',$n->inventory_id)->orderBy('updated_at','DESC')->limit(1)->get()[0];
+            $n->total_asset = InventoryAssigned::where('inventory_id',$n->inventory_id)->get()->count();
+            $n->datetime = Carbon::createFromTimestamp($assignedDate->updated_at)->format('m/d/Y g:i:s A');
+            $n->action_done = InventoryLogs::where('inventory_id',$n->inventory_id)->orderBy('created_at','DESC')->limit(1)->get()[0];
+            $n->operator = User::where('id',1)->get()[0];
             $nparent = InventoryParentCategory::where('inventory_parent_category.category_id',$n->category_id)
                 ->where('inventory_parent_category.company_id',$n->company_id)
-                ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')->get();
-            $n->item_name = $n->name;
-            $n->total_asset = $a + $b;
+                ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')
+                ->get();
+
             foreach($nparent as $np){
                 $tree = $np->parents->reverse();
                 $j=0;
@@ -677,6 +688,7 @@ class InventoryController extends Controller
         $response['status'] = 'Success';
         $response['code'] = 200;
         $response['data'] = $newlyAdded;
+
         return Response::json($response);
     }
 
@@ -926,6 +938,19 @@ class InventoryController extends Controller
             $response['code'] = 200;
             $response['data'] = [];
         }
+        return Response::json($response);
+    }
+
+    public function getPurchaseHistory(Request $request){
+        $phis = InventoryAssigned::where('inventory_id',$request->inventory_id)->get();
+
+        foreach ($phis as $v){
+            $v->date_purchase = Carbon::createFromTimestamp($v->date_purchase)->format('m/d/Y g:i:s A');
+        }
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $phis;
 
         return Response::json($response);
     }
