@@ -816,9 +816,9 @@ class InventoryController extends Controller
 
     public function transferInventory(Request $request) {
         $validator = Validator::make($request->all(), [
-            'id' => 'required',
-            'newLoc' => 'required',
-            'qty' => 'required|integer|min:1'
+            'assigned_id' => 'required',
+            'inventory_id' => 'required',
+            'location' => 'required'
         ]);
         $response = [];
         if($validator->fails()) {
@@ -826,27 +826,23 @@ class InventoryController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
-            $location = InventoryLocation::where("id", $request->id)->first();
-            if(is_numeric($request->newLoc)){
-                $newLoc = InventoryLocation::where("id", $request->newLoc)->first();
-                $n = InventoryLocation::find($request->newLoc);
-                $n->qty = $request->qty + $newLoc->qty;
-                $n->updated_at = strtotime("now");
-                $n->save();
-            }else{
-                $n = new InventoryLocation;
-                $n->inventory_id = $location->inventory_id;
-                $n->qty = $request->qty;
-                $n->location = $request->newLoc;
-                $n->status = 1;
-                $n->created_at = strtotime("now");
-                $n->updated_at = 0;
-                $n->save();
-            }
-            $u = InventoryLocation::find($request->id);
-            $u->qty = $location->qty - $request->qty;
-            $u->updated_at = strtotime("now");
-            $u->save();
+            $now = strtotime("now");;
+            $items = InventoryAssigned::where("id",$request->assigned_id)->first();
+
+            //Logs
+            $user=Auth::user();
+            $log = new InventoryLogs;
+            $log->inventory_id = $request->inventory_id;
+            $log->type = "Transferred";
+            $log->reason = "1 $request->item_name has been transferred from $items->location_site to $request->location";
+            $log->created_by = $user->id;
+            $log->created_at = $now;
+            $log->save();
+
+            $data = InventoryAssigned::find($request->assigned_id);
+            $data->location_site = $request->location;
+            $data->updated_at = $now;
+            $data->save();
 
             $response['status'] = 'Success';
             $response['code'] = 200;
