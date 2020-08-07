@@ -369,6 +369,16 @@ class InventoryController extends Controller
         $ca_id = intval($request->input("category_id", 0));
         $page = intval($request->input("page", 1));
         $pageSize = intval($request->input("limit", 20));
+        $sort = $request->input("sort", "");
+        if(empty($sort))
+        {
+            $sort_field = "inventory_id";
+            $sort_order = "desc";
+        }else{
+            $x = explode("-",$sort);
+            $sort_field = $x[0];
+            $sort_order = $x[1];
+        }
 
         $any = array();
         if ($ca_id != "")
@@ -436,38 +446,34 @@ class InventoryController extends Controller
         $page = $page_obj->curr_page;
 
         $list = DB::table('inventory')
-            ->select(DB::raw('co.name as company_name, inventory.*'))
+            ->select(DB::raw('
+                co.name as company_name, inventory.*,
+                (SELECT COUNT(id) from inventory_assigned a WHERE a.inventory_id = inventory.inventory_id AND a.status !=3) as qty
+            '))
             ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
             ->where($filter)
             ->whereIn("category_id", $item_found)
+            ->orderBy($sort_field,$sort_order)
             ->limit($limit)->offset(($page - 1) * $limit)->get()->toArray();
         $i=0;
         foreach($list as $n){
-            $assignedQty[$i] = DB::table('inventory_assigned')->select(DB::raw('COUNT(id) AS total_qty'))
-                ->where([["inventory_id", $n->inventory_id]])
-                ->whereIn("status", [1,2])
-                ->pluck('total_qty');
-            $b = count($assignedQty[$i])==1?(int)$assignedQty[$i][0]:0;
-
             $nparent = InventoryParentCategory::where('inventory_parent_category.category_id',$n->category_id)
                 ->where('inventory_parent_category.company_id',$n->company_id)
                 ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')->get();
             $n->created_at = gmdate("F j, Y", $n->created_at);
             $n->updated_at = gmdate("F j, Y", $n->updated_at);
-            //$n->or = (string)$n->or;
-            $n->qty = $b;
-            $n->total_assigned = $b;
             foreach($nparent as $np){
                 $tree = $np->parents->reverse();
                 $n->item_name = $np->name;
                 $j=0;
                 foreach($tree as $t){
                     $n->x[$j] = $t->name;
-
                     $n->asset_name = implode(" | ", $n->x);
+                    $n->path = implode(" | ", $n->x)." | ".$n->item_name;
                     $j++;
                 }
             }
+
 
             $i++;
         }
@@ -752,9 +758,14 @@ class InventoryController extends Controller
                 ->where([["inventory_id", $request->inventory_id],["location_site","=",$n->location],["status", 2]])
                 ->groupBy('location_site')
                 ->pluck('remaining');
+            $assigned = InventoryAssigned::select(DB::raw('COUNT(id) as remaining'))
+                ->where([["inventory_id", $request->inventory_id],["location_site","=",$n->location],["status", 1]])
+                ->groupBy('location_site')
+                ->pluck('remaining');
 
             $n->qty = count($total_qty)>0?$total_qty[0]:0;
             $n->remaining = count($remaining)>0?$remaining[0]:0;
+            $n->assigned = count($assigned)>0?$assigned[0]:0;
         }
 
         $response['status'] = 'Success';
