@@ -1189,36 +1189,38 @@ class ReportController extends Controller
 			} else {
 				$detail .= ', ';
 			}
-		}
+    }
+    
+      // // logs
+      // $log = Log::create([
+      //   'client_id' => $user['id'],
+      //   'processor_id' => $processorId,
+      //   'log_type' => 'Document',
+      //   'detail' => $detail,
+      //   'label' => $action,
+      //   'log_date' => Carbon::now()->toDateString()
+      // ]);
 
-		// logs
-		$log = Log::create([
-			'client_id' => $user['id'],
-			'processor_id' => $processorId,
-			'log_type' => 'Document',
-			'detail' => $detail,
-			'label' => $action,
-			'log_date' => Carbon::now()->toDateString()
-		]);
+      // // document_log
+      // foreach( $documents as $document ) {
+      //       $previousOnHand = 0;
 
-		// document_log
-		foreach( $documents as $document ) {
-	        $previousOnHand = 0;
+      //       $onHandDocument = OnHandDocument::where('client_id', $user['id'])
+      //         ->where('document_id', $document['id'])->first();
 
-	        $onHandDocument = OnHandDocument::where('client_id', $user['id'])
-	        	->where('document_id', $document['id'])->first();
+      //       if( $onHandDocument ) {
+      //         $previousOnHand = $onHandDocument->count;
+      //       }
 
-	        if( $onHandDocument ) {
-	        	$previousOnHand = $onHandDocument->count;
-          }
+      //       if($document['count'] > 0) {
+      //         $log->documents()->attach($document['id'], [
+      //           'count' => $document['count'],
+      //           'previous_on_hand' => $previousOnHand
+      //         ]);
+      //       }
+      //   }
+    
 
-          if($document['count'] > 0) {
-            $log->documents()->attach($document['id'], [
-              'count' => $document['count'],
-              'previous_on_hand' => $previousOnHand
-            ]);
-          }
-	    }
 	}
 
 	private function handleStandAloneOnHandDocuments($action, $user) {
