@@ -547,6 +547,7 @@ class InventoryController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
+            $user = Auth::user();
             $inv = InventoryAssigned::find($request->id);
             $inv->assigned_to = $request->assigned_to;
             $inv->location_site = $request->location_site;
@@ -557,6 +558,7 @@ class InventoryController extends Controller
             if($request->serial !== null) {
                 $inv->serial = $request->serial;
             }
+            $inv->updated_by = $user->id;
             $inv->updated_at = strtotime("now");
             $inv->save();
 
@@ -941,6 +943,8 @@ class InventoryController extends Controller
                 $data->remarks = $val["remarks".$key];
                 $data->location_site = $val["location".$key];
                 $data->status = 2;
+                $data->created_by = $user->id;
+                $data->updated_by = $user->id;
                 $data->created_at = strtotime("now");
                 $data->updated_at = strtotime("now");
                 $data->save();
