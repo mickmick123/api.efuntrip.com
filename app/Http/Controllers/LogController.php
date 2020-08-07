@@ -532,7 +532,6 @@ class LogController extends Controller
 
        $documentLogs = DB::table('logs')->where('client_id', $client_id)
             ->select(DB::raw('id, label, log_type, processor_id, service_procedure_id, detail, detail_cn, label, amount, log_type, log_date, created_at'))
-            //->where('l.group_id', null)
             ->where('log_type', 'Document')
             ->where('label', 'not like', "%Documents Needed%")
             ->where('label', 'not like', "%Prepare%")

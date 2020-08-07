@@ -564,9 +564,6 @@ class ReportController extends Controller
 	        // 	]);
           // }
           
-          // if($label === 'Prepare required documents, the following documents are needed') {
-          //   $this->handleUpdateStatus($cs->client_id, 1, null, 'Prepare required documents, the following documents are needed');
-          // }
 
 	        // Missing documents
 	        if( $actionName != 'Filed' ) {
@@ -717,6 +714,15 @@ class ReportController extends Controller
         
                           if( ($allRcvdDocs[$docIndex]['count'] + $clientReportDocument['count']) < $onHandDocuments[$index]->count ) {
                             $allRcvdDocs[$docIndex]['count'] += $clientReportDocument['count'];
+                            $docLogData[] = [
+                              'document_id' => $clientReportDocument['document_id'], 
+                              'log_id' => 0,
+                              'count' => $clientReportDocument['count'],
+                              'pending_count' => $clientReportDocument['count'],
+                              'previous_on_hand' => $onHandDocuments[$index]->count,
+                              'created_at' => Carbon::now(),
+                              'updated_at' => Carbon::now()
+                            ];
         
                           } else {
                             $docLogData[] = [
@@ -1493,16 +1499,16 @@ class ReportController extends Controller
 						}
 
 						if( $index == -1 ) {
-              $docLogData[] = [
-                'document_id' => $clientReportDocument['document_id'], 
-                'log_id' => 0,
-                'count' => 0,
-                'pending_count' => $clientReportDocument['count'],
-                // 'previous_on_hand' => $onHandDocuments[$index]->count - $allRcvdDocs[$docIndex]['count'],
-                'previous_on_hand' => 0,
-                'created_at' => Carbon::now(),
-                'updated_at' => Carbon::now()
-              ];
+              // $docLogData[] = [
+              //   'document_id' => $clientReportDocument['document_id'], 
+              //   'log_id' => 0,
+              //   'count' => 0,
+              //   'pending_count' => $clientReportDocument['count'],
+              //   // 'previous_on_hand' => $onHandDocuments[$index]->count - $allRcvdDocs[$docIndex]['count'],
+              //   'previous_on_hand' => 0,
+              //   'created_at' => Carbon::now(),
+              //   'updated_at' => Carbon::now()
+              // ];
 							$counter++;
 						} else {
 							if( $clientReportDocument['count'] > $onHandDocuments[$index]->count ) {
@@ -1617,18 +1623,37 @@ class ReportController extends Controller
                                         'category_id' => $categoryData->id
                                       ]);
 
-                $storeServiceProcedure = ServiceProcedure::create([
-                      'service_id' => $cs->service_id,
-                      'name' => 'Prepared Documents',
-                      'step' => 1,
-                      'action_id' => $actionData->id,
-                      'category_id' => $categoryData->id,
-                      'is_required' => 1,
-                      'status_upon_completion' => 'on process',
-                      'documents_to_display' => 'suggested',
-                      'is_suggested_count' => 1
+                $checkServiceProcedure = ServiceProcedure::where('service_id', $cs->service_id)
+                                        // ->where('name', 'Prepared Documents')
+                                        ->where('name', 'Documents Needed')
+                                        ->where('step', 1)
+                                        ->where('action_id', $actionData->id)
+                                        ->where('category_id', $categoryData->id)
+                                        ->first();
+                
+                if(!$checkServiceProcedure) {
+                  
+                  $storeServiceProcedure = ServiceProcedure::create([
+                        'service_id' => $cs->service_id,
+                        // 'name' => 'Prepared Documents',
+                        'name' => 'Documents Needed',
+                        'step' => 1,
+                        'action_id' => $actionData->id,
+                        'category_id' => $categoryData->id,
+                        'is_required' => 1,
+                        'status_upon_completion' => 'on process',
+                        'documents_to_display' => 'suggested',
+                        'is_suggested_count' => 1
 
-                ]);
+                  ]);
+                  
+                  $serviceProcedID = $storeServiceProcedure->id;
+                } else {
+                  $serviceProcedID = $checkServiceProcedure['id'];
+                }
+
+                
+
                 // End of Add service procedure
 
 
@@ -1638,7 +1663,7 @@ class ReportController extends Controller
                       'client_service_id' => $cs->id,
                       'client_id' => $cs->client_id,
                       'group_id' => $cs->group_id,
-                      'service_procedure_id' => $storeServiceProcedure->id,
+                      'service_procedure_id' => $serviceProcedID,
                       'processor_id' => Auth::user()->id,
                       'log_type' => 'Document',
                       'detail' => $docsDetail,
@@ -1651,8 +1676,6 @@ class ReportController extends Controller
                     $dlc['log_id'] = $docLogQuery->id;
   
                     DB::table('document_log')->insert($dlc);
-  
-  
   
                   }
   
@@ -1737,25 +1760,40 @@ class ReportController extends Controller
                                     'category_id' => $categoryData->id
                                   ]);
 
-            $storeServiceProcedure = ServiceProcedure::create([
-                  'service_id' => $cs->service_id,
-                  'name' => 'Prepared Documents',
-                  'step' => 1,
-                  'action_id' => $actionData->id,
-                  'category_id' => $categoryData->id,
-                  'is_required' => 1,
-                  'status_upon_completion' => 'on process',
-                  'documents_to_display' => 'suggested',
-                  'is_suggested_count' => 1
+            $checkServiceProcedure = ServiceProcedure::where('service_id', $cs->service_id)
+                                  ->where('name', 'Documents Needed')
+                                  ->where('step', 1)
+                                  ->where('action_id', $actionData->id)
+                                  ->where('category_id', $categoryData->id)
+                                  ->first();
 
-            ]);
+            if(!$checkServiceProcedure) {
+                  
+              $storeServiceProcedure = ServiceProcedure::create([
+                    'service_id' => $cs->service_id,
+                    // 'name' => 'Prepared Documents',
+                    'name' => 'Documents Needed',
+                    'step' => 1,
+                    'action_id' => $actionData->id,
+                    'category_id' => $categoryData->id,
+                    'is_required' => 1,
+                    'status_upon_completion' => 'on process',
+                    'documents_to_display' => 'suggested',
+                    'is_suggested_count' => 1
+
+              ]);
+              
+              $serviceProcedID = $storeServiceProcedure->id;
+            } else {
+              $serviceProcedID = $checkServiceProcedure['id'];
+            }
             // End of Add service procedure
 
 						Log::create([
 								'client_service_id' => $cs->id,
 								'client_id' => $cs->client_id,
                 'group_id' => $cs->group_id,
-                'service_procedure_id' => $storeServiceProcedure->id,
+                'service_procedure_id' => $serviceProcedID,
 								'processor_id' => Auth::user()->id,
 								'log_type' => 'Status',
 								'detail' => $detail,
