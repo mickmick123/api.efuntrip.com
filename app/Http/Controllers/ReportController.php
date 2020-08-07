@@ -548,21 +548,23 @@ class ReportController extends Controller
 	        ]);
 
 	        // Document log
-	        // foreach( $documents as $document ) {
-	        // 	$previousOnHand = 0;
+	        if( $actionName == 'Filed' || $actionName == 'Released' ) {
+		        foreach( $documents as $document ) {
+		        	$previousOnHand = 0;
 
-	        // 	$onHandDocument = OnHandDocument::where('client_id', $cs->client_id)
-	        // 		->where('document_id', $document['id'])->first();
+		        	$onHandDocument = OnHandDocument::where('client_id', $cs->client_id)
+		        		->where('document_id', $document['id'])->first();
 
-	        // 	if( $onHandDocument ) {
-	        // 		$previousOnHand = $onHandDocument->count;
-	        // 	}
+		        	if( $onHandDocument ) {
+		        		$previousOnHand = $onHandDocument->count;
+		        	}
 
-	        // 	$log->documents()->attach($document['id'], [
-	        // 		'count' => $document['count'],
-	        // 		'previous_on_hand' => $previousOnHand
-	        // 	]);
-          // }
+		        	$log->documents()->attach($document['id'], [
+		        		'count' => $document['count'],
+		        		'previous_on_hand' => $previousOnHand
+		        	]);
+	            }
+	        }
           
 
 	        // Missing documents
@@ -1190,39 +1192,35 @@ class ReportController extends Controller
 				$detail .= ', ';
 			}
     }
-
-      if($action === 'Received documents') {
-        $action = 'Received Documents from Client';
-      }
     
-      // logs
-      $log = Log::create([
-        'client_id' => $user['id'],
-        'processor_id' => $processorId,
-        'log_type' => 'Document',
-        'detail' => $detail,
-        'label' => $action,
-        'log_date' => Carbon::now()->toDateString()
-      ]);
+      // // logs
+      // $log = Log::create([
+      //   'client_id' => $user['id'],
+      //   'processor_id' => $processorId,
+      //   'log_type' => 'Document',
+      //   'detail' => $detail,
+      //   'label' => $action,
+      //   'log_date' => Carbon::now()->toDateString()
+      // ]);
 
-      // document_log
-      foreach( $documents as $document ) {
-            $previousOnHand = 0;
+      // // document_log
+      // foreach( $documents as $document ) {
+      //       $previousOnHand = 0;
 
-            $onHandDocument = OnHandDocument::where('client_id', $user['id'])
-              ->where('document_id', $document['id'])->first();
+      //       $onHandDocument = OnHandDocument::where('client_id', $user['id'])
+      //         ->where('document_id', $document['id'])->first();
 
-            if( $onHandDocument ) {
-              $previousOnHand = $onHandDocument->count;
-            }
+      //       if( $onHandDocument ) {
+      //         $previousOnHand = $onHandDocument->count;
+      //       }
 
-            if($document['count'] > 0) {
-              $log->documents()->attach($document['id'], [
-                'count' => $document['count'],
-                'previous_on_hand' => $previousOnHand
-              ]);
-            }
-        }
+      //       if($document['count'] > 0) {
+      //         $log->documents()->attach($document['id'], [
+      //           'count' => $document['count'],
+      //           'previous_on_hand' => $previousOnHand
+      //         ]);
+      //       }
+      //   }
     
 
 	}
@@ -1443,7 +1441,7 @@ class ReportController extends Controller
 		// 		->where('active', 1)->where('status', $status)->pluck('id')->toArray();
 		// }
 		$clientServicesId = ClientService::where('client_id', $clientId)
-				->where('active', 1)->pluck('id')->toArray();
+				->where('active', 1)->where('status','pending')->pluck('id')->toArray();
 
 		$clientReports = ClientReport::with('clientReportDocuments')
 			->whereIn('client_service_id', $clientServicesId)
@@ -1665,56 +1663,23 @@ class ReportController extends Controller
 
                 if($cs->status === 'pending') {
 
-                  // $checkDocLogQuery = Log::where('client_id', $cs->client_id)
-                  //                     // ->where('group_id', $cs->group_id)
-                  //                     // ->where('processor_id', Auth::user()->id)
-                  //                     ->where('log_type', 'Document')
-                  //                     ->where('label', 'like', '%'.$docLabel.'%')
-                  //                     // ->where('log_date', 'like', Carbon::now()->toDateString())
-                  //                     ->latest()
-                  //                     ->first();
-
-                  // if(!$checkDocLogQuery) {
-                    $docLogQuery = Log::create([
-                        'client_service_id' => $cs->id,
-                        'client_id' => $cs->client_id,
-                        'group_id' => $cs->group_id,
-                        // 'service_procedure_id' => $serviceProcedID,
-                        'processor_id' => Auth::user()->id,
-                        'log_type' => 'Document',
-                        'detail' => $docsDetail,
-                        'label' => $docLabel,
-                        'log_date' => Carbon::now()->toDateString()
-                    ]);
-
-                    $logID = $docLogQuery->id;
-                  // } else {
-                  //   $logID = $checkDocLogQuery['id'];
-
-                  //   $updateLogQuery = Log::where('id', $logID)
-                  //                     ->update([
-                  //                       'client_service_id' => $cs->id,
-                  //                       // 'service_procedure_id' => $serviceProcedID
-                  //                     ]);
-
-                  // }
-
-                  
+                  $docLogQuery = Log::create([
+                      'client_service_id' => $cs->id,
+                      'client_id' => $cs->client_id,
+                      'group_id' => $cs->group_id,
+                      'service_procedure_id' => $serviceProcedID,
+                      'processor_id' => Auth::user()->id,
+                      'log_type' => 'Document',
+                      'detail' => $docsDetail,
+                      'label' => $docLabel,
+                      'log_date' => Carbon::now()->toDateString()
+                  ]);
   
                   foreach($docLogData as $dlc) {
   
-                    $dlc['log_id'] = $logID;
-
-                    $checkDocLog = DB::table('document_log')
-                                  ->where('log_id', $dlc['log_id'])
-                                  ->where('document_id', $dlc['document_id'])
-                                  ->first();
-
-                    if(!$checkDocLog) {
-                      DB::table('document_log')->insert($dlc);
-                    }
+                    $dlc['log_id'] = $docLogQuery->id;
   
-                    
+                    DB::table('document_log')->insert($dlc);
   
                   }
   
