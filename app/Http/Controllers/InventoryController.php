@@ -668,25 +668,26 @@ class InventoryController extends Controller
         $sort = $request->sort;
         $search = $request->search;
 
-        $newlyAdded = DB::table('inventory as in')
-            ->select(['in.*','co.name AS company',
+        $newlyAdded = Inventory::select(['inventory.*',
+            DB::raw("(inventory.name) AS name"),
+            DB::raw("(co.name) AS company"),
                 'datetime' => function ($query) {
-                    $query->select(DB::raw("FROM_UNIXTIME(updated_at, '%m/%d/%Y %h:%i:%s %p')"))
+                    $query->select(DB::raw("FROM_UNIXTIME(updated_at, '%m/%d/%Y %h:%i:%s %p') AS datatime"))
                         ->from('inventory_assigned')
-                        ->whereColumn('inventory_id', 'in.inventory_id')
+                        ->whereColumn('inventory_id', 'inventory.inventory_id')
                         ->orderBy('updated_at','DESC')
                         ->limit(1);
                 },
                 'total_asset' => function ($query) {
                     $query->select(DB::raw("count('inventory_id')"))
                         ->from('inventory_assigned')
-                        ->whereColumn('inventory_id', 'in.inventory_id')
+                        ->whereColumn('inventory_id', 'inventory.inventory_id')
                         ->limit(1);
                 },
                 'action_done' => function ($query) {
                     $query->select('type')
                         ->from('inventory_logs')
-                        ->whereColumn('inventory_id', 'in.inventory_id')
+                        ->whereColumn('inventory_id', 'inventory.inventory_id')
                         ->orderBy('created_at','DESC')
                         ->limit(1);
                 },
@@ -694,25 +695,22 @@ class InventoryController extends Controller
                     $query->select('users.first_name')
                         ->from('inventory_assigned AS iass')
                         ->leftJoin('users','iass.created_by','users.id')
-                        ->whereColumn('iass.inventory_id', 'in.inventory_id')
+                        ->whereColumn('iass.inventory_id', 'inventory.inventory_id')
                         ->orderBy('iass.updated_at','DESC')
                         ->limit(1);
                 },
             ])
-            ->leftjoin('company as co', 'in.company_id', 'co.company_id')
-            ->where('datetime',$search)
+            ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
+            ->orHaving('datetime', 'LIKE','%'.$search.'%')
+            ->orHaving('total_asset', 'LIKE','%'.$search.'%')
+            ->orHaving('name','LIKE', '%'.$search.'%')
+            ->orHaving('company','LIKE', '%'.$search.'%')
+            ->orHaving('action_done', 'LIKE','%'.$search.'%')
+            ->orHaving('operator', 'LIKE','%'.$search.'%')
             ->when($sort != '', function ($q) use($sort){
                 $sort = explode('-' , $sort);
-                    return $q->orderBy($sort[0], $sort[1]);
+                return $q->orderBy($sort[0], $sort[1]);
             })->paginate($perPage);
-
-//        foreach($newlyAdded as $n){
-//            $assignedDate = InventoryAssigned::where('inventory_id',$n->inventory_id)->orderBy('updated_at','DESC')->limit(1)->get()[0];
-//            $n->total_asset = InventoryAssigned::where('inventory_id',$n->inventory_id)->whereNotIn('status',[3])->get()->count();
-//            $n->datetime = Carbon::createFromTimestamp($assignedDate->updated_at)->format('m/d/Y g:i:s A');
-//            $n->action_done = InventoryLogs::where('inventory_id',$n->inventory_id)->orderBy('created_at','DESC')->limit(1)->get()[0];
-//            $n->operator = User::where('id',1)->get()[0];
-//        }
 
         $response['status'] = 'Success';
         $response['code'] = 200;

@@ -3,9 +3,11 @@
 namespace App;
 
 use Illuminate\Database\Eloquent\Model;
+use JustBetter\PaginationWithHavings\PaginationWithHavings;
 
 class Inventory extends Model
 {
+    use PaginationWithHavings;
     protected $table = 'inventory';
     public $primaryKey  = 'inventory_id';
     public $timestamps = false;
