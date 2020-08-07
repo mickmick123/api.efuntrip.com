@@ -534,13 +534,12 @@ class LogController extends Controller
             ->select(DB::raw('id, label, log_type, processor_id, service_procedure_id, detail, detail_cn, label, amount, log_type, log_date, created_at'))
             //->where('l.group_id', null)
             ->where('log_type', 'Document')
+            ->where('label', 'not like', "%Documents Needed%")
             ->where('label', 'not like', "%Prepare%")
-            ->groupBy('log_date')
             ->orderBy('id', 'desc')
             ->get();
 
         $data = [];
-
         foreach( $documentLogs as $log ) {
 
            $payload = [];
@@ -563,11 +562,14 @@ class LogController extends Controller
 
             $displayDate = Carbon::parse($log->log_date)->format('F d, Y');
 
-            $data[] = [
-                    'display_date' => $displayDate,
-                    'info' => $log,
-                    'document_logs' =>$payload,
-            ];
+
+              $data[] = [
+                      'display_date' => $displayDate,
+                      'info' => $log,
+                      'document_logs' =>$payload,
+              ];
+
+
        }
 
         $response['status'] = 'Success';
