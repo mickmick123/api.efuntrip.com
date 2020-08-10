@@ -16,7 +16,7 @@ class LocationController extends Controller
         $response['code'] = 200;
         $response['data'] = $loc;
 
-        return Response::json($loc);
+        return Response::json($response);
     }
 
     public function getLocationDetail(Request $request){
@@ -26,6 +26,6 @@ class LocationController extends Controller
         $response['code'] = 200;
         $response['data'] = $loc;
 
-        return Response::json($loc);
+        return Response::json($response);
     }
 }
