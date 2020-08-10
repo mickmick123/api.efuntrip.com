@@ -535,6 +535,8 @@ class LogController extends Controller
             ->where('log_type', 'Document')
             ->where('label', 'not like', "%Documents Needed%")
             ->where('label', 'not like', "%Prepare%")
+            ->orWhere('label', 'like', "%Documents complete%")
+
             ->orderBy('id', 'desc')
             ->get();
 
