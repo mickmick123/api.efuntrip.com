@@ -669,8 +669,8 @@ class InventoryController extends Controller
         $search = $request->search;
 
         $newlyAdded = Inventory::select(['inventory.*',
-            DB::raw("(inventory.name) AS name"),
-            DB::raw("(co.name) AS company"),
+            DB::raw("(inventory.name) AS name,
+                (co.name) AS company"),
                 'datetime' => function ($query) {
                     $query->select(DB::raw("FROM_UNIXTIME(updated_at, '%m/%d/%Y %h:%i:%s %p') AS datatime"))
                         ->from('inventory_assigned')
