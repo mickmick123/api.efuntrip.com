@@ -715,7 +715,6 @@ class InventoryController extends Controller
         $response['status'] = 'Success';
         $response['code'] = 200;
         $response['data'] = $newlyAdded;
-        $response['request'] = [$sort,$search];
 
         return Response::json($response);
     }

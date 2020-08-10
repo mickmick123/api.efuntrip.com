@@ -95,6 +95,8 @@ class RouteServiceProvider extends ServiceProvider
             $this->mapInventoryRoutes();
 
             $this->mapCompanyRoutes();
+
+            $this->mapLocationRoutes();
     }
 
     /**
@@ -346,5 +348,13 @@ class RouteServiceProvider extends ServiceProvider
                 ->middleware('api')
                 ->namespace($this->namespace)
                 ->group(base_path('routes/api/company.php'));
+        }
+
+        protected function mapLocationRoutes()
+        {
+            Route::prefix('api/v1/location')
+                ->middleware('api')
+                ->namespace($this->namespace)
+                ->group(base_path('routes/api/location.php'));
         }
 }
