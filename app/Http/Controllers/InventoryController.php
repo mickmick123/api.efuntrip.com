@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Company;
 use App\Inventory;
 use App\InventoryLogs;
 use App\InventoryLocation;
@@ -446,6 +447,28 @@ class InventoryController extends Controller
         $limit = $page_obj->page_size;
         $page = $page_obj->curr_page;
 
+        if($co_id !== 0) {
+            $arr = array();
+            if($ca_id !== 0 ){
+                $arr[] = ['pc.parent_id', '=', $ca_id];
+            }
+            if($name == ""){
+                $arr[] = ['pc.parent_id', '=', $ca_id];
+            }
+            if($name !==""){
+                $arr[] = ['c.name','LIKE', $name];
+            }
+            $category = DB::table('inventory_parent_category AS pc')
+                ->leftJoin('company AS com', 'pc.company_id', '=', 'com.company_id')
+                ->leftJoin('inventory_category AS c', 'pc.category_id', '=', 'c.category_id')
+                ->where('pc.company_id', '=', $co_id)
+                ->where($arr)
+                ->orderBy('c.name')
+                ->get();
+        }else{
+            $category = Company::all();
+        }
+
         $list = DB::table('inventory')
             ->select(DB::raw('
                 co.name as company_name, inventory.*,
@@ -480,6 +503,7 @@ class InventoryController extends Controller
         }
 
         $data = array(
+            "category" => $category,
             "totalNum" => $page_obj->total_num,
             "currPage" => $page_obj->curr_page,
             "list" => $list,
