@@ -1337,15 +1337,82 @@ class ReportController extends Controller
 
 	public function releasedDocuments(Request $request) {
 		foreach( $request->users as $user ) {
-	        $action = 'Released documents';
+          $action = 'Released documents';
 
 			if( strlen(trim($user['recipient'])) > 0 ) {
 				$action .= ' to client\'s representative ' . $user['recipient'];
-			}
+      }
+
+          // Logs
+          $getUser = DB::table('users')->where('id', $user['id'])->first();
+          $getGroup = DB::table('group_user')->where('user_id', $user['id'])->first();
+
+          $groupID = ($getGroup) ? $getGroup['group_id'] : null;
+
+          $detail = '';
+
+          foreach( $user['documents'] as $index => $document ) {
+            $documentTitle = Document::findOrFail($document['id'])->title;
+      
+            $detail .= ' (' . $document['count'] . ')' . $documentTitle;
+      
+            if( $index == count($user['documents']) - 1 ) {
+              $detail .= '.';
+            } else {
+              $detail .= ', ';
+            }
+          }
+
+          if($detail !== '') {
+            $detail = $action . "\n" . $detail;
+          }
+          
+          $saveLog = Log::create([
+            'client_id' => $getUser->id,
+            'group_id' => $groupID,
+            'processor_id' => Auth::user()->id,
+            'log_type' => 'Document',
+            'detail' => $detail,
+            'label' => $action,
+            'log_date' => Carbon::now()->toDateString()
+          ]);
+
+          // End Logs
+
+          $docArray = [];
+      
+          foreach( $user['documents'] as $index => $document ) {
+            $onHandDocuments = DB::table('on_hand_documents')->where('client_id', $user['id'])->orderBy('id', 'desc')->get();
+
+            foreach($onHandDocuments as $onHandDocument) {
+
+              if($document['id'] === $onHandDocument->document_id) {
+
+                if(!in_array($document['id'], $docArray)) {
+
+                  if($document['count'] > 0) {
+                    DB::table('document_log')->insert([
+                      'document_id' => $document['id'],
+                      'log_id' => $saveLog->id,
+                      'count' => $document['count'],
+                      'pending_count' => 0,
+                      'previous_on_hand' => $onHandDocument->count,
+                      'created_at' => Carbon::now(),
+                      'updated_at' => Carbon::now()
+                    ]);
+                  }
+                  
+                  $docArray[] = $document['id'];
+                }
+              }
+
+            }
+          }
 
 	        $this->handleStandAloneLogDocumentLog($action, $user, $user['documents']);
 
-	        $this->handleStandAloneOnHandDocuments($action, $user);
+          $this->handleStandAloneOnHandDocuments($action, $user);
+
 		}
 
 		$response['status'] = 'Success';
@@ -1458,15 +1525,15 @@ class ReportController extends Controller
 			$status = 'on process';
 		}
 
-		// if( $_clientServiceId ) {
-		// 	$clientServicesId = ClientService::where('id', $_clientServiceId)
-		// 		->where('active', 1)->where('status', $status)->pluck('id')->toArray();
-		// } else {
-		// 	$clientServicesId = ClientService::where('client_id', $clientId)
-		// 		->where('active', 1)->where('status', $status)->pluck('id')->toArray();
-		// }
-		$clientServicesId = ClientService::where('client_id', $clientId)
-				->where('active', 1)->where('status','pending')->pluck('id')->toArray();
+		if( $_clientServiceId ) {
+			$clientServicesId = ClientService::where('id', $_clientServiceId)
+				->where('active', 1)->where('status', $status)->pluck('id')->toArray();
+		} else {
+			$clientServicesId = ClientService::where('client_id', $clientId)
+				->where('active', 1)->where('status', $status)->pluck('id')->toArray();
+		}
+		// $clientServicesId = ClientService::where('client_id', $clientId)
+		// 		->where('active', 1)->where('status','pending')->pluck('id')->toArray();
 
 		$clientReports = ClientReport::with('clientReportDocuments')
 			->whereIn('client_service_id', $clientServicesId)
