@@ -432,21 +432,6 @@ class InventoryController extends Controller
         $count = DB::table('inventory')->where($filter)
             ->whereIn("category_id", $item_found)->count();
 
-        if ($count==0)
-        {
-            $response['status'] = 'No results found.';
-            $response['code'] = 404;
-            $response['data'] = '';
-            return Response::json($response);
-        }
-
-        $page_obj->set_count($count);
-        if (empty($count)) {
-            return array();
-        }
-        $limit = $page_obj->page_size;
-        $page = $page_obj->curr_page;
-
         if($co_id !== 0) {
             $arr = array();
             if($ca_id !== 0 ){
@@ -468,6 +453,22 @@ class InventoryController extends Controller
         }else{
             $category = Company::all();
         }
+
+        if ($count==0)
+        {
+            $response['status'] = 'No results found.';
+            $response['code'] = 404;
+            $response['category'] = $category;
+            $response['data'] = '';
+            return Response::json($response);
+        }
+
+        $page_obj->set_count($count);
+        if (empty($count)) {
+            return array();
+        }
+        $limit = $page_obj->page_size;
+        $page = $page_obj->curr_page;
 
         $list = DB::table('inventory')
             ->select(DB::raw('
@@ -503,7 +504,6 @@ class InventoryController extends Controller
         }
 
         $data = array(
-            "category" => $category,
             "totalNum" => $page_obj->total_num,
             "currPage" => $page_obj->curr_page,
             "list" => $list,
@@ -513,6 +513,7 @@ class InventoryController extends Controller
 
         $response['status'] = 'Success';
         $response['code'] = 200;
+        $response['category'] = $category;
         $response['data'] = $data;
         return Response::json($response);
     }
