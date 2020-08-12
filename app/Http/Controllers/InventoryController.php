@@ -7,7 +7,6 @@ use App\Helpers\ArrayHelper;
 use App\Inventory;
 use App\InventoryLogs;
 use App\InventoryLocation;
-use App\User;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\DB;
 use App\InventoryParentCategory;
@@ -719,10 +718,10 @@ class InventoryController extends Controller
             DB::raw("(inventory.name) AS name,
                 (co.name) AS company"),
                 'datetime' => function ($query) {
-                    $query->select(DB::raw("FROM_UNIXTIME(updated_at, '%m/%d/%Y %h:%i:%s %p') AS datatime"))
-                        ->from('inventory_assigned')
+                    $query->select(DB::raw("FROM_UNIXTIME(created_at, '%m/%d/%Y %H:%i:%s') AS datatime"))
+                        ->from('inventory_logs')
                         ->whereColumn('inventory_id', 'inventory.inventory_id')
-                        ->orderBy('updated_at','DESC')
+                        ->orderBy('created_at','DESC')
                         ->limit(1);
                 },
                 'total_asset' => function ($query) {
