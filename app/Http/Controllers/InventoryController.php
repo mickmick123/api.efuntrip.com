@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Company;
+use App\Helpers\ArrayHelper;
 use App\Inventory;
 use App\InventoryLogs;
 use App\InventoryLocation;
@@ -38,6 +39,42 @@ class InventoryController extends Controller
         $response['status'] = 'Success';
         $response['code'] = 200;
         $response['data'] = $list;
+        return Response::json($response);
+    }
+
+    public function getTreeCategory(Request $request){
+        if(in_array($request->company_id,[null,0])){
+            $com = Company::all();
+            foreach($com as $index=>$value){
+                $com[$index] = Company::where('company_id',$value->company_id)->get();
+                foreach ($com[$index] as $k=>$v) {
+                    $v->sub_categories = InventoryParentCategory::with('inventories','subCategories')
+                        ->leftJoin('inventory_category as icat', 'icat.category_id', '=', 'inventory_parent_category.category_id')
+                        ->where([
+                            ['inventory_parent_category.company_id', $v->company_id],
+                            ['inventory_parent_category.parent_id', 0]
+                        ])
+                        ->get();
+                }
+            }
+            $tree = ArrayHelper::ArrayMerge($com);
+        }else{
+            $tree = Company::where('company_id',$request->company_id)->get();
+            foreach ($tree as $k=>$v) {
+                $v->sub_categories = InventoryParentCategory::with('inventories','subCategories')
+                    ->leftJoin('inventory_category as icat', 'icat.category_id', '=', 'inventory_parent_category.category_id')
+                    ->where([
+                        ['inventory_parent_category.company_id', $request->company_id],
+                        ['inventory_parent_category.parent_id', $request->category_id]
+                    ])
+                    ->get();
+            }
+        }
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $tree;
+
         return Response::json($response);
     }
 
@@ -123,7 +160,6 @@ class InventoryController extends Controller
             'name' => 'required',
             'description' => 'required',
             'type' => 'required',
-            'or' => 'required',
             'unit' => 'required',
         ]);
 
@@ -150,31 +186,10 @@ class InventoryController extends Controller
             $inv->updated_at = strtotime("now");
             $inv->save();
 
-            $qty = 0;
-            foreach (json_decode($request->location_storage, true) as $k=>$v) {
-                if($v["quantity".$k] !== null && $v["location".$k] !== null){
-                    $qty = $qty + $v["quantity".$k];
-                    for($i = 0; $i < $v["quantity".$k]; $i++){
-                        $ass = new InventoryAssigned;
-                        $ass->inventory_id = $inv->inventory_id;
-                        $ass->model = $request->model;
-                        $ass->serial = $request->serial_no;
-                        $ass->type = 'Purchased';
-                        $ass->hasOR = $request->or;
-                        $ass->purchase_price = $request->purchase_price;
-                        $ass->location_site = $v["location".$k];
-                        $ass->created_by = $user->id;
-                        $ass->updated_by = $user->id;
-                        $ass->created_at = strtotime("now");
-                        $ass->updated_at = strtotime("now");
-                        $ass->save();
-                    }
-                }
-            }
             $ilog = new InventoryLogs;
             $ilog->inventory_id = $inv->inventory_id;
             $ilog->type = 'Stored';
-            $ilog->reason = $qty;
+            $ilog->reason = $request->name.' has been created by '.$user->first_name;
             $ilog->created_by = $user->id;
             $ilog->created_at = strtotime("now");
             $ilog->save();
@@ -219,7 +234,7 @@ class InventoryController extends Controller
             }
             $response['status'] = 'Success';
             $response['code'] = 200;
-            $response['data'] = explode('.', $request->imgName);
+            $response['data'] = $categ;
         }
         return Response::json($response);
     }

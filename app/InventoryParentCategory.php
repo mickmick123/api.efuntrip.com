@@ -36,20 +36,8 @@ class InventoryParentCategory extends Model
 
     public function subCategories()
     {
-        return $this->hasMany(self::class, 'parent_id', 'category_id')
-                // ->where('company_id', $this->company_id)
-                // ->with('subCategories')
-                // ->with(['subCategories' => function($q) {
-                //     $q->where('company_id', $this->company_id);
-                // }])
-                // ->with('inventories', 'subCategories.inventories')
-                ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id');
-    }
-
-    public function subCategoriesWithInventories()
-    {
-        return $this->hasMany(self::class, 'parent_id', 'id')->with('inventories', 'subCategoriesWithInventories')
-            ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id');
+        return $this->hasMany(self::class, 'parent_id', 'category_id')->with('inventories', 'subCategories')
+            ->leftJoin('inventory_category as icat', 'icat.category_id', '=', 'inventory_parent_category.category_id')->orderBy('icat.name', 'asc');
     }
 
     public function inventories()

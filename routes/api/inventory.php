@@ -5,6 +5,7 @@ use Illuminate\Http\Request;
 Route::middleware('auth:api')->group(function() {
 
     Route::post('/get-all-inventory-categories','InventoryController@getAllInventoryCategories');
+    Route::post('/get-tree-category','InventoryController@getTreeCategory');
     Route::post('/get-tab-category','InventoryController@getTabCategory');
     Route::get('/get-all-inventory-lists','InventoryController@getAllInventoryLists');
     Route::get('/get-newly-added/{perPage?}','InventoryController@getNewlyAdded');
