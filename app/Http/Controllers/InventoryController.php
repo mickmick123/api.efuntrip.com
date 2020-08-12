@@ -450,8 +450,15 @@ class InventoryController extends Controller
                 ->where($arr)
                 ->orderBy('c.name')
                 ->get();
+            foreach ($category as $d) {
+                $d->isCompany = false;
+            }
         }else{
             $category = Company::all();
+
+            foreach ($category as $d) {
+                $d->isCompany = true;
+            }
         }
 
         if ($count==0)
