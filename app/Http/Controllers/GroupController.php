@@ -5,6 +5,7 @@ use Carbon\Carbon;
 use App\ClientService;
 
 use App\ClientTransaction;
+use App\ClientEwallet;
 
 use App\ContactNumber;
 
@@ -85,12 +86,45 @@ class GroupController extends Controller
     }
 
 
+    public function getGroupEwallet($id) {
+        $depo = ClientEWallet::where('group_id', $id)->where('type', 'Deposit')->sum('amount');
+
+        $withdraw = ClientEWallet::where('group_id', $id)->where('type', 'Refund')->sum('amount');
+
+        $groupActiveServices = ClientService::where('active', 1)->where('group_id', null)
+                                    ->where(function ($query) {
+                                                $query->where('status','!=', 'cancelled');
+                                            })->pluck('id');
+
+        $payment = ClientTransaction::where('group_id', $id)
+                    ->where('type', 'Payment')
+                    ->where(function ($q) {
+                        $q->where('client_service_id','!=',null);
+                    })
+                    ->whereIn('client_service_id', $groupActiveServices)
+                    ->sum('amount');
+
+        return $depo - ($withdraw + $payment);
+    }
+
     private function getGroupDeposit($id) {
         return ClientTransaction::where('group_id', $id)->where('type', 'Deposit')->sum('amount');
     }
 
     private function getGroupPayment($id) {
-        return ClientTransaction::where('group_id', $id)->where('type', 'Payment')->sum('amount');
+        $clientActiveServices = ClientService::where('active', 1)->where('group_id', $id)
+                                    ->where(function ($query) {
+                                                $query->where('status','!=', 'cancelled');
+                                            })->pluck('id');
+
+        return ClientTransaction::where('group_id', $id)
+                    ->where(function ($q) use($clientActiveServices){
+                        $q->whereIn('client_service_id', $clientActiveServices);
+                        $q->orwhere('client_service_id',null);
+                    })
+                    ->where('type', 'Payment')
+                    ->sum('amount');
+        // return ClientTransaction::where('group_id', $id)->where('type', 'Payment')->sum('amount');
     }
 
     private function getGroupTotalDiscount($id) {
@@ -103,14 +137,17 @@ class GroupController extends Controller
     }
 
     private function getGroupTotalCost($id) {
-        $groupTotalCost = ClientService::where('group_id', $id)
-            ->where('active', 1)->where('status','!=','cancelled')
-            ->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
+        $groupTotalCost = ClientService::where('active', 1)->where('group_id', $id)
+                            ->where('status','!=','cancelled');
+        $clids = $groupTotalCost->pluck('id');
+        $groupTotalCost =   $groupTotalCost->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
 
         $discount =  ClientTransaction::where('group_id', $id)->where('type', 'Discount')
-                        ->where('client_service_id','!=',null)->sum('amount');
+                    ->where('client_service_id','!=',null)->whereIn('client_service_id', $clids)->sum('amount');
 
-        return ($groupTotalCost) ? ($groupTotalCost - $discount) : 0;
+        $discount = ($discount) ? $discount : 0;
+
+        return (($groupTotalCost) ? $groupTotalCost : 0) - $discount;
     }
 
 
@@ -129,18 +166,20 @@ class GroupController extends Controller
 
     private function getGroupTotalCompleteServiceCost($id) {
 
-        $groupTotalCompleteServiceCost = ClientService::where('group_id', $id)
-            ->where('active', 1)
-            ->where(function ($query) {
-                        $query->where('status', 'complete')
-                             ->orwhere('status', 'released');
-                    })
-            ->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
+        $g = ClientService::where('active', 1)->where('group_id', $id)
+                                            ->where(function ($query) {
+                                                        $query->where('status', 'complete')
+                                                             ->orwhere('status', 'released');
+                                                    });
+        $clids = $g->pluck('id');
+        $gCost = $g->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
 
-        $discount = ClientTransaction::where('group_id', $id)->where('type', 'Discount')
-                            ->where('client_service_id','!=',null)->sum('amount');
+        $discount =  ClientTransaction::where('group_id', $id)->where('type', 'Discount')
+                    ->where('client_service_id','!=',null)->whereIn('client_service_id', $clids)->sum('amount');
 
-        return ($groupTotalCompleteServiceCost) ? ($groupTotalCompleteServiceCost - $discount) : 0;
+        $discount = ($discount) ? $discount : 0;
+
+        return (($gCost) ? $gCost : 0) - $discount;
     }
 
     public function getGroupTotalBalance($id) {
@@ -454,6 +493,7 @@ class GroupController extends Controller
             $group->total_balance = $this->getGroupTotalBalance($id);
             $group->total_collectables = $this->getGroupTotalCollectables($id);
             $group->total_deposit = $this->getGroupDeposit($id);
+            $group->total_ewallet = $this->getGroupEwallet($id);
 
             $response['status'] = 'Success';
             $response['data'] = [
