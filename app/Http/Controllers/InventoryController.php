@@ -249,7 +249,7 @@ class InventoryController extends Controller
             $ilog = new InventoryLogs;
             $ilog->inventory_id = $inv->inventory_id;
             $ilog->type = 'Stored';
-            $ilog->reason = $request->name.' has been created by '.$user->first_name;
+            $ilog->reason = $user->first_name.' added '.$request->name;
             $ilog->created_by = $user->id;
             $ilog->created_at = strtotime("now");
             $ilog->save();
@@ -1176,11 +1176,11 @@ class InventoryController extends Controller
         $log->save();
     }
 
-    public function getPurchaseHistory(Request $request){
-        $phis = InventoryAssigned::where('inventory_id',$request->inventory_id)->get();
+    public function getActionLog(Request $request){
+        $phis = InventoryLogs::where('inventory_id',$request->inventory_id)->orderBy('created_at','DESC')->get();
 
         foreach ($phis as $v){
-            $v->date_purchase = Carbon::createFromTimestamp($v->created_at)->format('m/d/Y g:i:s A');
+            $v->created_at = Carbon::createFromTimestamp($v->created_at)->format('M. d Y');
         }
 
         $response['status'] = 'Success';
