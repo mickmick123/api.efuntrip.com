@@ -11,6 +11,8 @@ use App\Location;
 use App\LocationDetail;
 use App\Role;
 use App\User;
+use App\InventoryParentUnit;
+use App\InventoryUnit;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\DB;
 use App\InventoryParentCategory;
@@ -51,6 +53,7 @@ class InventoryController extends Controller
             foreach($com as $index=>$value){
                 $com[$index] = Company::where('company_id',$value->company_id)->get();
                 foreach ($com[$index] as $k=>$v) {
+                    $v->company = true;
                     $v->sub_categories = InventoryParentCategory::with('inventories','subCategories')
                         ->leftJoin('inventory_category as icat', 'icat.category_id', '=', 'inventory_parent_category.category_id')
                         ->where([
@@ -67,7 +70,7 @@ class InventoryController extends Controller
                 $v->sub_categories = InventoryParentCategory::with('inventories','subCategories')
                     ->leftJoin('inventory_category as icat', 'icat.category_id', '=', 'inventory_parent_category.category_id')
                     ->where([
-                        ['inventory_parent_category.company_id', $request->company_id],
+                        ['inventory_parent_category.company_id', $v->company_id],
                         ['inventory_parent_category.parent_id', $request->category_id]
                     ])
                     ->get();
@@ -163,7 +166,6 @@ class InventoryController extends Controller
             'name' => 'required',
             'description' => 'required',
             'type' => 'required',
-            'unit' => 'required',
         ]);
 
         if ($validator->fails()) {
@@ -184,10 +186,65 @@ class InventoryController extends Controller
             $inv->description = $request->description;
             $inv->specification = $request->specification;
             $inv->type = $request->type;
-            $inv->unit = $request->unit;
             $inv->created_at = strtotime("now");
             $inv->updated_at = strtotime("now");
             $inv->save();
+
+            if($request->type === 'Property'){
+                $unit = InventoryUnit::where('name',$request->unit)->get();
+                if(count($unit) === 0) {
+                    $addUnit = new InventoryUnit;
+                    $addUnit->name = $request->unit;
+                    $addUnit->created_at = strtotime("now");
+                    $addUnit->updated_at = strtotime("now");
+                    $addUnit->save();
+                    $unit = InventoryUnit::where('name', $request->unit)->get();
+                }
+                $addParentUnit = new InventoryParentUnit;
+                $addParentUnit->inventory_id = $inv->inventory_id;
+                $addParentUnit->unit_id = $unit[0]->unit_id;
+                $addParentUnit->parent_id = 0;
+                $addParentUnit->content = 0;
+                $addParentUnit->min_purchased = 0;
+                $addParentUnit->save();
+            }elseif($request->type === 'Consumables'){
+                $unitOption = [];
+                foreach (json_decode($request->unit_option, true) as $k=>$v) {
+                    if($v["unit".$k] !== null && $v["content".$k] !== null){
+                        $unit = InventoryUnit::where('name',$v['unit'.$k])->get();
+                        if(count($unit) === 0) {
+                            $addUnit = new InventoryUnit;
+                            $addUnit->name = $v['unit'.$k];
+                            $addUnit->created_at = strtotime("now");
+                            $addUnit->updated_at = strtotime("now");
+                            $addUnit->save();
+                            $unit = InventoryUnit::where('name', $v['unit'.$k])->get();
+                        }
+                        $unitOption[$k] = $unit;
+                        ArrayHelper::ArrayQueryPush($unitOption[$k],['content'],[$v["content".$k]]);
+                    }
+                }
+                $unitOption = ArrayHelper::ArrayMerge($unitOption);
+                foreach ($unitOption as $k=>$v){
+                    $addParentUnit = new InventoryParentUnit;
+                    $addParentUnit->inventory_id = $inv->inventory_id;
+                    $addParentUnit->unit_id = $v->unit_id;
+                    if($k === 0){
+                        $addParentUnit->parent_id = 0;
+                        $addParentUnit->content = $v->content;
+                        $addParentUnit->min_purchased = 0;
+                    }elseif($k+1 === count($unitOption)){
+                        $addParentUnit->parent_id = $unitOption[$k-1]->unit_id;
+                        $addParentUnit->content = 0;
+                        $addParentUnit->min_purchased = $v->content;
+                    }else{
+                        $addParentUnit->parent_id = $unitOption[$k-1]->unit_id;
+                        $addParentUnit->content = $v->content;
+                        $addParentUnit->min_purchased = 0;
+                    }
+                    $addParentUnit->save();
+                }
+            }
 
             $ilog = new InventoryLogs;
             $ilog->inventory_id = $inv->inventory_id;
@@ -199,7 +256,7 @@ class InventoryController extends Controller
 
             $response['status'] = 'Success';
             $response['code'] = 200;
-            $response['data'] = explode('.', $request->imgName);
+            $response['data'] = 'Item Profile has been Created!';
         }
         return Response::json($response);
     }
@@ -1129,6 +1186,16 @@ class InventoryController extends Controller
         $response['status'] = 'Success';
         $response['code'] = 200;
         $response['data'] = $phis;
+
+        return Response::json($response);
+    }
+
+    public function getUnit(){
+        $unit = InventoryUnit::orderBy('name','ASC')->get();
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $unit;
 
         return Response::json($response);
     }

@@ -13,4 +13,13 @@ class ArrayHelper{
         }
         return $data;
     }
+
+    public static function ArrayQueryPush($array,$column,$value){
+        foreach ($array as $k=>$v){
+            for($i=0;$i<count($column);$i++){
+                $v[$column[$i]] = $value[$i];
+            }
+        }
+        return $array;
+    }
 }

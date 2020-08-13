@@ -18,6 +18,7 @@ Route::middleware('auth:api')->group(function() {
     Route::post('/get-company-category-inventory','InventoryController@getCompanyCategoryInventory');
     Route::post('/get-category-inventory','InventoryController@getCategoryInventory');
     Route::post('/get-purchase-history','InventoryController@getPurchaseHistory');
+    Route::get('/get-unit','InventoryController@getUnit');
 
     Route::post('/move-inventory-category','InventoryController@moveInventoryCategory');
 
