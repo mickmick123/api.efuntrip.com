@@ -20,8 +20,9 @@ class LocationController extends Controller
     }
 
     public function getLocationDetail(Request $request){
-        $loc = LocationDetail::all();
+        $loc = LocationDetail::where("loc_id", $request->id)->orderBy("location_detail", "ASC")->get();
 
+        $response = [];
         $response['status'] = 'Success';
         $response['code'] = 200;
         $response['data'] = $loc;

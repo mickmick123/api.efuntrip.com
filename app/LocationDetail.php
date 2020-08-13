@@ -9,5 +9,5 @@ class LocationDetail extends Model
     protected $table = 'ref_location_detail';
     public $timestamps = false;
 
-    protected $fillable = ['location_id','location_detail'];
+    protected $fillable = ['loc_id','location_detail'];
 }
