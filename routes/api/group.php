@@ -64,5 +64,7 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::post('group-summary', 'GroupController@getGroupSummary');
 
+	Route::post('add-group-payment', 'GroupController@addGroupPayment');
+
 
 });

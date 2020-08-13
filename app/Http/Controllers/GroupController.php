@@ -3534,4 +3534,93 @@ public function getClientPackagesByGroup($client_id, $group_id){
        return Response::json($response);
  }
 
+
+ function addGroupPayment(Request $request){
+
+     $validator = Validator::make($request->all(), [
+           'group_id' => 'required',
+       ]);
+
+       if($validator->fails()) {
+           $response['status'] = 'Failed';
+           $response['errors'] = $validator->errors();
+           $response['code'] = 422;
+       } else {
+           // $tracking = $request->get('tracking');
+
+          $group_id = $request->get('group_id');
+
+          for($i=0; $i<count($request->payments); $i++) {
+
+             $client_id = $request->payments[$i]['client_id'];
+             $cs_id = $request->payments[$i]['id'];
+             $amount = $request->payments[$i]['amount'];
+             $total_cost = $request->payments[$i]['total_cost'];
+             $payment = ClientTransaction::where('type','Payment')->where('client_service_id',$cs_id)->first();
+
+             if($payment){
+                 $payment->amount += $amount;
+                 $payment->save();
+             }
+             else{
+                 $payment = new ClientTransaction;
+                 $payment->client_id = $client_id;
+                 $payment->client_service_id = $cs_id;
+                 $payment->type = 'Payment';
+                 $payment->group_id = $group_id;
+                 $payment->amount = $amount;
+                 $payment->save();
+             }
+
+             $service = ClientService::findOrFail($cs_id);
+             if($service->payment_amount > 0){
+                 $service->payment_amount += $amount;
+             }
+             else{
+                 $service->payment_amount = $amount;
+             }
+             if($amount == $total_cost){
+                 $service->is_full_payment = 1;
+             }
+             $service->save();
+
+             // save transaction logs
+             $detail = 'Paid an amount of Php'.$amount.'.';
+             $detail_cn = '已支付 Php'.$amount.'.';
+             $log_data = array(
+                 'client_service_id' => null,
+                 'client_id' => $client_id,
+                 'group_id' => $group_id,
+                 'log_type' => 'Transaction',
+                 'log_group' => 'payment',
+                 'detail'=> $detail,
+                 'detail_cn'=> $detail_cn,
+                 'amount'=> $amount,
+             );
+             LogController::save($log_data);
+
+             $detail = 'Paid service with an amount of Php'.$amount.'.';
+             $detail_cn = '已支付 Php'.$amount.'.';
+             $log_data = array(
+                 'client_service_id' => $cs_id,
+                 'client_id' => $client_id,
+                 'group_id' => $group_id,
+                 'log_type' => 'Ewallet',
+                 'log_group' => 'payment',
+                 'detail'=> $detail,
+                 'detail_cn'=> $detail_cn,
+                 'amount'=> '-'.$amount,
+             );
+             LogController::save($log_data);
+
+           }
+
+           $response['status'] = 'Success';
+           $response['code'] = 200;
+      }
+
+
+      return Response::json($response);
+  }
+
 }
