@@ -618,9 +618,12 @@ class InventoryController extends Controller
         $list = DB::table('inventory')
             ->select(DB::raw('
                 co.name as company_name, inventory.*,
-                (SELECT COUNT(id) FROM inventory_assigned a WHERE a.inventory_id = inventory.inventory_id AND a.status !=3) AS qty
+                (SELECT COUNT(id) FROM inventory_assigned a WHERE a.inventory_id = inventory.inventory_id AND a.status !=3) AS qty,
+                u.name as unit, u.unit_id, pu.id as parent_unit_id
             '))
             ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
+            ->leftJoin("inventory_parent_unit as pu", "inventory.inventory_id", "pu.inv_id")
+            ->leftJoin("inventory_unit as u", "pu.unit_id", "u.unit_id")
             ->where($filter)
             ->where("status", 1)
             ->whereIn("category_id", $item_found)
@@ -1014,8 +1017,8 @@ class InventoryController extends Controller
         } else {
             $now = strtotime("now");;
             $loc = LocationDetail::select('l.location','ref_location_detail.location_detail')->where("ref_location_detail.id",$request->loc_detail_id)
-                    ->leftJoin("ref_location as l","ref_location_detail.loc_id","l.id")
-                    ->first();
+                ->leftJoin("ref_location as l","ref_location_detail.loc_id","l.id")
+                ->first();
             if(!is_numeric($request->loc_site_id)){
                 $location = $request->loc_site_id;
                 $location_detail = $request->loc_detail_id;
@@ -1047,13 +1050,23 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    public function getUnitList(){
+        $list = InventoryUnit::all();
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $list;
+
+        return Response::json($response);
+    }
+
     public function editInventory(Request $request){
         $validator = Validator::make($request->all(), [
             'inventory_id' => 'required',
             'description' => 'required',
             'specification' => 'nullable',
             'type' => 'required',
-            'unit' => 'required'
+            'unit_id' => 'required'
         ]);
         $response = [];
         if($validator->fails()) {
@@ -1061,10 +1074,24 @@ class InventoryController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
+            $now = strtotime("now");
+            if(!is_numeric($request->unit_id)){
+                $u = new InventoryUnit;
+                $u->name = $request->unit_id;
+                $u->created_at = $now;
+                $u->updated_at = $now;
+                $u->save();
+            }else{
+                $u = InventoryUnit::where("unit_id", $request->unit_id)->first();
+            }
+
+            $pUnit = InventoryParentUnit::find($request->parent_unit_id);
+            $pUnit->unit_id = $u->unit_id;
+            $pUnit->save();
+
             $inv = Inventory::find($request->inventory_id);
             $inv->description = $request->description;
             $inv->type = $request->type;
-            $inv->unit = $request->unit;
 
             if($request->specification !== null) {
                 $inv->specification = $request->specification;
@@ -1072,9 +1099,16 @@ class InventoryController extends Controller
             $inv->updated_at = strtotime("now");
             $inv->save();
 
+            $array = [
+                'description' => $inv['description'],
+                'specification' => $inv['specification'],
+                'type' => $inv['type'],
+                'unit' => $u->name
+            ];
+
             $response['status'] = 'Success';
             $response['code'] = 200;
-            $response['data'] = $inv;
+            $response['data'] = $array;
 
         }
         return Response::json($response);
@@ -1199,6 +1233,16 @@ class InventoryController extends Controller
         $log->save();
     }
 
+    public function getUnit(){
+        $unit = InventoryUnit::orderBy('name','ASC')->get();
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $unit;
+
+        return Response::json($response);
+    }
+
     public function getActionLog(Request $request){
         $phis = InventoryLogs::where('inventory_id',$request->inventory_id)->orderBy('created_at','DESC')->get();
 
@@ -1209,16 +1253,6 @@ class InventoryController extends Controller
         $response['status'] = 'Success';
         $response['code'] = 200;
         $response['data'] = $phis;
-
-        return Response::json($response);
-    }
-
-    public function getUnit(){
-        $unit = InventoryUnit::orderBy('name','ASC')->get();
-
-        $response['status'] = 'Success';
-        $response['code'] = 200;
-        $response['data'] = $unit;
 
         return Response::json($response);
     }
