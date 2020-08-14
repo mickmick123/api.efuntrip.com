@@ -1347,7 +1347,7 @@ class ReportController extends Controller
           $getUser = DB::table('users')->where('id', $user['id'])->first();
           $getGroup = DB::table('group_user')->where('user_id', $user['id'])->first();
 
-          $groupID = ($getGroup) ? $getGroup['group_id'] : null;
+          $groupID = ($getGroup) ? $getGroup->group_id : null;
 
           $detail = '';
 
