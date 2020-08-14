@@ -333,12 +333,18 @@ class InventoryController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
+            //Logs
+            $user = Auth::user();
+            $reason = "$user->first_name deleted the $request->path | $request->item_name";
+            self::saveLogs($request->inventory_id, 'inventory deleted', $reason);
+
             $inv = Inventory::find($request->inventory_id);
-            $inv->delete();
+            $inv->status = 0;
+            $inv->save();
 
             $response['status'] = 'Success';
             $response['code'] = 200;
-            $response['data'] = $inv;
+            $response['data'] = [];
         }
         return Response::json($response);
     }
@@ -561,6 +567,7 @@ class InventoryController extends Controller
             return array();
         }
         $count = DB::table('inventory')->where($filter)
+            ->where("status", 1)
             ->whereIn("category_id", $item_found)->count();
 
         if($co_id !== 0) {
@@ -615,6 +622,7 @@ class InventoryController extends Controller
             '))
             ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
             ->where($filter)
+            ->where("status", 1)
             ->whereIn("category_id", $item_found)
             ->orderBy($sort_field,$sort_order)
             ->limit($limit)->offset(($page - 1) * $limit)->get()->toArray();
@@ -665,7 +673,7 @@ class InventoryController extends Controller
         $data = DB::table('inventory_assigned as a')
             ->select(DB::raw('a.*, i.type as inventory_type, CONCAT(u.first_name," ",u.last_name) as assigned_to, u.id as user_id,
                                 l.location as location_site, ld.location_detail, l.id as loc_site_id, CASE WHEN a.location_id =0 THEN null ELSE a.location_id END AS loc_detail_id,
-                                l1.location as storage_site, ld1.location_detail as storage_detail'))
+                                l1.location as storage_site, ld1.location_detail as storage_detail, l1.id as s_site_id'))
             ->leftjoin('inventory as i', 'a.inventory_id', 'i.inventory_id')
             ->leftJoin("users as u", "a.assigned_to", "u.id")
             ->leftJoin("ref_location_detail as ld","a.location_id","ld.id")
@@ -673,7 +681,7 @@ class InventoryController extends Controller
             ->leftJoin("ref_location_detail as ld1","a.storage_id","ld1.id")
             ->leftJoin("ref_location as l1","ld1.loc_id","l1.id")
             ->where("a.inventory_id", "=", $inventory_id)
-            ->whereIn("status", [1,2])
+            ->whereIn("a.status", [1,2])
             ->orderBy('a.status','DESC')
             ->orderBy('a.created_at','DESC')
             ->get();
@@ -995,7 +1003,8 @@ class InventoryController extends Controller
         $validator = Validator::make($request->all(), [
             'assigned_id' => 'required',
             'inventory_id' => 'required',
-            'location' => 'required'
+            'loc_site_id' => 'required',
+            'loc_detail_id' => 'required'
         ]);
         $response = [];
         if($validator->fails()) {
@@ -1004,15 +1013,29 @@ class InventoryController extends Controller
             $response['code'] = 422;
         } else {
             $now = strtotime("now");;
-            $items = InventoryAssigned::where("id",$request->assigned_id)->first();
+            $loc = LocationDetail::select('l.location','ref_location_detail.location_detail')->where("ref_location_detail.id",$request->loc_detail_id)
+                    ->leftJoin("ref_location as l","ref_location_detail.loc_id","l.id")
+                    ->first();
+            if(!is_numeric($request->loc_site_id)){
+                $location = $request->loc_site_id;
+                $location_detail = $request->loc_detail_id;
+            }else{
+                $location = Location::where("id", $request->loc_site_id)->first()->location;
+                if(!is_numeric($request->loc_detail_id)){
+                    $location_detail = $request->loc_detail_id;
+                }else{
+                    $location_detail = LocationDetail::where("id", $request->loc_detail_id)->first()->location_detail;
+                }
+            }
+            $location_detailId = self::location($request->loc_site_id, $request->loc_detail_id);
 
             //Logs
             $user=Auth::user();
-            $reason = "$user->first_name transferred 1 $request->item_name from $items->location_site to $request->location.";
+            $reason = "$user->first_name transferred 1 $request->item_name from $loc->location ($loc->location_detail) to $location ($location_detail).";
             self::saveLogs($request->inventory_id,"Transferred", $reason);
 
             $data = InventoryAssigned::find($request->assigned_id);
-            $data->location_site = $request->location;
+            $data->storage_id = $location_detailId;
             $data->updated_at = $now;
             $data->save();
 
