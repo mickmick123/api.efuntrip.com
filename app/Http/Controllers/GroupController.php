@@ -1271,6 +1271,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
     foreach($clientServices->items() as $s){
 
         $query = ClientService::where('created_at', $s->created_at)->where('service_id',$s->service_id)->where('group_id', $groupId)->where('active', 1);
+        $queryx = ClientService::where('service_id',$s->service_id)->where('group_id', $groupId)->where('active', 1);
 
         $servicesByDate = DB::table('client_services')
           ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, created_at, client_id'))
@@ -1316,8 +1317,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
       }
 
 
-        $temp['total_service_cost'] = ($query->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)"))) - $discountCtr;
-        $temp['total_service'] = ($query->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)")));
+        $temp['total_service_cost'] = ($queryx->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)"))) - $discountCtr;
+        $temp['total_service'] = ($queryx->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)")));
         $temp['service_count'] = $totalServiceCount;
 
 
