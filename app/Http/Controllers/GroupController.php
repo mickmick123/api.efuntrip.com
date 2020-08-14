@@ -1307,6 +1307,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
             $memberByDate[$ctr2]['tcost'] = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$sd->sdate)->where('group_id', $groupId)->where('client_id',$m->client_id)->value(DB::raw("SUM(cost + charge + tip +com_client + com_agent)"));
             $memberByDate[$ctr2]['service'] = $m;
             $memberByDate[$ctr2]['created_at'] = $m->created_at;
+            $memberByDate[$ctr2]['client_id'] = $m->client_id;
+
             $ctr2++;
 
             if($m->active && $m->status != "cancelled")
@@ -1553,7 +1555,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
                 $members[$ctr2] = User::where('id',$m->client_id)->select('first_name','last_name')->first();
                 $members[$ctr2]['tcost'] = $query->where('client_id',$m->client_id)->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)"));
                 $members[$ctr2]['services'] = $clientServices;
-
+                $members[$ctr2]['client_id'] = $m->client_id;
 
 
               $ctr2++;
