@@ -474,10 +474,10 @@ class InventoryController extends Controller
             },
             'operator' => function ($query) {
                 $query->select('users.first_name')
-                    ->from('inventory_assigned AS iass')
-                    ->leftJoin('users','iass.created_by','users.id')
-                    ->whereColumn('iass.inventory_id', 'inventory.inventory_id')
-                    ->orderBy('iass.updated_at','DESC')
+                    ->from('inventory_logs AS ilog')
+                    ->leftJoin('users','ilog.created_by','users.id')
+                    ->whereColumn('ilog.inventory_id', 'inventory.inventory_id')
+                    ->orderBy('ilog.created_at','DESC')
                     ->limit(1);
             },
         ])
