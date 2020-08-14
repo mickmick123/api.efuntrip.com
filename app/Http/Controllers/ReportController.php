@@ -1075,6 +1075,22 @@ class ReportController extends Controller
 
       $label = 'Updated Cost';
       $detail = 'Updated service cost from '.$previousCost.' to '.$cost.'. Total is now '.$totalPrice.'.';
+
+      // Update Logs
+      $totalCharge = $cs->cost + $cs->charge + $cs->tip;
+
+      $label = 'Documents complete, service is now complete. Total charge is PHP' . $totalCharge . '.';
+
+      Log::where('client_service_id', $cs->id)
+          ->where('client_id', $cs->client_id)
+          ->where('group_id', $cs->group_id)
+          ->where('processor_id', Auth::user()->id)
+          ->where('log_type', 'Status')
+          ->where('label', 'LIKE', '%Documents complete, service is now complete.%')
+          ->update([
+            'label' => $label
+          ]);
+      // End
       
       // Log::create([
       //   'client_service_id' => $cs->id,
