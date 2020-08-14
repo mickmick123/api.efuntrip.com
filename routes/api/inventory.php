@@ -43,5 +43,7 @@ Route::middleware('auth:api')->group(function() {
 
     Route::get('/get-users-list','InventoryController@getUsersList');
 
+    Route::get('/get-unit-list','InventoryController@getUnitList');
+
     Route::match(array('get','post'),'/test','InventoryController@test');
 });
