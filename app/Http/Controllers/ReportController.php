@@ -1076,17 +1076,17 @@ class ReportController extends Controller
       $label = 'Updated Cost';
       $detail = 'Updated service cost from '.$previousCost.' to '.$cost.'. Total is now '.$totalPrice.'.';
       
-      Log::create([
-        'client_service_id' => $cs->id,
-        'client_id' => $cs->client_id,
-        'group_id' => $cs->group_id,
-        'service_procedure_id' => $serviceProcedureId,
-        'processor_id' => Auth::user()->id,
-        'log_type' => 'Action',
-        'detail' => $detail,
-        // 'label' => $label,
-        'log_date' => Carbon::now()->toDateString()
-      ]);
+      // Log::create([
+      //   'client_service_id' => $cs->id,
+      //   'client_id' => $cs->client_id,
+      //   'group_id' => $cs->group_id,
+      //   'service_procedure_id' => $serviceProcedureId,
+      //   'processor_id' => Auth::user()->id,
+      //   'log_type' => 'Action',
+      //   'detail' => $detail,
+      //   // 'label' => $label,
+      //   'log_date' => Carbon::now()->toDateString()
+      // ]);
 		}
 	}
 
