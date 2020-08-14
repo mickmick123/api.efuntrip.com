@@ -676,7 +676,7 @@ class InventoryController extends Controller
         $data = DB::table('inventory_assigned as a')
             ->select(DB::raw('a.*, i.type as inventory_type, CONCAT(u.first_name," ",u.last_name) as assigned_to, u.id as user_id,
                                 l.location as location_site, ld.location_detail, l.id as loc_site_id, CASE WHEN a.location_id =0 THEN null ELSE a.location_id END AS loc_detail_id,
-                                l1.location as storage_site, ld1.location_detail as storage_detail, l1.id as s_site_id'))
+                                l1.location as storage_site, ld1.location_detail as storage_detail, l1.id as s_site_id, ld1.id as s_detail_id'))
             ->leftjoin('inventory as i', 'a.inventory_id', 'i.inventory_id')
             ->leftJoin("users as u", "a.assigned_to", "u.id")
             ->leftJoin("ref_location_detail as ld","a.location_id","ld.id")
@@ -1016,7 +1016,7 @@ class InventoryController extends Controller
             $response['code'] = 422;
         } else {
             $now = strtotime("now");;
-            $loc = LocationDetail::select('l.location','ref_location_detail.location_detail')->where("ref_location_detail.id",$request->loc_detail_id)
+            $loc = LocationDetail::select('l.location','ref_location_detail.location_detail')->where("ref_location_detail.id",$request->storage_detail_id)
                 ->leftJoin("ref_location as l","ref_location_detail.loc_id","l.id")
                 ->first();
             if(!is_numeric($request->loc_site_id)){
@@ -1044,7 +1044,7 @@ class InventoryController extends Controller
 
             $response['status'] = 'Success';
             $response['code'] = 200;
-            $response['data'] = [];
+            $response['data'] = $loc;
         }
 
         return Response::json($response);
