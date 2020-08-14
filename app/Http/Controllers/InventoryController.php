@@ -812,34 +812,17 @@ class InventoryController extends Controller
             $response['code'] = 422;
         } else {
             if(!is_numeric($request->loc_site_id)){
-                $location = new Location;
-                $location->location = $request->loc_site_id;
-                $location->save();
-
-                $location_detail = new LocationDetail;
-                $location_detail->loc_id = $location->id;
-                $location_detail->location_detail = $request->loc_detail_id;
-                $location_detail->save();
-
-                $location_detailId = $location_detail->id;
-
                 $location = $request->loc_site_id;
                 $location_detail = $request->loc_detail_id;
             }else{
                 $location = Location::where("id", $request->loc_site_id)->first()->location;
                 if(!is_numeric($request->loc_detail_id)){
-                    $location_detail = new LocationDetail;
-                    $location_detail->loc_id = $request->loc_site_id;
-                    $location_detail->location_detail = $request->loc_detail_id;
-                    $location_detail->save();
-
-                    $location_detailId = $location_detail->id;
                     $location_detail = $request->loc_detail_id;
                 }else{
-                    $location_detailId = $request->loc_detail_id;
                     $location_detail = LocationDetail::where("id", $request->loc_detail_id)->first()->location_detail;
                 }
             }
+            $location_detailId = self::location($request->loc_site_id, $request->loc_detail_id);
 
             $data = InventoryAssigned::find($request->assigned_id);
             $data->inventory_id = $request->inventory_id;
@@ -1198,24 +1181,45 @@ class InventoryController extends Controller
 
     protected static function location($loc_site_id, $loc_detail_id){
         if(!is_numeric($loc_site_id)){
-            $location = new Location;
-            $location->location = $loc_site_id;
-            $location->save();
+            $loc = Location::where("location", "=", $loc_site_id)->first();
+            if($loc){
+                $l_id = $loc->id;
+            }else{
+                $location = new Location;
+                $location->location = $loc_site_id;
+                $location->save();
 
-            $location_detail = new LocationDetail;
-            $location_detail->loc_id = $location->id;
-            $location_detail->location_detail = $loc_detail_id;
-            $location_detail->save();
+                $l_id = $location->id;
+            }
 
-            $location_detailId = $location_detail->id;
-        }else{
-            if(!is_numeric($loc_detail_id)){
+            $detail = LocationDetail::where("location_detail", "=", $loc_detail_id)->first();
+            if($detail){
+                $did = $detail->id;
+            }else{
                 $location_detail = new LocationDetail;
-                $location_detail->loc_id = $loc_site_id;
+                $location_detail->loc_id = $l_id;
                 $location_detail->location_detail = $loc_detail_id;
                 $location_detail->save();
 
-                $location_detailId = $location_detail->id;
+                $did = $location_detail->id;
+            }
+
+            $location_detailId = $did;
+        }else{
+            if(!is_numeric($loc_detail_id)){
+                $detail = LocationDetail::where("location_detail", "=", $loc_detail_id)->first();
+                if($detail){
+                    $did = $detail->id;
+                }else{
+                    $location_detail = new LocationDetail;
+                    $location_detail->loc_id = $loc_site_id;
+                    $location_detail->location_detail = $loc_detail_id;
+                    $location_detail->save();
+
+                    $did =  $location_detail->id;
+                }
+
+                $location_detailId = $did;
             }else{
                 $location_detailId = $loc_detail_id;
             }

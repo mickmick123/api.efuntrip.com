@@ -20,12 +20,23 @@ class LocationController extends Controller
     }
 
     public function getLocationDetail(Request $request){
-        $loc = LocationDetail::where("loc_id", $request->id)->orderBy("location_detail", "ASC")->get();
+        if(!is_numeric($request->id)){
+            $loc = Location::where("location", "=", $request->id)->first();
+            if($loc){
+                $location_id = $loc->id;
+            }else{
+                $location_id = 0;
+            }
+        }else{
+            $location_id = $request->id;
+        }
+
+        $detail = LocationDetail::where("loc_id", $location_id)->orderBy("location_detail", "ASC")->get();
 
         $response = [];
         $response['status'] = 'Success';
         $response['code'] = 200;
-        $response['data'] = $loc;
+        $response['data'] = $detail;
 
         return Response::json($response);
     }
