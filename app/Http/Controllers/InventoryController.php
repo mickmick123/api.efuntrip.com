@@ -201,7 +201,7 @@ class InventoryController extends Controller
                     $unit = InventoryUnit::where('name', $request->unit)->get();
                 }
                 $addParentUnit = new InventoryParentUnit;
-                $addParentUnit->inventory_id = $inv->inventory_id;
+                $addParentUnit->inv_id = $inv->inventory_id;
                 $addParentUnit->unit_id = $unit[0]->unit_id;
                 $addParentUnit->parent_id = 0;
                 $addParentUnit->content = 0;
@@ -227,7 +227,7 @@ class InventoryController extends Controller
                 $unitOption = ArrayHelper::ArrayMerge($unitOption);
                 foreach ($unitOption as $k=>$v){
                     $addParentUnit = new InventoryParentUnit;
-                    $addParentUnit->inventory_id = $inv->inventory_id;
+                    $addParentUnit->inv_id = $inv->inventory_id;
                     $addParentUnit->unit_id = $v->unit_id;
                     if($k === 0){
                         $addParentUnit->parent_id = 0;
