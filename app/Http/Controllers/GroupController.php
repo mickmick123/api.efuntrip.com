@@ -2802,10 +2802,11 @@ public function getClientPackagesByGroup($client_id, $group_id){
           $i = 0;
 
           foreach($member['services'] as $s){
-
+            \Log::info($s);
               if($s["active"] == -1){
                  $totalBal = ((float) $totalBal) - ((float) $s["total_charge"]);
               }else{
+                // jeff
                 if($s["active"] == 1 && strtolower($s['status']) == 'complete'){
                   $totalBal = ((float) $totalBal) - ((float) $s["total_charge"]);
                 }
