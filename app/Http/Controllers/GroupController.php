@@ -2802,11 +2802,9 @@ public function getClientPackagesByGroup($client_id, $group_id){
           $i = 0;
 
           foreach($member['services'] as $s){
-            // \Log::info($s);
               if($s["active"] == -1){
                  $totalBal = ((float) $totalBal) - ((float) $s["total_charge"]);
               }else{
-                // jeff
                 if($s["active"] == 1 && (strtolower($s['status']) == 'complete' || strtolower($s['status']) == 'released') ){
                   $totalBal = ((float) $totalBal) - ((float) $s["total_charge"] - (float) $s["discount"]);
                 }
@@ -2907,8 +2905,24 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $lang['_discount'] = '折扣';
     }
 
+    $result2 = collect($result2)->sortByDesc('sdate')->reverse()->toArray();
+
+    $ctr = 0;
+    foreach($result2 as $r){
+        $j = 0;
+        $members = [];
+        foreach($r['members'] as $member){
+            $member['services'] = collect($member['services'])->sortBy('total_service_cost')->toArray();
+            $members[$j] = $member;
+            $j++;
+        }
+        $result2[$ctr]['members'] = $members;
+        $ctr++;
+    }
+    $result2 = collect($result2)->reverse()->toArray();
+
     return [
-        'services' => $result2->reverse()->toArray(),
+        'services' => $result2,
         'lang' => $lang,
         'watermark' => public_path()."/images/watermark.png",
         'logo' => public_path()."/images/logo.png",
