@@ -2808,7 +2808,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
               }else{
                 // jeff
                 if($s["active"] == 1 && strtolower($s['status']) == 'complete'){
-                  $totalBal = ((float) $totalBal) - ((float) $s["total_charge"]);
+                  $totalBal = ((float) $totalBal) - ((float) $s["total_charge"] - (float) $s["discount"]);
                 }
               }
 
