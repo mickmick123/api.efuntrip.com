@@ -5,7 +5,7 @@ use Carbon\Carbon;
 use App\ClientService;
 
 use App\ClientTransaction;
-use App\ClientEwallet;
+use App\ClientEWallet;
 
 use App\ContactNumber;
 
