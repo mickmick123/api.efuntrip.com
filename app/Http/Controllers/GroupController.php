@@ -2911,6 +2911,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
     foreach($result2 as $r){
         $j = 0;
         $members = [];
+        $r['members'] = collect($r['members'])->reverse()->toArray();
         foreach($r['members'] as $member){
             $member['services'] = collect($member['services'])->sortBy('total_service_cost')->toArray();
             $members[$j] = $member;
