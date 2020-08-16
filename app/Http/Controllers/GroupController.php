@@ -2908,7 +2908,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
     }
 
     return [
-        'services' => $result2,
+        'services' => $result2->reverse()->toArray(),
         'lang' => $lang,
         'watermark' => public_path()."/images/watermark.png",
         'logo' => public_path()."/images/logo.png",
