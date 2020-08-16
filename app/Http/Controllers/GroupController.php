@@ -1544,7 +1544,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
                 foreach($ss as $cs){
                   $cs->discount =  ClientTransaction::where('client_service_id', $cs->id)->where('type', 'Discount')->sum('amount');
-                  if($cs->active !== 0 || $cs->status != 'cancelled'){
+                  if($cs->active !== 0 && $cs->status != 'cancelled'){
                     $discountCtr += $cs->discount;
                     $totalCost += (($cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent)) - $cs->discount;
                   }
