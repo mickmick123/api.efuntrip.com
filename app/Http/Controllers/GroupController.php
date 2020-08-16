@@ -2802,12 +2802,12 @@ public function getClientPackagesByGroup($client_id, $group_id){
           $i = 0;
 
           foreach($member['services'] as $s){
-            \Log::info($s);
+            // \Log::info($s);
               if($s["active"] == -1){
                  $totalBal = ((float) $totalBal) - ((float) $s["total_charge"]);
               }else{
                 // jeff
-                if($s["active"] == 1 && strtolower($s['status']) == 'complete'){
+                if($s["active"] == 1 && (strtolower($s['status']) == 'complete' || strtolower($s['status']) == 'released') ){
                   $totalBal = ((float) $totalBal) - ((float) $s["total_charge"] - (float) $s["discount"]);
                 }
               }
@@ -3454,7 +3454,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
                  $cs->remarks = strip_tags($cs->remarks);
 
 
-                 $chrg = ($cs->active == 0 || strtolower($cs->status) !== 'complete') ? 0 : ($cs->charge + $cs->cost + $cs->tip);
+                 $chrg = ($cs->active == 0 || (strtolower($cs->status) !== 'complete' || strtolower($cs->status) !== 'released') ) ? 0 : ($cs->charge + $cs->cost + $cs->tip);
 
                  if($cs->active == 0){
                       $cs->status = 'CANCELLED';
@@ -3472,8 +3472,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
                  $tempTotal +=$sub;
 
                  $cs->total_service_cost = 0; //here
-                 $cs->total_charge = ($cs->active == 0 || strtolower($cs->status) !== 'complete') ? 0 : (($cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent));
-                 $cs->service_cost =  ($cs->active == 0 || strtolower($cs->status) !== 'complete') ? 0 : (($cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent)) - $cs->discount;
+                 $cs->total_charge = ($cs->active == 0 || (strtolower($cs->status) !== 'complete' || strtolower($cs->status) !== 'released')) ? 0 : (($cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent));
+                 $cs->service_cost =  ($cs->active == 0 || (strtolower($cs->status) !== 'complete' || strtolower($cs->status) !== 'released')) ? 0 : (($cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent)) - $cs->discount;
                  $clientServices[$tmpCtr] = $cs;
                  $tmpCtr++;
                }
