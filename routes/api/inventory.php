@@ -18,13 +18,14 @@ Route::middleware('auth:api')->group(function() {
     Route::post('/get-company-category-inventory','InventoryController@getCompanyCategoryInventory');
     Route::post('/get-category-inventory','InventoryController@getCategoryInventory');
     Route::post('/get-action-log','InventoryController@getActionLog');
-    Route::get('/get-unit','InventoryController@getUnit');
+    Route::post('/get-unit','InventoryController@getUnit');
 
     Route::post('/move-inventory-category','InventoryController@moveInventoryCategory');
 
     Route::post('/add-company','InventoryController@addCompany');
     Route::post('/add-inventory','InventoryController@addInventory');
     Route::post('/add-inventory-category','InventoryController@addInventoryCategory');
+    Route::post('/add-inventory-consumable','InventoryController@addInventoryConsumable');
     Route::post('/edit-inventory-category','InventoryController@editInventoryCategory');
 
     Route::post('/add-more-item','InventoryController@addMoreItem');

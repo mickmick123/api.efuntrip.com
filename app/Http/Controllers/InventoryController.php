@@ -1265,8 +1265,14 @@ class InventoryController extends Controller
         $log->save();
     }
 
-    public function getUnit(){
-        $unit = InventoryUnit::orderBy('name','ASC')->get();
+    public function getUnit(Request $request){
+        if(count($request->all()) !== 0){
+            $unit = InventoryParentUnit::leftJoin('inventory_unit AS iu','inventory_parent_unit.unit_id','iu.unit_id')
+                ->where('inventory_parent_unit.inv_id',$request->inv_id)
+                ->get();
+        }else{
+            $unit = InventoryUnit::orderBy('name','ASC')->get();
+        }
 
         $response['status'] = 'Success';
         $response['code'] = 200;
@@ -1285,6 +1291,45 @@ class InventoryController extends Controller
         $response['status'] = 'Success';
         $response['code'] = 200;
         $response['data'] = $phis;
+
+        return Response::json($response);
+    }
+
+    public function addInventoryConsumable(Request $request){
+        $validator = Validator::make($request->all(), [
+            'inventory_id' => 'required',
+            'qty' => 'required',
+            'unit' => 'required',
+            'price' => 'nullable',
+            'location' => 'required',
+            'location_detail' => 'required',
+            'sup_name' => 'required',
+            'sup_location' => 'required'
+        ]);
+
+        if($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+            $icon = new InventoryConsumables;
+            $icon->inventory_id = $request->inventory_id;
+            $icon->qty = $request->qty;
+            $icon->unit = $request->unit;
+            $icon->price = $request->price;
+            $icon->location_id = $request->location_detail;
+            $icon->sup_name = $request->sup_name;
+            $icon->sup_location = $request->sup_location;
+            $icon->type = 'Purchase';
+            $icon->created_by = $request->sup_location;
+            $icon->created_at = strtotime("now");;
+            $icon->updated_at = strtotime("now");;
+            $icon->save();
+
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+            $response['data'] = 'Consumable has been Created!';
+        }
 
         return Response::json($response);
     }
