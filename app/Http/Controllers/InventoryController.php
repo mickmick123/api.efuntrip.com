@@ -1062,16 +1062,6 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
-    public function getUnitList(){
-        $list = InventoryUnit::all();
-
-        $response['status'] = 'Success';
-        $response['code'] = 200;
-        $response['data'] = $list;
-
-        return Response::json($response);
-    }
-
     public function editInventory(Request $request){
         $validator = Validator::make($request->all(), [
             'inventory_id' => 'required',
@@ -1314,24 +1304,64 @@ class InventoryController extends Controller
             $response['code'] = 422;
         } else {
             $user = auth()->user();
+            $item = InventoryConsumables::where([
+                        ["inventory_id", $request->inventory_id],["unit_id", $request->unit]
+                    ])->orderBy("id", "DESC")->limit(1)->first();
+            if($item){
+                $remaining = $item->remaining;
+            }else{
+                $remaining = 0;
+            }
+
+            //Logs
+            $unit = InventoryUnit::where("unit_id",$request->unit)->first();
+            $reason = "$user->first_name purchased $request->qty (".$unit->name.") with the price of Php$request->price";
+            self::saveLogs($request->inventory_id, 'Stored', $reason);
+
             $icon = new InventoryConsumables;
             $icon->inventory_id = $request->inventory_id;
             $icon->qty = $request->qty;
             $icon->unit_id = $request->unit;
             $icon->price = $request->price;
-            $icon->location_id = self::location($request->location, $request->location_detail);;
+            $icon->remaining = $remaining + $request->qty;
+            $icon->location_id = self::location($request->location, $request->location_detail);
             $icon->sup_name = $request->sup_name;
             $icon->sup_location = $request->sup_location;
             $icon->type = 'Purchased';
             $icon->created_by = $user->id;
-            $icon->created_at = strtotime("now");;
-            $icon->updated_at = strtotime("now");;
+            $icon->created_at = strtotime("now");
+            $icon->updated_at = strtotime("now");
             $icon->save();
 
             $response['status'] = 'Success';
             $response['code'] = 200;
             $response['data'] = 'Consumable has been Created!';
         }
+
+        return Response::json($response);
+    }
+
+    public function getInventoryConsumable(Request $request){
+        $list = DB::table('inventory_consumables as c')
+            ->select(DB::raw("c.*, l.location, ld.location_detail,
+                    iu.name as unit, CONCAT(u.first_name, ' ', u.last_name) as operator
+                    "))
+            ->where("inventory_id", $request->inventory_id)
+            ->leftJoin("users as u", "c.created_by", "u.id")
+            ->leftJoin("inventory_unit as iu", "c.unit_id", "iu.unit_id")
+            ->leftJoin("ref_location_detail as ld","c.location_id","ld.id")
+            ->leftJoin("ref_location as l","ld.loc_id","l.id")
+            ->orderBy("id", "DESC")
+            ->get();
+
+        foreach ($list as $l){
+            $l->created_at = gmdate("F j, Y", $l->created_at);
+            $l->updated_at = gmdate("F j, Y", $l->updated_at);
+        }
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $list;
 
         return Response::json($response);
     }

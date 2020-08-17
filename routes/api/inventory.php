@@ -25,6 +25,7 @@ Route::middleware('auth:api')->group(function() {
     Route::post('/add-company','InventoryController@addCompany');
     Route::post('/add-inventory','InventoryController@addInventory');
     Route::post('/add-inventory-category','InventoryController@addInventoryCategory');
+    Route::get('/list-inventory-consumable','InventoryController@getInventoryConsumable');
     Route::post('/add-inventory-consumable','InventoryController@addInventoryConsumable');
     Route::post('/edit-inventory-category','InventoryController@editInventoryCategory');
 
@@ -43,8 +44,6 @@ Route::middleware('auth:api')->group(function() {
     Route::post('/delete-inventory-category','InventoryController@deleteInventoryCategory');
 
     Route::get('/get-users-list','InventoryController@getUsersList');
-
-    Route::get('/get-unit-list','InventoryController@getUnitList');
 
     Route::match(array('get','post'),'/test','InventoryController@test');
 });
