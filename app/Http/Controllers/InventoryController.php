@@ -435,7 +435,7 @@ class InventoryController extends Controller
                 ->leftJoin('inventory_unit as iunit', 'iunit.unit_id', '=', 'inventory_parent_unit.unit_id')
                 ->where([
                     ['inventory_parent_unit.inv_id', $request->inventory_id],
-                    ['inventory_parent_unit.parent_id', $request->unit_id]
+                    //['inventory_parent_unit.parent_id', $request->unit_id]
                 ])
                 ->get();
         }
@@ -632,7 +632,7 @@ class InventoryController extends Controller
             ->select(DB::raw('
                 co.name as company_name, inventory.*,
                 (SELECT COUNT(id) FROM inventory_assigned a WHERE a.inventory_id = inventory.inventory_id AND a.status !=3) AS qty,
-                u.name as unit, u.unit_id, pu.id as parent_unit_id
+                u.unit_id, pu.id as parent_unit_id
             '))
             ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
             ->leftJoin("inventory_parent_unit as pu", "inventory.inventory_id", "pu.inv_id")
@@ -640,6 +640,7 @@ class InventoryController extends Controller
             ->where($filter)
             ->where("status", 1)
             ->whereIn("category_id", $item_found)
+            ->groupBy("inventory_id")
             ->orderBy($sort_field,$sort_order)
             ->limit($limit)->offset(($page - 1) * $limit)->get()->toArray();
         $i=0;
@@ -663,6 +664,20 @@ class InventoryController extends Controller
                     $j++;
                 }
             }
+
+            $unit = Inventory::select('inventory_id')->where('inventory_id',$n->inventory_id)->get();
+            foreach ($unit as $k) {
+                $units = InventoryParentUnit::where('inv_id', $k->inventory_id)
+                    ->leftJoin('inventory_unit as iunit', 'iunit.unit_id', '=', 'inventory_parent_unit.unit_id')
+                    ->orderBy('id', 'asc')
+                    ->get();
+                $xx = 0;
+                foreach ($units as $u) {
+                    $n->childs[$xx] = $u['name'];
+                    $xx++;
+                }
+            }
+            $n->unit = implode("/", $n->childs);
 
             $i++;
         }
