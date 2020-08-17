@@ -495,6 +495,7 @@ class InventoryController extends Controller
             },
         ])
             ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
+            ->whereNotIn('status',[0])
             ->orHaving('datetime', 'LIKE','%'.$search.'%')
             ->orHaving('total_asset', 'LIKE','%'.$search.'%')
             ->orHaving('name','LIKE', '%'.$search.'%')
