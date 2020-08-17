@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Company;
 use App\Helpers\ArrayHelper;
 use App\Inventory;
+use App\InventoryConsumables;
 use App\InventoryLogs;
 use App\InventoryLocation;
 use App\Location;
@@ -394,13 +395,13 @@ class InventoryController extends Controller
     public function deleteInventoryCategory(Request $request){
         $categ = InventoryParentCategory::where('category_id', $request->category_id)->where('company_id', $request->company_id)->first()->getAllChildren()->pluck('category_id');
 
-        $ipc = InventoryParentCategory::where('company_id', $request->company_id)
+        InventoryParentCategory::where('company_id', $request->company_id)
             ->where(function ($q) use ($categ, $request) {
                 $q->whereIn('category_id', $categ);
                 $q->orwhere('category_id', $request->category_id);
             })->delete();
 
-        $icat = InventoryCategory::where(function ($q) use ($categ, $request) {
+        InventoryCategory::where(function ($q) use ($categ, $request) {
                 $q->whereIn('category_id', $categ);
                 $q->orwhere('category_id', $request->category_id);
             })->delete();
@@ -411,17 +412,15 @@ class InventoryController extends Controller
                 $q->orwhere('category_id', $request->category_id);
             })->pluck('inventory_id');
 
-        $inv = Inventory::where('company_id', $request->company_id)
+        Inventory::where('company_id', $request->company_id)
             ->where(function ($q) use ($categ, $request) {
                 $q->whereIn('category_id', $categ);
                 $q->orwhere('category_id', $request->category_id);
             })->delete();
 
-        $loc = InventoryLocation::whereIn('inventory_id',$invId)
-            ->delete();
+        InventoryAssigned::whereIn('inventory_id',$invId)->delete();
 
-        $ass = InventoryAssigned::whereIn('inventory_id',$invId)
-            ->delete();
+        InventoryConsumables::whereIn('inventory_id',$invId)->delete();
 
         $response['status'] = 'Success';
         $response['code'] = 200;

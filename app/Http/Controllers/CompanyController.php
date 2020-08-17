@@ -6,6 +6,7 @@ use App\Company;
 use App\Inventory;
 use App\InventoryAssigned;
 use App\InventoryCategory;
+use App\InventoryConsumables;
 use App\InventoryLocation;
 use App\InventoryParentCategory;
 use Illuminate\Http\Request;
@@ -75,28 +76,22 @@ class CompanyController extends Controller
 
 
     public function deleteCompany(Request $request){
-        $com = Company::where('company_id',$request->company_id)
-            ->delete();
+        Company::where('company_id',$request->company_id)->delete();
 
-        $icat = DB::table('inventory_category AS icat')
+        DB::table('inventory_category AS icat')
             ->leftJoin('inventory_parent_category AS ipcat','icat.category_id','=','ipcat.category_id')
             ->where('ipcat.company_id',$request->company_id)
             ->delete();
 
-        $ipcat = InventoryParentCategory::where('company_id',$request->company_id)
-            ->delete();
+        InventoryParentCategory::where('company_id',$request->company_id)->delete();
 
-        $invId = Inventory::where('company_id',$request->company_id)
-            ->pluck('inventory_id');
+        $invId = Inventory::where('company_id',$request->company_id)->pluck('inventory_id');
 
-        $inv = Inventory::where('company_id',$request->company_id)
-            ->delete();
+        Inventory::where('company_id',$request->company_id)->delete();
 
-        $loc = InventoryLocation::whereIn('inventory_id',$invId)
-            ->delete();
+        InventoryAssigned::whereIn('inventory_id',$invId)->delete();
 
-        $ass = InventoryAssigned::whereIn('inventory_id',$invId)
-            ->delete();
+        InventoryConsumables::whereIn('inventory_id',$invId)->delete();
 
         $response['status'] = 'Success';
         $response['code'] = 200;
