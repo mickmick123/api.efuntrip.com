@@ -429,7 +429,21 @@ class InventoryController extends Controller
     }
 
     public function test(Request $request){
-        return Response::json($request->all());
+        $tree = Inventory::where('inventory_id',$request->inventory_id)->get();
+        foreach ($tree as $k=>$v) {
+            $v->sub_categories = InventoryParentUnit::with('subCategories')
+                ->leftJoin('inventory_unit as iunit', 'iunit.unit_id', '=', 'inventory_parent_unit.unit_id')
+                ->where([
+                    ['inventory_parent_unit.inv_id', $request->inventory_id],
+                    ['inventory_parent_unit.parent_id', $request->unit_id]
+                ])
+                ->get();
+        }
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $tree;
+        return Response::json($response);
     }
 
     public function uploadCategoryAvatar($data,$folder) {
