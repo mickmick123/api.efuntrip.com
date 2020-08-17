@@ -1313,29 +1313,13 @@ class InventoryController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
-            $loc = Location::where('location',$request->location)->get();
-            $locDet = LocationDetail::where('location_detail',$request->location_detail)->get();
-
             $user = auth()->user();
             $icon = new InventoryConsumables;
             $icon->inventory_id = $request->inventory_id;
             $icon->qty = $request->qty;
             $icon->unit_id = $request->unit;
             $icon->price = $request->price;
-            if(count($loc) === 0) {
-                $addLoc = new Location;
-                $addLoc->location = $request->location;
-                $addLoc->save();
-                $loc = Location::where('location',$request->location)->get();
-            }
-            if(count($locDet) === 0){
-                $addLocDet = new LocationDetail;
-                $addLocDet->loc_id = $loc[0]->id;
-                $addLocDet->location_detail = $request->location;
-                $addLocDet->save();
-            }
-            $locDet = LocationDetail::where('location_detail',$request->location_detail)->get();
-            $icon->location_id = $locDet[0]->id;
+            $icon->location_id = self::location($request->location, $request->location_detail);;
             $icon->sup_name = $request->sup_name;
             $icon->sup_location = $request->sup_location;
             $icon->type = 'Purchased';
