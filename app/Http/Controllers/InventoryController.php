@@ -1316,7 +1316,7 @@ class InventoryController extends Controller
             $icon = new InventoryConsumables;
             $icon->inventory_id = $request->inventory_id;
             $icon->qty = $request->qty;
-            $icon->unit = $request->unit;
+            $icon->unit_id = $request->unit;
             $icon->price = $request->price;
             $icon->location_id = $request->location_detail;
             $icon->sup_name = $request->sup_name;
