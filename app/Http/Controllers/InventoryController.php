@@ -1312,6 +1312,7 @@ class InventoryController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
+            $user = auth()->user();
             $icon = new InventoryConsumables;
             $icon->inventory_id = $request->inventory_id;
             $icon->qty = $request->qty;
@@ -1321,7 +1322,7 @@ class InventoryController extends Controller
             $icon->sup_name = $request->sup_name;
             $icon->sup_location = $request->sup_location;
             $icon->type = 'Purchase';
-            $icon->created_by = $request->sup_location;
+            $icon->created_by = $user->id;
             $icon->created_at = strtotime("now");;
             $icon->updated_at = strtotime("now");;
             $icon->save();
