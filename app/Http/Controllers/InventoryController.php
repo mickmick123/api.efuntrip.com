@@ -1338,7 +1338,7 @@ class InventoryController extends Controller
             $icon->location_id = $locDet[0]->id;
             $icon->sup_name = $request->sup_name;
             $icon->sup_location = $request->sup_location;
-            $icon->type = 'Purchase';
+            $icon->type = 'Purchased';
             $icon->created_by = $user->id;
             $icon->created_at = strtotime("now");;
             $icon->updated_at = strtotime("now");;
