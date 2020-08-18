@@ -430,12 +430,13 @@ class InventoryController extends Controller
 
     public function test(Request $request){
         $tree = Inventory::where('inventory_id',$request->inventory_id)->get();
+        InventoryParentUnit::$inventory_id = $request->inventory_id;
         foreach ($tree as $k=>$v) {
             $v->sub_categories = InventoryParentUnit::with('subCategories')
                 ->leftJoin('inventory_unit as iunit', 'iunit.unit_id', '=', 'inventory_parent_unit.unit_id')
                 ->where([
                     ['inventory_parent_unit.inv_id', $request->inventory_id],
-                    //['inventory_parent_unit.parent_id', $request->unit_id]
+                    ['inventory_parent_unit.parent_id', $request->unit_id]
                 ])
                 ->get();
         }
@@ -1328,6 +1329,39 @@ class InventoryController extends Controller
             $icon->sup_name = $request->sup_name;
             $icon->sup_location = $request->sup_location;
             $icon->type = 'Purchased';
+            $icon->created_by = $user->id;
+            $icon->created_at = strtotime("now");
+            $icon->updated_at = strtotime("now");
+            $icon->save();
+
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+            $response['data'] = 'Consumable has been Created!';
+        }
+
+        return Response::json($response);
+    }
+
+    public function addInventoryConsume(Request $request){
+        $validator = Validator::make($request->all(), [
+            'inventory_id' => 'required',
+            'qty' => 'required',
+            'unit_id' => 'required',
+            'user' => 'nullable',
+        ]);
+
+        if($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+            $user = auth()->user();
+            $icon = new InventoryConsumables;
+            $icon->inventory_id = $request->inventory_id;
+            $icon->qty = $request->qty;
+            $icon->unit_id = $request->unit_id;
+            $icon->assigned_to = $request->user;
+            $icon->type = 'Consumed';
             $icon->created_by = $user->id;
             $icon->created_at = strtotime("now");
             $icon->updated_at = strtotime("now");
