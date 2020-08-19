@@ -91,7 +91,7 @@ class GroupController extends Controller
 
         $withdraw = ClientEWallet::where('group_id', $id)->where('type', 'Refund')->sum('amount');
 
-        $groupActiveServices = ClientService::where('active', 1)->where('group_id', null)
+        $groupActiveServices = ClientService::where('active', 1)->where('group_id', $id)
                                     ->where(function ($query) {
                                                 $query->where('status','!=', 'cancelled');
                                             })->pluck('id');
@@ -168,7 +168,7 @@ class GroupController extends Controller
 
         $g = ClientService::where('active', 1)->where('group_id', $id)
                                             ->where(function ($query) {
-                                                        $query->where('status', 'complete')
+                                                        $query->orwhere('status', 'complete')
                                                              ->orwhere('status', 'released');
                                                     });
         $clids = $g->pluck('id');
@@ -938,6 +938,289 @@ public function getFunds($group_id, $page = 20){
 }
 
 public function addFunds(Request $request) {
+        $validator = Validator::make($request->all(), [
+            'group_id' => 'required',
+        ]);
+
+        if($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+            $tracking = $request->get('tracking');
+            $group_id = $request->get('group_id');
+            $type = $request->get('type');
+            $storage = $request->get('storage');
+            $amount = $request->get('amount');
+            $reason = $request->get('reason');
+            $branch_id = $request->get('branch_id');
+            $bank = $request->get('bank');
+            $alipay_reference = $request->get('alipay_reference');
+            $selected_client = $request->get('selected_client');
+            $selected_group = $request->get('selected_group');
+            $transfer_to = $request->get('transfer_to');
+
+            $client_id = Group::where('id',$group_id)->first()->leader_id;
+            $gname = Group::where('id',$group_id)->first()->name;
+
+            if ($type == "Deposit") {
+                $depo = new ClientEWallet;
+                $depo->client_id = $client_id;
+                $depo->group_id = $group_id;
+                $depo->type = 'Deposit';
+                if($storage=='Bank'){
+                    $depo->storage_type = $bank;
+                }
+                if($storage=='Alipay'){
+                    $amount = $amount-($amount*0.0175);
+                    $depo->storage_type = $bank;
+                    $depo->alipay_reference = $alipay_reference;
+                }
+                $depo->amount = $amount;
+                $depo->save();
+
+                //save financing
+                $deptype = $storage;
+                if($storage == 'Bank'){
+                    $deptype = $bank;
+                }
+
+                $finance = new Financing;
+                $finance->user_sn = Auth::user()->id;
+                $finance->type = "deposit";
+                $finance->record_id = $depo->id;
+                $finance->cat_type = "process";
+                $finance->cat_storage = $storage;
+                $finance->branch_id = 1;
+                $finance->storage_type = $bank;
+                $finance->trans_desc = Auth::user()->first_name.' received deposit from group '.$gname;
+                if($storage=='Alipay'){
+                    $finance->trans_desc = Auth::user()->first_name.' received deposit from group '.$gname.' with Alipay reference: '.$alipay_reference;
+                }
+                ((strcasecmp($storage,'Cash')==0) ? $finance->cash_client_depo_payment = $amount : $finance->bank_client_depo_payment = $amount);
+                $finance->save();
+
+                // save transaction logs
+                $detail = 'Receive '.$deptype.' deposit with an amount of Php'.$amount.'.';
+                $detail_cn = '预存了款项 Php'.$amount.'.';
+                $log_data = array(
+                    'client_service_id' => null,
+                    'client_id' => null,
+                    'group_id' => $group_id,
+                    'log_type' => 'Ewallet',
+                    'log_group' => 'deposit',
+                    'detail'=> $detail,
+                    'detail_cn'=> $detail_cn,
+                    'amount'=> $amount,
+                );
+                 LogController::save($log_data);
+            }
+
+            else if($type == "Payment") {
+                $payment = new ClientTransaction;
+                $payment->client_id = $client_id;
+                $payment->tracking = $tracking;
+                $payment->type = 'Payment';
+                $payment->group_id = $group_id;
+                if($storage=='Bank'){
+                    $payment->storage_type = $bank;
+                }
+                if($storage=='Alipay'){
+                    $payment->storage_type = $bank;
+                    $payment->alipay_reference = $alipay_reference;
+                    $amount = $amount-($amount*0.0175);
+                }
+                $payment->amount = $amount;
+                $payment->save();
+
+                //for financing
+                $finance = new Financing;
+                $finance->user_sn = Auth::user()->id;
+                $finance->type = "payment";
+                $finance->record_id = $payment->id;
+                $finance->cat_type = "process";
+                $finance->cat_storage = $storage;
+                $finance->branch_id = $branch_id;
+                $finance->storage_type = $bank;
+                $finance->trans_desc = Auth::user()->first_name.' received payment from group '.$gname;
+                if($storage=='Alipay'){
+                    $finance->trans_desc = Auth::user()->first_name.' received payment from group '.$gname.' with Alipay reference: '.$alipay_reference;
+                }
+                ((strcasecmp($storage,'Cash')==0) ? $finance->cash_client_depo_payment = $amount : $finance->bank_client_depo_payment = $amount);
+                $finance->save();
+
+                // save transaction logs
+                $detail = 'Paid an amount of Php'.$amount.'.';
+                $detail_cn = '已支付 Php'.$amount.'.';
+                $log_data = array(
+                    'client_service_id' => null,
+                    'client_id' => null,
+                    'group_id' => $group_id,
+                    'log_type' => 'Transaction',
+                    'log_group' => 'payment',
+                    'detail'=> $detail,
+                    'detail_cn'=> $detail_cn,
+                    'amount'=> $amount,
+                );
+                LogController::save($log_data);
+            }
+
+            else if($type == "Refund") {
+                    $refund = new ClientEWallet;
+                    $refund->client_id = $client_id;
+                    $refund->type = 'Refund';
+                    $refund->amount = $amount;
+                    $refund->group_id = $group_id;
+                    $refund->reason = $reason;
+                    if($storage=='Bank'){
+                        $refund->storage_type = $bank;
+                    }
+                    $refund->save();
+
+                    //for financing
+                    $finance = new Financing;
+                    $finance->user_sn = Auth::user()->id;
+                    $finance->type = "refund";
+                    $finance->record_id = $refund->id;
+                    $finance->cat_type = "process";
+                    $finance->cat_storage = $storage;
+                    $finance->cash_client_refund = $amount;
+                    $finance->branch_id = 1;
+                    $finance->trans_desc = Auth::user()->first_name.' refund to group '.$gname.' with the reason of '.$reason;
+                    $finance->storage_type = ($storage!='Cash') ? $bank : null;
+                    $finance->save();
+
+                    // save transaction logs
+                    $detail = 'Refunded an amount of Php'.$amount.' with the reason of <i>"'.$reason.'"</i>.';
+                    $detail_cn = '退款了 Php'.$amount.' 因为 "'.$reason.'".';
+                    $log_data = array(
+                        'client_service_id' => null,
+                        'client_id' => null,
+                        'group_id' => $group_id,
+                        'log_type' => 'Ewallet',
+                        'log_group' => 'refund',
+                        'detail'=> $detail,
+                        'detail_cn'=> $detail_cn,
+                        'amount'=> '-'.$amount,
+                    );
+                    LogController::save($log_data);
+            }
+
+            else if($type == "Discount"){
+                $discount = new ClientTransaction;
+                $discount->client_id = $client_id;
+                $discount->tracking = $tracking;
+                $discount->type = 'Discount';
+                $discount->amount = $amount;
+                $discount->group_id = $group_id;
+                $discount->reason = $reason;
+                if($storage=='bank'){
+                    $discount->storage_type = $bank_type;
+                }
+                $discount->save();
+
+                // save transaction logs
+                $detail = 'Discounted an amount of Php'.$amount.' with the reason of <i>"'.$reason.'"</i>.';
+                $detail_cn = '给于折扣 Php'.$amount.' 因为"'.$reason.'".';
+                $log_data = array(
+                    'client_service_id' => null,
+                    'client_id' => null,
+                    'group_id' => $group_id,
+                    'log_type' => 'Transaction',
+                    'log_group' => 'discount',
+                    'detail'=> $detail,
+                    'detail_cn'=> $detail_cn,
+                    'amount'=> $amount,
+                );
+                LogController::save($log_data);
+            }
+
+            else if($type == "Balance Transfer"){
+                // Refund amount to client
+                $refund = new ClientEWallet;
+                $refund->client_id = $client_id;
+                $refund->type = 'Refund';
+                $refund->amount = $amount;
+                $refund->group_id = $group_id;
+                $refund->reason = $reason;
+                $refund->save();
+
+                if($request->transfer_to == 'Group'){
+                    $transferred = Group::where('id',$selected_group)->first()->name;
+                    $leaderId = Group::where('id',$selected_group)->first()->leader_id;
+                }
+                if($request->transfer_to == 'Client'){
+                    $cl_usr = User::where('id',$selected_client)->select('id','first_name','last_name')->first();
+                    $transferred = $cl_usr->first_name.' '.$cl_usr->last_name;
+                }
+
+                // save transaction logs
+                $detail = 'Withdrew an amount of Php'.$amount.', transferred to '.$request->transfer_to.' '.$transferred;
+                $detail_cn = '退款 Php'.$amount.', 转移到了客户 '.$transferred;
+                $log_data = array(
+                    'client_service_id' => null,
+                    'client_id' => null,
+                    'group_id' => $group_id,
+                    'log_type' => 'Ewallet',
+                    'log_group' => 'refund',
+                    'detail'=> $detail,
+                    'detail_cn'=> $detail_cn,
+                    'amount'=> '-'.$amount,
+                );
+                LogController::save($log_data);
+
+                $transTo = $selected_client;
+                $grid = null;
+                if($request->transfer_to == 'Group'){
+                    $transTo = Group::where('id',$selected_group)->first()->leader_id;
+                    $grid = $selected_group;
+                }
+
+                // Deposit amount to client or group selected
+                $depo = new ClientEWallet;
+                $depo->client_id = $transTo;
+                $depo->type = 'Deposit';
+                $depo->amount = $amount;
+                $depo->group_id = $grid;
+                $depo->save();
+
+                //for financing
+                $finance = new Financing;
+                $finance->user_sn = Auth::user()->id;
+                $finance->type = "transfer";
+                $finance->record_id = $depo->id;
+                $finance->cat_type = "process";
+                $finance->cat_storage = $storage;
+                $finance->branch_id = 1;
+                ((strcasecmp($storage,'Cash')==0) ? $finance->cash_client_depo_payment = $amount : $finance->bank_client_depo_payment = $amount);
+                ((strcasecmp($storage,'Cash')==0) ? $finance->cash_client_refund = $amount : $finance->bank_cost = $amount);
+                $finance->trans_desc = Auth::user()->first_name.' transffered funds from group '.$gname.' to '.$request->transfer_to.' '.$transferred.'.';
+                $finance->save();
+
+                 // save transaction logs
+                $detail = 'Deposited an amount of Php'.$amount.' from group '.$gname.'.';
+                $detail_cn = '预存了款项 Php'.$amount.' 从 团体 '.$gname.'.';
+                $log_data = array(
+                    'client_service_id' => null,
+                    'client_id' => null,
+                    'group_id' => $grid,
+                    'log_type' => 'Transaction',
+                    'log_group' => 'deposit',
+                    'detail'=> $detail,
+                    'detail_cn'=> $detail_cn,
+                    'amount'=> $amount,
+                );
+                 LogController::save($log_data);
+            }
+
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+        }
+
+        return Response::json($response);
+    }
+
+public function addFunds2(Request $request) {
         $validator = Validator::make($request->all(), [
             'group_id' => 'required',
         ]);
@@ -3679,6 +3962,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
            // $tracking = $request->get('tracking');
 
           $group_id = $request->get('group_id');
+          $mode = $request->get('mode');
 
           for($i=0; $i<count($request->payments); $i++) {
 
@@ -3728,7 +4012,40 @@ public function getClientPackagesByGroup($client_id, $group_id){
                  'amount'=> $amount,
              );
              LogController::save($log_data);
-            
+
+             $label = null;
+             if($mode == "batch"){
+                $label = 'Payment for Batch '.Carbon::parse($service->created_at)->format('M d, Y');
+                $detail = '<b>['.$client_id.'] '.$service->detail.'.</b> Paid service with an amount of Php'.$amount.'.';
+                $detail_cn = '<b>['.$client_id.'] '.$service->detail.'.</b> Paid service with an amount of Php'.$amount.'.';
+             }
+             else if($mode == "members"){
+                $cl = User::findOrFail($client_id);
+                $label = 'Payment for member <b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'</b>';
+                $detail = '<b>'.$service->detail.'.</b> Paid service with an amount of Php'.$amount.'.';
+                $detail_cn = '<b>'.$service->detail.'.</b> Paid service with an amount of Php'.$amount.'.';
+             }
+             else if($mode == "service"){
+                $cl = User::findOrFail($client_id);
+                $label = 'Payment for sevice <b>'.$service->detail.'</b>';
+                $detail = '<b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'.</b> Paid service with an amount of Php'.$amount.'.';
+                $detail_cn = '<b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'.</b> Paid service with an amount of Php'.$amount.'.';
+             }
+
+             
+             $log_data = array(
+                 'client_service_id' => $cs_id,
+                 'client_id' => null,
+                 'group_id' => $group_id,
+                 'log_type' => 'Ewallet',
+                 'log_group' => 'payment',
+                 'detail'=> $detail,
+                 'detail_cn'=> $detail_cn,
+                 'amount'=> '-'.$amount,
+                 'label'=> $label,
+             );
+             LogController::save($log_data);
+
            }
 
            $response['status'] = 'Success';

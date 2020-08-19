@@ -160,6 +160,7 @@ class LogController extends Controller
         if($client_id == 0){
             $client_id = null;
         }
+        // return 0;
 
         $translogs = DB::table('logs')->where('client_id',$client_id)->where('group_id',$group_id)->where('log_type','Transaction')->orderBy('id','desc')->get();
 
@@ -776,6 +777,9 @@ class LogController extends Controller
         if($group_id == 0){
             $group_id = null;
         }
+        else{
+            return $this->groupTransactionHistory($group_id);
+        }
 
         $translogs = DB::table('logs')->where('client_id',$client_id)->where('group_id',$group_id)->where('log_type','Ewallet')->orderBy('id','desc')->get();
 
@@ -879,6 +883,173 @@ class LogController extends Controller
                     $csshow = 1;
                     //$currentService = null;
                 }
+
+                if($csshow){
+                    $arraylogs[] = array(
+                        'month' => $m,
+                        'day' => $d,
+                        'year' => $y,
+                        'display_date' => Carbon::parse($t->log_date)->format('F d,Y'),
+                        'data' => array (
+                            'id' => $t->id,
+                            'head' => $t->detail,
+                            'body' => $body,
+                            'balance' => $t->balance,
+                            'prevbalance' => $currentBalance,
+                            'amount' => $t->amount,
+                            'type' => $t->log_group,
+                            'processor' => $usr[0]->first_name,
+                            'date' => Carbon::parse($t->log_date)->format('F d,Y'),
+                            'title' => $csdetail,
+                            'tracking' => $cstracking,
+                            'status' => $csstatus,
+                            'active' => $csactive,
+
+                        )
+                    );
+                }
+
+            }
+        }
+
+        $response['status'] = 'Success';
+        $response['data'] = $arraylogs;
+        $response['code'] = 200;
+
+        return Response::json($response);
+    }
+
+    public function groupTransactionHistory($group_id) {
+
+        $translogs = DB::table('logs')->where('group_id',$group_id)->where('log_type','Ewallet')->orderBy('id','desc')->get();
+
+        $arraylogs = [];
+        $month = null;
+        $day = null;
+        $year = null;
+        $currentBalance = app(GroupController::class)->getGroupEwallet($group_id);
+        $currentService = null;
+        $currentLabel = null;
+
+        foreach($translogs as $t){
+            if(($t->log_group == 'payment' && $t->client_service_id != $currentService) || $t->log_group != 'payment'){
+                $body = "";
+                $usr =  User::where('id',$t->processor_id)->select('id','first_name','last_name')->get();
+
+                $cs = ClientService::where('id',$t->client_service_id)
+                        ->first();
+
+                $cdate = Carbon::parse($t->log_date)->format('M d Y');
+                $dt = explode(" ", $cdate);
+                $m = $dt[0];
+                $d = $dt[1];
+                $y = $dt[2];
+                if($y == $year){
+                    $y = null;
+                    if($m == $month && $d == $day){
+                        $m = null;
+                        $d = null;
+                        $y = null;
+                    }
+                    else{
+                        $month = $m;
+                        $day = $d;
+                        $y = $year;
+                    }
+                }
+                else{
+                    $year = $y;
+                    $month = $m;
+                    $day = $d;
+                }
+
+
+                if($cs){
+                    if($t->label == null){
+                        $cst = $cs->cost + $cs->tip + $cs->charge + $cs->com_client + $cs->com_agent;
+                        $disc = ClientTransaction::where('client_service_id', $cs->id)->where('type','Discount')->first();
+                        if($disc){
+                            $cst -=$disc->amount;
+                        }
+
+                        $csdetail = $cs->detail.' <b style="color: red; margin-left: 25px;">Price : Php'.$cst.' , Balance : Php'.($cst - $cs->payment_amount).'</b>';
+                        $cstracking =  $cs->tracking;
+                        $csstatus =  $cs->status;
+                        $csactive =  $cs->active;
+                        if($csactive == 0 && $csstatus != 'cancelled'){
+                            $csstatus =  'Disabled';
+                        }
+
+
+                        $currentService = $cs->id;
+
+                        $body = DB::table('logs as l')->select(DB::raw('l.detail, l.log_date, pr.first_name, l.amount'))
+                        ->where('client_service_id', $cs->id)->where('group_id',$group_id)
+                        ->where('l.id','!=', $t->id)
+                        ->leftjoin(
+                            DB::raw('
+                                (
+                                    Select id,first_name, last_name
+                                    from users as u
+                                ) as pr
+                            '),
+                            'pr.id', '=', 'l.processor_id'
+                        )
+                        ->where('log_type','Ewallet')
+                        ->orderBy('l.id', 'desc')
+                        //->distinct('detail')
+                        ->get();
+
+                        $t->amount = DB::table('logs as l')
+                                        ->where('client_service_id', $cs->id)->where('group_id',$group_id)
+                                        ->sum('amount');
+
+                        $data = collect($body->toArray())->flatten()->all();
+
+                        $body = $data;
+                    }
+                    else if($t->label != null && $currentLabel != $t->label){
+                        $csdetail = $t->label;
+                        $translogs = DB::table('logs')->where('group_id',$group_id)->where('log_type','Ewallet')->where('label',$t->label)->orderBy('id','desc')->get();
+
+                        $cs_ids = $translogs->pluck('client_service_id');
+
+                        $t->amount = DB::table('logs as l')
+                                        ->where('label', $t->label)->where('group_id',$group_id)
+                                        ->sum('amount');
+                        $t->detail = "Total payment Php".abs($t->amount);
+
+                        $body = $translogs;
+
+                        $cstracking =  null;
+                        $csstatus =  null;
+                        $csactive =  null;
+                        $currentLabel = $t->label;
+
+                    }
+                    else{
+                        $cs->active = 0;
+                    }
+
+                    $csshow = 1;
+                    if($cs->active == 0 || $cs->status == 'cancelled'){
+                        $csshow = 0;
+                    }
+
+                }
+                else{
+                    $csdetail = ucfirst($t->log_group);
+                    $cstracking = '';
+                    $csstatus = '';
+                    $csactive = 'none';
+                    $body = '';
+                    $csshow = 1;
+                    //$currentService = null;
+                }
+
+                $t->balance = $currentBalance;
+
+                $currentBalance -= ($t->amount);
 
                 if($csshow){
                     $arraylogs[] = array(
