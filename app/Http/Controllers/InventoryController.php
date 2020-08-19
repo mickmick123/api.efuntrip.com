@@ -447,6 +447,33 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    public static function contentToMinPurchased($inventory_id,$unit_id,$qty){
+        $ids = [];
+        $names = [];
+        $values = [];
+        $result = $qty;
+
+        $record = 0;
+        $ctr = 0;
+        $data = InventoryParentUnit::leftJoin('inventory_unit AS iu','inventory_parent_unit.unit_id','iu.unit_id')
+            ->where('inventory_parent_unit.inv_id',$inventory_id)->get();
+        for($i=0;$i<count($data);$i++){
+            if($data[$i]->unit_id == $unit_id){
+                $record = 1;
+            }
+            if($record === 1){
+                array_push($ids,$data[$i]->unit_id);
+                array_push($names,$data[$i]->name);
+                array_push($values,$data[$i]->content);
+                if($values[$ctr] !== 0){
+                    $result = $result * $values[$ctr];
+                }
+                $ctr++;
+            }
+        }
+        return $result;
+    }
+
     public function uploadCategoryAvatar($data,$folder) {
         $img64 = $data->imgBase64;
 
@@ -1354,7 +1381,7 @@ class InventoryController extends Controller
 
             $icon = new InventoryConsumables;
             $icon->inventory_id = $request->inventory_id;
-            $icon->qty = $request->qty;
+            $icon->qty = self::contentToMinPurchased($request->inventory_id,$request->unit,$request->qty);
             $icon->unit_id = $request->unit;
             $icon->price = $request->price;
             $icon->remaining = $remaining + $request->qty;
