@@ -1158,6 +1158,79 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    public function editInventoryConsumables(Request $request){
+        $validator = Validator::make($request->all(), [
+            'inventory_id' => 'required',
+            'description' => 'required',
+            'specification' => 'nullable',
+        ]);
+        if($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+            $user = auth()->user();
+            $inv = Inventory::find($request->inventory_id);
+            $inv->description = $request->description;
+            $inv->specification = $request->specification;
+            $inv->updated_at = strtotime("now");
+            $inv->save();
+
+            InventoryParentUnit::where('inv_id',$inv->inventory_id)->delete();
+
+            $unitOption = [];
+            foreach (json_decode($request->unit_option, true) as $k=>$v) {
+                if($v["unit".$k] !== null && $v["content".$k] !== null){
+                    $unit = InventoryUnit::where('name',$v['unit'.$k])->get();
+                    if(count($unit) === 0) {
+                        $addUnit = new InventoryUnit;
+                        $addUnit->name = $v['unit'.$k];
+                        $addUnit->created_at = strtotime("now");
+                        $addUnit->updated_at = strtotime("now");
+                        $addUnit->save();
+                        $unit = InventoryUnit::where('name', $v['unit'.$k])->get();
+                    }
+                    $unitOption[$k] = $unit;
+                    ArrayHelper::ArrayQueryPush($unitOption[$k],['content'],[$v["content".$k]]);
+                }
+            }
+            $unitOption = ArrayHelper::ArrayMerge($unitOption);
+            foreach ($unitOption as $k=>$v){
+                $addParentUnit = new InventoryParentUnit;
+                $addParentUnit->inv_id = $inv->inventory_id;
+                $addParentUnit->unit_id = $v->unit_id;
+                if($k === 0){
+                    $addParentUnit->parent_id = 0;
+                    $addParentUnit->content = $v->content;
+                    $addParentUnit->min_purchased = 0;
+                }elseif($k+1 === count($unitOption)){
+                    $addParentUnit->parent_id = $unitOption[$k-1]->unit_id;
+                    $addParentUnit->content = 0;
+                    $addParentUnit->min_purchased = $v->content;
+                }else{
+                    $addParentUnit->parent_id = $unitOption[$k-1]->unit_id;
+                    $addParentUnit->content = $v->content;
+                    $addParentUnit->min_purchased = 0;
+                }
+                $addParentUnit->save();
+            }
+
+            $ilog = new InventoryLogs;
+            $ilog->inventory_id = $inv->inventory_id;
+            $ilog->type = 'Updated';
+            $ilog->reason = $user->first_name.' updated '.$request->name;
+            $ilog->created_by = $user->id;
+            $ilog->created_at = strtotime("now");
+            $ilog->save();
+
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+            $response['data'] = 'Update Successful!';
+
+        }
+        return Response::json($response);
+    }
+
     public function editInventoryConsumable(Request $request){
         $validator = Validator::make($request->all(), [
             'inventory_id' => 'required',
