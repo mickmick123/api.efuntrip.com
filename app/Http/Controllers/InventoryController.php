@@ -1181,6 +1181,16 @@ class InventoryController extends Controller
         foreach($list as $k=>$v){
             $v->unit_option = InventoryParentUnit::leftJoin('inventory_unit AS iu','inventory_parent_unit.unit_id','iu.unit_id')
                 ->where('inventory_parent_unit.inv_id',$v->inventory_id)->get();
+
+            $xx = 0;
+            foreach ($v->unit_option as $u) {
+                $childs[$xx] = $u['name'];
+                if((count($v->unit_option)-1)==$xx){
+                    $v->min_purchased = $u['min_purchased'];
+                }
+                $xx++;
+            }
+            $v->unit = implode("/", $childs);
         }
 
         $response['status'] = 'Success';
@@ -1511,6 +1521,7 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    //modified
     public function locationListConsumable(Request $request){
         $location = DB::table("inventory_consumables as c")
             ->select(DB::raw('l.location, l.id'))
@@ -1520,6 +1531,27 @@ class InventoryController extends Controller
             ->groupBy('ld.loc_id')
             ->orderBy("l.location", "ASC")
             ->get();
+
+        foreach ($location as $l){
+            $purchased = DB::table('inventory_consumables as c')
+                    ->select(DB::raw('SUM(qty) as qty'))
+                    ->where([["inventory_id", $request->inventory_id],["type", "=", "Purchased"],["l.id", $l->id]])
+                    ->leftjoin("ref_location_detail as ld", "c.location_id", "ld.id")
+                    ->leftjoin("ref_location as l", "ld.loc_id", "l.id")
+                    ->groupBy('c.inventory_id')
+                    ->first();
+            $consumed = DB::table('inventory_consumables as c')
+                ->select(DB::raw('SUM(qty) as qty'))
+                ->where([["inventory_id", $request->inventory_id],["type", "=", "Consumed"],["l.id", $l->id]])
+                ->leftjoin("ref_location_detail as ld", "c.location_id", "ld.id")
+                ->leftjoin("ref_location as l", "ld.loc_id", "l.id")
+                ->groupBy('c.inventory_id')
+                ->first();
+
+            $purchased = $purchased?(int)$purchased->qty:0;
+            $consumed = $consumed?(int)$consumed->qty:0;
+            $l->remaining = self::unitFormat($request->inventory_id,$purchased-$consumed);
+        }
 
         $response['status'] = 'Success';
         $response['code'] = 200;
