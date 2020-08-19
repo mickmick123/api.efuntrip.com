@@ -300,6 +300,61 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    public function editInventory(Request $request){
+        $validator = Validator::make($request->all(), [
+            'inventory_id' => 'required',
+            'description' => 'required',
+            'specification' => 'nullable',
+            'type' => 'required',
+            'unit_id' => 'required'
+        ]);
+        $response = [];
+        if($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+            $now = strtotime("now");
+            if(!is_numeric($request->unit_id)){
+                $u = new InventoryUnit;
+                $u->name = $request->unit_id;
+                $u->created_at = $now;
+                $u->updated_at = $now;
+                $u->save();
+            }else{
+                $u = InventoryUnit::where("unit_id", $request->unit_id)->first();
+            }
+
+            $pUnit = InventoryParentUnit::find($request->parent_unit_id);
+            $pUnit->unit_id = $u->unit_id;
+            $pUnit->save();
+
+            $inv = Inventory::find($request->inventory_id);
+            $inv->description = $request->description;
+            $inv->type = $request->type;
+
+            if($request->specification !== null) {
+                $inv->specification = $request->specification;
+            }
+            $inv->updated_at = strtotime("now");
+            $inv->save();
+
+            $array = [
+                'description' => $inv['description'],
+                'specification' => $inv['specification'],
+                'type' => $inv['type'],
+                'unit' => $u->name
+            ];
+
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+            $response['data'] = $array;
+
+        }
+        return Response::json($response);
+    }
+
+
     public function editInventoryCategory(Request $request){
         $validator = Validator::make($request->all(), [
             'category_id' => 'required',
