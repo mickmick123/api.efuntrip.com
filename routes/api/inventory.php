@@ -40,6 +40,7 @@ Route::middleware('auth:api')->group(function() {
     Route::post('/update-image','InventoryController@updateImage');
 
     Route::get('/list-location','InventoryController@locationList');
+    Route::get('/list-location-consumable','InventoryController@locationListConsumable');
     Route::post('/delete-location','InventoryController@deleteLocation');
 
     Route::post('/delete-inventory','InventoryController@deleteInventory');
