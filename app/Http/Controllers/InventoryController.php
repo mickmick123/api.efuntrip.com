@@ -230,14 +230,14 @@ class InventoryController extends Controller
                     $addParentUnit = new InventoryParentUnit;
                     $addParentUnit->inv_id = $inv->inventory_id;
                     $addParentUnit->unit_id = $v->unit_id;
-                    if($k === 0){
-                        $addParentUnit->parent_id = 0;
-                        $addParentUnit->content = 0;
-                        $addParentUnit->min_purchased = $v->content;;
-                    }elseif($k+1 === count($unitOption)){
-                        $addParentUnit->parent_id = $unitOption[$k-1]->unit_id;
+                    if($k+1 === count($unitOption)){
+                        $addParentUnit->parent_id = $unitOption[count($unitOption)-1]->unit_id;
                         $addParentUnit->content = 0;
                         $addParentUnit->min_purchased = $v->content;
+                    }elseif($k === 0){
+                        $addParentUnit->parent_id = 0;
+                        $addParentUnit->content = $v->content;
+                        $addParentUnit->min_purchased = 0;
                     }else{
                         $addParentUnit->parent_id = $unitOption[$k-1]->unit_id;
                         $addParentUnit->content = $v->content;
@@ -1103,7 +1103,7 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
-    public function editInventory(Request $request){
+    public function editInventoryConsumable(Request $request){
         $validator = Validator::make($request->all(), [
             'inventory_id' => 'required',
             'description' => 'required',
@@ -1370,8 +1370,9 @@ class InventoryController extends Controller
         } else {
             $user = auth()->user();
             $item = InventoryConsumables::where([
-                        ["inventory_id", $request->inventory_id]
-                    ])->orderBy("id", "DESC")->limit(1)->first();
+                ["inventory_id", $request->inventory_id],
+                ["location_id", self::location($request->location, $request->location_detail)]
+            ])->orderBy("id", "DESC")->limit(1)->first();
             if($item){
                 $remaining = $item->remaining;
             }else{
@@ -1408,6 +1409,7 @@ class InventoryController extends Controller
             $response['status'] = 'Success';
             $response['code'] = 200;
             $response['data'] = 'Consumable has been Created!';
+            $response['request'] = $request->all();
         }
 
         return Response::json($response);
@@ -1429,7 +1431,8 @@ class InventoryController extends Controller
             $user = auth()->user();
 
             $item = InventoryConsumables::where([
-                ["inventory_id", $request->inventory_id]
+                ["inventory_id", $request->inventory_id],
+                ["location_id", $request->location_id]
             ])->orderBy("id", "DESC")->limit(1)->first();
             if($item){
                 $remaining = $item->remaining;
@@ -1454,6 +1457,7 @@ class InventoryController extends Controller
             $icon->inventory_id = $request->inventory_id;
             $icon->qty = $qty;
             $icon->remaining = $remaining - $qty;
+            $icon->location_id = $request->location_id;
             $icon->unit_id = $request->unit_id;
             $icon->assigned_to = $request->user;
             $icon->type = 'Consumed';
@@ -1542,7 +1546,7 @@ class InventoryController extends Controller
     }
 
     // Unit Formatting
-    protected static function unitFormat($inventory_id, $qty){
+    public static function unitFormat($inventory_id, $qty){
         $list = Inventory::select('inventory_id')->where('inventory_id',$inventory_id)->get();
         $array_m = [];
         foreach ($list as $k) {
