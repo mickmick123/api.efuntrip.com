@@ -1574,8 +1574,8 @@ class InventoryController extends Controller
             }
             $jjj++;
         }
-        $len = count($cond) - 1;
 
+        $len = count($cond) - 1;
         if($len == 0){
             foreach (array_reverse($cond) as $key=>$val) {
                 $condX[$key] = floor($qty / $val);
@@ -1585,7 +1585,7 @@ class InventoryController extends Controller
             $condX[$array_o[0]] = ceil($lastUnit);
 
             $g = [];
-            foreach ($units as $key=>$val){
+            foreach ($condX as $key=>$val){
                 $sections[$key] = (int)$val;
             }
 
@@ -1638,7 +1638,7 @@ class InventoryController extends Controller
     }
 
     public function testKo(){
-        return Response::json(self::unitFormat(30, 0));
+        return Response::json(self::unitFormat(30, 11));
     }
 }
 
