@@ -542,6 +542,7 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    //modified
     public function list(Request $request)
     {
         $name = $request->input("q", "");
@@ -694,18 +695,16 @@ class InventoryController extends Controller
                 }
             }
 
-            $unit = Inventory::select('inventory_id')->where('inventory_id',$n->inventory_id)->get();
-            foreach ($unit as $k) {
-                $units = InventoryParentUnit::where('inv_id', $k->inventory_id)
-                    ->leftJoin('inventory_unit as iunit', 'iunit.unit_id', '=', 'inventory_parent_unit.unit_id')
-                    ->orderBy('id', 'asc')
-                    ->get();
-                $xx = 0;
-                foreach ($units as $u) {
-                    $n->childs[$xx] = $u['name'];
-                    $xx++;
-                }
+            $units = InventoryParentUnit::where('inv_id', $n->inventory_id)
+                ->leftJoin('inventory_unit as iunit', 'iunit.unit_id', '=', 'inventory_parent_unit.unit_id')
+                ->orderBy('id', 'asc')
+                ->get();
+            $xx = 0;
+            foreach ($units as $u) {
+                $n->childs[$xx] = $u['name'];
+                $xx++;
             }
+
             $n->unit = implode("/", $n->childs);
 
             $i++;
@@ -1347,6 +1346,7 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    //modified
     public function addInventoryConsumable(Request $request){
         $validator = Validator::make($request->all(), [
             'inventory_id' => 'required',
@@ -1366,7 +1366,7 @@ class InventoryController extends Controller
         } else {
             $user = auth()->user();
             $item = InventoryConsumables::where([
-                        ["inventory_id", $request->inventory_id],["unit_id", $request->unit]
+                        ["inventory_id", $request->inventory_id]
                     ])->orderBy("id", "DESC")->limit(1)->first();
             if($item){
                 $remaining = $item->remaining;
@@ -1374,17 +1374,24 @@ class InventoryController extends Controller
                 $remaining = 0;
             }
 
+            if(!is_numeric($request->loc_site_id)){
+                $location = $request->loc_site_id;
+            }else{
+                $location = Location::where("id", $request->location)->first()->location;
+            }
+
+            $qty = self::contentToMinPurchased($request->inventory_id,$request->unit,$request->qty);
             //Logs
-            $unit = InventoryUnit::where("unit_id",$request->unit)->first();
-            $reason = "$user->first_name purchased $request->qty (".$unit->name.") with the price of Php$request->price";
+            $reason = "$user->first_name purchased ".self::unitFormat($request->inventory_id,$qty)." with the price of Php$request->price
+                    Stored at $location from $request->sup_name.";
             self::saveLogs($request->inventory_id, 'Stored', $reason);
 
             $icon = new InventoryConsumables;
             $icon->inventory_id = $request->inventory_id;
-            $icon->qty = self::contentToMinPurchased($request->inventory_id,$request->unit,$request->qty);
+            $icon->qty = $qty;
             $icon->unit_id = $request->unit;
             $icon->price = $request->price;
-            $icon->remaining = $remaining + $request->qty;
+            $icon->remaining = $remaining + $qty;
             $icon->location_id = self::location($request->location, $request->location_detail);
             $icon->sup_name = $request->sup_name;
             $icon->sup_location = $request->sup_location;
@@ -1416,9 +1423,33 @@ class InventoryController extends Controller
             $response['code'] = 422;
         } else {
             $user = auth()->user();
+
+            $item = InventoryConsumables::where([
+                ["inventory_id", $request->inventory_id]
+            ])->orderBy("id", "DESC")->limit(1)->first();
+            if($item){
+                $remaining = $item->remaining;
+            }else{
+                $remaining = 0;
+            }
+
+            if(!is_numeric($request->loc_site_id)){
+                $location = $request->loc_site_id;
+            }else{
+                $location = Location::where("id", $request->location)->first()->location;
+            }
+
+            $qty = self::contentToMinPurchased($request->inventory_id,$request->unit,$request->qty);
+
+            //Logs
+            $name = User::select('first_name')->where("id", $request->user)->first();
+            $reason = "$name->first_name consumed ".self::unitFormat($request->inventory_id,$qty);
+            self::saveLogs($request->inventory_id, 'Stored', $reason);
+
             $icon = new InventoryConsumables;
             $icon->inventory_id = $request->inventory_id;
-            $icon->qty = $request->qty;
+            $icon->qty = $qty;
+            $icon->remaining = $remaining - $qty;
             $icon->unit_id = $request->unit_id;
             $icon->assigned_to = $request->user;
             $icon->type = 'Consumed';
@@ -1438,10 +1469,11 @@ class InventoryController extends Controller
     public function getInventoryConsumable(Request $request){
         $list = DB::table('inventory_consumables as c')
             ->select(DB::raw("c.*, l.location, ld.location_detail,
-                    iu.name as unit, CONCAT(u.first_name, ' ', u.last_name) as operator
+                    iu.name as unit, CONCAT(u.first_name, ' ', u.last_name) as operator, CONCAT(w.first_name, ' ', w.last_name) as who
                     "))
             ->where("inventory_id", $request->inventory_id)
             ->leftJoin("users as u", "c.created_by", "u.id")
+            ->leftJoin("users as w", "c.assigned_to", "w.id")
             ->leftJoin("inventory_unit as iu", "c.unit_id", "iu.unit_id")
             ->leftJoin("ref_location_detail as ld","c.location_id","ld.id")
             ->leftJoin("ref_location as l","ld.loc_id","l.id")
@@ -1451,6 +1483,8 @@ class InventoryController extends Controller
         foreach ($list as $l){
             $l->created_at = gmdate("F j, Y", $l->created_at);
             $l->updated_at = gmdate("F j, Y", $l->updated_at);
+            $l->qty = self::unitFormat($request->inventory_id, $l->qty);
+            $l->remaining = self::unitFormat($request->inventory_id, $l->remaining);
         }
 
         $response['status'] = 'Success';
@@ -1458,6 +1492,108 @@ class InventoryController extends Controller
         $response['data'] = $list;
 
         return Response::json($response);
+    }
+
+    //modified
+    public function locationListConsumable(Request $request){
+        $location = DB::table("inventory_consumables as c")
+            ->select(DB::raw('l.location, l.id'))
+            ->leftjoin("ref_location_detail as ld", "c.location_id", "ld.id")
+            ->leftjoin("ref_location as l", "ld.loc_id", "l.id")
+            ->where("c.inventory_id", $request->inventory_id)
+            ->groupBy('ld.loc_id')
+            ->orderBy("l.location", "ASC")
+            ->get();
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $location;
+
+        return Response::json($response);
+    }
+
+    // Unit Formatting
+    protected static function unitFormat($inventory_id, $qty){
+        $list = Inventory::select('inventory_id')->where('inventory_id',$inventory_id)->get();
+        $array_m = [];
+        foreach ($list as $k) {
+            $k->unit = InventoryParentUnit::where('inv_id', $k->inventory_id)
+                ->leftJoin('inventory_unit as iunit', 'iunit.unit_id', '=', 'inventory_parent_unit.unit_id')
+                ->orderBy('id', 'desc')
+                ->get();
+            $x = 0;
+            foreach ($k->unit as $u) {
+                $array_m[$x] = $u['content'];
+                $x++;
+            }
+            $tree = $k->unit->reverse();
+            $j = 0;
+            foreach ($tree as $u) {
+                $name[$j] = $u['name'];
+                $j++;
+            }
+            $array_o = array_reverse($name);
+        }
+        $units = array_combine($array_o, $array_m);
+        $jjj=0;
+        foreach($units as $key => $value) {
+            if(0!=$jjj) {
+                if(1==$jjj) {
+                    $cond[$key] = $value;
+                    $cond1 = $value;
+                }
+                if(1!=$jjj){
+                    $cond[$key] = $value * $cond1;
+                    $cond1 = $value * $cond1;
+                }
+
+            }
+            if(0!=$jjj){
+                $in[$jjj] = $key;
+            }
+            $jjj++;
+        }
+        $len = count($cond) - 1;
+        $js = 0;
+        foreach (array_reverse($cond) as $key=>$val) {
+            if($js==0) {
+                $condX[$key] = floor($qty / $val);
+                $cond2 = $val;
+            }
+            if($js==1) {
+                $cond3 = $qty % $cond2;
+                $condX[$key] = floor($cond3 / $val);
+                $cond2 = $val;
+            }
+            if($js!=1 && $js!=0) {
+                $cond3 = $cond3 % $cond2;
+                $condX[$key] = floor($cond3 / $val);
+                $cond2 = $val;
+            }
+            if($len==$js){
+                $lastUnit = $cond3 % $cond2;
+            }
+            $js++;
+        }
+
+        $condX[$array_o[0]] = ceil($lastUnit);
+
+        $g = [];
+        foreach ($condX as $key=>$val){
+            $sections[$key] = (int)$val;
+        }
+
+        foreach ($sections as $name => $value){
+            if ($value > 0){
+                $g[] = $value. ' '.$name.($value == 1 ? '' : 's');
+            }
+        }
+
+        return implode(', ', $g);
+    }
+
+    public function testKo(){
+        return Response::json(self::unitFormat(30, 0));
     }
 }
 
