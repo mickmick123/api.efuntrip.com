@@ -1285,7 +1285,7 @@ class InventoryController extends Controller
                 $l_id = $location->id;
             }
 
-            $detail = LocationDetail::where("location_detail", "=", $loc_detail_id)->first();
+            $detail = LocationDetail::where([["loc_id",$l_id],["location_detail", "=", $loc_detail_id]])->first();
             if($detail){
                 $did = $detail->id;
             }else{
@@ -1300,7 +1300,7 @@ class InventoryController extends Controller
             $location_detailId = $did;
         }else{
             if(!is_numeric($loc_detail_id)){
-                $detail = LocationDetail::where("location_detail", "=", $loc_detail_id)->first();
+                $detail = LocationDetail::where([["loc_id",$loc_site_id],["location_detail", "=", $loc_detail_id]])->first();
                 if($detail){
                     $did = $detail->id;
                 }else{
