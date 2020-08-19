@@ -542,7 +542,6 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
-    //modified
     public function list(Request $request)
     {
         $name = $request->input("q", "");
@@ -1346,7 +1345,6 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
-    //modified
     public function addInventoryConsumable(Request $request){
         $validator = Validator::make($request->all(), [
             'inventory_id' => 'required',
@@ -1485,6 +1483,10 @@ class InventoryController extends Controller
             $l->updated_at = gmdate("F j, Y", $l->updated_at);
             $l->qty = self::unitFormat($request->inventory_id, $l->qty);
             $l->remaining = self::unitFormat($request->inventory_id, $l->remaining);
+            $l->location = $l->location?$l->location:'';
+            $l->location_detail = $l->location_detail?$l->location_detail:'';
+            $l->sup_name = $l->sup_name?$l->sup_name:'';
+            $l->sup_location = $l->sup_location?$l->sup_location:'';
         }
 
         $response['status'] = 'Success';
@@ -1494,7 +1496,6 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
-    //modified
     public function locationListConsumable(Request $request){
         $location = DB::table("inventory_consumables as c")
             ->select(DB::raw('l.location, l.id'))
@@ -1535,6 +1536,26 @@ class InventoryController extends Controller
             $array_o = array_reverse($name);
         }
         $units = array_combine($array_o, $array_m);
+
+        if($qty == 0){
+            return '0 '.$array_o[0];
+        }
+
+        if(count($units) == 1){
+            $g = [];
+            foreach ($units as $key=>$val){
+                $sections[$key] = (int)$val;
+            }
+
+            foreach ($sections as $name => $value){
+                if ($value > 0){
+                    $g[] = $value. ' '.$name.($value == 1 ? '' : 's');
+                }
+            }
+
+            return implode(', ', $g);
+        }
+
         $jjj=0;
         foreach($units as $key => $value) {
             if(0!=$jjj) {
@@ -1554,6 +1575,29 @@ class InventoryController extends Controller
             $jjj++;
         }
         $len = count($cond) - 1;
+
+        if($len == 0){
+            foreach (array_reverse($cond) as $key=>$val) {
+                $condX[$key] = floor($qty / $val);
+                $lastUnit = $qty % $val;
+            }
+
+            $condX[$array_o[0]] = ceil($lastUnit);
+
+            $g = [];
+            foreach ($units as $key=>$val){
+                $sections[$key] = (int)$val;
+            }
+
+            foreach ($sections as $name => $value){
+                if ($value > 0){
+                    $g[] = $value. ' '.$name.($value == 1 ? '' : 's');
+                }
+            }
+
+            return implode(', ', $g);
+        }
+
         $js = 0;
         foreach (array_reverse($cond) as $key=>$val) {
             if($js==0) {
@@ -1590,6 +1634,7 @@ class InventoryController extends Controller
         }
 
         return implode(', ', $g);
+
     }
 
     public function testKo(){
