@@ -660,7 +660,19 @@ class InventoryController extends Controller
         $list = DB::table('inventory')
             ->select(DB::raw('
                 co.name as company_name, inventory.*,
-                (SELECT COUNT(id) FROM inventory_assigned a WHERE a.inventory_id = inventory.inventory_id AND a.status !=3) AS qty,
+                CASE WHEN inventory.type="Consumables" THEN
+                    IFNULL(
+                        (SELECT
+                            SUM(qty)
+                        FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type="Purchased")
+                        -
+                        (SELECT
+                            SUM(qty)
+                        FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type="Consumed")
+                    ,0)
+                ELSE
+                    (SELECT COUNT(id) FROM inventory_assigned a WHERE a.inventory_id = inventory.inventory_id AND a.status !=3)
+                END AS qty,
                 u.unit_id, pu.id as parent_unit_id
             '))
             ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
@@ -679,6 +691,9 @@ class InventoryController extends Controller
                 ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')->get();
             $n->created_at = gmdate("F j, Y", $n->created_at);
             $n->updated_at = gmdate("F j, Y", $n->updated_at);
+            if($n->type=="Consumables") {
+                $n->qty = self::unitFormat($n->inventory_id, (int)$n->qty);
+            }
             foreach($nparent as $np){
                 $tree = $np->parents->reverse();
                 $n->item_name = $np->name;
@@ -1544,7 +1559,7 @@ class InventoryController extends Controller
         if(count($units) == 1){
             $g = [];
             foreach ($units as $key=>$val){
-                $sections[$key] = (int)$val;
+                $sections[$key] = $qty;
             }
 
             foreach ($sections as $name => $value){
