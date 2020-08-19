@@ -232,8 +232,8 @@ class InventoryController extends Controller
                     $addParentUnit->unit_id = $v->unit_id;
                     if($k === 0){
                         $addParentUnit->parent_id = 0;
-                        $addParentUnit->content = $v->content;
-                        $addParentUnit->min_purchased = 0;
+                        $addParentUnit->content = 0;
+                        $addParentUnit->min_purchased = $v->content;;
                     }elseif($k+1 === count($unitOption)){
                         $addParentUnit->parent_id = $unitOption[$k-1]->unit_id;
                         $addParentUnit->content = 0;
@@ -1437,7 +1437,7 @@ class InventoryController extends Controller
                 $location = Location::where("id", $request->location)->first()->location;
             }
 
-            $qty = self::contentToMinPurchased($request->inventory_id,$request->unit,$request->qty);
+            $qty = self::contentToMinPurchased($request->inventory_id,$request->unit_id,$request->qty);
 
             //Logs
             $name = User::select('first_name')->where("id", $request->user)->first();
