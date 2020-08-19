@@ -1780,126 +1780,196 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
    }
 
+   public function transferMember(Request $request){
+
+          $response = [];
+
+          if($request->group_id == $request->current_group_id){
+              $response['status'] = 'Error';
+              $response['code'] = 401;
+              $response['msg'] = 'Saving failed. You selected same group!';
+          }else{
+
+              $currentGroup = DB::table('users as u')->select(DB::raw('u.id, CONCAT(u.first_name, " ", u.last_name) as name, g.name as group_name, g_u.total_service_cost, g_u.id as guid'))
+                            ->leftjoin(DB::raw('(select * from group_user) as g_u'),'g_u.user_id','=','u.id')
+                            ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=', 'g_u.group_id')
+                            ->where('u.id', $request->member_id)
+                            ->where('g_u.group_id', $request->current_group_id)
+                            ->first();
+
+
+              if($currentGroup){
+
+                $data = array('group_id' => $request->group_id);
+
+                //check if current member
+                 $group = GroupUser::where('group_id', $request->group_id)
+                          ->where('user_id', $request->member_id)
+                          ->first();
+
+                 if(!$group){
+                    DB::table('group_user')
+                          ->where('id', $currentGroup->guid)
+                          ->update($data);
+                 }else{
+                    $previousGroup = GroupUser::where('group_id', $request->current_group_id)
+                             ->where('user_id', $request->member_id)
+                             ->first();
+                    $previousGroup->forceDelete();
+                 }
+
+                 $details = 'Transfer member ' . $currentGroup->name . ' from Group <strong>'. $currentGroup->group_name .'</strong> to Group<strong>' . $request->group_name .'</strong> with Total Service Cost of ' . $currentGroup->total_service_cost;
+                 $details_cn = '转会会员 ' . $currentGroup->name .' 来自组 '. $currentGroup->group_name.' 分组 ' . $request->group_name .' 以及总服务费 Php' . $currentGroup->total_service_cost;
+
+                  // save transaction logs
+                  $log_data = array(
+                      'client_id' => $request->member_id,
+                      'group_id' => $request->group_id,
+                      'log_type' => 'Transaction',
+                      'log_group' => 'service',
+                      'detail'=> $details,
+                      'detail_cn'=> $details_cn,
+                      'amount'=> 0.00,
+                  );
+                  LogController::save($log_data);
+
+                $response = $this->transferService($request);
+
+              }else{
+                $response['status'] = 'Error';
+                $response['code'] = 401;
+                $response['msg'] = 'No group data';
+              }
+
+          }
+
+         return Response::json($response);
+   }
+
+   public function transferService($request){
+
+
+     if($request->option == 'client-to-group') {
+         $groupId = 0;
+         $newGroupId = $request->group_id;
+     } elseif($request->option == 'group-to-client') {
+         $groupId = $request->group_id;
+         $newGroupId = null;
+     }
+
+     $gentracking = null;
+     for($i=0; $i<count($request->services); $i++) {
+
+         if($request->packages[$i] == 0)   { //New package
+             if($gentracking == null){
+                 $type = ($request->option == 'client-to-group') ? 'group' : 'individual';
+                 $tracking = $this->generateTracking($type);
+                 $gentracking = $tracking;
+
+                 Package::create([
+                     'client_id' => $request->member_id,
+                     'group_id' => $newGroupId,
+                     'log_date' => Carbon::now()->format('F j, Y, g:i a'),
+                     'tracking' => $tracking,
+                     'status' => '0'
+                 ]);
+
+             }
+             else{
+                 $tracking = $gentracking;
+             }
+         } else {
+             $tracking = $request->packages[$i];
+
+         }
+
+         $oldtrack = null;
+         $getServ = ClientService::where('id', $request->services[$i])
+           //  ->where('client_id', $request->member_id)
+           //  ->where('group_id', $groupId)
+             ->first();
+
+         if($getServ){
+             $oldtrack = $getServ->tracking;
+             $getServ->group_id = $newGroupId;
+             $getServ->tracking = $tracking;
+             $getServ->save();
+
+             $disc = ClientTransaction::where('client_service_id',$getServ->id)->where('type','Discount')->first();
+             $discount = 0;
+             $group_leader = null;
+             if($disc){
+                 $discount = $disc->amount;
+                 $disc->group_id = $newGroupId;
+                 $disc->client_id = $request->member_id;
+                 $disc->tracking = $tracking;
+                 if($newGroupId != null){
+                     $group_leader = Group::where('id', $newGroupId)->first()->leader_id;
+                     $disc->client_id = $group_leader;
+                 }
+                 $disc->save();
+             }
+
+             $response['status'] = 'Success';
+             $response['code'] = 200;
+
+             //Logs here
+             $translated = Service::where('id',$getServ->service_id)->first();
+             $cnserv =$getServ->detail;
+             if($translated){
+                 $cnserv = ($translated->detail_cn!='' ? $translated->detail_cn : $translated->detail);
+             }
+
+             $cost = ($getServ->cost + $getServ->charge + $getServ->tip + $getServ->com_client + $getServ->com_agent) - $discount;
+
+             if($request->option == 'client-to-group') {
+                 $details = 'Transfer service ' . $getServ->detail . ' to Group Package #' . $tracking .' with <strong>Total Service Cost of ' . $cost;
+                 $details_cn = '转移了服务 ' . $cnserv . '到服务包(团体)#' . $tracking .'以及总服务费 Php' . $cost;
+
+                 $_groupId = $newGroupId;
+
+             }
+             elseif($request->option == 'group-to-client') {
+                 $details = 'Transfer service ' . $getServ->detail . ' to Package #<strong>' . $tracking .' with Total Service Cost of ' . $cost;
+                 $details_cn = '转移了服务 ' . $cnserv . '到服务包#' . $tracking .'以及总服务费 Php' . $cost;
+
+                 $_groupId = $groupId;
+             }
+
+             // save transaction logs
+             $log_data = array(
+                 'client_service_id' => $getServ->id,
+                 'client_id' => $request->member_id,
+                 'group_id' => null,
+                 'log_type' => 'Transaction',
+                 'log_group' => 'service',
+                 'detail'=> $details,
+                 'detail_cn'=> $details_cn,
+                 'amount'=> $cost,
+             );
+             LogController::save($log_data);
+
+             // $log_data['group_id'] = $_groupId;
+             // $log_data['client_id'] = null;
+             // LogController::save($log_data);
+
+         }
+
+         $this->updatePackageStatus($tracking);
+         $this->updatePackageStatus($oldtrack);
+
+
+     }
+
+     $response['status'] = 'Success';
+     $response['code'] = 200;
+     $response['data']  = $getServ;
+
+     return $response;
+   }
 
    public function transfer(Request $request) {
-
-        if($request->option == 'client-to-group') {
-            $groupId = 0;
-            $newGroupId = $request->group_id;
-        } elseif($request->option == 'group-to-client') {
-            $groupId = $request->group_id;
-            $newGroupId = null;
-        }
-
-        $gentracking = null;
-        for($i=0; $i<count($request->services); $i++) {
-
-            if($request->packages[$i] == 0) { //New package
-                if($gentracking == null){
-                    $type = ($request->option == 'client-to-group') ? 'group' : 'individual';
-                    $tracking = $this->generateTracking($type);
-                    $gentracking = $tracking;
-
-                    Package::create([
-                        'client_id' => $request->member_id,
-                        'group_id' => $newGroupId,
-                        'log_date' => Carbon::now()->format('F j, Y, g:i a'),
-                        'tracking' => $tracking,
-                        'status' => '0'
-                    ]);
-
-                }
-                else{
-                    $tracking = $gentracking;
-                }
-            } else {
-                $tracking = $request->packages[$i];
-
-            }
-
-            $oldtrack = null;
-            $getServ = ClientService::where('id', $request->services[$i])
-              //  ->where('client_id', $request->member_id)
-              //  ->where('group_id', $groupId)
-                ->first();
-
-            if($getServ){
-                $oldtrack = $getServ->tracking;
-                $getServ->group_id = $newGroupId;
-                $getServ->tracking = $tracking;
-                $getServ->save();
-
-                $disc = ClientTransaction::where('client_service_id',$getServ->id)->where('type','Discount')->first();
-                $discount = 0;
-                $group_leader = null;
-                if($disc){
-                    $discount = $disc->amount;
-                    $disc->group_id = $newGroupId;
-                    $disc->client_id = $request->member_id;
-                    $disc->tracking = $tracking;
-                    if($newGroupId != null){
-                        $group_leader = Group::where('id', $newGroupId)->first()->leader_id;
-                        $disc->client_id = $group_leader;
-                    }
-                    $disc->save();
-                }
-
-                $response['status'] = 'Success';
-                $response['code'] = 200;
-
-                //Logs here
-                $translated = Service::where('id',$getServ->service_id)->first();
-                $cnserv =$getServ->detail;
-                if($translated){
-                    $cnserv = ($translated->detail_cn!='' ? $translated->detail_cn : $translated->detail);
-                }
-
-                $cost = ($getServ->cost + $getServ->charge + $getServ->tip + $getServ->com_client + $getServ->com_agent) - $discount;
-
-                if($request->option == 'client-to-group') {
-                    $details = 'Transfer service ' . $getServ->detail . ' to Group Package #' . $tracking .' with <strong>Total Service Cost of ' . $cost;
-                    $details_cn = '转移了服务 ' . $cnserv . '到服务包(团体)#' . $tracking .'以及总服务费 Php' . $cost;
-
-                    $_groupId = $newGroupId;
-
-                }
-                elseif($request->option == 'group-to-client') {
-                    $details = 'Transfer service ' . $getServ->detail . ' to Package #<strong>' . $tracking .' with Total Service Cost of ' . $cost;
-                    $details_cn = '转移了服务 ' . $cnserv . '到服务包#' . $tracking .'以及总服务费 Php' . $cost;
-
-                    $_groupId = $groupId;
-                }
-
-                // save transaction logs
-                $log_data = array(
-                    'client_service_id' => $getServ->id,
-                    'client_id' => $request->member_id,
-                    'group_id' => null,
-                    'log_type' => 'Transaction',
-                    'log_group' => 'service',
-                    'detail'=> $details,
-                    'detail_cn'=> $details_cn,
-                    'amount'=> $cost,
-                );
-                LogController::save($log_data);
-
-                // $log_data['group_id'] = $_groupId;
-                // $log_data['client_id'] = null;
-                // LogController::save($log_data);
-
-
-            }
-
-            $this->updatePackageStatus($tracking);
-            $this->updatePackageStatus($oldtrack);
-
-
-        }
-
-        $response['status'] = 'Success';
-        $response['code'] = 200;
-        $response['data']  = $getServ;
-
+        $response = $this->transferService($request);
         return Response::json($response);
     }
 

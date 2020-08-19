@@ -55,6 +55,7 @@ Route::middleware('auth:api')->group(function() {
 	Route::post('client-services', 'GroupController@getClientServices');
 
 	Route::post('transfer', 'GroupController@transfer');
+	Route::post('transfer-member', 'GroupController@transferMember');
 
 	Route::post('add-service-payment', 'GroupController@addServicePayment');
 
