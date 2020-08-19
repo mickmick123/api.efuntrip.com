@@ -3715,11 +3715,11 @@ public function getClientPackagesByGroup($client_id, $group_id){
              $service->save();
 
              // save transaction logs
-             $detail = 'Paid an amount of Php'.$amount.'.';
+             $detail = 'Paid an amount of Php '.$amount.'.';
              $detail_cn = '已支付 Php'.$amount.'.';
              $log_data = array(
                  'client_service_id' => null,
-                 'client_id' => $client_id,
+                 'client_id' => null,
                  'group_id' => $group_id,
                  'log_type' => 'Transaction',
                  'log_group' => 'payment',
@@ -3728,21 +3728,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
                  'amount'=> $amount,
              );
              LogController::save($log_data);
-
-             $detail = 'Paid service with an amount of Php'.$amount.'.';
-             $detail_cn = '已支付 Php'.$amount.'.';
-             $log_data = array(
-                 'client_service_id' => $cs_id,
-                 'client_id' => $client_id,
-                 'group_id' => $group_id,
-                 'log_type' => 'Ewallet',
-                 'log_group' => 'payment',
-                 'detail'=> $detail,
-                 'detail_cn'=> $detail_cn,
-                 'amount'=> '-'.$amount,
-             );
-             LogController::save($log_data);
-
+            
            }
 
            $response['status'] = 'Success';
