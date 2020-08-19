@@ -2063,6 +2063,25 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
    }
 
+   public function checkIfMemberExist(Request $request){
+
+       $group = GroupUser::where('group_id', $request->group_id)
+               ->where('user_id', $request->member_id)
+               ->first();
+
+       if($group){
+            $hasGroup = 1;
+       }else{
+            $hasGroup = 0;
+       }
+
+       $response['status'] = 'Success';
+       $response['code'] = 200;
+       $response['data']  = $hasGroup;
+
+       return $response;
+   }
+
    public function transferMember(Request $request){
 
           $response = [];
@@ -2095,10 +2114,12 @@ public function getClientPackagesByGroup($client_id, $group_id){
                           ->where('id', $currentGroup->guid)
                           ->update($data);
                  }else{
-                    $previousGroup = GroupUser::where('group_id', $request->current_group_id)
-                             ->where('user_id', $request->member_id)
-                             ->first();
-                    $previousGroup->forceDelete();
+                    if($request->selected_all == 1){
+                      $previousGroup = GroupUser::where('group_id', $request->current_group_id)
+                               ->where('user_id', $request->member_id)
+                               ->first();
+                      $previousGroup->forceDelete();
+                    }
                  }
 
                  $details = 'Transfer member ' . $currentGroup->name . ' from Group <strong>'. $currentGroup->group_name .'</strong> to Group<strong>' . $request->group_name .'</strong> with Total Service Cost of ' . $currentGroup->total_service_cost;
@@ -4032,7 +4053,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
                 $detail_cn = '<b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'.</b> Paid service with an amount of Php'.$amount.'.';
              }
 
-             
+
              $log_data = array(
                  'client_service_id' => $cs_id,
                  'client_id' => null,

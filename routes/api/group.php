@@ -57,6 +57,9 @@ Route::middleware('auth:api')->group(function() {
 	Route::post('transfer', 'GroupController@transfer');
 	Route::post('transfer-member', 'GroupController@transferMember');
 
+	Route::post('checkif-member-exist', 'GroupController@checkIfMemberExist');
+
+
 	Route::post('add-service-payment', 'GroupController@addServicePayment');
 
 	Route::get('switch-branch/{group_id}/{branch_id?}', 'GroupController@switchBranch');
