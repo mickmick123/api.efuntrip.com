@@ -547,18 +547,25 @@ class InventoryController extends Controller
 
         $newlyAdded = Inventory::select(['inventory.*',
             DB::raw("(inventory.name) AS name,
-                (co.name) AS company"),
+                (co.name) AS company,
+                CASE WHEN inventory.type='Consumables' THEN
+                    IFNULL(
+                        (SELECT
+                            SUM(qty)
+                        FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type='Purchased')
+                        -
+                        (SELECT
+                            SUM(qty)
+                        FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type='Consumed')
+                    ,0)
+                ELSE
+                    (SELECT COUNT(id) FROM inventory_assigned a WHERE a.inventory_id = inventory.inventory_id AND a.status !=3)
+                END AS total_asset"),
             'datetime' => function ($query) {
                 $query->select(DB::raw("FROM_UNIXTIME(created_at, '%m/%d/%Y %H:%i:%s') AS datatime"))
                     ->from('inventory_logs')
                     ->whereColumn('inventory_id', 'inventory.inventory_id')
                     ->orderBy('created_at','DESC')
-                    ->limit(1);
-            },
-            'total_asset' => function ($query) {
-                $query->select(DB::raw("count('inventory_id')"))
-                    ->from('inventory_assigned')
-                    ->whereColumn('inventory_id', 'inventory.inventory_id')
                     ->limit(1);
             },
             'action_done' => function ($query) {
@@ -589,6 +596,13 @@ class InventoryController extends Controller
                 $sort = explode('-' , $sort);
                 return $q->orderBy($sort[0], $sort[1]);
             })->paginate($perPage);
+
+        foreach($newlyAdded as $n){
+            if($n->type=="Consumables") {
+                $n->total_asset = self::unitFormat($n->inventory_id, (int)$n->total_asset);
+            }
+        }
+
 
         $response['status'] = 'Success';
         $response['code'] = 200;

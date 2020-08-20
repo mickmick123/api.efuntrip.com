@@ -97,7 +97,6 @@ class LocationController extends Controller
         $response['limit'] = $limit;
         $response['quantities'] = $convertedQty;
         $response['remaining'] = InventoryController::unitFormat($request->inventory_id, $remaining);
-//        $response['request'] = $request->all();
 
         return Response::json($response);
     }
