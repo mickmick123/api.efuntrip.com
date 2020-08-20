@@ -2038,6 +2038,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
         $group_id = $request->group_id;
         $client_id = $request->client_id;
+        $current_group_id = $request->current_group_id;
 
         $result['services'] = DB::table('client_services')
                  ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, tracking, status, detail, created_at'))
@@ -2050,6 +2051,9 @@ public function getClientPackagesByGroup($client_id, $group_id){
         if($request->option === 'client-to-group'){
           $result['packages'] = Package::where('group_id', $group_id)->where('client_id', $client_id)->orderBy('id', 'desc')->get();
         }
+        else if($request->option === 'group-to-group'){
+          $result['packages'] = Package::where('group_id', $current_group_id)->orderBy('id', 'desc')->get();
+        }
         else{
           $result['packages'] = Package::where('client_id', $client_id)->where('group_id', NULL)->orderBy('id', 'desc')->get();
         }
@@ -2060,8 +2064,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $response['code'] = 200;
 
         return Response::json($response);
-
    }
+   
 
    public function checkIfMemberExist(Request $request){
 
