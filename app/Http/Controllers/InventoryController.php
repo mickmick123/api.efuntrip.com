@@ -1600,20 +1600,27 @@ class InventoryController extends Controller
 
     public function locationListConsumable(Request $request){
         $location = DB::table("inventory_consumables as c")
-            ->select(DB::raw('l.location, l.id, SUM(price) as price'))
+            ->select(DB::raw('l.location, l.id'))
             ->leftjoin("ref_location_detail as ld", "c.location_id", "ld.id")
             ->leftjoin("ref_location as l", "ld.loc_id", "l.id")
             ->where([["c.inventory_id", $request->inventory_id],["c.type","=","Purchased"]])
             ->groupBy('ld.loc_id')
             ->orderBy("l.location", "ASC")
             ->get();
+        $spent = DB::table('inventory_consumables as c')
+            ->select(DB::raw('SUM(price) as price'))
+            ->where([["inventory_id", $request->inventory_id],["c.type", "=", "Purchased"]])
+            ->leftjoin("ref_location_detail as ld", "c.location_id", "ld.id")
+            ->leftjoin("ref_location as l", "ld.loc_id", "l.id")
+            ->groupBy('c.inventory_id')
+            ->first();
         $lastUnit = InventoryParentUnit::select("u.name")->where("inv_id", $request->inventory_id)
             ->leftJoin("inventory_unit as u", "inventory_parent_unit.unit_id", "u.unit_id")
             ->orderBy("id", "DESC")->limit(1)->first();
-
+        $price = number_format($spent->price, 2);
         foreach ($location as $l){
             $purchased = DB::table('inventory_consumables as c')
-                ->select(DB::raw('SUM(qty) as qty, SUM(price) as price'))
+                ->select(DB::raw('SUM(qty) as qty'))
                 ->where([["inventory_id", $request->inventory_id],["c.type", "=", "Purchased"],["l.id", $l->id]])
                 ->leftjoin("ref_location_detail as ld", "c.location_id", "ld.id")
                 ->leftjoin("ref_location as l", "ld.loc_id", "l.id")
@@ -1627,17 +1634,16 @@ class InventoryController extends Controller
                 ->groupBy('c.inventory_id')
                 ->first();
 
-            $l->price = number_format($purchased->price, 2);
             $purchased = $purchased?(int)$purchased->qty:0;
             $consumed = $consumed?(int)$consumed->qty:0;
             $l->remaining = self::unitFormat($request->inventory_id,$purchased-$consumed);
             $l->uTotal = number_format($purchased-$consumed);
-            $l->uTotal = $l->uTotal." ".$lastUnit->name.($l->uTotal>0?'s':'');
+            $l->uTotal = $l->uTotal!=0?$l->uTotal." ".($lastUnit->name.($l->uTotal>0?'s':'')):'';
         }
 
         $response['status'] = 'Success';
         $response['code'] = 200;
-        $response['data'] = $location;
+        $response['data'] = array('spent' => $price, 'location' => $location);
 
         return Response::json($response);
     }
