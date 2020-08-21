@@ -51,7 +51,8 @@
                 'sound' => 'default'
             ]
         ])
-        ->setApiKey('AIzaSyA7ev628GjNpVE5WMy7mhARgvFur_JZ-zg')
+        // ->setApiKey('AIzaSyA7ev628GjNpVE5WMy7mhARgvFur_JZ-zg')
+        ->setApiKey('AIzaSyDPF-KM8WG3bIyj0t9Ybf-SU41e3XPy--o')
         ->setDevicesToken($androidDeviceTokens)
         ->send();
 	}
