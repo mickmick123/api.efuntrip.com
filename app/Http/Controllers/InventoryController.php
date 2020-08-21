@@ -1232,7 +1232,7 @@ class InventoryController extends Controller
             $ilog = new InventoryLogs;
             $ilog->inventory_id = $inv->inventory_id;
             $ilog->type = 'Updated';
-            $ilog->reason = $user->first_name.' updated '.$request->name;
+            $ilog->reason = $user->first_name.' updated '.$inv->name;
             $ilog->created_by = $user->id;
             $ilog->created_at = strtotime("now");
             $ilog->save();
@@ -1260,6 +1260,7 @@ class InventoryController extends Controller
                 $xx++;
             }
             $v->unit = implode("/", $childs);
+            $v->specification = $v->specification?$v->specification:'';
         }
 
         $response['status'] = 'Success';
