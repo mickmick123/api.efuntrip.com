@@ -1455,9 +1455,12 @@ class InventoryController extends Controller
             $response['code'] = 422;
         } else {
             $user = auth()->user();
+            $locId = self::location($request->location, $request->location_detail,2);
+            $supLocId = self::location($request->sup_location, $request->sup_location_detail,3);
+
             $item = InventoryConsumables::where([
                 ["inventory_id", $request->inventory_id],
-                ["location_id", self::location($request->location, $request->location_detail)]
+                ["location_id", $locId]
             ])->orderBy("id", "DESC")->limit(1)->first();
             if($item){
                 $remaining = $item->remaining;
@@ -1483,9 +1486,9 @@ class InventoryController extends Controller
             $icon->unit_id = $request->unit;
             $icon->price = $request->price;
             $icon->remaining = $remaining + $qty;
-            $icon->location_id = self::location($request->location, $request->location_detail);
+            $icon->location_id = $locId;
             $icon->sup_name = $request->sup_name;
-            $icon->sup_location = $request->sup_location;
+            $icon->sup_location_id = $supLocId;
             $icon->type = 'Purchased';
             $icon->created_by = $user->id;
             $icon->created_at = strtotime("now");
