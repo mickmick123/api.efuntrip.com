@@ -22,7 +22,7 @@ class LocationController extends Controller
 
     public function getLocationDetail(Request $request){
         if(!is_numeric($request->id)){
-            $loc = Location::where("location", "=", $request->id)->first();
+            $loc = Location::where([["location", "=", $request->id],["type", "=", $request->type]])->first();
             if($loc){
                 $location_id = $loc->id;
             }else{
