@@ -211,19 +211,17 @@ class InventoryController extends Controller
             }elseif($request->type === 'Consumables'){
                 $unitOption = [];
                 foreach (json_decode($request->unit_option, true) as $k=>$v) {
-                    if($v["unit".$k] !== null && $v["content".$k] !== null){
-                        $unit = InventoryUnit::where('name',$v['unit'.$k])->get();
-                        if(count($unit) === 0) {
-                            $addUnit = new InventoryUnit;
-                            $addUnit->name = $v['unit'.$k];
-                            $addUnit->created_at = strtotime("now");
-                            $addUnit->updated_at = strtotime("now");
-                            $addUnit->save();
-                            $unit = InventoryUnit::where('name', $v['unit'.$k])->get();
-                        }
-                        $unitOption[$k] = $unit;
-                        ArrayHelper::ArrayQueryPush($unitOption[$k],['content'],[$v["content".$k]]);
+                    $unit = InventoryUnit::where('name',$v['unit'.$k])->get();
+                    if(count($unit) === 0) {
+                        $addUnit = new InventoryUnit;
+                        $addUnit->name = $v['unit'.$k];
+                        $addUnit->created_at = strtotime("now");
+                        $addUnit->updated_at = strtotime("now");
+                        $addUnit->save();
+                        $unit = InventoryUnit::where('name', $v['unit'.$k])->get();
                     }
+                    $unitOption[$k] = $unit;
+                    ArrayHelper::ArrayQueryPush($unitOption[$k],['content'],[$v["content".$k]]);
                 }
                 $unitOption = ArrayHelper::ArrayMerge($unitOption);
                 foreach ($unitOption as $k=>$v){
@@ -1194,19 +1192,17 @@ class InventoryController extends Controller
 
             $unitOption = [];
             foreach (json_decode($request->unit_option, true) as $k=>$v) {
-                if($v["unit".$k] !== null && $v["content".$k] !== null){
-                    $unit = InventoryUnit::where('name',$v['unit'.$k])->get();
-                    if(count($unit) === 0) {
-                        $addUnit = new InventoryUnit;
-                        $addUnit->name = $v['unit'.$k];
-                        $addUnit->created_at = strtotime("now");
-                        $addUnit->updated_at = strtotime("now");
-                        $addUnit->save();
-                        $unit = InventoryUnit::where('name', $v['unit'.$k])->get();
-                    }
-                    $unitOption[$k] = $unit;
-                    ArrayHelper::ArrayQueryPush($unitOption[$k],['content'],[$v["content".$k]]);
+                $unit = InventoryUnit::where('name',$v['unit'.$k])->get();
+                if(count($unit) === 0) {
+                    $addUnit = new InventoryUnit;
+                    $addUnit->name = $v['unit'.$k];
+                    $addUnit->created_at = strtotime("now");
+                    $addUnit->updated_at = strtotime("now");
+                    $addUnit->save();
+                    $unit = InventoryUnit::where('name', $v['unit'.$k])->get();
                 }
+                $unitOption[$k] = $unit;
+                ArrayHelper::ArrayQueryPush($unitOption[$k],['content'],[$v["content".$k]]);
             }
             $unitOption = ArrayHelper::ArrayMerge($unitOption);
             foreach ($unitOption as $k=>$v){
