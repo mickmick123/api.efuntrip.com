@@ -1563,14 +1563,16 @@ class InventoryController extends Controller
     public function getInventoryConsumable(Request $request){
         $list = DB::table('inventory_consumables as c')
             ->select(DB::raw("c.*, l.location, ld.location_detail,
-                    iu.name as unit, CONCAT(u.first_name, ' ', u.last_name) as operator, CONCAT(w.first_name, ' ', w.last_name) as who
-                    "))
+                    iu.name as unit, CONCAT(u.first_name, ' ', u.last_name) as operator, CONCAT(w.first_name, ' ', w.last_name) as who,
+                    l1.location as sup_location, ld1.location_detail as sup_location_detail"))
             ->where("inventory_id", $request->inventory_id)
             ->leftJoin("users as u", "c.created_by", "u.id")
             ->leftJoin("users as w", "c.assigned_to", "w.id")
             ->leftJoin("inventory_unit as iu", "c.unit_id", "iu.unit_id")
             ->leftJoin("ref_location_detail as ld","c.location_id","ld.id")
             ->leftJoin("ref_location as l","ld.loc_id","l.id")
+            ->leftJoin("ref_location_detail as ld1","c.sup_location_id","ld1.id")
+            ->leftJoin("ref_location as l1","ld1.loc_id","l1.id")
             ->orderBy("id", "DESC")
             ->get();
 
@@ -1582,7 +1584,8 @@ class InventoryController extends Controller
             $l->location = $l->location?$l->location:'';
             $l->location_detail = $l->location_detail?$l->location_detail:'';
             $l->sup_name = $l->sup_name?$l->sup_name:'';
-            $l->sup_location = $l->sup_location?$l->sup_location:'';
+            $s = $l->sup_location;
+            $l->sup_location = $s?$s.' ('.$l->sup_location_detail.')':'';
         }
 
         $response['status'] = 'Success';
