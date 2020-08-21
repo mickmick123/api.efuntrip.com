@@ -10,8 +10,8 @@ use Illuminate\Http\Request;
 
 class LocationController extends Controller
 {
-    public function getLocation(){
-        $loc = Location::all();
+    public function getLocation(Request $request){
+        $loc = Location::where("type", "=", $request->type)->get();
 
         $response['status'] = 'Success';
         $response['code'] = 200;

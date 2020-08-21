@@ -905,7 +905,7 @@ class InventoryController extends Controller
         } else {
             $now = strtotime("now");
             $items = InventoryAssigned::where("id", $request->assigned_id)->first();
-            $location_detailId = self::location($request->loc_site_id, $request->loc_detail_id);
+            $location_detailId = self::location($request->loc_site_id, $request->loc_detail_id, 2);
 
             //Logs
             $user=Auth::user();
@@ -1135,7 +1135,7 @@ class InventoryController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
-            $now = strtotime("now");;
+            $now = strtotime("now");
             $loc = LocationDetail::select('l.location','ref_location_detail.location_detail')->where("ref_location_detail.id",$request->storage_detail_id)
                 ->leftJoin("ref_location as l","ref_location_detail.loc_id","l.id")
                 ->first();
@@ -1150,7 +1150,7 @@ class InventoryController extends Controller
                     $location_detail = LocationDetail::where("id", $request->loc_detail_id)->first()->location_detail;
                 }
             }
-            $location_detailId = self::location($request->loc_site_id, $request->loc_detail_id);
+            $location_detailId = self::location($request->loc_site_id, $request->loc_detail_id, 2);
 
             //Logs
             $user=Auth::user();
@@ -1308,7 +1308,7 @@ class InventoryController extends Controller
                 if($val["type".$key] == "Received"){
                     $received += 1;
                 }
-                $location_detailId = self::location($val["location".$key], $val["location_detail".$key]);
+                $location_detailId = self::location($val["location".$key], $val["location_detail".$key], 2);
 
                 $data = new InventoryAssigned;
                 $data->inventory_id = $request->inventory_id;
@@ -1348,14 +1348,15 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
-    protected static function location($loc_site_id, $loc_detail_id){
+    protected static function location($loc_site_id, $loc_detail_id, $type=1){
         if(!is_numeric($loc_site_id)){
-            $loc = Location::where("location", "=", $loc_site_id)->first();
+            $loc = Location::where([["location", "=", $loc_site_id],["type", "=", $type]])->first();
             if($loc){
                 $l_id = $loc->id;
             }else{
                 $location = new Location;
                 $location->location = $loc_site_id;
+                $location->type = $type;
                 $location->save();
 
                 $l_id = $location->id;
@@ -1591,36 +1592,41 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
-    //modified
     public function locationListConsumable(Request $request){
         $location = DB::table("inventory_consumables as c")
-            ->select(DB::raw('l.location, l.id'))
+            ->select(DB::raw('l.location, l.id, SUM(price) as price'))
             ->leftjoin("ref_location_detail as ld", "c.location_id", "ld.id")
             ->leftjoin("ref_location as l", "ld.loc_id", "l.id")
             ->where([["c.inventory_id", $request->inventory_id],["c.type","=","Purchased"]])
             ->groupBy('ld.loc_id')
             ->orderBy("l.location", "ASC")
             ->get();
+        $lastUnit = InventoryParentUnit::select("u.name")->where("inv_id", $request->inventory_id)
+            ->leftJoin("inventory_unit as u", "inventory_parent_unit.unit_id", "u.unit_id")
+            ->orderBy("id", "DESC")->limit(1)->first();
 
         foreach ($location as $l){
             $purchased = DB::table('inventory_consumables as c')
-                    ->select(DB::raw('SUM(qty) as qty'))
-                    ->where([["inventory_id", $request->inventory_id],["type", "=", "Purchased"],["l.id", $l->id]])
-                    ->leftjoin("ref_location_detail as ld", "c.location_id", "ld.id")
-                    ->leftjoin("ref_location as l", "ld.loc_id", "l.id")
-                    ->groupBy('c.inventory_id')
-                    ->first();
+                ->select(DB::raw('SUM(qty) as qty, SUM(price) as price'))
+                ->where([["inventory_id", $request->inventory_id],["c.type", "=", "Purchased"],["l.id", $l->id]])
+                ->leftjoin("ref_location_detail as ld", "c.location_id", "ld.id")
+                ->leftjoin("ref_location as l", "ld.loc_id", "l.id")
+                ->groupBy('c.inventory_id')
+                ->first();
             $consumed = DB::table('inventory_consumables as c')
                 ->select(DB::raw('SUM(qty) as qty'))
-                ->where([["inventory_id", $request->inventory_id],["type", "=", "Consumed"],["l.id", $l->id]])
+                ->where([["inventory_id", $request->inventory_id],["c.type", "=", "Consumed"],["l.id", $l->id]])
                 ->leftjoin("ref_location_detail as ld", "c.location_id", "ld.id")
                 ->leftjoin("ref_location as l", "ld.loc_id", "l.id")
                 ->groupBy('c.inventory_id')
                 ->first();
 
+            $l->price = number_format($purchased->price, 2);
             $purchased = $purchased?(int)$purchased->qty:0;
             $consumed = $consumed?(int)$consumed->qty:0;
             $l->remaining = self::unitFormat($request->inventory_id,$purchased-$consumed);
+            $l->uTotal = number_format($purchased-$consumed);
+            $l->uTotal = $l->uTotal." ".$lastUnit->name.($l->uTotal>0?'s':'');
         }
 
         $response['status'] = 'Success';
