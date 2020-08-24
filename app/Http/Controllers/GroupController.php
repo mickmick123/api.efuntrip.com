@@ -470,7 +470,7 @@ class GroupController extends Controller
 
     public function show($id) {
         $group = Group::with('branches', 'contactNumbers', 'serviceProfile')
-            ->select(array('id', 'name', 'leader_id', 'tracking', 'address','client_com_id', 'agent_com_id', 'service_profile_id'))
+            ->select(array('id', 'name', 'leader_id', 'tracking', 'address','client_com_id', 'agent_com_id', 'service_profile_id','risk'))
             ->find($id);
 
         if( $group ) {
@@ -737,7 +737,7 @@ class GroupController extends Controller
            }else{
              $response['status'] = 'Error';
              $response['code'] = 404;
-             $response['msg'] = 'Client already a member of this group!';
+             $response['msg'] = 'lient Already Exist!';
            }
         }
 
@@ -749,7 +749,7 @@ class GroupController extends Controller
       return Response::json($response);
   }
 
-
+//001
 public function members(Request $request, $id, $page = 20) {
 
     $sort = $request->input('sort');
@@ -799,36 +799,6 @@ public function members(Request $request, $id, $page = 20) {
       $gids = $mems->pluck('user_id');
     }
 
-
-    // \Log::info($gids);
-
-    // $groups = DB::table('group_user as g_u')
-    //     ->select(DB::raw('g_u.id,g_u.group_id, CONCAT(u.first_name, " ", u.last_name) as name, g_u.user_id,  g_u.is_vice_leader, g_u.total_service_cost, u.id'))
-    //     ->leftjoin(DB::raw('(select * from users) as u'),'u.id','=','g_u.user_id')
-    //     ->whereIn('g_u.user_id', $gids)
-    //     ->when($mode == 'fullname', function ($query) use($q1,$q2){
-    //             return $query->where(function ($query2) use($q1,$q2) {
-    //                         $query2->where('u.first_name', '=', $q1)
-    //                               ->Where('u.last_name', '=', $q2);
-    //                     })->orwhere(function ($query2) use($q1,$q2) {
-    //                         $query2->where('u.last_name', '=', $q1)
-    //                               ->Where('u.first_name', '=', $q2);
-    //                     });
-    //     })
-    //     ->when($mode == 'id', function ($query) use($search){
-    //             return $query->where('u.id','LIKE','%'.$search.'%');
-    //     })
-    //     ->when($mode == 'name', function ($query) use($search){
-    //             return $query->where('first_name' ,'=', $search)
-    //                          ->orwhere('last_name' ,'=', $search);
-    //     })
-    //     ->when($sort != '', function ($q) use($sort){
-    //         $sort = explode('-' , $sort);
-    //         return $q->orderBy($sort[0], $sort[1]);
-    //     })
-    //     ->orderBy('g_u.id', 'desc')
-    //     ->paginate($page);
-
     $groups = DB::table('users as u')->select(DB::raw('u.id, CONCAT(u.first_name, " ", u.last_name) as name, g_u.is_vice_leader, g_u.total_service_cost, g_u.id as guid'))
                     ->leftjoin(DB::raw('(select * from group_user) as g_u'),'g_u.user_id','=','u.id')
                     ->whereIn('u.id', $gids)
@@ -875,6 +845,7 @@ public function members(Request $request, $id, $page = 20) {
                     ->get();
 
         $totalServiceCost = 0;
+        $totalSub = 0;
         if(count($packs) > 0){
 
           foreach($packs as $p){
@@ -887,14 +858,39 @@ public function members(Request $request, $id, $page = 20) {
                   ->get();
 
             //  $tempService = [];
-              $ctr2 = 0;
+                  $ctr2 = 0;
+                  $totalSub = 0;
                   foreach($services as $s){
                     $s->package_cost = $s->cost+ $s->charge + $s->tip + $s->com_agent + $s->com_client;
                     $s->detail =  $s->detail;
                     $s->discount =  ClientTransaction::where('client_service_id', $s->id)->where('type', 'Discount')->sum('amount');
+
+
+                    //Discount Details
+                    $s->discount_details =  ClientTransaction::where('client_service_id', $s->id)->where('type', 'Discount')->select('amount','reason','created_at')->first();
+
+                    //Payment details
+                    $logType = Log::where('client_service_id', $s->id)->where('group_id', $id)->where('log_type', 'Transaction')->where('log_group', 'payment')->select('amount','log_date')->get();
+
+                    $paymentLog = '';
+                    $s->payment_details = '';
+
+                    if(count($logType) > 0){
+                      foreach($logType as $log){
+                        $paymentLog =  $paymentLog."\r\n Php". $log->amount ."(".$log->log_date.")";
+                      }
+                      $s->payment_details = $paymentLog;
+                    }else{
+                       if($s->payment_amount > 0){
+                         $s->payment_details = "Php" . $s->payment_amount . " (". $s->created_at .")";
+                       }
+                    }
+
                     if($s->active !== 0){
                         $totalServiceCost += ($s->package_cost - $s->discount);
+                        $totalSub +=  ($s->discount + $s->payment_amount) - (($s->cost + $s->charge) + ($s->tip + $s->com_client + $s->com_agent));
                     }
+
                   //  $tempService[$ctr2] = $s;
                   //  $ctr2 ++;
                   }
@@ -911,6 +907,7 @@ public function members(Request $request, $id, $page = 20) {
         $temp['is_vice_leader'] = $g->is_vice_leader;
         $temp['user_id'] = $g->id;
         $temp['total_service_cost'] = $totalServiceCost;
+        $temp['total_sub'] = $totalSub;
         $response[$ctr] =  $temp;
         $ctr++;
       }
@@ -1572,6 +1569,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
         $discountCtr = 0;
         $totalServiceCount = 0;
+
         foreach($servicesByDate as $sd){
 
           $queryClients = ClientService::where('service_id', $sd->service_id)->where('created_at', $sd->created_at)->where('group_id', $groupId)->orderBy('created_at','DESC')->orderBy('client_id')->groupBy('client_id')->get();
@@ -1579,6 +1577,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
           $memberByDate = [];
           $ctr2 = 0;
 
+          $totalSub = 0;
           foreach($queryClients as $m){
 
             $clientServices = [];
@@ -1586,6 +1585,29 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
             $m->discount = ClientTransaction::where('client_service_id', $m->id)->where('type', 'Discount')->sum('amount');
             $discountCtr += $m->discount;
+
+            //Discount Details
+            $m->discount_details =  ClientTransaction::where('client_service_id', $m->id)->where('type', 'Discount')->select('amount','reason','created_at')->first();
+
+            //Payment details
+            $logType = Log::where('client_service_id', $m->id)->where('group_id', $groupId)->where('log_type', 'Transaction')->where('log_group', 'payment')->select('amount','log_date')->get();
+
+            $paymentLog = '';
+            $m->payment_details = '';
+
+
+            if(count($logType) > 0){
+              foreach($logType as $log){
+                $paymentLog =  $paymentLog."\r\n Php". $log->amount ."(".$log->log_date.")";
+              }
+              $m->payment_details = $paymentLog;
+            }else{
+               if($m->payment_amount > 0){
+                 $m->payment_details = "Php" . $m->payment_amount . " (". $m->created_at .")";
+               }
+            }
+
+            $totalSub +=  ($m->discount + $m->payment_amount) - (($m->cost + $m->charge) + ($m->tip + $m->com_client + $m->com_agent));
 
             $memberByDate[$ctr2] = User::where('id',$m->client_id)->select('first_name','last_name')->first();
             $memberByDate[$ctr2]['tcost'] = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$sd->sdate)->where('group_id', $groupId)->where('client_id',$m->client_id)->value(DB::raw("SUM(cost + charge + tip +com_client + com_agent)"));
@@ -1598,7 +1620,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
             if($m->active && $m->status != "cancelled")
               $totalServiceCount++;
          }
-
+         $sd->total_sub = $totalSub;
          $sd->members = $memberByDate;
       }
 
@@ -1818,7 +1840,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
           $members = [];
           $discountCtr = 0;
           $totalCost = 0;
-
+          $totalSub = 0;
           foreach($queryMembers as $m){
                 $ss =  ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->where('client_id',$m->client_id)->get();
 
@@ -1827,9 +1849,32 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
                 foreach($ss as $cs){
                   $cs->discount =  ClientTransaction::where('client_service_id', $cs->id)->where('type', 'Discount')->sum('amount');
+
+                  //Discount Details
+                  $cs->discount_details =  ClientTransaction::where('client_service_id', $cs->id)->where('type', 'Discount')->select('amount','reason','created_at')->first();
+
+                  //Payment details
+                  $logType = Log::where('client_service_id', $cs->id)->where('group_id', $groupId)->where('log_type', 'Transaction')->where('log_group', 'payment')->select('amount','log_date')->get();
+
+                  $paymentLog = '';
+                  $cs->payment_details = '';
+
+                  if(count($logType) > 0){
+                    foreach($logType as $log){
+                      $paymentLog =  $paymentLog."\r\n Php". $log->amount ."(".$log->log_date.")";
+                    }
+                    $cs->payment_details = $paymentLog;
+                  }else{
+                     if($cs->payment_amount > 0){
+                       $cs->payment_details = "Php" . $cs->payment_amount . " (". $cs->created_at .")";
+                     }
+                  }
+
                   if($cs->active !== 0 && $cs->status != 'cancelled'){
                     $discountCtr += $cs->discount;
                     $totalCost += (($cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent)) - $cs->discount;
+                    $totalSub +=  ($cs->discount + $cs->payment_amount) - (($cs->cost + $cs->charge) + ($cs->tip + $cs->com_client + $cs->com_agent));
+
                   }
 
                   $clientServices[$tmpCtr] = $cs;
@@ -1845,6 +1890,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
               $ctr2++;
           }
           $temp['total_service_cost'] = $totalCost;
+          $temp['total_sub'] = $totalSub;
           //$temp['total_service_cost'] = ($query->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)")));
           $temp['members'] = $members;
           //$temp['query'] = $query;
@@ -2052,7 +2098,14 @@ public function getClientPackagesByGroup($client_id, $group_id){
           $result['packages'] = Package::where('group_id', $group_id)->where('client_id', $client_id)->orderBy('id', 'desc')->get();
         }
         else if($request->option === 'group-to-group'){
-          $result['packages'] = Package::where('group_id', $current_group_id)->orderBy('id', 'desc')->get();
+
+          if($current_group_id !== 0){
+              $result['packages'] = Package::where('group_id', $current_group_id)->orderBy('id', 'desc')->get();
+          }
+          else{
+              $result['packages'] = [];
+          }
+
         }
         else{
           $result['packages'] = Package::where('client_id', $client_id)->where('group_id', NULL)->orderBy('id', 'desc')->get();
@@ -2065,7 +2118,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
         return Response::json($response);
    }
-   
+
 
    public function checkIfMemberExist(Request $request){
 
@@ -3823,6 +3876,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
                foreach($ss as $cs){
                  $cs->discount =  ClientTransaction::where('client_service_id', $cs->id)->where('type', 'Discount')->sum('amount');
+
                  if($cs->active !== 0){
                    $discountCtr += $cs->discount;
                    $totalCost += (($cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent)) - $cs->discount;
@@ -4039,18 +4093,19 @@ public function getClientPackagesByGroup($client_id, $group_id){
              LogController::save($log_data);
 
              $label = null;
-             $cl = User::findOrFail($client_id);
              if($mode == "batch"){
                 $label = 'Payment for Batch '.Carbon::parse($service->created_at)->format('M d, Y');
-                $detail = 'Paid Php'.$amount.' to service '.$service->detail.'. -<b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'</b>';
-                $detail_cn = 'Paid Php'.$amount.' to service '.$service->detail.'. -<b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'</b>';
+                $detail = '<b>['.$client_id.'] '.$service->detail.'.</b> Paid service with an amount of Php'.$amount.'.';
+                $detail_cn = '<b>['.$client_id.'] '.$service->detail.'.</b> Paid service with an amount of Php'.$amount.'.';
              }
              else if($mode == "members"){
+                $cl = User::findOrFail($client_id);
                 $label = 'Payment for member <b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'</b>';
                 $detail = '<b>'.$service->detail.'.</b> Paid service with an amount of Php'.$amount.'.';
                 $detail_cn = '<b>'.$service->detail.'.</b> Paid service with an amount of Php'.$amount.'.';
              }
              else if($mode == "service"){
+                $cl = User::findOrFail($client_id);
                 $label = 'Payment for sevice <b>'.$service->detail.'</b>';
                 $detail = '<b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'.</b> Paid service with an amount of Php'.$amount.'.';
                 $detail_cn = '<b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'.</b> Paid service with an amount of Php'.$amount.'.';
