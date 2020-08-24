@@ -737,7 +737,7 @@ class GroupController extends Controller
            }else{
              $response['status'] = 'Error';
              $response['code'] = 404;
-             $response['msg'] = 'Client Not Available!';
+             $response['msg'] = 'Client already a member of this group!';
            }
         }
 
@@ -4039,19 +4039,18 @@ public function getClientPackagesByGroup($client_id, $group_id){
              LogController::save($log_data);
 
              $label = null;
+             $cl = User::findOrFail($client_id);
              if($mode == "batch"){
                 $label = 'Payment for Batch '.Carbon::parse($service->created_at)->format('M d, Y');
-                $detail = '<b>['.$client_id.'] '.$service->detail.'.</b> Paid service with an amount of Php'.$amount.'.';
-                $detail_cn = '<b>['.$client_id.'] '.$service->detail.'.</b> Paid service with an amount of Php'.$amount.'.';
+                $detail = 'Paid Php'.$amount.' to service '.$service->detail.'. -<b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'</b>';
+                $detail_cn = 'Paid Php'.$amount.' to service '.$service->detail.'. -<b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'</b>';
              }
              else if($mode == "members"){
-                $cl = User::findOrFail($client_id);
                 $label = 'Payment for member <b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'</b>';
                 $detail = '<b>'.$service->detail.'.</b> Paid service with an amount of Php'.$amount.'.';
                 $detail_cn = '<b>'.$service->detail.'.</b> Paid service with an amount of Php'.$amount.'.';
              }
              else if($mode == "service"){
-                $cl = User::findOrFail($client_id);
                 $label = 'Payment for sevice <b>'.$service->detail.'</b>';
                 $detail = '<b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'.</b> Paid service with an amount of Php'.$amount.'.';
                 $detail_cn = '<b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'.</b> Paid service with an amount of Php'.$amount.'.';
