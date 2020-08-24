@@ -4,9 +4,7 @@ use Illuminate\Http\Request;
 
 Route::get('check-updated-cost', 'ReportController@checkUpdatedCost');
 
-Route::get('check-ond-handdocs/{id}', 'ReportController@checkOnHandDocs');
-
-Route::get('sendpushnotification', 'ReportController@sendPushNotification');
+// Route::get('check-ond-handdocs/{id}', 'ReportController@checkOnHandDocs');
 
 Route::middleware('auth:api')->group(function() {
 
@@ -28,7 +26,7 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('reports-by-service/{id?}', 'ReportController@reportsByService');
 
-	
+  Route::post('sendpushnotification', 'ReportController@sendPushNotification');
 
 	Route::post('update-client-report-score', 'ReportController@updateClientReportScore');
 

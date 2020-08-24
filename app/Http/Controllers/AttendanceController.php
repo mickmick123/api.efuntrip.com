@@ -37,12 +37,13 @@ class AttendanceController extends Controller
                         ->get();
 
         $response['status'] = 'Success';
-		$response['code'] = 200;
+		    $response['code'] = 200;
         $response['data'] = $attendance;
 
-		return Response::json($response);
+		    return Response::json($response);
     }
     
+
     public function testKernel () {
         $d = Carbon::now('Asia/Manila');
         $date = $d->toDateString();
@@ -187,6 +188,11 @@ class AttendanceController extends Controller
             }
 
         }
+    }
+
+
+    public function attendance() {
+      
     }
 
 }

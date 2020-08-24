@@ -58,7 +58,7 @@ class ReportController extends Controller
 
 
     	$reports = Report::orderBy('id', 'desc')
-    		->select(['id', 'processor_id', 'created_at'])
+        ->select(['id', 'processor_id', 'created_at'])
     		->whereHas('clientReports.clientService.client', function($query) use($search) {
 
           if( $search ) {
@@ -179,7 +179,9 @@ class ReportController extends Controller
 	                    'transactions.client_service_id', '=', 'cs.id')
 	                ->where('cs.client_id', $clientId)
 	                ->where('cs.active', 1)
-	                ->where('cs.status', '<>', 'released')
+                  ->where('cs.status', '<>', 'released')
+                  ->where('cs.status', '!=', 'complete')
+                  ->where('cs.status', '!=', 'released')
 	                ->orderBy('cs.id', 'desc')
 	                ->get();
 
@@ -549,7 +551,9 @@ class ReportController extends Controller
 	        	'detail' => $detail,
 	        	'label' => $label,
 	        	'log_date' => Carbon::now()->toDateString()
-	        ]);
+          ]);
+          
+          $this->sendPushNotification($cs->client_id, $detail);
 
 	        // Document log
 	        if( $actionName == 'Filed' || $actionName == 'Released' ) {
@@ -992,7 +996,9 @@ class ReportController extends Controller
 				        	'detail' => $detail,
 				        	'label' => $label,
 				        	'log_date' => Carbon::now()->toDateString()
-				        ]);
+                ]);
+                
+                $this->sendPushNotification($cs->client_id, $detail);
 					}
 
 					$arr = ['status' => $statusUponCompletion];
@@ -1045,7 +1051,9 @@ class ReportController extends Controller
 			        	'detail' => $detail,
 			        	'label' => $label,
 			        	'log_date' => Carbon::now()->toDateString()
-			        ]);
+              ]);
+              
+              $this->sendPushNotification($cs->client_id, $detail);
 
 			        $cs->update(['status' => $statusUponCompletion]);
 
@@ -1094,6 +1102,8 @@ class ReportController extends Controller
           ->update([
             'label' => $label
           ]);
+
+          $this->sendPushNotification($cs->client_id, $detail);
       // End
       
       // Log::create([
@@ -1239,36 +1249,39 @@ class ReportController extends Controller
 				$detail .= ', ';
 			}
     }
-    
-      // // logs
-      // $log = Log::create([
-      //   'client_id' => $user['id'],
-      //   'processor_id' => $processorId,
-      //   'log_type' => 'Document',
-      //   'detail' => $detail,
-      //   'label' => $action,
-      //   'log_date' => Carbon::now()->toDateString()
-      // ]);
 
-      // // document_log
-      // foreach( $documents as $document ) {
-      //       $previousOnHand = 0;
+    if($action = 'Generate photocopies of documents') {
+      // logs
+      $log = Log::create([
+        'client_id' => $user['id'],
+        'processor_id' => $processorId,
+        'log_type' => 'Document',
+        'detail' => $detail,
+        'label' => $action,
+        'log_date' => Carbon::now()->toDateString()
+      ]);
 
-      //       $onHandDocument = OnHandDocument::where('client_id', $user['id'])
-      //         ->where('document_id', $document['id'])->first();
+      $this->sendPushNotification($user['id'], $detail);
 
-      //       if( $onHandDocument ) {
-      //         $previousOnHand = $onHandDocument->count;
-      //       }
+      // document_log
+      foreach( $documents as $document ) {
+            $previousOnHand = 0;
 
-      //       if($document['count'] > 0) {
-      //         $log->documents()->attach($document['id'], [
-      //           'count' => $document['count'],
-      //           'previous_on_hand' => $previousOnHand
-      //         ]);
-      //       }
-      //   }
-    
+            $onHandDocument = OnHandDocument::where('client_id', $user['id'])
+              ->where('document_id', $document['id'])->first();
+
+            if( $onHandDocument ) {
+              $previousOnHand = $onHandDocument->count;
+            }
+
+            if($document['count'] > 0) {
+              $log->documents()->attach($document['id'], [
+                'count' => $document['count'],
+                'previous_on_hand' => $previousOnHand
+              ]);
+            }
+        }
+    }
 
 	}
 
@@ -1398,6 +1411,8 @@ class ReportController extends Controller
             'label' => $action,
             'log_date' => Carbon::now()->toDateString()
           ]);
+
+          $this->sendPushNotification($cs->client_id, $detail);
 
           // End Logs
 
@@ -1788,6 +1803,8 @@ class ReportController extends Controller
                       'label' => $docLabel,
                       'log_date' => Carbon::now()->toDateString()
                   ]);
+
+                  $this->sendPushNotification($cs->client_id, $docsDetail);
   
                   foreach($docLogData as $dlc) {
   
@@ -1917,7 +1934,9 @@ class ReportController extends Controller
 								'detail' => $detail,
 								'label' => $label,
 								'log_date' => Carbon::now()->toDateString()
-						]);
+            ]);
+            
+            $this->sendPushNotification($cs->client_id, $detail);
           }
 
 				}
@@ -2299,78 +2318,34 @@ class ReportController extends Controller
   }
   
 
-  public function sendPushNotification() {
+  public function sendPushNotification($user_id, $message = null) {
+    $devices = DB::table('devices')->where('user_id', $user_id)->groupBy('device_token')->get();
+
+    $deviceToken = [];
+
+    if(count($devices)) {
+      foreach($devices as $device) {
+        array_push($deviceToken, $device->device_token);
+      }
+    }
+
     $push = new PushNotification('fcm'); 
     $push->setUrl('https://fcm.googleapis.com/fcm/send')
     ->setMessage([ 
       'notification' => [ 
-        'title'=>'Title', 
-        'body'=>'Test Only', 
+        // 'title'=>'Title', 
+        'body' => $message, 
         'sound' => 'default' 
       ] 
     ]) 
-    ->setConfig(['dry_run' => true,'priority' => 'high']) 
-    ->setApiKey('AIzaSyDPF-KM8WG3bIyj0t9Ybf-SU41e3XPy--o') 
-    ->setDevicesToken('fQUb2PAY7aM:APA91bE6F9rgO7tO-fPxhBQ0PNMWJk171bza5KPOt-fS32bacpthysOdNfBWezn1tCc4JnSF7k7er9GNYOGsVlIhC3kIBspXDZeI2hh8410x_282iT1z2OhkmmfSl7rUxP7W87RVL9iI')
+    ->setConfig(['dry_run' => false,'priority' => 'high']) 
+    ->setApiKey('AAAAIynhqO8:APA91bH5P-SGimP4b0jazCrC8ya7bV9LoR57wWB9zLqatXfRyxSIdKs2_q4-e01Ofce6oxW-7YQOGlk4Sov4WwiUAE7qojRu-3xb9429ve0Ufkh4JDMaod7cKBAxbypFUPJNKX0yoe98') 
+    ->setDevicesToken($deviceToken)
     ->send()
     ->getFeedback();
 
-    // $this->assertEquals('https://fcm.googleapis.com/fcm/send', $push->url);
-    // $this->assertInstanceOf('stdClass', $push->getFeedback());
 
-      // $push = new PushNotification('fcm');$push->setMessage([
-      //     'notification' => [
-      //       'title'=> 'Test',
-      //       'body'=> 'TEST NOTIFICATION',
-      //       'sound' => 'default'
-      //     ],
-      //     'data' => "Notification Data",
-      // ])
-      //     ->setApiKey(env('AIzaSyDPF-KM8WG3bIyj0t9Ybf-SU41e3XPy--o'))
-      //     ->setConfig(['dry_run' => false])
-      //     ->setDevicesToken([
-      //       'c3tCLnwsrjE:APA91bEimW9ejKxlcED3NWYuJ07MHmCQs6tq1RmfNJG4YBjcAHiFSS7B1E2abfPOOGBTpvZQqDd5DeuUfJgLKCPJRzXuN7McEob3f3T8Kef07a2bsVDeljCBqx1tb4g-vRLAzQauxMjz',
-      //       'fQUb2PAY7aM:APA91bE6F9rgO7tO-fPxhBQ0PNMWJk171bza5KPOt-fS32bacpthysOdNfBWezn1tCc4JnSF7k7er9GNYOGsVlIhC3kIBspXDZeI2hh8410x_282iT1z2OhkmmfSl7rUxP7W87RVL9iI',
-      //       'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIxIiwianRpIjoiOGRjYzk1YWM2MmI0NGMyYjhkMjI1YzYyMDJmODgxYTlkMDU0Y2Y5M2QwMTU4ZjMwNjA4OGRhOTI2ZTFhZTJjNjZlMjRiYzFjNTY4NWZmY2UiLCJpYXQiOjE1OTc4ODU3NTQsIm5iZiI6MTU5Nzg4NTc1NCwiZXhwIjoxNTk3OTE4MTU0LCJzdWIiOiIxIiwic2NvcGVzIjpbXX0.TdBUdvjRlwjcW8jbees71cEmXFU2-xNWbkaxC3dGmsTpw5TOPN-zNSOukPToRTCQ91FkFo9N7gTg110Z_8z1Ro3HzuySIXlmRXAE6stf03uHdi8qTYqOeti9emWmPi8uhNVpPSXnoyPv_W6l_DywrdR3GFPSTRu7ucAhNm14U6FAUfSyAyye91PzMetwjwXuRPgphGfDrnXSY-EOvyIg8DTXb1eiX_7WfvNhTbzCHrdOTuSnh8102XuRgM-tnN7Q-QlNxjLRmJM9IfOOCZy4r_5Pyo5-ddyDbqHQL-ioFalp1jh8yByAIGFlbeYhsweOOQ8rloiVHIbOx8M-sGTbZZp91uZbAghmyI1QPJdRqfcoJitVcqYxWnZEYP9OUbSp4TFr_ARk2_rCWyaIP9S-PQf5ngrrYrNLSYTpWEpBLMUMv7RJGGIigT80Icr-QV8jqqsomutOrdH9saVRuCl9feNO9f4XaHwfB5yQANIqxOpqJOtJA0aksWPrRxyhubdrrt7EqNLUNxUTshij3NdGUHxFFS16wDSOUZuL2DPJKy_t5ilWjHSZVEEjxbZKPLhzAMj4tRvgvZDdaZOGLuZdO53lyadbZFaagM7jRx3glwGEf3tyTfTFv8dQ2nodfcadBoASVrpxX3FlFnZYeOZnqJbb2Gvzps4V9x6D2eemsaE'
-      //     ])
-      //     ->send();
-      // Log::info(json_encode($push));
-
-      // $url = "https://fcm.googleapis.com/fcm/send";            
-      //   $header = [
-      //   'authorization: key=' . 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIxIiwianRpIjoiZmM3MDIxMmFiMDIzNjkyYThhZGJkMTVlZjhiMmRhZGY0NjdjZDBjNDU3ZTVkOWI1NzJiY2E2ZTU3ODVkMDgyMjExYTUxODhiZTc0ODExOTEiLCJpYXQiOjE1OTE1ODc0NzIsIm5iZiI6MTU5MTU4NzQ3MiwiZXhwIjoxNTkxNjE5ODcyLCJzdWIiOiIxIiwic2NvcGVzIjpbXX0.ErP6fw3K9n0ywHSTK7YkJA7AbXVltFnkTSGNQPRrNSvZmZGbjAoOrQH1HGSS4yOY1dzYjbxNDTAR-hetkxT3OMSUuX4l7Yp30TZq6wgsnMFNoZtPDU27xAhCALysPNyc_Y_o4gjyrc1V4yHz1jAT-I8IFnbijnEJnyIdFZXq28_ASJ4wRKLObeUmLeMNIt3sPvRtfj_fRtcy8TDF5c3zhdGYsldwMNgKSuzrTBm_rbnjD13SPRU7l0YlzR3DdZoK3Oi6e_5rNWfrCdqaqt3VJOxRAaV5acTfaVYvuwwpPa_14eXd0J-uG36o_ygQgX6Y-sCCxxLaiBo6Yr3gXFA0QJhCpTDM3ItewayrSsdrzjyFlBcFooFtQhYr5n5YGPYUymmPdGSAzFFPBB5yWjHUi9T2fIRmSnG9V3l5-kcgt0vDg8hBq_OqUUCVIts6m2yBWpZxcFfacSTVZby9retAbS3oDpliO_Bfy2yaZnl_8uxfVXLbxjRPxg9aWH2zZeCfjEzrkn7rjNuww0X5EcC5fZSizQVcBW4g8AKFba1jm9JOVu641ZtyN5n7tmChHUzeXTvch54mVKIbtiLH0SIHKLXZ7Kpek2mnO5pZR2xqvejodQLJdu30W_4fPHKEQ4IiLgsq9Yz6iIb-DBmfd_hCRoCXzsGyUOduKi6PAiwn2Ec',
-      //       'content-type: application/json'
-      //   ];    
-
-      //   $postdata = '{
-      //       "to" : "' . $fcm_token . '",
-      //           "notification" : {
-      //               "title":"' . $title . '",
-      //               "text" : "' . $message . '"
-      //           },
-      //       "data" : {
-      //           "id" : "'.$id.'",
-      //           "title":"' . $title . '",
-      //           "description" : "' . $message . '",
-      //           "text" : "' . $message . '",
-      //           "is_read": 0
-      //         }
-      //   }';
-
-      //   $ch = curl_init();
-      //   curl_setopt($ch, CURLOPT_URL, $url);
-      //   curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-      //   curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 60);
-      //   curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
-      //   curl_setopt($ch, CURLOPT_POSTFIELDS, $postdata);
-      //   curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
-
-      //   $result = curl_exec($ch);    
-      //   curl_close($ch);
-
-      //   return $result;
-
-      $response['feedback'] = $push;
-      return Response::json($response);
+    $response['feedback'] = $deviceToken;
+    return Response::json($response);
   }
 }
