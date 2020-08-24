@@ -609,10 +609,10 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
-    public function list(Request $request)
+    public function list(Request $request, $id)
     {
         $name = $request->input("q", "");
-        $id = intval($request->input("inventory_id", 0));
+        //$id = intval($request->input("inventory_id", 0));
         $co_id = intval($request->input("company_id", 0));
         $ca_id = intval($request->input("category_id", 0));
         $page = intval($request->input("page", 1));
