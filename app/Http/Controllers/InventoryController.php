@@ -390,7 +390,7 @@ class InventoryController extends Controller
             //Logs
             $user = Auth::user();
             $reason = "$user->first_name deleted the $request->path | $request->item_name";
-            self::saveLogs($request->inventory_id, 'inventory deleted', $reason);
+            self::saveLogs($request->inventory_id, 'Item Profile Deleted', $reason);
 
             $inv = Inventory::find($request->inventory_id);
             $inv->status = 0;
@@ -583,7 +583,6 @@ class InventoryController extends Controller
             },
         ])
             ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
-            ->whereNotIn('status',[0])
             ->orHaving('datetime', 'LIKE','%'.$search.'%')
             ->orHaving('total_asset', 'LIKE','%'.$search.'%')
             ->orHaving('name','LIKE', '%'.$search.'%')
