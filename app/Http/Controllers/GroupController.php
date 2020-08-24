@@ -2170,14 +2170,15 @@ public function getClientPackagesByGroup($client_id, $group_id){
                     DB::table('group_user')
                           ->where('id', $currentGroup->guid)
                           ->update($data);
-                 }else{
-                    if($request->selected_all == 1){
-                      $previousGroup = GroupUser::where('group_id', $request->current_group_id)
-                               ->where('user_id', $request->member_id)
-                               ->first();
-                      $previousGroup->forceDelete();
-                    }
                  }
+                 // else{
+                 //    if($request->selected_all == 1){
+                 //      $previousGroup = GroupUser::where('group_id', $request->current_group_id)
+                 //               ->where('user_id', $request->member_id)
+                 //               ->first();
+                 //      $previousGroup->forceDelete();
+                 //    }
+                 // }
 
                  $details = 'Transfer member ' . $currentGroup->name . ' from Group <strong>'. $currentGroup->group_name .'</strong> to Group<strong>' . $request->group_name .'</strong> with Total Service Cost of ' . $currentGroup->total_service_cost;
                  $details_cn = '转会会员 ' . $currentGroup->name .' 来自组 '. $currentGroup->group_name.' 分组 ' . $request->group_name .' 以及总服务费 Php' . $currentGroup->total_service_cost;
