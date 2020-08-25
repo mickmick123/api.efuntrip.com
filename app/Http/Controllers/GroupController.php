@@ -33,15 +33,21 @@ use Auth, DB, Response, Validator;
 //Excel
 use Illuminate\Http\Request;
 
-use Maatwebsite\Excel\Facades\Excel;
-//Macoy
 
+use Maatwebsite\Excel\Facades\Excel;
+
+//User Defined
 use App\Exports\ByServiceExport;
 use App\Exports\ByMemberExport;
 use App\Exports\ByBatchExport;
+
+use Status;
 use PDF;
 
+
 use DateTime;
+
+
 
 
 class GroupController extends Controller
@@ -846,6 +852,7 @@ public function members(Request $request, $id, $page = 20) {
 
         $totalServiceCost = 0;
         $totalSub = 0;
+        $statusList = [];
         if(count($packs) > 0){
 
           foreach($packs as $p){
@@ -891,6 +898,8 @@ public function members(Request $request, $id, $page = 20) {
                         $totalSub +=  ($s->discount + $s->payment_amount) - (($s->cost + $s->charge) + ($s->tip + $s->com_client + $s->com_agent));
                     }
 
+                    array_push($statusList,$s->status);
+
                   //  $tempService[$ctr2] = $s;
                   //  $ctr2 ++;
                   }
@@ -908,6 +917,10 @@ public function members(Request $request, $id, $page = 20) {
         $temp['user_id'] = $g->id;
         $temp['total_service_cost'] = $totalServiceCost;
         $temp['total_sub'] = $totalSub;
+        $temp['status'] = $this->checkOverallStatus($statusList);
+        $temp['status_list']= $statusList;
+
+
         $response[$ctr] =  $temp;
         $ctr++;
       }
@@ -1578,6 +1591,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
           $ctr2 = 0;
 
           $totalSub = 0;
+          $statusList = [];
           foreach($queryClients as $m){
 
             $clientServices = [];
@@ -1609,6 +1623,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
             $totalSub +=  ($m->discount + $m->payment_amount) - (($m->cost + $m->charge) + ($m->tip + $m->com_client + $m->com_agent));
 
+            array_push($statusList,$m->status);
+
             $memberByDate[$ctr2] = User::where('id',$m->client_id)->select('first_name','last_name')->first();
             $memberByDate[$ctr2]['tcost'] = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$sd->sdate)->where('group_id', $groupId)->where('client_id',$m->client_id)->value(DB::raw("SUM(cost + charge + tip +com_client + com_agent)"));
             $memberByDate[$ctr2]['service'] = $m;
@@ -1629,6 +1645,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $temp['total_service'] = ($queryx->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)")));
         $temp['service_count'] = $totalServiceCount;
 
+        $temp['status'] = $this->checkOverallStatus($statusList);
+        $temp['status_list']= $statusList;
 
         $temp['bydates'] = $servicesByDate;
         $response[$ctr] = $temp;
@@ -1796,6 +1814,36 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
   }
 
+  //check overall status
+  public function checkOverallStatus($data = []){
+
+    $status = Status::CANCELLED;
+
+    //'pending','on process','complete','released','cancelled'
+
+    //only pending
+    if(((!in_array(Status::COMPLETE, $data)) && (!in_array(Status::ON_PROCESS, $data)) && (!in_array(Status::RELEASED, $data)) && (!in_array(Status::CANCELLED, $data))) && in_array(Status::PENDING, $data)){
+        $status = Status::PENDING;
+    }
+    //only complete and released
+    else if(((in_array(Status::COMPLETE, $data)) || (in_array(Status::RELEASED, $data))) && ((!in_array(Status::ON_PROCESS, $data)) && (!in_array(Status::CANCELLED, $data)) && (!in_array(Status::PENDING, $data)))){
+        $status = Status::COMPLETE;
+    }
+
+    //on process
+    else if (in_array(Status::PENDING, $data) || in_array(Status::ON_PROCESS, $data))
+    {
+        $status = Status::ON_PROCESS;
+    }
+
+    else{
+        $status = Status::CANCELLED;
+    }
+
+    return $status;
+  }
+
+
   //$groupId, $page = 20
   public function getClientPackagesByBatch(Request $request, $groupId, $perPage = 10){
 
@@ -1841,6 +1889,10 @@ public function getClientPackagesByGroup($client_id, $group_id){
           $discountCtr = 0;
           $totalCost = 0;
           $totalSub = 0;
+
+          //
+          $status_list = [];
+          $status = "";
           foreach($queryMembers as $m){
                 $ss =  ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->where('client_id',$m->client_id)->get();
 
@@ -1874,11 +1926,13 @@ public function getClientPackagesByGroup($client_id, $group_id){
                     $discountCtr += $cs->discount;
                     $totalCost += (($cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent)) - $cs->discount;
                     $totalSub +=  ($cs->discount + $cs->payment_amount) - (($cs->cost + $cs->charge) + ($cs->tip + $cs->com_client + $cs->com_agent));
-
                   }
+
+                  array_push($status_list,$cs->status);
 
                   $clientServices[$tmpCtr] = $cs;
                   $tmpCtr++;
+
                 }
 
                 $members[$ctr2] = User::where('id',$m->client_id)->select('first_name','last_name')->first();
@@ -1886,14 +1940,16 @@ public function getClientPackagesByGroup($client_id, $group_id){
                 $members[$ctr2]['services'] = $clientServices;
                 $members[$ctr2]['client_id'] = $m->client_id;
 
-
               $ctr2++;
           }
+
           $temp['total_service_cost'] = $totalCost;
           $temp['total_sub'] = $totalSub;
-          //$temp['total_service_cost'] = ($query->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)")));
           $temp['members'] = $members;
-          //$temp['query'] = $query;
+          $temp['status_list'] = $status_list;
+          $temp['status'] = $this->checkOverallStatus($status_list);
+
+
           $response[$ctr] = $temp;
           $ctr++;
         }
