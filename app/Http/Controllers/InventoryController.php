@@ -291,9 +291,12 @@ class InventoryController extends Controller
                 $parentCateg->parent_id = $request->parent_id;
                 $parentCateg->save();
             }
+
+            $treeKey = InventoryParentCategory::where('category_id',$categ->category_id)->get();
+
             $response['status'] = 'Success';
             $response['code'] = 200;
-            $response['data'] = $categ;
+            $response['data'] = $treeKey;
         }
         return Response::json($response);
     }
