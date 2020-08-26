@@ -1285,7 +1285,7 @@ class ReportController extends Controller
 			}
     }
 
-    // if($action === 'Generate photocopies of documents') {
+    if($action !== 'Released documents') {
       // logs
       $log = Log::create([
         'client_id' => $user['id'],
@@ -1316,7 +1316,7 @@ class ReportController extends Controller
               ]);
             }
         }
-    // }
+    }
 
 	}
 
