@@ -31,12 +31,22 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::patch('update-group-commission/{id}', 'GroupController@updateGroupCommission');
 
+ //Group By
   Route::get('members/{id}/{page?}', 'GroupController@members');
 	Route::get('packages-bybatch/{group_id}/{page?}', 'GroupController@getClientPackagesByBatch');
 	Route::get('packages-byservice/{group_id}/{page?}', 'GroupController@getClientPackagesByService');
+
+ //
+	Route::post('by-batch-members', 'GroupController@getMembersByBatch');
+	Route::post('by-members-service', 'GroupController@getMemberByService');
+	Route::post('by-service-members', 'GroupController@getServicesByMembers');
+
+
+	//Export Excel
 	Route::get('byservice/{group_id}/{page?}', 'GroupController@getByService');
 	Route::get('bybatch/{group_id}/{page?}', 'GroupController@getByBatch');
 	Route::get('group-members/{id}/{page?}', 'GroupController@getMembers');
+
 	Route::post('preview-report', 'GroupController@previewReport');
 
 	Route::get('unpaid-services/{group_id}/{is_auto_generated}/{page?}', 'GroupController@getUnpaidServices');
