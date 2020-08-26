@@ -1003,16 +1003,25 @@ class ReportController extends Controller
                 $this->sendPushNotification($cs->client_id, $detail);
 					}
 
-					$arr = ['status' => $statusUponCompletion];
+					// $arr = ['status' => $statusUponCompletion];
 
+					// if( $action == 'Cancelled' && $category == 'Service' ) {
+					// 	$arr['active'] = 0;
+					// 	$arr['cost'] = 0;
+					// 	$arr['charge'] = 0;
+					// 	$arr['tip'] = 0;
+					// }
+
+					// $cs->update($arr);
+
+					$cs->status = $statusUponCompletion;
 					if( $action == 'Cancelled' && $category == 'Service' ) {
-						$arr['active'] = 0;
-						$arr['cost'] = 0;
-						$arr['charge'] = 0;
-						$arr['tip'] = 0;
+						$cs->active = 0;
+						$cs->cost = 0;
+						$cs->charge = 0;
+						$cs->tip = 0;
 					}
-
-					$cs->update($arr);
+					$cs->save();
 
 					ClientController::updatePackageStatus($cs->tracking);
 				}
@@ -1057,7 +1066,9 @@ class ReportController extends Controller
               
               $this->sendPushNotification($cs->client_id, $detail);
 
-			        $cs->update(['status' => $statusUponCompletion]);
+			        // $cs->update(['status' => $statusUponCompletion]);
+              		$cs->status = $statusUponCompletion;
+              		$c->save();
 
 					ClientController::updatePackageStatus($cs->tracking);
 				}
@@ -1903,7 +1914,9 @@ class ReportController extends Controller
 
 
 					if( $cs->status != $newStatus ) {
-						$cs->update(['status' => $newStatus]);
+						// $cs->update(['status' => $newStatus]);
+						$cs->status = $newStatus;
+						$cs->save();
 
 						ClientController::updatePackageStatus($cs->tracking);
 

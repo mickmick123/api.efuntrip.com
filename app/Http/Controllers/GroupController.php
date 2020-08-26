@@ -33,15 +33,21 @@ use Auth, DB, Response, Validator;
 //Excel
 use Illuminate\Http\Request;
 
-use Maatwebsite\Excel\Facades\Excel;
-//Macoy
 
+use Maatwebsite\Excel\Facades\Excel;
+
+//User Defined
 use App\Exports\ByServiceExport;
 use App\Exports\ByMemberExport;
 use App\Exports\ByBatchExport;
+
+use Status;
 use PDF;
 
+
 use DateTime;
+
+
 
 
 class GroupController extends Controller
@@ -846,6 +852,7 @@ public function members(Request $request, $id, $page = 20) {
 
         $totalServiceCost = 0;
         $totalSub = 0;
+        $statusList = [];
         if(count($packs) > 0){
 
           foreach($packs as $p){
@@ -870,26 +877,30 @@ public function members(Request $request, $id, $page = 20) {
                     $s->discount_details =  ClientTransaction::where('client_service_id', $s->id)->where('type', 'Discount')->select('amount','reason','created_at')->first();
 
                     //Payment details
-                    $logType = Log::where('client_service_id', $s->id)->where('group_id', $id)->where('log_type', 'Transaction')->where('log_group', 'payment')->select('amount','log_date')->get();
+                    // $logType = Log::where('client_service_id', $s->id)->where('group_id', $id)->where('log_type', 'Transaction')->where('log_group', 'payment')->select('amount','log_date')->get();
 
-                    $paymentLog = '';
-                    $s->payment_details = '';
+                    $s->payment_details = ClientTransaction::where('client_service_id', $s->id)->where('type', 'Payment')->select('amount','reason','created_at')->first();
 
-                    if(count($logType) > 0){
-                      foreach($logType as $log){
-                        $paymentLog =  $paymentLog."\r\n Php". $log->amount ."(".$log->log_date.")";
-                      }
-                      $s->payment_details = $paymentLog;
-                    }else{
-                       if($s->payment_amount > 0){
-                         $s->payment_details = "Php" . $s->payment_amount . " (". $s->created_at .")";
-                       }
-                    }
+                    // $paymentLog = '';
+                    // $s->payment_details = '';
+
+                    // if(count($logType) > 0){
+                    //   foreach($logType as $log){
+                    //     $paymentLog =  $paymentLog."\r\n Php". $log->amount ."(".$log->log_date.")";
+                    //   }
+                    //   $s->payment_details = $paymentLog;
+                    // }else{
+                    //    if($s->payment_amount > 0){
+                    //      $s->payment_details = "Php" . $s->payment_amount . " (". $s->created_at .")";
+                    //    }
+                    // }
 
                     if($s->active !== 0){
                         $totalServiceCost += ($s->package_cost - $s->discount);
                         $totalSub +=  ($s->discount + $s->payment_amount) - (($s->cost + $s->charge) + ($s->tip + $s->com_client + $s->com_agent));
                     }
+
+                    array_push($statusList,$s->status);
 
                   //  $tempService[$ctr2] = $s;
                   //  $ctr2 ++;
@@ -908,6 +919,10 @@ public function members(Request $request, $id, $page = 20) {
         $temp['user_id'] = $g->id;
         $temp['total_service_cost'] = $totalServiceCost;
         $temp['total_sub'] = $totalSub;
+        $temp['status'] = $this->checkOverallStatus($statusList);
+        $temp['status_list']= $statusList;
+
+
         $response[$ctr] =  $temp;
         $ctr++;
       }
@@ -950,6 +965,7 @@ public function addFunds(Request $request) {
             $storage = $request->get('storage');
             $amount = $request->get('amount');
             $reason = $request->get('reason');
+            $reason2 = $request->get('reason2');
             $branch_id = $request->get('branch_id');
             $bank = $request->get('bank');
             $alipay_reference = $request->get('alipay_reference');
@@ -974,6 +990,7 @@ public function addFunds(Request $request) {
                     $depo->alipay_reference = $alipay_reference;
                 }
                 $depo->amount = $amount;
+                $depo->reason = $reason2;
                 $depo->save();
 
                 //save financing
@@ -1578,6 +1595,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
           $ctr2 = 0;
 
           $totalSub = 0;
+          $statusList = [];
           foreach($queryClients as $m){
 
             $clientServices = [];
@@ -1590,24 +1608,27 @@ public function getClientPackagesByGroup($client_id, $group_id){
             $m->discount_details =  ClientTransaction::where('client_service_id', $m->id)->where('type', 'Discount')->select('amount','reason','created_at')->first();
 
             //Payment details
-            $logType = Log::where('client_service_id', $m->id)->where('group_id', $groupId)->where('log_type', 'Transaction')->where('log_group', 'payment')->select('amount','log_date')->get();
+            // $logType = Log::where('client_service_id', $m->id)->where('group_id', $groupId)->where('log_type', 'Transaction')->where('log_group', 'payment')->select('amount','log_date')->get();
 
-            $paymentLog = '';
-            $m->payment_details = '';
+            // $paymentLog = '';
+            // $m->payment_details = '';
 
 
-            if(count($logType) > 0){
-              foreach($logType as $log){
-                $paymentLog =  $paymentLog."\r\n Php". $log->amount ."(".$log->log_date.")";
-              }
-              $m->payment_details = $paymentLog;
-            }else{
-               if($m->payment_amount > 0){
-                 $m->payment_details = "Php" . $m->payment_amount . " (". $m->created_at .")";
-               }
-            }
+            // if(count($logType) > 0){
+            //   foreach($logType as $log){
+            //     $paymentLog =  $paymentLog."\r\n Php". $log->amount ."(".$log->log_date.")";
+            //   }
+            //   $m->payment_details = $paymentLog;
+            // }else{
+            //    if($m->payment_amount > 0){
+            //      $m->payment_details = "Php" . $m->payment_amount . " (". $m->created_at .")";
+            //    }
+            // }
+            $m->payment_details = ClientTransaction::where('client_service_id', $m->id)->where('type', 'Payment')->select('amount','reason','created_at')->first();
 
             $totalSub +=  ($m->discount + $m->payment_amount) - (($m->cost + $m->charge) + ($m->tip + $m->com_client + $m->com_agent));
+
+            array_push($statusList,$m->status);
 
             $memberByDate[$ctr2] = User::where('id',$m->client_id)->select('first_name','last_name')->first();
             $memberByDate[$ctr2]['tcost'] = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$sd->sdate)->where('group_id', $groupId)->where('client_id',$m->client_id)->value(DB::raw("SUM(cost + charge + tip +com_client + com_agent)"));
@@ -1629,6 +1650,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $temp['total_service'] = ($queryx->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)")));
         $temp['service_count'] = $totalServiceCount;
 
+        $temp['status'] = $this->checkOverallStatus($statusList);
+        $temp['status_list']= $statusList;
 
         $temp['bydates'] = $servicesByDate;
         $response[$ctr] = $temp;
@@ -1796,6 +1819,36 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
   }
 
+  //check overall status
+  public function checkOverallStatus($data = []){
+
+    $status = Status::CANCELLED;
+
+    //'pending','on process','complete','released','cancelled'
+
+    //only pending
+    if(((!in_array(Status::COMPLETE, $data)) && (!in_array(Status::ON_PROCESS, $data)) && (!in_array(Status::RELEASED, $data)) && (!in_array(Status::CANCELLED, $data))) && in_array(Status::PENDING, $data)){
+        $status = Status::PENDING;
+    }
+    //only complete and released
+    else if(((in_array(Status::COMPLETE, $data)) || (in_array(Status::RELEASED, $data))) && ((!in_array(Status::ON_PROCESS, $data)) && (!in_array(Status::CANCELLED, $data)) && (!in_array(Status::PENDING, $data)))){
+        $status = Status::COMPLETE;
+    }
+
+    //on process
+    else if (in_array(Status::PENDING, $data) || in_array(Status::ON_PROCESS, $data))
+    {
+        $status = Status::ON_PROCESS;
+    }
+
+    else{
+        $status = Status::CANCELLED;
+    }
+
+    return $status;
+  }
+
+
   //$groupId, $page = 20
   public function getClientPackagesByBatch(Request $request, $groupId, $perPage = 10){
 
@@ -1841,6 +1894,10 @@ public function getClientPackagesByGroup($client_id, $group_id){
           $discountCtr = 0;
           $totalCost = 0;
           $totalSub = 0;
+
+          //
+          $status_list = [];
+          $status = "";
           foreach($queryMembers as $m){
                 $ss =  ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->where('client_id',$m->client_id)->get();
 
@@ -1854,31 +1911,34 @@ public function getClientPackagesByGroup($client_id, $group_id){
                   $cs->discount_details =  ClientTransaction::where('client_service_id', $cs->id)->where('type', 'Discount')->select('amount','reason','created_at')->first();
 
                   //Payment details
-                  $logType = Log::where('client_service_id', $cs->id)->where('group_id', $groupId)->where('log_type', 'Transaction')->where('log_group', 'payment')->select('amount','log_date')->get();
+                  // $logType = Log::where('client_service_id', $cs->id)->where('group_id', $groupId)->where('log_type', 'Transaction')->where('log_group', 'payment')->select('amount','log_date')->get();
 
-                  $paymentLog = '';
-                  $cs->payment_details = '';
+                  // $paymentLog = '';
+                  // $cs->payment_details = '';
 
-                  if(count($logType) > 0){
-                    foreach($logType as $log){
-                      $paymentLog =  $paymentLog."\r\n Php". $log->amount ."(".$log->log_date.")";
-                    }
-                    $cs->payment_details = $paymentLog;
-                  }else{
-                     if($cs->payment_amount > 0){
-                       $cs->payment_details = "Php" . $cs->payment_amount . " (". $cs->created_at .")";
-                     }
-                  }
+                  // if(count($logType) > 0){
+                  //   foreach($logType as $log){
+                  //     $paymentLog =  $paymentLog."\r\n Php". $log->amount ."(".$log->log_date.")";
+                  //   }
+                  //   $cs->payment_details = $paymentLog;
+                  // }else{
+                  //    if($cs->payment_amount > 0){
+                  //      $cs->payment_details = "Php" . $cs->payment_amount . " (". $cs->created_at .")";
+                  //    }
+                  // }
+                  $cs->payment_details = ClientTransaction::where('client_service_id', $cs->id)->where('type', 'Payment')->select('amount','reason','created_at')->first();
 
                   if($cs->active !== 0 && $cs->status != 'cancelled'){
                     $discountCtr += $cs->discount;
                     $totalCost += (($cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent)) - $cs->discount;
                     $totalSub +=  ($cs->discount + $cs->payment_amount) - (($cs->cost + $cs->charge) + ($cs->tip + $cs->com_client + $cs->com_agent));
-
                   }
+
+                  array_push($status_list,$cs->status);
 
                   $clientServices[$tmpCtr] = $cs;
                   $tmpCtr++;
+
                 }
 
                 $members[$ctr2] = User::where('id',$m->client_id)->select('first_name','last_name')->first();
@@ -1886,14 +1946,16 @@ public function getClientPackagesByGroup($client_id, $group_id){
                 $members[$ctr2]['services'] = $clientServices;
                 $members[$ctr2]['client_id'] = $m->client_id;
 
-
               $ctr2++;
           }
+
           $temp['total_service_cost'] = $totalCost;
           $temp['total_sub'] = $totalSub;
-          //$temp['total_service_cost'] = ($query->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)")));
           $temp['members'] = $members;
-          //$temp['query'] = $query;
+          $temp['status_list'] = $status_list;
+          $temp['status'] = $this->checkOverallStatus($status_list);
+
+
           $response[$ctr] = $temp;
           $ctr++;
         }
@@ -2844,6 +2906,60 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
     }
 
+    public static function createRefund($model, $original) {
+        if(($model->status == 'cancelled' && $original['status'] != $model->status) || ($original['active'] != $model->active && $model->active == 0)){
+
+            $servicePayment = ClientTransaction::where('client_id',$model->client_id)
+                                ->where('group_id', $model->group_id)
+                                ->where('client_service_id', $model->id)
+                                ->where('type','Payment')->first();
+
+            if($servicePayment){
+                // $ewallet_refund = new ClientEWallet;
+                // $ewallet_refund->client_id = $model->client_id;
+                // $ewallet_refund->type = 'Refund';
+                // $ewallet_refund->amount = $servicePayment->amount;
+                // $ewallet_refund->group_id = $model->group_id;
+                // $ewallet_refund->reason = 'Refunded due to cancelled service';
+                // $ewallet_refund->save();
+
+                //for financing
+                $finance = new Financing;
+                $finance->user_sn = Auth::user()->id;
+                $finance->type = "refund";
+                $finance->record_id = $servicePayment->id;
+                $finance->cat_type = "process";
+                $finance->cat_storage = 'cash';
+                $finance->cash_client_refund = $servicePayment->amount;
+                $finance->branch_id = 1;
+                $finance->trans_desc = Auth::user()->first_name.' refund to client #'.$model->client_id.' due to cancelled service';
+                $finance->save();
+
+                //save transaction history
+                $detail = 'Refunded Php'.$servicePayment->amount.' due to cancelled service <b>'.$model->detail.'</b>.';
+                $detail_cn = $detail;
+                $log_data = array(
+                    'client_service_id' => null,
+                    'client_id' => $model->client_id,
+                    'group_id' => $model->group_id,
+                    'processor_id' => Auth::user()->id,
+                    'log_date' => date('Y-m-d'),
+                    'log_type' => 'Ewallet',
+                    'log_group' => 'refund',
+                    'detail'=> $detail,
+                    'detail_cn'=> $detail_cn,
+                    'amount'=> $servicePayment->amount,
+                );
+                 LogController::save($log_data);
+
+                 $rson = 'Refunded Php'.$servicePayment->amount.' due to cancelled service. ('.date('Y-m-d H:i:s').')<br>';
+                 $servicePayment->amount = 0;
+                 $servicePayment->reason = $rson.$servicePayment->reason;
+                 $servicePayment->save();
+            }
+        }
+    }
+
 
     public static function createOrDeleteCommission($model, $original) {
 
@@ -2926,16 +3042,16 @@ public function getClientPackagesByGroup($client_id, $group_id){
                 $savelog->save();
 
 
-                $depo = new ClientTransaction;
+                $depo = new ClientEWallet;
                 $depo->client_id = $model->client_com_id;
                 $depo->type = 'Deposit';
                 $depo->group_id = null;
-                $depo->tracking = $savelog->id;
+                // $depo->tracking = $savelog->id;
                 $depo->amount = $model->com_client;
-                $depo->is_commission = 1;
+                // $depo->is_commission = 1;
                 $depo->save();
 
-                //save transaction logs
+                //save transaction history
                 $detail = 'Received commission Php'.$model->com_client.' from group '.$group_name.'.';
                 $detail_cn = $detail;
                 $log_data = array(
@@ -2944,7 +3060,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
                     'group_id' => null,
                     'processor_id' => Auth::user()->id,
                     'log_date' => date('Y-m-d'),
-                    'log_type' => 'Transaction',
+                    'log_type' => 'Ewallet',
                     'log_group' => 'deposit',
                     'detail'=> $detail,
                     'detail_cn'=> $detail_cn,
@@ -2973,13 +3089,13 @@ public function getClientPackagesByGroup($client_id, $group_id){
                 $savelog->amount = $model->com_agent;
                 $savelog->save();
 
-                $depo = new ClientTransaction;
+                $depo = new ClientEWallet;
                 $depo->client_id = $model->agent_com_id;
                 $depo->type = 'Deposit';
                 $depo->group_id = null;
-                $depo->tracking = $savelog->id;
+                // $depo->tracking = $savelog->id;
                 $depo->amount = $model->com_agent;
-                $depo->is_commission = 1;
+                // $depo->is_commission = 1;
                 $depo->save();
 
                 //save transaction logs
@@ -2991,7 +3107,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
                     'group_id' => null,
                     'processor_id' => Auth::user()->id,
                     'log_date' => date('Y-m-d'),
-                    'log_type' => 'Transaction',
+                    'log_type' => 'Ewallet',
                     'log_group' => 'deposit',
                     'detail'=> $detail,
                     'detail_cn'=> $detail_cn,
@@ -4051,9 +4167,10 @@ public function getClientPackagesByGroup($client_id, $group_id){
              $amount = $request->payments[$i]['amount'];
              $total_cost = $request->payments[$i]['total_cost'];
              $payment = ClientTransaction::where('type','Payment')->where('client_service_id',$cs_id)->first();
-
+             $rson = 'Php'.$amount.' ('.date('Y-m-d H:i:s').')<br>';
              if($payment){
                  $payment->amount += $amount;
+                 $payment->reason = $rson.$payment->reason;
                  $payment->save();
              }
              else{
@@ -4063,6 +4180,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
                  $payment->type = 'Payment';
                  $payment->group_id = $group_id;
                  $payment->amount = $amount;
+                 $payment->reason = $rson;
                  $payment->save();
              }
 

@@ -32,6 +32,7 @@ class AccountsController extends Controller
 	 	// $both_branch = Branch::where('name', 'Both')->pluck("id")[0];
     	$auth_branch =  $this->getBranchAuth();
 	 	$users = User::select('id', 'email', 'first_name', 'last_name')
+                    ->where('password','!=',null)
 	 				->with(array('roles' => function($query){
 	 					$query->select('roles.id', 'roles.label');
 	 				}))->whereHas('roles', function ($query) use ($role_id) {

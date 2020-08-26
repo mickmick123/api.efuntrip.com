@@ -869,9 +869,9 @@ class LogController extends Controller
 
                     $body = $data;
                     $csshow = 1;
-                    if($cs->active == 0 || $cs->status == 'cancelled'){
-                        $csshow = 0;
-                    }
+                    // if($cs->active == 0 || $cs->status == 'cancelled'){
+                    //     $csshow = 0;
+                    // }
 
                 }
                 else{
@@ -1032,9 +1032,9 @@ class LogController extends Controller
                     }
 
                     $csshow = 1;
-                    if($cs->active == 0 || $cs->status == 'cancelled'){
-                        $csshow = 0;
-                    }
+                    // if($cs->active == 0 || $cs->status == 'cancelled'){
+                    //     $csshow = 0;
+                    // }
 
                 }
                 else{

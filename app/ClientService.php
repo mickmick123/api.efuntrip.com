@@ -27,6 +27,7 @@ class ClientService extends Model
 
         self::updated(function($model) {
             $original = $model->getOriginal();
+            GroupController::createRefund($model,$original);
             GroupController::createOrDeleteCommission($model,$original);
             static::updateBalanceAndCollectables($model->client_id, $model->group_id);
         });
