@@ -40,6 +40,8 @@ use Auth, Carbon\Carbon, DB, Response, Validator;
 
 use Illuminate\Http\Request;
 
+use App\Jobs\LogsPushNotification;
+
 
 class ReportController extends Controller
 {
@@ -1091,19 +1093,41 @@ class ReportController extends Controller
       // Update Logs
       $totalCharge = $cs->cost + $cs->charge + $cs->tip;
 
-      $label = 'Documents complete, service is now complete. Total charge is PHP' . $totalCharge . '.';
+      $labelSearch = 'Documents complete, service is now complete. Total charge is PHP' . $totalCharge . '.';
 
-      Log::where('client_service_id', $cs->id)
+      $getLog = Log::where('client_service_id', $cs->id)
           ->where('client_id', $cs->client_id)
           ->where('group_id', $cs->group_id)
           ->where('processor_id', Auth::user()->id)
           ->where('log_type', 'Status')
-          ->where('label', 'LIKE', '%Documents complete, service is now complete.%')
-          ->update([
-            'label' => $label
-          ]);
+					->where('label', 'LIKE', '%Documents complete, service is now complete.%')
+					->first();
 
-          $this->sendPushNotification($cs->client_id, $detail);
+			if($getLog) {
+					Log::where('id', $getLog['id'])
+							->update([
+								'label' => $labelSearch
+							]);
+
+					$this->sendPushNotification($cs->client_id, $detail, $labelSearch, $getLog['id']);
+			} else {
+				$getLog = Log::create([
+										'client_service_id' => $cs->id,
+										'client_id' => $cs->client_id,
+										'group_id' => $cs->group_id,
+										'service_procedure_id' => $serviceProcedureId,
+										'processor_id' => Auth::user()->id,
+										'log_type' => 'Action',
+										'detail' => $detail,
+										'label' => $label,
+										'log_date' => Carbon::now()->toDateString()
+									]);
+
+				$this->sendPushNotification($cs->client_id, $detail);
+			}
+          
+
+          
       // End
       
       // Log::create([
@@ -1250,7 +1274,7 @@ class ReportController extends Controller
 			}
     }
 
-    if($action = 'Generate photocopies of documents') {
+    // if($action === 'Generate photocopies of documents') {
       // logs
       $log = Log::create([
         'client_id' => $user['id'],
@@ -1281,7 +1305,7 @@ class ReportController extends Controller
               ]);
             }
         }
-    }
+    // }
 
 	}
 
@@ -1412,7 +1436,7 @@ class ReportController extends Controller
             'log_date' => Carbon::now()->toDateString()
           ]);
 
-          $this->sendPushNotification($cs->client_id, $detail);
+          $this->sendPushNotification($getUser->id, $detail);
 
           // End Logs
 
@@ -1562,15 +1586,15 @@ class ReportController extends Controller
 			$status = 'on process';
 		}
 
-		if( $_clientServiceId ) {
-			$clientServicesId = ClientService::where('id', $_clientServiceId)
-				->where('active', 1)->where('status', $status)->pluck('id')->toArray();
-		} else {
-			$clientServicesId = ClientService::where('client_id', $clientId)
-				->where('active', 1)->where('status', $status)->pluck('id')->toArray();
-		}
-		// $clientServicesId = ClientService::where('client_id', $clientId)
-		// 		->where('active', 1)->where('status','pending')->pluck('id')->toArray();
+		// if( $_clientServiceId ) {
+		// 	$clientServicesId = ClientService::where('id', $_clientServiceId)
+		// 		->where('active', 1)->where('status', $status)->pluck('id')->toArray();
+		// } else {
+		// 	$clientServicesId = ClientService::where('client_id', $clientId)
+		// 		->where('active', 1)->where('status', $status)->pluck('id')->toArray();
+		// }
+		$clientServicesId = ClientService::where('client_id', $clientId)
+				->where('active', 1)->where('status','pending')->where('status','on process')->pluck('id')->toArray();
 
 		$clientReports = ClientReport::with('clientReportDocuments')
 			->whereIn('client_service_id', $clientServicesId)
@@ -2318,34 +2342,66 @@ class ReportController extends Controller
   }
   
 
-  public function sendPushNotification($user_id, $message = null) {
-    $devices = DB::table('devices')->where('user_id', $user_id)->groupBy('device_token')->get();
+  public function sendPushNotification($user_id, $message = null, $label = null, $log_id = null) {
+    // $devices = DB::table('devices')->where('user_id', $user_id)->groupBy('device_token')->get();
 
-    $deviceToken = [];
+    // $deviceToken = [];
 
-    if(count($devices)) {
-      foreach($devices as $device) {
-        array_push($deviceToken, $device->device_token);
-      }
-    }
+    // if(count($devices)) {
+    //   foreach($devices as $device) {
+    //     array_push($deviceToken, $device->device_token);
+    //   }
+    // }
 
-    $push = new PushNotification('fcm'); 
-    $push->setUrl('https://fcm.googleapis.com/fcm/send')
-    ->setMessage([ 
-      'notification' => [ 
-        // 'title'=>'Title', 
-        'body' => $message, 
-        'sound' => 'default' 
-      ] 
-    ]) 
-    ->setConfig(['dry_run' => false,'priority' => 'high']) 
-    ->setApiKey('AAAAIynhqO8:APA91bH5P-SGimP4b0jazCrC8ya7bV9LoR57wWB9zLqatXfRyxSIdKs2_q4-e01Ofce6oxW-7YQOGlk4Sov4WwiUAE7qojRu-3xb9429ve0Ufkh4JDMaod7cKBAxbypFUPJNKX0yoe98') 
-    ->setDevicesToken($deviceToken)
-    ->send()
-    ->getFeedback();
+    // $push = new PushNotification('fcm'); 
+    // $push->setUrl('https://fcm.googleapis.com/fcm/send')
+    // ->setMessage([ 
+    //   'notification' => [ 
+    //     // 'title'=>'Title', 
+    //     'body' => $message, 
+    //     'sound' => 'default' 
+    //   ] 
+    // ]) 
+    // ->setConfig(['dry_run' => false,'priority' => 'high']) 
+    // ->setApiKey('AAAAIynhqO8:APA91bH5P-SGimP4b0jazCrC8ya7bV9LoR57wWB9zLqatXfRyxSIdKs2_q4-e01Ofce6oxW-7YQOGlk4Sov4WwiUAE7qojRu-3xb9429ve0Ufkh4JDMaod7cKBAxbypFUPJNKX0yoe98') 
+    // ->setDevicesToken($deviceToken)
+    // ->send()
+    // ->getFeedback();
 
+		// $user_id = 15616;
+		// $message = 'Test only';
+		// $label = 'Updated Cost';
 
-    $response['feedback'] = $deviceToken;
+		if($label !== null) {
+			$job = (new LogsPushNotification($user_id, $message, $log_id))->delay(now()->addMinutes(5));
+		} else {
+			$job = (new LogsPushNotification($user_id, $message, $log_id));
+		}
+		
+		$jobID = $this->dispatch($job);
+
+		if($label !== null && $log_id !== null) {
+			$checkLogNotif = DB::table('logs_notification as ln')
+											->leftJoin('jobs', 'ln.job_id', '=', 'jobs.id')
+											->where('ln.log_id', $log_id)
+											->first();
+
+			if($checkLogNotif) {
+				DB::table('jobs')->where('id', $checkLogNotif->job_id)->delete();
+				DB::table('logs_notification')
+					->where('log_id', $log_id)
+					->where('job_id', $checkLogNotif->job_id)
+					->delete();
+			}
+
+			DB::table('logs_notification')->insert([
+				'log_id' => $log_id,
+				'job_id' => $jobID
+			]);
+		}
+		
+
+		$response['job_id'] = $jobID;
     return Response::json($response);
   }
 }
