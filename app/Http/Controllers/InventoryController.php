@@ -1619,7 +1619,7 @@ class InventoryController extends Controller
             ->first();
         $lastUnit = InventoryParentUnit::select("u.name")->where("inv_id", $request->inventory_id)
             ->leftJoin("inventory_unit as u", "inventory_parent_unit.unit_id", "u.unit_id")
-            ->orderBy("id", "DESC")->limit(1)->first();
+            ->orderBy("id", "DESC")->get();
         $price = number_format($spent->price, 2);
         foreach ($location as $l){
             $purchased = DB::table('inventory_consumables as c')
@@ -1641,7 +1641,11 @@ class InventoryController extends Controller
             $consumed = $consumed?(int)$consumed->qty:0;
             $l->remaining = self::unitFormat($request->inventory_id,$purchased-$consumed);
             $l->uTotal = number_format($purchased-$consumed);
-            $l->uTotal = $l->uTotal!=0?$l->uTotal." ".($lastUnit->name.($l->uTotal>0?'s':'')):'';
+            if(count($lastUnit) > 1){
+                $l->uTotal = $l->uTotal!=0?$l->uTotal." ".($lastUnit[0]['name'].($l->uTotal>0?'s':'')):'';
+            }else{
+                $l->uTotal = "";
+            }
         }
 
         $response['status'] = 'Success';
