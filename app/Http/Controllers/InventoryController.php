@@ -555,9 +555,10 @@ class InventoryController extends Controller
                             SUM(qty)
                         FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type='Purchased')
                         -
-                        (SELECT
+                        IFNULL((SELECT
                             SUM(qty)
-                        FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type='Consumed')
+                        FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type='Consumed'),
+                        0)
                     ,0)
                 ELSE
                     (SELECT COUNT(id) FROM inventory_assigned a WHERE a.inventory_id = inventory.inventory_id AND a.status !=3)
@@ -735,9 +736,9 @@ class InventoryController extends Controller
                             SUM(qty)
                         FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type="Purchased")
                         -
-                        (SELECT
+                        IFNULL((SELECT
                             SUM(qty)
-                        FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type="Consumed")
+                        FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type="Consumed"),0)
                     ,0)
                 ELSE
                     (SELECT COUNT(id) FROM inventory_assigned a WHERE a.inventory_id = inventory.inventory_id AND a.status !=3)
