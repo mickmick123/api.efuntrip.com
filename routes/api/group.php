@@ -41,6 +41,9 @@ Route::middleware('auth:api')->group(function() {
 	Route::post('by-members-service', 'GroupController@getMemberByService');
 	Route::post('by-service-members', 'GroupController@getServicesByMembers');
 
+ //
+  Route::post('distribute-old-payment', 'GroupController@distributeOldPayment');
+
 
 	//Export Excel
 	Route::get('byservice/{group_id}/{page?}', 'GroupController@getByService');

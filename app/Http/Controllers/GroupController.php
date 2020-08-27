@@ -917,21 +917,23 @@ public function getServicesByMembers(Request $request){
             $s->discount_details =  ClientTransaction::where('client_service_id', $s->id)->where('type', 'Discount')->select('amount','reason','created_at')->first();
 
             //Payment details
-            $logType = Log::where('client_service_id', $s->id)->where('group_id', $request->group_id)->where('log_type', 'Transaction')->where('log_group', 'payment')->select('amount','log_date')->get();
+            // $logType = Log::where('client_service_id', $s->id)->where('group_id', $request->group_id)->where('log_type', 'Transaction')->where('log_group', 'payment')->select('amount','log_date')->get();
+            //
+            // $paymentLog = '';
+            // $s->payment_details = '';
+            //
+            // if(count($logType) > 0){
+            //   foreach($logType as $log){
+            //     $paymentLog =  $paymentLog."\r\n Php". $log->amount ."(".$log->log_date.")";
+            //   }
+            //   $s->payment_details = $paymentLog;
+            // }else{
+            //    if($s->payment_amount > 0){
+            //      $s->payment_details = "Php" . $s->payment_amount . " (". $s->created_at .")";
+            //    }
+            // }
 
-            $paymentLog = '';
-            $s->payment_details = '';
 
-            if(count($logType) > 0){
-              foreach($logType as $log){
-                $paymentLog =  $paymentLog."\r\n Php". $log->amount ."(".$log->log_date.")";
-              }
-              $s->payment_details = $paymentLog;
-            }else{
-               if($s->payment_amount > 0){
-                 $s->payment_details = "Php" . $s->payment_amount . " (". $s->created_at .")";
-               }
-            }
 
           }
 
@@ -4338,6 +4340,108 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
 
       return Response::json($response);
+  }
+
+  //Distribute payment
+  public function distributeOldPayment(Request $request){
+
+
+    $total = DB::table('client_transactions')
+                  ->where('group_id',$request->group_id)
+                  ->where('type', 'Deposit')
+                  ->orWhere('type', 'Payment')
+                  ->sum('amount');
+
+    $totalDepo = DB::table('client_transactions')
+                  ->where('group_id',$request->group_id)
+                  ->where('type', 'Deposit')
+                //  ->orWhere('type', 'Payment')
+                  ->sum('amount');
+
+    $totalPayment = DB::table('client_transactions')
+                ->where('group_id',$request->group_id)
+                ->where('type', 'Payment')
+              //  ->orWhere('type', 'Payment')
+                ->sum('amount');
+
+
+    $totalRefund = DB::table('client_transactions')
+                  ->where('group_id',$request->group_id)
+                  ->where('type', 'Refund')
+                  ->sum('amount');
+
+
+    $queryTotalDiscount = DB::table('client_services as cs')
+                  ->leftjoin(DB::raw('(select * from client_transactions) as ct'),'ct.client_service_id','=','cs.id')
+                  ->where('ct.type', 'Discount')
+                  ->where('cs.group_id', $request->group_id)
+                  ->sum('ct.amount');
+
+
+    $queryTotalCost = ClientService::where('active', 1)->where('group_id', $request->group_id)
+                                      ->where('status','!=','cancelled');
+
+    $groupTotalCost =   $queryTotalCost->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
+
+
+    $totalAmount = ($totalPayment + $totalDepo) - $totalRefund;
+
+
+    $queryClients = ClientService::where('group_id', $request->group_id)->where('active', 1)->where('is_full_payment', 0)->get();
+    $totalRemaining = 0;
+    foreach($queryClients as $m){
+
+       $discount =  ClientTransaction::where('client_service_id', $m->id)->where('type', 'Discount')->sum('amount');
+
+       $clientService = ClientService::where('id', $m->id);
+
+       $payment= (($m->cost + $m->charge + $m->tip + $m->com_agent + $m->com_client) - $discount);
+
+       if($totalAmount > 0){
+            if($totalAmount > $payment){
+                if($m->payment_amount != 0){
+                    $totalAmount = $totalAmount - $m->payment_amount;
+                }
+                $totalAmount = $totalAmount - $payment;
+            }else{
+                $payment = $totalAmount + $m->payment_amount;
+                $totalAmount = 0;
+            }
+
+            $data = array('is_full_payment' => 1, 'payment_amount' => $payment);
+            $clientService->update($data);
+       }
+    }
+
+
+    $totalRemaining = $totalAmount;
+
+    $depo = ClientEWallet::where('group_id', $request->group_id)->where('type', 'Deposit')->sum('amount');
+
+    if(!$depo){
+      if($totalRemaining > 0){
+        $dp = new ClientEWallet;
+        $dp->client_id = 0;
+        $dp->type = 'Deposit';
+        $dp->amount = $totalRemaining;
+        $dp->group_id = $request->group_id;
+        $dp->reason = "Generating DP";
+        $dp->save();
+      }
+    }
+
+
+    $response['status'] = 'Success';
+    $response['remaining'] = $totalRemaining;
+    $response['total_payment_and_dp'] = ($totalPayment + $totalDepo);
+    $response['total_depo'] = $totalDepo;
+    $response['total_refund'] = $totalRefund;
+    $response['total_payment'] = $totalPayment;
+    $response['total_cost'] = $groupTotalCost;
+    $response['total_discount'] = $queryTotalDiscount;
+    $response['code'] = 200;
+
+    return Response::json($response);
   }
 
 }
