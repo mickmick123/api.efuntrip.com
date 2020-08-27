@@ -1620,7 +1620,11 @@ class InventoryController extends Controller
         $lastUnit = InventoryParentUnit::select("u.name")->where("inv_id", $request->inventory_id)
             ->leftJoin("inventory_unit as u", "inventory_parent_unit.unit_id", "u.unit_id")
             ->orderBy("id", "DESC")->get();
-        $price = number_format($spent->price, 2);
+        if($spent) {
+            $price = number_format($spent->price, 2);
+        }else {
+            $price = 0.00;
+        }
         foreach ($location as $l){
             $purchased = DB::table('inventory_consumables as c')
                 ->select(DB::raw('SUM(qty) as qty'))
