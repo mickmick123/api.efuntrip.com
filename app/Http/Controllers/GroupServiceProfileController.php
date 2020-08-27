@@ -52,22 +52,27 @@ class GroupServiceProfileController extends Controller
       $group = Group::where('id',$group_id)->first();
 
       if($group->service_profile_id > 0 && $group->service_profile_id != null){
-          $profileServiceIds = ServiceProfileCost::where('profile_id',$group->service_profile_id)->where('branch_id',$branch_id)
-                              ->where(function($query) {
-                                  return $query->orwhere('cost', '>', 0)
-                                      ->orWhere('charge', '>', 0)
-                                      ->orWhere('tip', '>', 0)
-                                      ->orWhere('com_agent', '>', 0)
-                                      ->orWhere('com_client', '>', 0);
-                              })
+          $profileServiceIds = ServiceProfileCost::where('profile_id',$group->service_profile_id)->where('branch_id',$branch_id)->where('active', 1)
+                              // ->where(function($query) {
+                              //     return $query->orwhere('cost', '>', 0)
+                              //         ->orWhere('charge', '>', 0)
+                              //         ->orWhere('tip', '>', 0)
+                              //         ->orWhere('com_agent', '>', 0)
+                              //         ->orWhere('com_client', '>', 0);
+                              // })
                               ->pluck('service_id');
           $profileServices = Service::whereIn('id',$profileServiceIds)
+                                // ->orwhere(function($query) {
+                                //     return $query->where('cost', 0)
+                                //         ->where('charge', 0)
+                                //         ->where('tip', 0)
+                                //         ->where('com_agent', 0)
+                                //         ->where('com_client', 0);
+                                // })
                                 ->orwhere(function($query) {
-                                    return $query->where('cost', 0)
-                                        ->where('charge', 0)
-                                        ->where('tip', 0)
-                                        ->where('com_agent', 0)
-                                        ->where('com_client', 0);
+                                    return $query->orwhere('id', 289)
+                                        ->orwhere('id', 308)
+                                        ->orwhere('id', 414);
                                 })
                                 ->get();
 

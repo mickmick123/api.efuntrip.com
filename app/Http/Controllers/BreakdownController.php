@@ -167,6 +167,30 @@ class BreakdownController extends Controller
         }
     }
 
+    public function profileSwitch(Request $request) {
+        $validator = Validator::make($request->all(), [ 
+            'newValue' => 'required',
+            'serviceId' => 'required',
+            'branchId' => 'required',
+            'profileId' => 'required',
+        ]);
+
+        if($validator->fails()) {       
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;   
+        } else {
+            ServiceProfileCost::where('service_id', $request->serviceId)
+                    ->where('profile_id', $request->profileId)
+                    ->where('branch_id', $request->branchId)
+                    ->update(['active' => $request->newValue]);
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+        }
+
+        return Response::json($response);
+    }
+
 
     public function updatePrice(Request $request) {
         $validator = Validator::make($request->all(), [ 

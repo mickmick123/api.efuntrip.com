@@ -406,6 +406,7 @@ class ServiceController extends Controller
 			$comAgent = null;
 			$comClient = null;
 			$total = 0;
+			$active = 0;
 
 			// Market Price
 			if( $item['id'] == 0 ) {
@@ -455,7 +456,7 @@ class ServiceController extends Controller
 					$comClient = 0;
 					$total = 0;
 
-					$select = ['cost', 'charge', 'tip', 'com_agent', 'com_client'];
+					$select = ['active', 'cost', 'charge', 'tip', 'com_agent', 'com_client'];
 				}
 
 				$serviceProfileCost = ServiceProfileCost::select($select)
@@ -468,6 +469,7 @@ class ServiceController extends Controller
 					$cost = $serviceProfileCost->cost;
 					$charge = $serviceProfileCost->charge;
 					$tip = $serviceProfileCost->tip;
+					$active = $serviceProfileCost->active;
 					$total = $cost + $charge + $tip;
 
 					if( $serviceProfileCost->com_agent ) {
@@ -481,6 +483,7 @@ class ServiceController extends Controller
 				}
 			}
 
+			$item['active'] = $active;
 			$item['total'] = !is_null($total) ? number_format($total, 2) : $total;
 			$item['cost'] = !is_null($cost) ? number_format($cost, 2) : $cost;
 			$item['cost_breakdown'] = Breakdown::select(['description', 'amount'])->where('type', 'cost')

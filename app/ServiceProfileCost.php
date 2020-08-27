@@ -11,7 +11,7 @@ class ServiceProfileCost extends Model
 
     public $timestamps = false;
 
-    protected $fillable = ['service_id', 'profile_id', 'cost', 'charge', 'tip', 'com_agent', 'com_client', 'branch_id'];
+    protected $fillable = ['service_id', 'profile_id', 'cost', 'charge', 'tip', 'com_agent', 'com_client', 'branch_id', 'active'];
 
     public function service() {
     	return $this->belongsTo('App\Service', 'service_id', 'id');
