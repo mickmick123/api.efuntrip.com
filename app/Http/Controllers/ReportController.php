@@ -32,6 +32,8 @@ use App\OnHandDocument;
 
 use App\SuggestedDocument;
 
+use App\TransferredFile;
+
 use App\User;
 
 use App\ClientTransaction;
@@ -1341,7 +1343,8 @@ class ReportController extends Controller
 					$query = OnHandDocument::create([
 						'client_id' => $user['id'],
 						'document_id' => $document['id'],
-						'count' => $document['count']
+						'count' => $document['count'],
+            'processor_id' => Auth::user()->id
 					]);
 				}
 	    	} elseif( strpos($action, "Released documents") !== false ) {
@@ -1379,7 +1382,8 @@ class ReportController extends Controller
 						$query = OnHandDocument::create([
 							'client_id' => $user['id'],
 							'document_id' => $documentId,
-							'count' => $document['count']
+							'count' => $document['count'],
+							'processor_id' => Auth::user()->id
 						]);
 					}
 				}
@@ -1982,6 +1986,131 @@ class ReportController extends Controller
 		}
 	}
 
+
+	public function transferFiles(Request $request) {
+		$client_id = $request->users[0]['id'];
+		$documents = $request->users[0]['documents'];
+		$recipient_id = $request->users[0]['recipient'];
+		$sender_id = $request->users[0]['sender'];
+
+		foreach($documents as $document) {
+			if($document['count'] > 0) {
+
+				$doclog = new DocumentLog;
+				$doclog->document_id = $document['id'];
+				$doclog->log_id = 0;
+				$doclog->count = $document['count'];
+				$doclog->pending_count = 0;
+				$doclog->previous_on_hand = $document['onHandCount'];
+				$doclog->save();
+
+				$tf = new TransferredFile;
+				$tf->sender_id = $sender_id;
+				$tf->receiver_id = $recipient_id;
+				$tf->client_id = $client_id;
+				$tf->document_log_id = $doclog->id;
+				$tf->save();
+
+			}
+		}
+
+		$response['status'] = 'Success';
+		$response['code'] = 200;
+		return Response::json($response);
+	}
+
+
+	public function getReceivedFiles($id) {
+		$rcvdDocsBySender = TransferredFile::leftJoin('users as sender', 'transferred_files.sender_id', '=', 'sender.id')
+								->where('receiver_id', $id)
+								->where('sender_id', '!=', 0)
+								->where('transferred_files.status', 1)
+								->select('transferred_files.*', DB::raw('CONCAT(sender.first_name," ",sender.last_name) AS sender'))
+								->orderBy('id', 'DESC')
+								->groupBy('sender_id')
+								->get();
+
+		$rcvdDocs = [];
+
+		foreach($rcvdDocsBySender as $rbs) {
+			$rcvd = TransferredFile::leftJoin('users as sender', 'transferred_files.sender_id', '=', 'sender.id')
+						->leftJoin('users as rcvr', 'transferred_files.receiver_id', '=', 'rcvr.id')
+						->leftJoin('document_log as dl', 'transferred_files.document_log_id', '=', 'dl.id')
+						->leftJoin('documents as doc', 'dl.document_id', '=', 'doc.id')
+						->where('receiver_id', $id)
+						->where('sender_id', $rbs['sender_id'])
+						->where('transferred_files.status', 1)
+						->select('transferred_files.*', DB::raw('CONCAT(sender.first_name," ",sender.last_name) AS sender'), DB::raw('CONCAT(rcvr.first_name," ",rcvr.last_name) AS receiver'), 'dl.log_id', 'dl.count', 'dl.pending_count', 'dl.previous_on_hand', 'doc.id as document_id', 'doc.title', 'doc.title_cn')
+						->orderBy('id', 'DESC')
+						->get();
+
+			$rbs['documents'] = $rcvd;
+
+			$rcvdDocs[] = $rbs;
+		}
+		
+
+		$response['status'] = 'Success';
+		$response['code'] = 200;
+		$response['data'] = $rcvdDocs;
+		return Response::json($response);
+	}
+
+
+	public function storeReceivedFiles(Request $request) {
+		$documents = $request->documents['documents'];
+		$received = $request->received;
+		$sender = $request->sender;
+		$receiver = $request->receiver;
+
+		$rcvr = User::where('id', $receiver)->first();
+
+		$label = $sender.' transferred files to '.$rcvr->first_name.' '.$rcvr->last_name;
+		$details = $label;
+
+		// Add the submitted docs to log details
+		foreach($documents as $key => $document) {
+			$details .= "\n" . '('.$document['count'].') ' . $received[$key]['title']; 
+		}
+
+		$log = new Log;
+		$log->client_id = $received[0]['client_id'];
+		$log->processor_id = $received[0]['sender_id'];
+		$log->log_type = 'Document';
+		$log->detail = $details;
+		$log->label = $label;
+		$log->log_date = Carbon::now()->toDateString();
+		$log->save();
+
+		// Save submitted docs to document logs
+		foreach($documents as $document) {
+			$dl = new DocumentLog;
+			$dl->document_id = $document['id'];
+			$dl->log_id = $log->id;
+			$dl->count = $document['count'];
+			$dl->pending_count = 0;
+			$dl->previous_on_hand = $document['onHandCount'];
+			$dl->save();
+		}
+
+		// Update status of transferred files to 0
+		foreach($received as $rcvd) {
+			$tf = TransferredFile::where('id', $rcvd['id'])->first();
+			$tf->status = 0;
+			$tf->save();
+		}
+		
+
+		$response['status'] = 'Success';
+		$response['code'] = 200;
+		$response['documents'] = $documents;
+		$response['received'] = $received;
+		$response['sender'] = $sender;
+		$response['receiver'] = $rcvr->first_name;
+		return Response::json($response);
+	}
+
+
 	public function getFiledReports(){
 		$csIds = ClientReport::where('id','>=',133)->whereHas('serviceProcedure.action', function($query) {
 		 				$query->where('name', 'Filed');
@@ -2416,5 +2545,22 @@ class ReportController extends Controller
 
 		$response['job_id'] = $jobID;
     return Response::json($response);
-  }
+	}
+	
+
+	public function sendNotif() {
+		$push = new PushNotification('fcm'); 
+    $push->setUrl('https://fcm.googleapis.com/fcm/send')
+    ->setMessage([ 
+      'notification' => [ 
+        'title'=>'Test Title', 
+        'body' => 'Web push notification test', 
+        'sound' => 'default' 
+      ] 
+    ]) 
+    ->setConfig(['dry_run' => false,'priority' => 'high']) 
+    ->setApiKey('AAAAIynhqO8:APA91bH5P-SGimP4b0jazCrC8ya7bV9LoR57wWB9zLqatXfRyxSIdKs2_q4-e01Ofce6oxW-7YQOGlk4Sov4WwiUAE7qojRu-3xb9429ve0Ufkh4JDMaod7cKBAxbypFUPJNKX0yoe98') 
+    ->setDevicesToken('4892bc15f44d6cd3c0f53fa8c98024fc00945c438baaae66904b46f33fdb3a05d2125c735d4cbf92')
+    ->send();
+	}
 }

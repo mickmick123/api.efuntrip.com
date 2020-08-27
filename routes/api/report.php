@@ -6,6 +6,8 @@ Route::get('check-updated-cost', 'ReportController@checkUpdatedCost');
 
 // Route::get('check-ond-handdocs/{id}', 'ReportController@checkOnHandDocs');
 
+
+
 Route::middleware('auth:api')->group(function() {
 
 	Route::get('documents', 'ReportController@getDocuments');
@@ -25,6 +27,12 @@ Route::middleware('auth:api')->group(function() {
 	Route::get('/{perPage?}', 'ReportController@index');
 
 	Route::get('reports-by-service/{id?}', 'ReportController@reportsByService');
+
+	Route::get('get-received-files/{id}', 'ReportController@getReceivedFiles');
+
+	Route::post('transfer-files', 'ReportController@transferFiles');
+
+	Route::post('store-received-files', 'ReportController@storeReceivedFiles');
 
   Route::post('sendpushnotification', 'ReportController@sendPushNotification');
 

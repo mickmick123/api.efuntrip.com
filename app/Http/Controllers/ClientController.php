@@ -665,6 +665,22 @@ class ClientController extends Controller
         return Response::json($response);
     }
 
+    public function getAllUsers() {
+        $users = DB::table('role_user as rs')
+                    ->leftJoin('users', 'rs.user_id', '=', 'users.id')
+                    ->leftJoin('roles', 'rs.role_id', '=', 'roles.id')
+                    ->where('rs.role_id', '!=', 2)
+                    ->select('user_id as id', 'first_name', 'last_name')
+                    ->groupBy('user_id')
+                    ->get();
+
+        $response['status'] = 'Success';
+        $response['data'] =  $users;
+        $response['code'] = 200;
+
+        return Response::json($response);
+    }
+
     public function store(Request $request) {
 		$validator = Validator::make($request->all(), [
             'first_name' => 'required',
