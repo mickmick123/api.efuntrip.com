@@ -817,14 +817,14 @@ class ClientController extends Controller
                     if(strlen($contactNumber['number']) !== 0 && $contactNumber['number'] !== null) {
                         ContactNumber::create([
                             'user_id' => $client->id,
-                            'number' => $contactNumber['number'],
+                            'number' => '+63'.$contactNumber['number'],
                             'is_primary' => $contactNumber['is_primary'],
                             'is_mobile' => $contactNumber['is_mobile']
                         ]);
 
                         if( $contactNumber['is_primary'] ) {
                             $client->update([
-                                'password' => bcrypt($contactNumber['number'])
+                                'password' => bcrypt('+63'.$contactNumber['number'])
                             ]);
                         }
                     }
@@ -1073,18 +1073,20 @@ class ClientController extends Controller
 
                     $client->contactNumbers()->delete();
                     foreach($request->contact_numbers as $contactNumber) {
-                        if(strlen($contactNumber['number']) !== 0 && $contactNumber['number'] !== null) {
+                        $contactNum = str_replace('+63', '', $contactNumber['number']);
+
+                        if(strlen($contactNum) !== 0 && $contactNum !== null) {
                             ContactNumber::create([
                                 'user_id' => $client->id,
-                                'number' => $contactNumber['number'],
-                                'is_primary' => $contactNumber['is_primary'],
+                                'number' => '+63'.$contactNum,
+                                'is_primary' => json_decode($contactNumber['is_primary'], true),
                                 'is_mobile' => $contactNumber['is_mobile']
                             ]);
 
                             if( $contactNumber['is_primary'] ) {
                                 $old = ContactNumber::where('user_id',$client->id)->where('is_primary',1)->first();
                                 if($old){
-                                    if($old->number != $contactNumber['number']){
+                                    if($old->number != '+63'.$contactNum){
                                         $upd = Updates::updateOrCreate(
                                             ['client_id' => $client->id, 'type' => 'Contact'],
                                             ['updated_at' => Carbon::now()]
@@ -1092,7 +1094,7 @@ class ClientController extends Controller
                                     }
                                 }
                                 $client->update([
-                                    'password' => bcrypt($contactNumber['number'])
+                                    'password' => bcrypt('+63'.$contactNum)
                                 ]);
                             }
                         }
@@ -2452,15 +2454,16 @@ class ClientController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
-            $contactNumber = $request->contact_number;
+            $contactNumber = '+63'.$request->contact_number;
 
-            if(strlen($contactNumber) === 13) {
-                $number = substr($contactNumber, 3);
-            } else if(strlen($contactNumber) === 12) {
-                $number = substr($contactNumber, 2);
-            } else {
-                $number = substr($contactNumber, 1);
-            }
+            // if(strlen($contactNumber) === 13) {
+            //     $number = substr($contactNumber, 3);
+            // } else if(strlen($contactNumber) === 12) {
+            //     $number = substr($contactNumber, 2);
+            // } else {
+            //     $number = substr($contactNumber, 1);
+            // }
+            $number = '+63'.$contactNumber;
 
             $contact = ContactNumber::where('number','LIKE','%'.$number.'%')->count();
 
