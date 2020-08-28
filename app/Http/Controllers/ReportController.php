@@ -2483,34 +2483,6 @@ class ReportController extends Controller
   
 
   public function sendPushNotification($user_id, $message = null, $label = null, $log_id = null) {
-    // $devices = DB::table('devices')->where('user_id', $user_id)->groupBy('device_token')->get();
-
-    // $deviceToken = [];
-
-    // if(count($devices)) {
-    //   foreach($devices as $device) {
-    //     array_push($deviceToken, $device->device_token);
-    //   }
-    // }
-
-    // $push = new PushNotification('fcm'); 
-    // $push->setUrl('https://fcm.googleapis.com/fcm/send')
-    // ->setMessage([ 
-    //   'notification' => [ 
-    //     // 'title'=>'Title', 
-    //     'body' => $message, 
-    //     'sound' => 'default' 
-    //   ] 
-    // ]) 
-    // ->setConfig(['dry_run' => false,'priority' => 'high']) 
-    // ->setApiKey('AAAAIynhqO8:APA91bH5P-SGimP4b0jazCrC8ya7bV9LoR57wWB9zLqatXfRyxSIdKs2_q4-e01Ofce6oxW-7YQOGlk4Sov4WwiUAE7qojRu-3xb9429ve0Ufkh4JDMaod7cKBAxbypFUPJNKX0yoe98') 
-    // ->setDevicesToken($deviceToken)
-    // ->send()
-    // ->getFeedback();
-
-		// $user_id = 15616;
-		// $message = 'Test only';
-		// $label = 'Updated Cost';
 
 		if($label !== null) {
 			$job = (new LogsPushNotification($user_id, $message, $log_id))->delay(now()->addMinutes(5));
@@ -2540,9 +2512,6 @@ class ReportController extends Controller
 			]);
 		}
 		
-
-		$response['job_id'] = $jobID;
-    return Response::json($response);
 	}
 	
 
