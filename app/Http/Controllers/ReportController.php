@@ -1343,8 +1343,7 @@ class ReportController extends Controller
 					$query = OnHandDocument::create([
 						'client_id' => $user['id'],
 						'document_id' => $document['id'],
-						'count' => $document['count'],
-            'processor_id' => Auth::user()->id
+						'count' => $document['count']
 					]);
 				}
 	    	} elseif( strpos($action, "Released documents") !== false ) {
@@ -1382,8 +1381,7 @@ class ReportController extends Controller
 						$query = OnHandDocument::create([
 							'client_id' => $user['id'],
 							'document_id' => $documentId,
-							'count' => $document['count'],
-							'processor_id' => Auth::user()->id
+							'count' => $document['count']
 						]);
 					}
 				}
