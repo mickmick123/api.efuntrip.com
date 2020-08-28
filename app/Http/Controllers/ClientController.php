@@ -2443,7 +2443,7 @@ class ClientController extends Controller
 
     public function addTemporaryClient(Request $request) {
         $validator = Validator::make($request->all(), [
-            'contact_number' => 'required|min:11|max:13|unique:contact_numbers,number',
+            'contact_number' => 'required|min:10|max:13|unique:contact_numbers,number',
             'branch' => 'required',
             'birthdate' => 'nullable|date',
             'passport' => 'nullable|unique:users,passport'
@@ -2463,9 +2463,10 @@ class ClientController extends Controller
             // } else {
             //     $number = substr($contactNumber, 1);
             // }
-            $number = '+63'.$contactNumber;
+            // $number = '+63'.$contactNumber;
 
-            $contact = ContactNumber::where('number','LIKE','%'.$number.'%')->count();
+            // $contact = ContactNumber::where('number','LIKE','%'.$number.'%')->count();
+            $contact = ContactNumber::where('number', $contactNumber)->count();
 
             if($contact > 0) {
                 $response['status'] = 'Failed';
