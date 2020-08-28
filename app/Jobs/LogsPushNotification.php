@@ -66,7 +66,5 @@ class LogsPushNotification implements ShouldQueue
             ->where('log_id', $this->log_id)
             ->where('job_id', $this->job->getJobId())
             ->delete();
-
-        echo 'Queued Job Id:'. $this->job->getJobId()." end";
     }
 }
