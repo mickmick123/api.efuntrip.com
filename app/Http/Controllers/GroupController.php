@@ -4384,7 +4384,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
     $groupTotalCost =   $queryTotalCost->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
 
 
-    $totalAmount = ($totalPayment + $totalDepo) - $totalRefund;
+    $totalAmount = ($totalPayment + $totalDepo + $queryTotalDiscount) - $totalRefund;
 
 
     $queryClients = ClientService::where('group_id', $request->group_id)->where('active', 1)->where('is_full_payment', 0)->get();
