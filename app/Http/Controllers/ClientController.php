@@ -15,6 +15,8 @@ use App\ClientEWallet;
 
 use App\ContactNumber;
 
+use App\ContactAlternate;
+
 use App\Group;
 
 use App\Package;
@@ -372,6 +374,9 @@ class ClientController extends Controller
             $client->contact_numbers = DB::table('contact_numbers')->where('user_id', $id)
                 ->select(array('number', 'is_primary', 'is_mobile'))->get();
 
+            $client->contact_alternate = DB::table('contact_alternate')->where('user_id', $id)
+                ->select(array('user_id', 'detail', 'type'))->get();
+
             $client->groups = DB::table('group_user')->where('user_id', $id)
                 ->select(array('group_id'))->get();
 
@@ -681,6 +686,24 @@ class ClientController extends Controller
         return Response::json($response);
     }
 
+
+    public function getContactType() {
+        $type = DB::select(DB::raw('SHOW COLUMNS FROM contact_alternate WHERE Field = "type"'))[0]->Type;
+        preg_match('/^enum\((.*)\)$/', $type, $matches);
+        $values = array();
+        foreach(explode(',', $matches[1]) as $value){
+            $values[] = trim($value, "'");
+        }
+        return $values;
+
+        $response['status'] = 'Success';
+        $response['data'] =  $values;
+        $response['code'] = 200;
+
+        return Response::json($response);
+    }
+
+
     public function store(Request $request) {
 		$validator = Validator::make($request->all(), [
             'first_name' => 'required',
@@ -805,6 +828,14 @@ class ClientController extends Controller
                             ]);
                         }
                     }
+                }
+
+                foreach($request->contact_alternate as $contactAlternate) {
+                    $ca = new ContactAlternate;
+                    $ca->user_id = $client->id;
+                    $ca->detail = $contactAlternate['detail'];
+                    $ca->type = $contactAlternate['type'];
+                    $ca->save();
                 }
 
                 $client->branches()->detach();
@@ -1066,6 +1097,16 @@ class ClientController extends Controller
                             }
                         }
                     }
+
+                    DB::table('contact_alternate')->where('user_id', $client->id)->delete();
+                    foreach($request->contact_alternate as $contactAlternate) {
+                        $ca = new ContactAlternate;
+                        $ca->user_id = $client->id;
+                        $ca->detail = $contactAlternate['detail'];
+                        $ca->type = $contactAlternate['type'];
+                        $ca->save();
+                    }
+
 
                     $client->branches()->detach();
                     foreach($request->branches as $branch) {

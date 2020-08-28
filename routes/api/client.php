@@ -5,6 +5,8 @@ Route::get('manage-clients', 'ClientController@manageClients');
 
 Route::get('get-all-users', 'ClientController@getAllUsers');
 
+Route::get('get-contact-type', 'ClientController@getContactType');
+
 Route::middleware('auth:api')->group(function() {
 
 	// Route::get('manage-clients', 'ClientController@manageClients');
