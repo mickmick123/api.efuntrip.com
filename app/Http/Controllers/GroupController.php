@@ -1911,10 +1911,10 @@ public function getClientPackagesByGroup($client_id, $group_id){
      $arr = [];
           //$group_members = GroupUser::where('group_id', $groupId)->get();
           $group_members = GroupUser::where('group_id', $groupId)
-          ->when($sort != '', function ($q) use($sort){
-              $sort = explode('-' , $sort);
-              return $q->orderBy($sort[0], $sort[1]);
-          })
+          // ->when($sort != '', function ($q) use($sort){
+          //     $sort = explode('-' , $sort);
+          //     return $q->orderBy($sort[0], $sort[1]);
+          // })
           ->when($search != '', function ($q) use($search){
               return $q->where('user_id','LIKE','%'.$search.'%');
           })

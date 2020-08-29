@@ -183,7 +183,7 @@ class ReportController extends Controller
 	                    'transactions.client_service_id', '=', 'cs.id')
 	                ->where('cs.client_id', $clientId)
 	                ->where('cs.active', 1)
-                  ->where('cs.status', '<>', 'released')
+                  // ->where('cs.status', '<>', 'released')
                   ->where('cs.status', '!=', 'complete')
                   ->where('cs.status', '!=', 'released')
 	                ->orderBy('cs.id', 'desc')
@@ -1070,7 +1070,7 @@ class ReportController extends Controller
 
 			        // $cs->update(['status' => $statusUponCompletion]);
               		$cs->status = $statusUponCompletion;
-              		$c->save();
+              		$cs->save();
 
 					ClientController::updatePackageStatus($cs->tracking);
 				}
@@ -1607,7 +1607,11 @@ class ReportController extends Controller
 		// 		->where('active', 1)->where('status', $status)->pluck('id')->toArray();
 		// }
 		$clientServicesId = ClientService::where('client_id', $clientId)
-				->where('active', 1)->where('status','pending')->where('status','on process')->pluck('id')->toArray();
+				->where('active', 1)
+				->where(function ($query)  {
+                        $query->orwhere('status','pending')
+                              ->orwhere('status', 'on process');
+                    })->pluck('id')->toArray();
 
 		$clientReports = ClientReport::with('clientReportDocuments')
 			->whereIn('client_service_id', $clientServicesId)
