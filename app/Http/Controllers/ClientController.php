@@ -809,7 +809,7 @@ class ClientController extends Controller
             'nationalities' => 'required|array',
             'birth_country' => 'required',
             'address' => 'required',
-            'contact_numbers' => 'required|array',
+            // 'contact_numbers' => 'required|array',
             'contact_numbers.*.number' => 'nullable|max:13',
             'contact_numbers.*.is_primary' => 'nullable',
             'contact_numbers.*.is_mobile' => 'nullable',
@@ -834,20 +834,27 @@ class ClientController extends Controller
         } else {
             $ce_count = 0;
 
-            foreach($request->contact_numbers as $key=>$contactNumber) {
-                if(strlen($contactNumber['number']) !== 0 && $contactNumber['number'] !== null) {
-                    if(strlen($contactNumber['number']) === 13) {
-                        $number = substr($contactNumber['number'], 3);
-                    } else if(strlen($contactNumber['number']) === 12) {
-                        $number = substr($contactNumber['number'], 2);
+            foreach($request->contact_alternate as $key=>$contactNumber) {
+                if(strlen($contactNumber['detail']) !== 0 && $contactNumber['detail'] !== null) {
+                    // if(strlen($contactNumber['number']) === 13) {
+                    //     $number = substr($contactNumber['number'], 3);
+                    // } else if(strlen($contactNumber['number']) === 12) {
+                    //     $number = substr($contactNumber['number'], 2);
+                    // } else {
+                    //     $number = substr($contactNumber['number'], 1);
+                    // }
+                    $number = $contactNumber['detail'];
+                    $type = $contactNumber['type'];
+
+                    if($type === '+63') {
+                        $contact = ContactNumber::where('number','LIKE','%'.$number.'%')->count();
                     } else {
-                        $number = substr($contactNumber['number'], 1);
+                        $contact = ContactAlternate::where('detail','LIKE','%'.$number.'%')->count();
                     }
 
-                    $contact = ContactNumber::where('number','LIKE','%'.$number.'%')->count();
-
                     if($contact > 0) {
-                        $contact_error['contact_numbers.'.$key.'.number'] = ['The contact number has already been taken.'];
+                        // $contact_error['contact_numbers.'.$key.'.number'] = ['The contact number has already been taken.'];
+                        $contact_error['contact_alternate.'.$key.'.detail'] = ['The contact number has already been taken.'];
                         $ce_count++;
                     }
                 }
@@ -905,30 +912,72 @@ class ClientController extends Controller
                 	$client->nationalities()->attach($nationality);
                 }
 
-                foreach($request->contact_numbers as $contactNumber) {
-                    if(strlen($contactNumber['number']) !== 0 && $contactNumber['number'] !== null) {
-                        ContactNumber::create([
-                            'user_id' => $client->id,
-                            'number' => '+63'.$contactNumber['number'],
-                            'is_primary' => $contactNumber['is_primary'],
-                            'is_mobile' => $contactNumber['is_mobile']
-                        ]);
+                // foreach($request->contact_numbers as $contactNumber) {
+                //     if(strlen($contactNumber['number']) !== 0 && $contactNumber['number'] !== null) {
+                //         ContactNumber::create([
+                //             'user_id' => $client->id,
+                //             'number' => '+63'.$contactNumber['number'],
+                //             'is_primary' => $contactNumber['is_primary'],
+                //             'is_mobile' => $contactNumber['is_mobile']
+                //         ]);
 
-                        if( $contactNumber['is_primary'] ) {
+                //         if( $contactNumber['is_primary'] ) {
+                //             $client->update([
+                //                 'password' => bcrypt('+63'.$contactNumber['number'])
+                //             ]);
+                //         }
+                //     }
+                // }
+                
+                $primaryContact = 0;
+                foreach($request->contact_alternate as $key => $contactNumber) {
+                    if(strlen($contactNumber['detail']) !== 0 && $contactNumber['detail'] !== null) {
+
+                        if($contactNumber['type'] === '+63') {
+                            $primaryContact++;
+
+                            $cn = new ContactNumber;
+                            $cn->user_id = $client->id;
+                            $cn->number = $contactNumber['type'].$contactNumber['detail'];
+                            $cn->is_primary = ($primaryContact === 1) ? 1 : 0;
+                            $cn->is_mobile = 1;
+                            $cn->save();
+                        } else {
+                            $ca = new ContactAlternate;
+                            $ca->user_id = $client->id;
+                            $ca->detail = $contactNumber['detail'];
+                            $ca->type = $contactNumber['type'];
+                            $ca->save();
+                        }
+
+                        if($primaryContact === 1) {
                             $client->update([
-                                'password' => bcrypt('+63'.$contactNumber['number'])
+                                'password' => bcrypt($contactNumber['type'].$contactNumber['detail'])
                             ]);
                         }
+
+                        // ContactNumber::create([
+                        //     'user_id' => $client->id,
+                        //     'number' => '+63'.$contactNumber['number'],
+                        //     'is_primary' => $contactNumber['is_primary'],
+                        //     'is_mobile' => $contactNumber['is_mobile']
+                        // ]);
+
+                        // if( $contactNumber['is_primary'] ) {
+                        //     $client->update([
+                        //         'password' => bcrypt('+63'.$contactNumber['number'])
+                        //     ]);
+                        // }
                     }
                 }
 
-                foreach($request->contact_alternate as $contactAlternate) {
-                    $ca = new ContactAlternate;
-                    $ca->user_id = $client->id;
-                    $ca->detail = $contactAlternate['detail'];
-                    $ca->type = $contactAlternate['type'];
-                    $ca->save();
-                }
+                // foreach($request->contact_alternate as $contactAlternate) {
+                //     $ca = new ContactAlternate;
+                //     $ca->user_id = $client->id;
+                //     $ca->detail = $contactAlternate['detail'];
+                //     $ca->type = $contactAlternate['type'];
+                //     $ca->save();
+                // }
 
                 $client->branches()->detach();
                 foreach($request->branches as $branch) {
@@ -1017,35 +1066,61 @@ class ClientController extends Controller
         } else {
             $ce_count = 0;
 
-            foreach($request->contact_numbers as $key=>$contactNumber) {
-                if(strlen($contactNumber['number']) !== 0 && $contactNumber['number'] !== null) {
-                    if(strlen($contactNumber['number']) === 13) {
-                        $number = substr($contactNumber['number'], 3);
-                    } else if(strlen($contactNumber['number']) === 12) {
-                        $number = substr($contactNumber['number'], 2);
+            // foreach($request->contact_numbers as $key=>$contactNumber) {
+            //     if(strlen($contactNumber['number']) !== 0 && $contactNumber['number'] !== null) {
+            //         if(strlen($contactNumber['number']) === 13) {
+            //             $number = substr($contactNumber['number'], 3);
+            //         } else if(strlen($contactNumber['number']) === 12) {
+            //             $number = substr($contactNumber['number'], 2);
+            //         } else {
+            //             $number = substr($contactNumber['number'], 1);
+            //         }
+
+            //         $contact = ContactNumber::where('number','LIKE','%'.$number.'%')->get();
+            //         $client_contact = ContactNumber::where('user_id', $id)->where('number','LIKE','%'.$number.'%')->count();
+
+
+            //         if($client_contact === 0) {
+            //             if($contact) {
+            //                 $num_duplicate = 0;
+            //                 foreach($contact as $con) {
+            //                     if(strval ($con['user_id']) !== strval ($id)) {
+            //                       $num_duplicate++;
+            //                     }
+            //                 }
+    
+            //                 if($num_duplicate > 0) {
+            //                     $contact_error['contact_numbers.'.$key.'.number'] = ['The contact number has already been taken.'];
+            //                     $ce_count++;
+            //                 }
+    
+            //             }
+            //         }
+            //     }
+            // }
+
+            foreach($request->contact_alternate as $key=>$contactNumber) {
+                if(strlen($contactNumber['detail']) !== 0 && $contactNumber['detail'] !== null) {
+                    // if(strlen($contactNumber['number']) === 13) {
+                    //     $number = substr($contactNumber['number'], 3);
+                    // } else if(strlen($contactNumber['number']) === 12) {
+                    //     $number = substr($contactNumber['number'], 2);
+                    // } else {
+                    //     $number = substr($contactNumber['number'], 1);
+                    // }
+                    $number = $contactNumber['detail'];
+                    $type = $contactNumber['type'];
+
+                    if($type === '+63') {
+                        $contact = ContactNumber::where('number','LIKE','%'.$number.'%')->where('user_id', '!=', $id)->count();
                     } else {
-                        $number = substr($contactNumber['number'], 1);
+                        $contact = ContactAlternate::where('detail','LIKE','%'.$number.'%')->where('user_id', '!=', $id)->count();
                     }
 
-                    $contact = ContactNumber::where('number','LIKE','%'.$number.'%')->get();
-                    $client_contact = ContactNumber::where('user_id', $id)->where('number','LIKE','%'.$number.'%')->count();
-
-
-                    if($client_contact === 0) {
-                        if($contact) {
-                            $num_duplicate = 0;
-                            foreach($contact as $con) {
-                                if(strval ($con['user_id']) !== strval ($id)) {
-                                  $num_duplicate++;
-                                }
-                            }
-
-                            if($num_duplicate > 0) {
-                                $contact_error['contact_numbers.'.$key.'.number'] = ['The contact number has already been taken.'];
-                                $ce_count++;
-                            }
-
-                        }
+                    if($contact > 0) {
+                        // $contact_error['contact_numbers.'.$key.'.number'] = ['The contact number has already been taken.'];
+                        $contact_error['contact_alternate.'.$key.'.detail'] = ['The contact number has already been taken.'];
+                        $ce_count++;
                     }
                 }
             }
@@ -1163,43 +1238,90 @@ class ClientController extends Controller
                         $client->nationalities()->attach($nationality);
                     }
 
-                    $client->contactNumbers()->delete();
-                    foreach($request->contact_numbers as $contactNumber) {
-                        $contactNum = str_replace('+63', '', $contactNumber['number']);
+                    
+                    $rcn = ContactNumber::where('user_id', $client->id)->delete();
 
-                        if(strlen($contactNum) !== 0 && $contactNum !== null) {
-                            ContactNumber::create([
-                                'user_id' => $client->id,
-                                'number' => '+63'.$contactNum,
-                                'is_primary' => json_decode($contactNumber['is_primary'], true),
-                                'is_mobile' => $contactNumber['is_mobile']
-                            ]);
+                    $rca = ContactAlternate::where('user_id', $client->id)->delete();
+                    
+                    $primaryContact = 0;
+                    foreach($request->contact_alternate as $key => $contactNumber) {
+                        if(strlen($contactNumber['detail']) !== 0 && $contactNumber['detail'] !== null) {
 
-                            if( $contactNumber['is_primary'] ) {
-                                $old = ContactNumber::where('user_id',$client->id)->where('is_primary',1)->first();
-                                if($old){
-                                    if($old->number != '+63'.$contactNum){
-                                        $upd = Updates::updateOrCreate(
-                                            ['client_id' => $client->id, 'type' => 'Contact'],
-                                            ['updated_at' => Carbon::now()]
-                                        );
-                                    }
-                                }
+                            if($contactNumber['type'] === '+63') {
+                                $primaryContact++;
+
+                                $cn = new ContactNumber;
+                                $cn->user_id = $client->id;
+                                $cn->number = $contactNumber['type'].$contactNumber['detail'];
+                                $cn->is_primary = ($primaryContact === 1) ? 1 : 0;
+                                $cn->is_mobile = 1;
+                                $cn->save();
+                            } else {
+                                $ca = new ContactAlternate;
+                                $ca->user_id = $client->id;
+                                $ca->detail = $contactNumber['detail'];
+                                $ca->type = $contactNumber['type'];
+                                $ca->save();
+                            }
+
+                            if($primaryContact === 1) {
                                 $client->update([
-                                    'password' => bcrypt('+63'.$contactNum)
+                                    'password' => bcrypt($contactNumber['type'].$contactNumber['detail'])
                                 ]);
                             }
+
+                            // ContactNumber::create([
+                            //     'user_id' => $client->id,
+                            //     'number' => '+63'.$contactNumber['number'],
+                            //     'is_primary' => $contactNumber['is_primary'],
+                            //     'is_mobile' => $contactNumber['is_mobile']
+                            // ]);
+
+                            // if( $contactNumber['is_primary'] ) {
+                            //     $client->update([
+                            //         'password' => bcrypt('+63'.$contactNumber['number'])
+                            //     ]);
+                            // }
                         }
                     }
 
-                    DB::table('contact_alternate')->where('user_id', $client->id)->delete();
-                    foreach($request->contact_alternate as $contactAlternate) {
-                        $ca = new ContactAlternate;
-                        $ca->user_id = $client->id;
-                        $ca->detail = $contactAlternate['detail'];
-                        $ca->type = $contactAlternate['type'];
-                        $ca->save();
-                    }
+                    // $client->contactNumbers()->delete();
+                    // foreach($request->contact_numbers as $contactNumber) {
+                    //     $contactNum = str_replace('+63', '', $contactNumber['number']);
+
+                    //     if(strlen($contactNum) !== 0 && $contactNum !== null) {
+                    //         ContactNumber::create([
+                    //             'user_id' => $client->id,
+                    //             'number' => '+63'.$contactNum,
+                    //             'is_primary' => json_decode($contactNumber['is_primary'], true),
+                    //             'is_mobile' => $contactNumber['is_mobile']
+                    //         ]);
+
+                    //         if( $contactNumber['is_primary'] ) {
+                    //             $old = ContactNumber::where('user_id',$client->id)->where('is_primary',1)->first();
+                    //             if($old){
+                    //                 if($old->number != '+63'.$contactNum){
+                    //                     $upd = Updates::updateOrCreate(
+                    //                         ['client_id' => $client->id, 'type' => 'Contact'],
+                    //                         ['updated_at' => Carbon::now()]
+                    //                     );
+                    //                 }
+                    //             }
+                    //             $client->update([
+                    //                 'password' => bcrypt('+63'.$contactNum)
+                    //             ]);
+                    //         }
+                    //     }
+                    // }
+
+                    // DB::table('contact_alternate')->where('user_id', $client->id)->delete();
+                    // foreach($request->contact_alternate as $contactAlternate) {
+                    //     $ca = new ContactAlternate;
+                    //     $ca->user_id = $client->id;
+                    //     $ca->detail = $contactAlternate['detail'];
+                    //     $ca->type = $contactAlternate['type'];
+                    //     $ca->save();
+                    // }
 
 
                     $client->branches()->detach();
