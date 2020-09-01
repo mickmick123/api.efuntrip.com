@@ -582,7 +582,7 @@ class LogController extends Controller
 
 
     public function getAllLogs($client_service_id) {
-        $logs = Log::with('documents', 'serviceProcedure.action', 'serviceProcedure.category')->where('client_service_id',$client_service_id)
+        $logs = Log::with('documents', 'serviceProcedure.action', 'serviceProcedure.category')->where('client_service_id',$client_service_id)->where('log_type','!=','Commission')
             ->orderBy('id','desc')->get();
 
         foreach( $logs as $log ) {
