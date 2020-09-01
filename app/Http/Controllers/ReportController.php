@@ -1702,13 +1702,18 @@ class ReportController extends Controller
 
 									if( $allRcvdDocs[$docIndex]['count'] < $onHandDocuments[$index]->count ) {
                     $allRcvdDocs[$docIndex]['count'] += $clientReportDocument['count'];
-                    $docsDetail .= "\n" . '('.$clientReportDocument['count'].')' . ' '. $onHandDocuments[$index]->title;
+										$docsDetail .= "\n" . '('.$clientReportDocument['count'].')' . ' '. $onHandDocuments[$index]->title;
+										
+										$pendingCount = 0;
+										if( ($allRcvdDocs[$docIndex]['count'] - $clientReportDocument['count']) <= $onHandDocuments[$index]->count ) {
+											$pendingCount = $clientReportDocument['count'];
+										}
 
                     $docLogData[] = [
                       'document_id' => $onHandDocuments[$index]->id,
                       'log_id' => 0,
                       'count' => $clientReportDocument['count'],
-                      'pending_count' => 0,
+                      'pending_count' => $pendingCount,
                       // 'previous_on_hand' => $onHandDocuments[$index]->count - $allRcvdDocs[$docIndex]['count'],
                       'previous_on_hand' => $onHandDocuments[$index]->count - $clientReportDocument['count'],
                       'created_at' => Carbon::now(),
@@ -1716,7 +1721,20 @@ class ReportController extends Controller
                     ];
 
 									} else {
-                    $allRcvdDocs[$docIndex]['count'] += $clientReportDocument['count'];
+										$allRcvdDocs[$docIndex]['count'] += $clientReportDocument['count'];
+										
+										// $docsDetail .= "\n" . '('.$clientReportDocument['count'].')' . ' '. $onHandDocuments[$index]->title;
+
+                    // $docLogData[] = [
+                    //   'document_id' => $onHandDocuments[$index]->id,
+                    //   'log_id' => 0,
+                    //   'count' => $clientReportDocument['count'],
+                    //   'pending_count' => $clientReportDocument['count'],
+                    //   // 'previous_on_hand' => $onHandDocuments[$index]->count - $allRcvdDocs[$docIndex]['count'],
+                    //   'previous_on_hand' => $onHandDocuments[$index]->count - $clientReportDocument['count'],
+                    //   'created_at' => Carbon::now(),
+                    //   'updated_at' => Carbon::now()
+                    // ];
 										$counter++;
                   }
 
@@ -1724,17 +1742,23 @@ class ReportController extends Controller
 
 								} else {
                   if($docLogType === 'received') {
-                    $docsDetail .= "\n" . '('.$clientReportDocument['count'].')' . ' '. $onHandDocuments[$index]->title;
+										$hasPending = 0;
+										if( ($onHandDocuments[$index]->count - $clientReportDocument['count']) >= $onHandDocuments[$index]->count  ) {
+											$hasPending = 1;
+										}
+											$docsDetail .= "\n" . '('.$clientReportDocument['count'].')' . ' '. $onHandDocuments[$index]->title;
 
-                    $docLogData[] = [
-                      'document_id' => $onHandDocuments[$index]->id,
-                      'log_id' => 0,
-                      'count' => $clientReportDocument['count'],
-                      'pending_count' => 0,
-                      'previous_on_hand' => $onHandDocuments[$index]->count - $clientReportDocument['count'],
-                      'created_at' => Carbon::now(),
-                      'updated_at' => Carbon::now()
-                    ];
+											$docLogData[] = [
+												'document_id' => $onHandDocuments[$index]->id,
+												'log_id' => 0,
+												'count' => $clientReportDocument['count'],
+												'pending_count' => ($hasPending === 0) ? 0 : $clientReportDocument['count'],
+												'previous_on_hand' => $onHandDocuments[$index]->count - $clientReportDocument['count'],
+												'created_at' => Carbon::now(),
+												'updated_at' => Carbon::now()
+											];
+										
+                    
                   }
                 }
 
