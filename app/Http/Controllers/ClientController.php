@@ -512,7 +512,7 @@ class ClientController extends Controller
 	              $json[] = array(
 	                  'id' => $p->id,
 	                  'name' => $p->first_name." ".$p->last_name." -- [".$br."] -- ".$p->sdates."",
-	                  'full_name' => $p->id . " (" . $p->first_name." ".$p->last_name .") ",
+	                  'full_name' => $p->id,
 										'branch_id' => $p->branch_id
 	              );
 	           }
@@ -520,7 +520,7 @@ class ClientController extends Controller
 	              $json[] = array(
 	                  'id' => $p->id,
 	                  'name' => $p->first_name." ".$p->last_name." -- [".$br."] -- No Service",
-	                  'full_name' => $p->id . " (" .$p->first_name." ".$p->last_name .") ",
+	                  'full_name' => $p->id,
 										'branch_id' => $p->branch_id
 	              );
 	           }
