@@ -863,7 +863,7 @@ class LogController extends Controller
 
                     $t->amount = DB::table('logs as l')
                                     ->where('client_service_id', $cs->id)->where('group_id',null)
-                                    ->sum('amount');
+                                    ->where('log_type','Ewallet')->sum('amount');
 
                     $data = collect($body->toArray())->flatten()->all();
 

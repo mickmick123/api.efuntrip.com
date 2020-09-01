@@ -3024,7 +3024,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
                 $finance->save();
 
                 //save transaction history
-                $detail = 'Refunded Php'.$servicePayment->amount.' due to cancelled service <b>'.$model->detail.'</b>.';
+                $d = $model->created_at->format('M d, Y');
+                $detail = 'Refunded Php'.$servicePayment->amount.' due to cancelled service <b>['.$d.' : '.$model->detail.']</b>.';
                 $detail_cn = $detail;
                 $log_data = array(
                     'client_service_id' => null,
@@ -3040,7 +3041,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
                 );
                  LogController::save($log_data);
 
-                 $rson = 'Refunded Php'.$servicePayment->amount.' due to cancelled service. ('.date('Y-m-d H:i:s').')<br>';
+                 $rson = 'Refunded Php'.$servicePayment->amount.' due to cancelled service. ('.date('Y-m-d H:i:s').')<br><br>';
                  $servicePayment->amount = 0;
                  $servicePayment->reason = $rson.$servicePayment->reason;
                  $servicePayment->save();
@@ -3140,7 +3141,9 @@ public function getClientPackagesByGroup($client_id, $group_id){
                 $depo->save();
 
                 //save transaction history
-                $detail = 'Received commission Php'.$model->com_client.' from group '.$group_name.'.';
+                $d = $model->created_at->format('M d, Y');
+                $client = User::where('id',$model->client_id)->select('first_name','last_name')->first();
+                $detail = 'Received commission Php'.$model->com_client.' from group '.$group_name.'. ['.$d.' : '.$model->detail.' - '.$client->first_name.' '.$client->last_name.']';
                 $detail_cn = $detail;
                 $log_data = array(
                     'client_service_id' => null,
@@ -3187,7 +3190,9 @@ public function getClientPackagesByGroup($client_id, $group_id){
                 $depo->save();
 
                 //save transaction logs
-                $detail = 'Received commission Php'.$model->com_agent.' from group '.$group_name.'.';
+                $d = $model->created_at->format('M d, Y');
+                $client = User::where('id',$model->client_id)->select('first_name','last_name')->first();
+                $detail = 'Received commission Php'.$model->com_agent.' from group '.$group_name.'. ['.$d.' : '.$model->detail.' - '.$client->first_name.' '.$client->last_name.']';
                 $detail_cn = $detail;
                 $log_data = array(
                     'client_service_id' => null,
@@ -4255,7 +4260,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
              $amount = $request->payments[$i]['amount'];
              $total_cost = $request->payments[$i]['total_cost'];
              $payment = ClientTransaction::where('type','Payment')->where('client_service_id',$cs_id)->first();
-             $rson = 'Php'.$amount.' ('.date('Y-m-d H:i:s').')<br>';
+             $rson = 'Paid Php'.$amount.' ('.date('Y-m-d H:i:s').')<br><br>';
              if($payment){
                  $payment->amount += $amount;
                  $payment->reason = $rson.$payment->reason;
