@@ -243,7 +243,7 @@ class ClientController extends Controller
                             client_services as b
 
                         where
-                            b.active = 1 and b.status != "cancelled" 
+                            b.active = 1 and b.status != "cancelled"
                             and b.group_id is null
 
                         group by
@@ -450,14 +450,104 @@ class ClientController extends Controller
         return Response::json($response);
     }
 
+
+	public function searchCom(Request $request){
+
+			$keyword = $request->input('search');
+			$branch_id = $request->input('branch_id');
+			$branch_ids = DB::connection()->table('branch_user as b')->where('user_id',Auth::user()->id)->pluck('branch_id');
+
+
+			if(is_numeric($keyword)){
+
+				$results = DB::connection()
+						->table('users as a')
+						->select(DB::raw('
+								a.id,a.first_name,a.last_name,a.created_at,srv.sdates,srv.sdates2, srv.checkyear, bu.branch_id'))
+								->leftjoin(DB::raw('
+										(
+												Select date_format(max(cs.servdates),"%m/%d/%Y") as sdates, date_format(max(cs.servdates),"%Y%m%d") as sdates2, date_format(max(cs.servdates),"%Y") as checkyear ,cs.client_id
+												from( SELECT STR_TO_DATE(created_at, "%Y-%m-%d %H:%i:%s") as servdates,
+														group_id, active,client_id
+														FROM client_services
+														ORDER BY servdates desc
+												) as cs
+												where cs.active = 1
+												group by cs.client_id) as srv'),
+										'srv.client_id', '=', 'a.id')
+								->leftjoin(
+										DB::raw('
+												(
+														Select *
+														from role_user as r
+														where r.role_id = 2
+												) as role
+										'),
+										'role.user_id', '=', 'a.id'
+								)
+								->leftjoin(
+										DB::raw('
+												(
+														Select *
+														from branch_user
+												) as bu
+										'),
+										'bu.user_id', '=', 'a.id'
+								)
+								->where('role.role_id', '2')
+								->when($branch_id != '', function ($q) use($branch_ids){
+										return $q->whereIn('bu.branch_id', $branch_ids);
+								})
+								->where('a.id',$keyword)
+								->orderBy('sdates2','DESC')
+								->limit(10)
+								->get();
+
+
+					$json = [];
+
+	        foreach($results as $p){
+	           $br = Branch::where('id',$p->branch_id)->first()->name;
+	           if($p->checkyear >= 2016 || $p->checkyear != null){
+	              $json[] = array(
+	                  'id' => $p->id,
+	                  'name' => $p->first_name." ".$p->last_name." -- [".$br."] -- ".$p->sdates."",
+	                  'full_name' => $p->id . " (" . $p->first_name." ".$p->last_name .") ",
+										'branch_id' => $p->branch_id
+	              );
+	           }
+	           if($p->checkyear == null){
+	              $json[] = array(
+	                  'id' => $p->id,
+	                  'name' => $p->first_name." ".$p->last_name." -- [".$br."] -- No Service",
+	                  'full_name' => $p->id . " (" .$p->first_name." ".$p->last_name .") ",
+										'branch_id' => $p->branch_id
+	              );
+	           }
+
+				 }
+
+		      $response['status'] = 'Success';
+		      $response['data'] =  $json;
+		      $response['code'] = 200;
+
+		      return Response::json($response);
+
+			}else{
+					return $this->clientSearch($request);
+	    }
+
+	}
+
 	public function clientSearch(Request $request) {
         $keyword = $request->input('search');
         $branch_id = $request->input('branch_id');
-		$is_member_search = $request->input('is_member_search');
+	    	$is_member_search = $request->input('is_member_search');
 
         $branch_ids = DB::connection()->table('branch_user as b')->where('user_id',Auth::user()->id)->pluck('branch_id');
 
         $cids = ContactNumber::where("number",'LIKE', '%' . $keyword .'%')->pluck('user_id');
+
 
         if(preg_match('/\s/',$keyword)){
             $q = explode(" ", $keyword);
@@ -509,9 +599,9 @@ class ClientController extends Controller
                 )
                 ->where('role.role_id', '2')
                 ->when($branch_id != '', function ($q) use($branch_ids, $is_member_search, $branch_id){
-					if($is_member_search > 0){
-						  return $q->where('bu.branch_id', $is_member_search);
-					}
+										if($is_member_search > 0){
+											  return $q->where('bu.branch_id', $is_member_search);
+										}
                     return $q->whereIn('bu.branch_id', $branch_ids);
                 })
                 ->where(function ($query) use($q1, $q2, $keyword) {
@@ -662,10 +752,12 @@ class ClientController extends Controller
 									'branch_id' => $p->branch_id
               );
            }
-        }
-        $response['status'] = 'Success';
-        $response['data'] =  $json;
-        $response['code'] = 200;
+
+			 }
+
+	      $response['status'] = 'Success';
+	      $response['data'] =  $json;
+	      $response['code'] = 200;
 
         return Response::json($response);
     }
@@ -947,12 +1039,12 @@ class ClientController extends Controller
                                   $num_duplicate++;
                                 }
                             }
-    
+
                             if($num_duplicate > 0) {
                                 $contact_error['contact_numbers.'.$key.'.number'] = ['The contact number has already been taken.'];
                                 $ce_count++;
                             }
-    
+
                         }
                     }
                 }
@@ -1168,7 +1260,7 @@ class ClientController extends Controller
                 ->leftJoin(DB::raw('(select * from client_transactions) as cp'), function($join){
                     $join->on('cp.client_service_id', '=', 'cs.id');
                     $join->where('cp.type','=','Payment');
-                }) 
+                })
                 ->leftjoin(DB::raw('(select * from services) as s'),'s.id','=','cs.service_id')
                 ->leftjoin(DB::raw('(select * from users) as u'),'u.id','=','cs.client_id')
                 ->where('cs.client_id',$id)->where('cs.tracking',$tracking)
@@ -1376,7 +1468,7 @@ class ClientController extends Controller
                   $bcost = ServiceBranchCost::where('branch_id',$request->branch_id)->where('service_id',$service->id)->first();
                   $scost = $bcost->cost;
                   $stip = $bcost->tip;
-                  $scharge = $bcost->charge;   
+                  $scharge = $bcost->charge;
               }
               else{
                   $scost = $service->cost;
@@ -1417,12 +1509,12 @@ class ClientController extends Controller
 
                 // DB::table('client_service_points')->insert(
                 //     array(
-                //         'client_service_id' => $cs->id, 
+                //         'client_service_id' => $cs->id,
                 //         'points' => 1
                 //     )
                 // );
                 ClientServicePoints::create([
-                    'client_service_id' => $cs->id, 
+                    'client_service_id' => $cs->id,
                     'points' => 1
                 ]);
 
@@ -1845,7 +1937,7 @@ class ClientController extends Controller
                     $payment->reason = $rson.$payment->reason;
                     $payment->save();
                 }
-                else{                
+                else{
                     $payment = new ClientTransaction;
                     $payment->client_id = $client_id;
                     if($request->get('paytype') == 'Service'){
@@ -2742,7 +2834,7 @@ class ClientController extends Controller
 
                 if($level > 0){
                     $pcost = ServiceProfileCost::where('profile_id',$level)->where('service_id',$getService->id)->where('branch_id',$branchUser->branch_id)->first();
-                    if($pcost){                    
+                    if($pcost){
                         $charge = $pcost->charge;
                         $cost = $pcost->cost;
                         $tip = $pcost->tip;
@@ -3067,7 +3159,7 @@ class ClientController extends Controller
         ];
         $response['code'] = 200;
 
-        return Response::json($response); 
+        return Response::json($response);
     }
 
     public function getClientEwallet($id) {
@@ -3102,7 +3194,7 @@ class ClientController extends Controller
         $response['data'] = $clients;
         $response['code'] = 200;
 
-        return Response::json($response); 
+        return Response::json($response);
     }
 
 }

@@ -23,9 +23,12 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('get-clients-groups/{id}', 'ClientController@getClientGroups');
 
-    Route::get('search', 'ClientController@clientSearch');
+  Route::get('search', 'ClientController@clientSearch');
 
-    Route::get('get-reminders', 'ClientController@getReminders');
+	Route::get('search-com', 'ClientController@searchCom');
+
+
+  Route::get('get-reminders', 'ClientController@getReminders');
 
 	Route::post('add-temporary-client', 'ClientController@addTemporaryClient');
 
