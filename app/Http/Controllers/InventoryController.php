@@ -50,7 +50,7 @@ class InventoryController extends Controller
 
     public function getTreeCategory(Request $request){
         if(in_array($request->company_id,[null,0])){
-            $com = Company::all();
+            $com = Company::orderBy('name','ASC')->get();
             foreach($com as $index=>$value){
                 $com[$index] = Company::where('company_id',$value->company_id)->get();
                 foreach ($com[$index] as $k=>$v) {
@@ -61,6 +61,7 @@ class InventoryController extends Controller
                             ['inventory_parent_category.company_id', $v->company_id],
                             ['inventory_parent_category.parent_id', 0]
                         ])
+                        ->orderBy('name','ASC')
                         ->get();
                 }
             }
@@ -74,6 +75,7 @@ class InventoryController extends Controller
                         ['inventory_parent_category.company_id', $v->company_id],
                         ['inventory_parent_category.parent_id', $request->category_id]
                     ])
+                    ->orderBy('name','ASC')
                     ->get();
             }
         }
