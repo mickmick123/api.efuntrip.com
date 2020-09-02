@@ -990,7 +990,7 @@ class ReportController extends Controller
 							$label .= ' Total charge is PHP' . $totalCharge . '.';
 						}
 
-						Log::create([
+						$logs = Log::create([
 				        	'client_service_id' => $cs->id,
 				        	'client_id' => $cs->client_id,
 				        	'group_id' => $cs->group_id,
@@ -1001,8 +1001,13 @@ class ReportController extends Controller
 				        	'label' => $label,
 				        	'log_date' => Carbon::now()->toDateString()
                 ]);
+						
+						if($statusUponCompletion == 'complete') {
+							$this->sendPushNotification($cs->client_id, $detail, $label, $logs->id);
+						} else {
+							$this->sendPushNotification($cs->client_id, $detail);
+						}
                 
-                $this->sendPushNotification($cs->client_id, $detail);
 					}
 
 					// $arr = ['status' => $statusUponCompletion];
@@ -1136,7 +1141,7 @@ class ReportController extends Controller
 										'log_date' => Carbon::now()->toDateString()
 									]);
 
-				$this->sendPushNotification($cs->client_id, $detail);
+				// $this->sendPushNotification($cs->client_id, $detail);
 			}
           
 
