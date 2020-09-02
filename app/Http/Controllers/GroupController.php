@@ -847,7 +847,8 @@ public function members(Request $request, $id, $page = 20) {
       foreach($groups as $g){
 
 
-        $queryx = ClientService::where('client_id',$g->id)->where('group_id', $id)->where('active', 1)->orderBy('created_at','DESC');
+        $queryx = ClientService::where('client_id',$g->id)->where('group_id', $id)->where('active', 1)->where('status','!=','cancelled')->orderBy('created_at','DESC');
+        $csid = $queryx->pluck('id');
         $queryStatus = $queryx->select(array('status','cost','charge', 'tip', 'com_client', 'com_agent', 'created_at'))->get();
 
 
@@ -855,12 +856,15 @@ public function members(Request $request, $id, $page = 20) {
                         ->leftjoin(DB::raw('(select * from client_transactions) as ct'),'ct.client_service_id','=','cs.id')
                         ->where('cs.client_id',$g->id)
                         ->where('ct.type', 'Discount')
+                        ->where('ct.deleted_at', '==', null)
                         ->where('cs.group_id', $id)
+                        ->whereIn('cs.id',$csid)
                         ->sum('ct.amount');
 
         $queryTotalPayment = DB::table('client_services')
                       ->where('client_id',$g->id)
                       ->where('group_id', $id)
+                      ->whereIn('id',$csid)
                       ->sum('payment_amount');
 
         $statusList = [];
@@ -874,8 +878,8 @@ public function members(Request $request, $id, $page = 20) {
         }
 
 
-        $temp['total_service_cost'] = $totalServiceCost- $queryTotalDiscount;
-        $temp['total_sub'] = $queryTotalPayment - $totalServiceCost;
+        $temp['total_service_cost'] = $totalServiceCost - $queryTotalDiscount;
+        $temp['total_sub'] = ($queryTotalDiscount + $queryTotalPayment) - $totalServiceCost;
 
         $temp['packages'] = [];
 
@@ -2013,20 +2017,27 @@ public function getClientPackagesByGroup($client_id, $group_id){
           $queryStatus = DB::table('client_services')->select(DB::raw('status'))
           ->where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->get();
 
-          $queryTotal = DB::table('client_services')->select(DB::raw('SUM(cost + charge + tip + com_client + com_agent) as total'))
-          ->where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->where('active', 1)->whereNotIn('status', [Status::CANCELLED])->first();
+          $queryTotal = DB::table('client_services')
+                        // ->select(DB::raw('SUM(cost + charge + tip + com_client + com_agent) as total'))
+                        ->where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->where('active', 1)->where('status','!=', 'cancelled');
+           $csid = $queryTotal->pluck('id');
+          $queryTotal = $queryTotal->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
+
 
 
           $queryTotalDiscount = DB::table('client_services as cs')
                         ->leftjoin(DB::raw('(select * from client_transactions) as ct'),'ct.client_service_id','=','cs.id')
                         ->where(DB::raw('date_format(STR_TO_DATE(cs.created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)
                         ->where('ct.type', 'Discount')
+                        ->where('ct.deleted_at', '==', null)
                         ->where('cs.group_id', $groupId)
+                        ->whereIn('cs.id',$csid)
                         ->sum('ct.amount');
 
           $queryTotalPayment = DB::table('client_services')
                       ->where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)
                       ->where('group_id', $groupId)
+                      ->whereIn('id',$csid)
                       ->sum('payment_amount');
 
           $statusList = [];
@@ -2036,11 +2047,11 @@ public function getClientPackagesByGroup($client_id, $group_id){
           }
 
 
-          $temp['total_service_cost'] = $queryTotal->total - $queryTotalDiscount;
-          $temp['total_sub'] = ($queryTotalDiscount + $queryTotalPayment) - $queryTotal->total;
+          $temp['total_service_cost'] = $queryTotal - $queryTotalDiscount;
+          $temp['total_sub'] = ($queryTotalDiscount + $queryTotalPayment) - $queryTotal;
           $temp['members'] = [];
           $temp['status_list'] = $statusList;
-          $temp['status_temp'] = $queryTotal->total - $queryTotalDiscount;
+          $temp['status_temp'] = $queryTotal - $queryTotalDiscount;
           $temp['status'] = $this->checkOverallStatus($statusList);
 
           $response[$ctr] = $temp;
