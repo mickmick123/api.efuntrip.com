@@ -63,7 +63,8 @@ class ClientController extends Controller
                     (IFNULL(transactions.total_refund, 0) + IFNULL(totalCompleteServiceCost.amount, 0))
                 ) as collectables,
 
-                p.latest_package, srv.latest_service as latest_service'))
+                p.latest_package, srv.latest_service as latest_service
+                '))
             ->leftjoin(
             	DB::raw('
                     (
@@ -157,6 +158,7 @@ class ClientController extends Controller
             ->where('role.role_id', '2')
             ->orderBy('u.first_name', 'asc')
             ->get();
+
 
 		$response['status'] = 'Success';
 		$response['data'] = [
@@ -357,6 +359,16 @@ class ClientController extends Controller
                 return $query->where('first_name' ,'=', $search)->orwhere('last_name' ,'=', $search);
             })
             ->paginate($perPage);
+
+        $col = User::sum('collectable');
+        $bal = User::sum('balance');
+        // $clients['balance'] = $bal;
+
+        $custom = collect(['collectables' => $col]);
+        $clients = $custom->merge($clients);
+
+        $custom = collect(['balance' => $bal]);
+        $clients = $custom->merge($clients);
 
         return Response::json($clients);
     }

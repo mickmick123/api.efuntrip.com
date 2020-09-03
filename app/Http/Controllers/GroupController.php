@@ -299,6 +299,16 @@ class GroupController extends Controller
 
         $response = $groups;
 
+        $col = Group::sum('collectables');
+        $bal = Group::sum('balance');
+        // $clients['balance'] = $bal;
+
+        $custom = collect(['collectables' => $col]);
+        $response = $custom->merge($response);
+
+        $custom = collect(['balance' => $bal]);
+        $response = $custom->merge($response);
+
 
         return Response::json($response);
     }
@@ -1590,7 +1600,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
     foreach($clientServices->items() as $s){
 
-        $queryx = ClientService::where('service_id',$s->service_id)->where('group_id', $groupId)->where('active', 1)->orderBy('created_at','DESC');
+        $queryx = ClientService::where('service_id',$s->service_id)->where('group_id', $groupId)->where('active', 1)->where('status','!=','cancelled')->orderBy('created_at','DESC');
+        $csid = $queryx->pluck('id');
 
         $queryStatus = $queryx->select(array('status','cost','charge', 'tip', 'com_client', 'com_agent', 'created_at'))->get();
 
@@ -1599,11 +1610,14 @@ public function getClientPackagesByGroup($client_id, $group_id){
                       ->where('service_id',$s->service_id)
                       ->where('ct.type', 'Discount')
                       ->where('cs.group_id', $groupId)
+                      ->where('ct.deleted_at', '==', null)
+                      ->whereIn('cs.id',$csid)
                       ->sum('ct.amount');
 
         $queryTotalPayment = DB::table('client_services')
                     ->where('service_id',$s->service_id)
                     ->where('group_id', $groupId)
+                    ->whereIn('id',$csid)
                     ->sum('payment_amount');
 
 
@@ -1611,6 +1625,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $totalServiceCost = 0;
         $totalServiceCount = 0;
         $dateList = [];
+        // \Log::info($queryStatus);
 
         foreach($queryStatus as $q){
           array_push($statusList,$q->status);
@@ -1627,11 +1642,13 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $temp['service_id'] = $s->service_id;
         //
 
-        $temp['total_service_cost'] = $totalServiceCost- $queryTotalDiscount;
-        $temp['total_sub'] = $queryTotalPayment - $totalServiceCost;
+        $temp['total_service_cost'] = $totalServiceCost - $queryTotalDiscount;
+        $temp['total_sub'] = ($queryTotalDiscount + $queryTotalPayment) - $totalServiceCost;
 
         $temp['total_service'] = ($queryx->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)")));
         $temp['service_count'] = $totalServiceCount;
+        // \Log::info($s->service_id);
+        // \Log::info($statusList);
 
         $temp['status'] = $this->checkOverallStatus($statusList);
         $temp['status_list']= $queryStatus;
@@ -1697,8 +1714,9 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
             $ctr2++;
 
-            if($m->active && $m->status != "cancelled")
+            if($m->active && $m->status != "cancelled"){
               $totalServiceCount++;
+            }
          }
          $sd->total_sub = $totalSub;
          $sd->members = $memberByDate;
