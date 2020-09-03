@@ -4271,6 +4271,108 @@ public function getClientPackagesByGroup($client_id, $group_id){
  }
 
 
+ function editGroupPayment(Request $request){
+
+     $validator = Validator::make($request->all(), [
+         'group_id' => 'required',
+     ]);
+
+     if($validator->fails()) {
+         $response['status'] = 'Failed';
+         $response['errors'] = $validator->errors();
+         $response['code'] = 422;
+     } else {
+        $group_id = $request->get('group_id');
+        $amount = $request->get('amount');
+        $cs_id = $request->get('service_id');
+        $client_id = $request->get('client_id');
+        $mode = $request->get('mode');
+        $total_cost = $request->get('total_cost');
+
+        //Paid
+        $payment = ClientTransaction::where('type','Payment')->where('client_service_id',$cs_id)->first();
+        $rson = 'Retrieved payment with the amount of Php'.$amount.' ('.date('Y-m-d H:i:s').')<br><br>';
+
+        if($payment){
+            $payment->amount -= $amount;
+            $payment->reason = $rson.$payment->reason;
+            $payment->save();
+        }
+
+        $service = ClientService::findOrFail($cs_id);
+        if($service->payment_amount > 0){
+            $service->payment_amount -= $amount;
+        }
+        else{
+            $service->payment_amount = $amount;
+        }
+        if($amount == $total_cost){
+            $service->is_full_payment = 1;
+        }else{
+            $service->is_full_payment = 0;
+        }
+        $service->save();
+
+        // save transaction logs
+        $detail = 'Retrieved payment with the amount of Php '.$amount.'.';
+        $detail_cn = '已支付 Php'.$amount.'.';
+        $log_data = array(
+            'client_service_id' => null,
+            'client_id' => null,
+            'group_id' => $group_id,
+            'log_type' => 'Transaction',
+            'log_group' => 'payment',
+            'detail'=> $detail,
+            'detail_cn'=> $detail_cn,
+            'amount'=> $amount,
+        );
+        LogController::save($log_data);
+
+        $label = null;
+        if($mode == "batch"){
+           $label = 'Retrieved Payment for Batch '.Carbon::parse($service->created_at)->format('M d, Y');
+           $detail = '<b>['.$client_id.'] '.$service->detail.'.</b> Retrieved payment service with an amount of Php'.$amount.'.';
+           $detail_cn = '<b>['.$client_id.'] '.$service->detail.'.</b> Retrieved payment service with an amount of Php'.$amount.'.';
+        }
+        else if($mode == "members"){
+           $cl = User::findOrFail($client_id);
+           $label = 'Retrieved Payment for member <b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'</b>';
+           $detail = '<b>'.$service->detail.'.</b> Retrieved payment service with an amount of Php'.$amount.'.';
+           $detail_cn = '<b>'.$service->detail.'.</b> Retrieved payment service with an amount of Php'.$amount.'.';
+        }
+        else if($mode == "service"){
+           $cl = User::findOrFail($client_id);
+           $label = 'Retrieved Payment for sevice <b>'.$service->detail.'</b>';
+           $detail = '<b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'.</b> Retrieved payment service with an amount of Php'.$amount.'.';
+           $detail_cn = '<b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'.</b> Retrieved payment service with an amount of Php'.$amount.'.';
+        }
+
+
+        $log_data = array(
+            'client_service_id' => $cs_id,
+            'client_id' => null,
+            'group_id' => $group_id,
+            'log_type' => 'Ewallet',
+            'log_group' => 'payment',
+            'detail'=> $detail,
+            'detail_cn'=> $detail_cn,
+            'amount'=> '-'.$amount,
+            'label'=> $label,
+        );
+        LogController::save($log_data);
+
+
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+        }
+
+
+      return Response::json($response);
+
+
+ }
+
+
  function addGroupPayment(Request $request){
 
      $validator = Validator::make($request->all(), [
