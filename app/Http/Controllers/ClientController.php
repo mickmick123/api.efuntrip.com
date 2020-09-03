@@ -173,6 +173,8 @@ class ClientController extends Controller
     public function manageClientsPaginate(Request $request, $perPage = 20) {
         $sort = $request->input('sort');
         $search = $request->input('search');
+        $from = $request->input('from');
+
         $search_id = 0;
         $q1 = '';  $q2 = ''; $spaces = 0;
         if (preg_match("/^\d+$/", $search)) {
@@ -218,6 +220,7 @@ class ClientController extends Controller
                 ) as collectable,
 
                 p.latest_package,
+								csrv.updated_at,
                 srv.latest_service,
                 srv.latest_service2,
                 p.latest_package2,
@@ -315,7 +318,7 @@ class ClientController extends Controller
                     'srv.client_id', '=', 'u.id')
             ->leftJoin(DB::raw('
                 (
-                    Select count(*) as active_service_count, client_id
+                    Select count(*) as active_service_count, client_id, updated_at
 
                     from
                         client_services as cs
@@ -333,6 +336,8 @@ class ClientController extends Controller
             $clients = $clients->where('active_service_count', '>', 0);
         }
 
+
+
         $clients = $clients
             ->when($sort != '', function ($q) use($sort) {
                 $sort = explode('-' , $sort);
@@ -345,6 +350,11 @@ class ClientController extends Controller
 
                 return $q->orderBy($sort[0], $sort[1]);
             })
+
+						->when($from !== '', function ($q) use($from) {
+						   	return $q->orderBy('updated_at', 'desc');
+						})
+
             ->when($mode == 'fullname', function ($query) use($q1, $q2) {
                     return $query->where(function ($query2) use($q1, $q2) {
                         $query2->where('u.first_name', '=', $q1)->Where('u.last_name', '=', $q2);
@@ -358,6 +368,10 @@ class ClientController extends Controller
             ->when($mode == 'name', function ($query) use($search) {
                 return $query->where('first_name' ,'=', $search)->orwhere('last_name' ,'=', $search);
             })
+
+
+
+
             ->paginate($perPage);
 
         $col = User::sum('collectable');
@@ -940,7 +954,7 @@ class ClientController extends Controller
                 //         }
                 //     }
                 // }
-                
+
                 $primaryContact = 0;
                 foreach($request->contact_alternate as $key => $contactNumber) {
                     if(strlen($contactNumber['detail']) !== 0 && $contactNumber['detail'] !== null) {
@@ -1100,12 +1114,12 @@ class ClientController extends Controller
             //                       $num_duplicate++;
             //                     }
             //                 }
-    
+
             //                 if($num_duplicate > 0) {
             //                     $contact_error['contact_numbers.'.$key.'.number'] = ['The contact number has already been taken.'];
             //                     $ce_count++;
             //                 }
-    
+
             //             }
             //         }
             //     }
@@ -1250,11 +1264,11 @@ class ClientController extends Controller
                         $client->nationalities()->attach($nationality);
                     }
 
-                    
+
                     $rcn = ContactNumber::where('user_id', $client->id)->delete();
 
                     $rca = ContactAlternate::where('user_id', $client->id)->delete();
-                    
+
                     $primaryContact = 0;
                     foreach($request->contact_alternate as $key => $contactNumber) {
                         if(strlen($contactNumber['detail']) !== 0 && $contactNumber['detail'] !== null) {
@@ -3319,6 +3333,20 @@ class ClientController extends Controller
         return $depo - ($withdraw + $payment);
     }
 
+		public function getClientsByIds(Request $request) {
+
+        $clients = DB::table('users')
+										->whereIn('id', $request->ids)
+										->select(DB::raw('id, first_name, last_name, concat(first_name, " ", last_name) as full_name'))
+										->get();
+
+        $response['status'] = 'Success';
+        $response['data'] = $clients;
+        $response['code'] = 200;
+
+        return Response::json($response);
+    }
+
 
     /*** Visa App ***/
     public function getAllClients() {
@@ -3330,5 +3358,7 @@ class ClientController extends Controller
 
         return Response::json($response);
     }
+
+
 
 }

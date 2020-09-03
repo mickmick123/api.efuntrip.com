@@ -60,6 +60,8 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('get-documents-on-hand/{id}', 'ClientController@getDocumentsOnHand');
 
+	Route::post('get-clients-by-ids', 'ClientController@getClientsByIds');
+
 
 	// Visa app
 	Route::get('get-all-clients', 'ClientController@getAllClients');
