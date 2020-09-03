@@ -24,6 +24,8 @@ Route::middleware('auth:api')->group(function() {
 	
 	Route::get('/{perPage?}', 'ReportController@index');
 
+	Route::get('get-client-reports/{id}', 'ReportController@getClientReports');
+
 	Route::get('reports-by-service/{id?}', 'ReportController@reportsByService');
 
 	Route::get('get-received-files/{id}', 'ReportController@getReceivedFiles');

@@ -2582,6 +2582,14 @@ class ReportController extends Controller
 		}
 		
 	}
+
+
+	public function getClientReports($id) {
+		$cr = ClientReport::where('client_service_id', $id)->select('service_procedure_id')->get();
+
+		$response['data'] = $cr;
+		return Response::json($response);
+	}
 	
 
 	public function sendNotif() {
