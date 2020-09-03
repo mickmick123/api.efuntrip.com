@@ -1182,6 +1182,39 @@ class ReportController extends Controller
 		}
 	}
 
+	private function handleNoteToService($clientService, $serviceProcedureId, $note) {
+		$serviceProcedure = ServiceProcedure::with('action', 'category')->findOrFail($serviceProcedureId);
+		$action = $serviceProcedure->action->name;
+		$category = $serviceProcedure->category->name;
+
+		if( $action == 'Note' && $category == 'Service' ) {
+			$clientServiceId = $clientService['id'];
+
+			$cs = ClientService::findOrFail($clientServiceId);
+
+			$prevRemarks = ($cs->remarks === null || $cs->remarks === '') ? 'none' : $cs->remarks;
+
+			$cs->remarks = $note;
+			$cs->save();
+
+			$label = 'Note to Service';
+			$detail = 'Updated service note from '.$prevRemarks.' to '.$note.'.';
+			
+			$getLog = Log::create([
+				'client_service_id' => $cs->id,
+				'client_id' => $cs->client_id,
+				'group_id' => $cs->group_id,
+				'service_procedure_id' => $serviceProcedureId,
+				'processor_id' => Auth::user()->id,
+				'log_type' => 'Action',
+				'detail' => $detail,
+				'label' => $label,
+				'log_date' => Carbon::now()->toDateString()
+			]);
+
+		}
+	}
+
 	private function handleSuggestedDocuments($clientService, $serviceProcedureId) {
 		$documents = $clientService['documents'];
 
@@ -1258,7 +1291,7 @@ class ReportController extends Controller
               $report['extras']['discount_reason']
             );
 
-
+						$this->handleNoteToService($clientService, $report['service_procedure'], $report['extras']['note']);
 
         	}
         }

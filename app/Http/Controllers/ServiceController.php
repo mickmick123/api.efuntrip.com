@@ -22,7 +22,7 @@ use App\Http\Controllers\ServiceBranchCostController;
 
 use App\Http\Controllers\ServiceProfileCostController;
 
-use DB, Response, Validator;
+use Carbon\Carbon, DB, Response, Validator;
 
 use Illuminate\Http\Request;
 
@@ -641,5 +641,27 @@ class ServiceController extends Controller
 
 		return Response::json($response);
 	}
+
+	// public function addNotesToService() {
+	// 	$services = Service::where('is_active', 1)->where('parent_id', '!=', 0)->orderBy('id', 'ASC')->get();
+
+	// 	foreach($services as $service) {
+	// 		DB::table('service_procedures')->insert([
+	// 			'service_id' => $service->id,
+	// 			'name' => 'Note to Service',
+	// 			'preposition' => 'to',
+	// 			'action_id' => 17,
+	// 			'category_id' => 26,
+	// 			'is_required' => 0,
+	// 			'is_suggested_count' => 0,
+	// 			'created_at' => Carbon::now()->toDateString(),
+	// 			'updated_at' => Carbon::now()->toDateString()
+	// 		]);
+	// 	}
+
+	// 	$response['data'] = $services;
+
+	// 	return Response::json($response);
+	// }
 
 }
