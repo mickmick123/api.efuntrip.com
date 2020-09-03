@@ -4237,8 +4237,23 @@ public function getClientPackagesByGroup($client_id, $group_id){
      $gids = $mems->pluck('user_id');
 
 
-     $response = DB::table('users as u')->select(DB::raw('u.id, CONCAT(u.last_name, " ", u.first_name) as name, g_u.is_vice_leader, g_u.total_service_cost, g_u.id as guid'))
+     $response = DB::table('users as u')->select(DB::raw('u.id, CONCAT(u.last_name, " ", u.first_name) as name, u.last_name, u.first_name, g_u.is_vice_leader, g_u.total_service_cost, g_u.id as guid, log.log_date'))
                      ->leftjoin(DB::raw('(select * from group_user) as g_u'),'g_u.user_id','=','u.id')
+
+                     ->leftjoin(
+                          DB::raw('
+                              (
+                                  Select  l.created_at, l.client_id, date_format(max(l.created_at),"%Y%m%d%h%i%s") as log_date
+                                  from logs as l
+                                  where l.client_id is not null
+                                 group by l.client_id
+                                 order by log_date desc
+                              ) as log
+
+                          '),
+                          'log.client_id', '=', 'u.id'
+                      )
+
                      ->whereIn('u.id', $gids)
                      ->where('g_u.group_id', $id)
                      ->when($mode == 'fullname', function ($query) use($q1,$q2){
@@ -4261,6 +4276,11 @@ public function getClientPackagesByGroup($client_id, $group_id){
                                           ->orwhere('u.last_name' ,'=', $search);
                          });
                      })
+
+                     ->when($sort == '', function ($q) use($sort) {
+                         return $q->orderBy('log.log_date', 'desc');
+                     })
+
                      ->when($sort != '', function ($q) use($sort){
                          $sort = explode('-' , $sort);
                          return $q->orderBy($sort[0], $sort[1]);

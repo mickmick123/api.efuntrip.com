@@ -223,7 +223,10 @@ class ClientController extends Controller
 								csrv.updated_at,
                 srv.latest_service,
                 srv.latest_service2,
+								log.log_date,
+								log.created_at,
                 p.latest_package2,
+								transactions.transaction_date,
                 IFNULL(csrv.active_service_count, 0) AS active_service_count')
             )
             ->leftjoin(
@@ -235,6 +238,20 @@ class ClientController extends Controller
                     ) as role
                 '),
                 'role.user_id', '=', 'u.id'
+            )
+
+						->leftjoin(
+                DB::raw('
+                    (
+                        Select  l.created_at, l.client_id, date_format(max(l.created_at),"%Y%m%d%h%i%s") as log_date
+                        from logs as l
+                        where l.client_id is not null
+												group by l.client_id
+												order by log_date desc
+                    ) as log
+
+                '),
+                'log.client_id', '=', 'u.id'
             )
             ->leftjoin(DB::raw('
                     (
@@ -282,7 +299,8 @@ class ClientController extends Controller
                             SUM(IF(c.type = "Refund", c.amount, 0)) as total_refund,
                             SUM(IF(c.type = "Payment", c.amount, 0)) as total_payment,
                             SUM(IF(c.type = "Discount", c.amount, 0)) as total_discount,
-                            c.client_id
+                            c.client_id,
+														c.updated_at as transaction_date
 
                         from
                             client_transactions as c
@@ -352,7 +370,7 @@ class ClientController extends Controller
             })
 
 						->when($from !== '', function ($q) use($from) {
-						   	return $q->orderBy('updated_at', 'desc');
+						   	return $q->orderBy('log.log_date', 'desc');
 						})
 
             ->when($mode == 'fullname', function ($query) use($q1, $q2) {
