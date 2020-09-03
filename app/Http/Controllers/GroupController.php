@@ -3074,6 +3074,11 @@ public function getClientPackagesByGroup($client_id, $group_id){
                  $servicePayment->amount = 0;
                  $servicePayment->reason = $rson.$servicePayment->reason;
                  $servicePayment->save();
+
+                 $cserv = ClientService::findOrFail($model->id);
+                 $cserv->payment_amount = 0;
+                 $cserv->is_full_payment = 0;
+                 $cserv->save();
             }
         }
     }
