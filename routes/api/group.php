@@ -83,5 +83,7 @@ use Illuminate\Http\Request;
 
 	Route::post('add-group-payment', 'GroupController@addGroupPayment');
 
+	Route::post('edit-service-payment', 'GroupController@editGroupPayment');
+
 
 });
