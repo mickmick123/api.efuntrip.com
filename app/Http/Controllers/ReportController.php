@@ -1323,9 +1323,11 @@ class ReportController extends Controller
 			} else {
 				$detail .= ', ';
 			}
-    }
+    	}
 
-    if($action !== 'Released documents') {
+
+    if (strpos($action, 'Released documents') === false) {
+    // if($action != 'Released documents') {
       // logs
       $log = Log::create([
         'client_id' => $user['id'],
@@ -1446,12 +1448,13 @@ class ReportController extends Controller
 	}
 
 	public function releasedDocuments(Request $request) {
+
 		foreach( $request->users as $user ) {
           $action = 'Released documents';
 
 			if( strlen(trim($user['recipient'])) > 0 ) {
 				$action .= ' to client\'s representative ' . $user['recipient'];
-      }
+      		}
 
           // Logs
           $getUser = DB::table('users')->where('id', $user['id'])->first();
