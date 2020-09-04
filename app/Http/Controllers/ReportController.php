@@ -2091,10 +2091,11 @@ class ReportController extends Controller
 		$rcvdDocsBySender = TransferredFile::leftJoin('users as sender', 'transferred_files.sender_id', '=', 'sender.id')
 								->where('receiver_id', $id)
 								->where('sender_id', '!=', 0)
-								->where('transferred_files.status', 1)
+								// ->where('transferred_files.status', 1)
 								->select('transferred_files.*', DB::raw('CONCAT(sender.first_name," ",sender.last_name) AS sender'))
 								->orderBy('id', 'DESC')
 								->groupBy('sender_id')
+								->groupBy('created_at')
 								->get();
 
 		$rcvdDocs = [];
@@ -2106,12 +2107,19 @@ class ReportController extends Controller
 						->leftJoin('documents as doc', 'dl.document_id', '=', 'doc.id')
 						->where('receiver_id', $id)
 						->where('sender_id', $rbs['sender_id'])
-						->where('transferred_files.status', 1)
+						->where('transferred_files.created_at', $rbs['created_at'])
+						// ->where('transferred_files.status', 1)
 						->select('transferred_files.*', DB::raw('CONCAT(sender.first_name," ",sender.last_name) AS sender'), DB::raw('CONCAT(rcvr.first_name," ",rcvr.last_name) AS receiver'), 'dl.log_id', 'dl.count', 'dl.pending_count', 'dl.previous_on_hand', 'doc.id as document_id', 'doc.title', 'doc.title_cn')
 						->orderBy('id', 'DESC')
 						->get();
 
+			$tl = DocumentLog::where('log_id', $rbs['log_id'])
+						->leftJoin('documents as doc', 'document_log.document_id', '=', 'doc.id')
+						->select('document_log.*', 'doc.title', 'doc.title_cn')
+						->get();
+
 			$rbs['documents'] = $rcvd;
+			$rbs['document_logs'] = $tl;
 
 			$rcvdDocs[] = $rbs;
 		}
@@ -2163,6 +2171,7 @@ class ReportController extends Controller
 		// Update status of transferred files to 0
 		foreach($received as $rcvd) {
 			$tf = TransferredFile::where('id', $rcvd['id'])->first();
+			$tf->log_id = $log->id;
 			$tf->status = 0;
 			$tf->save();
 		}
