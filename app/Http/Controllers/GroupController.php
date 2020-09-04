@@ -941,24 +941,7 @@ public function getServicesByMembers(Request $request){
             $s->discount_details =  ClientTransaction::where('client_service_id', $s->id)->where('type', 'Discount')->select('amount','reason','created_at')->first();
 
             //Payment details
-            // $logType = Log::where('client_service_id', $s->id)->where('group_id', $request->group_id)->where('log_type', 'Transaction')->where('log_group', 'payment')->select('amount','log_date')->get();
-            //
-            // $paymentLog = '';
-            // $s->payment_details = '';
-            //
-            // if(count($logType) > 0){
-            //   foreach($logType as $log){
-            //     $paymentLog =  $paymentLog."\r\n Php". $log->amount ."(".$log->log_date.")";
-            //   }
-            //   $s->payment_details = $paymentLog;
-            // }else{
-            //    if($s->payment_amount > 0){
-            //      $s->payment_details = "Php" . $s->payment_amount . " (". $s->created_at .")";
-            //    }
-            // }
-
-
-
+            $s->payment_details = ClientTransaction::where('client_service_id', $s->id)->where('type', 'Payment')->select('amount','reason','created_at')->first();
           }
 
           $response['status'] = 'Success';
