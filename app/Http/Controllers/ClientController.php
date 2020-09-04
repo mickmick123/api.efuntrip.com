@@ -21,6 +21,7 @@ use App\Group;
 
 use App\Package;
 
+use App\Remark;
 use App\RoleUser;
 
 use App\Service;
@@ -391,6 +392,12 @@ class ClientController extends Controller
 
 
             ->paginate($perPage);
+
+        foreach ($clients as $c){
+            $c->remarks = Remark::select('remark','u.first_name as created_by', 'remarks.created_at')->where("client_id", $c->id)->orderBy("remarks.id", "desc")->limit(3)
+                ->leftjoin("users as u", "remarks.created_by", "u.id")
+                ->get();
+        }
 
 				$response = $clients;
 
@@ -3389,6 +3396,43 @@ class ClientController extends Controller
         return Response::json($response);
     }
 
+    public function addClientsRemark(Request $request){
+        $validator = Validator::make($request->all(), [
+            'remarks' => 'required',
+        ]);
 
+        if($validator->fails()) {
+            $response['status'] = 'failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+            $d = new Remark;
+            $d->client_id = $request->id;
+            $d->remark = $request->remarks;
+            $d->created_by = Auth::user()->id;
+            $d->created_at = date("Y-m-d H:i:s");
+            $d->save();
 
+            $response['status'] = 'success';
+            $response['code'] = 422;
+            $response['data'] = $d;
+        }
+
+        return Response::json($request);
+    }
+
+    public function getClientsRemarks($client_id){
+        $list = Remark::select('remark','u.first_name as created_by', 'remarks.created_at')->where("client_id", $client_id)->orderBy("remarks.id", "desc")
+                    ->leftjoin("users as u", "remarks.created_by", "u.id")->get();
+
+        foreach ($list as $l){
+            $l->created_at = gmdate("F j, Y", strtotime($l->created_at));
+        }
+
+        $response['status'] = 'success';
+        $response['code'] = 422;
+        $response['data'] = $list;
+
+        return Response::json($response);
+    }
 }

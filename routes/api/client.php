@@ -69,4 +69,8 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('get-clients-services/{id}/{tracking?}', 'ClientController@getClientServices');
 
+    Route::post('add-clients-remark', 'ClientController@addClientsRemark');
+
+    Route::get('get-clients-remarks/{client_id}', 'ClientController@getClientsRemarks');
+
 });
