@@ -27,7 +27,7 @@ class AccountsController extends Controller
     //get all Cpanel Users
     public function getCpanelUsers() {
 	 	$role_id = Role::where(function ($query) {
-                        $query->where('name', 'master')->orwhere('name', 'cpanel-admin');
+                        $query->orwhere('name', 'master')->orwhere('name', 'cpanel-admin');
                     })->pluck("id");
 	 	// $both_branch = Branch::where('name', 'Both')->pluck("id")[0];
     	$auth_branch =  $this->getBranchAuth();
@@ -112,6 +112,8 @@ class AccountsController extends Controller
 
             $user->roles()->detach();
             $user->roles()->attach($request->roles);
+
+            $user->givePermission($request->get('permissions'));
 
             $user->branches()->detach();
             $user->branches()->attach($request->branch);

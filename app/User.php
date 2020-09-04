@@ -131,6 +131,7 @@ class User extends Authenticatable
         return $this->belongsToMany(Role::class);
     }
 
+
     public function hasRole($role)
     {
         if (is_string($role)) {
@@ -140,4 +141,30 @@ class User extends Authenticatable
         return !! $role->intersect($this->roles)->count();
     }
 
+    public function permissions()
+    {
+        return $this->belongsToMany('App\Permission', 'permission_user', 'user_id', 'permission_id');
+    }
+
+    public function givePermission($permission)
+    {
+        if (is_string($permission)) {
+            $this->permissions()->save(
+                Permission::whereName($permission)->firstOrFail()
+            );
+        } elseif (is_array($permission)) {
+            $this->permissions()
+                ->attach($permission);
+        }
+    }
+
+    public function hasPermission($permission)
+    {
+        if (is_string($permission)) {
+            return $this->permissions->contains('name', $permission);
+        }
+
+        return !! $permission->intersect($this->permissions)->count();
+    }
+    
 }
