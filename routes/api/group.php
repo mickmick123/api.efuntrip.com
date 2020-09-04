@@ -85,5 +85,8 @@ use Illuminate\Http\Request;
 
 	Route::post('edit-service-payment', 'GroupController@editGroupPayment');
 
+	Route::post('add-group-remark', 'GroupController@addGroupRemark');
+
+	Route::post('get-group-history', 'GroupController@getGroupHistory');
 
 });

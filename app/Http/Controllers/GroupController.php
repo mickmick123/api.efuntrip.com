@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+use App\Remark;
 use Carbon\Carbon;
 use App\ClientService;
 
@@ -296,6 +297,14 @@ class GroupController extends Controller
                 return $q->orderBy($sort[0], $sort[1]);
             })
             ->paginate($request->input('perPage'));
+
+        foreach ($groups as $k=>$v){
+            $v->remarks = Remark::leftJoin('users','remarks.created_by','users.id')
+                ->where('remarks.group_id',$v->id)
+                ->orderBy('remarks.id','DESC')
+                ->limit(3)
+                ->get(['remarks.remark','users.first_name','remarks.created_at']);
+        }
 
         $response = $groups;
 
@@ -4739,6 +4748,50 @@ public function getClientPackagesByGroup($client_id, $group_id){
     $response['code'] = 200;
 
     return Response::json($response);
+  }
+
+  public function addGroupRemark(Request $request){
+      $validator = Validator::make($request->all(), [
+          'group_id' => 'required',
+          'remark' => 'required',
+      ]);
+
+      if ($validator->fails()) {
+          $response['status'] = 'Failed';
+          $response['errors'] = $validator->errors();
+          $response['code'] = 422;
+      } else {
+          $user = Auth::user();
+          $rem = new Remark;
+          $rem->group_id = $request->group_id;
+          $rem->remark = $request->remark;
+          $rem->created_by = $user->id;
+          $rem->created_at = now();
+          $rem->save();
+
+          $response['status'] = 'Success';
+          $response['code'] = 200;
+      }
+      return Response::json($response);
+  }
+
+  public function getGroupHistory(Request $request){
+        $result = Remark::select(['remarks.remark','users.first_name',
+            DB::raw('DATE_FORMAT(remarks.created_at, "%b %d,%Y") as display_date'),
+            DB::raw('DATE_FORMAT(remarks.created_at, "%d") as day'),
+            DB::raw('DATE_FORMAT(remarks.created_at, "%b") as month'),
+            DB::raw('DATE_FORMAT(remarks.created_at, "%Y") as year'),
+                ])
+            ->leftJoin('users','remarks.created_by','users.id')
+            ->where('remarks.group_id',$request->id)
+            ->orderBy('remarks.id','DESC')
+            ->get();
+
+      $response['status'] = 'Success';
+      $response['code'] = 200;
+      $response['data'] = $result;
+
+      return Response::json($response);
   }
 
 }
