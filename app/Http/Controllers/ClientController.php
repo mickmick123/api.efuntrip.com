@@ -392,17 +392,29 @@ class ClientController extends Controller
 
             ->paginate($perPage);
 
+				$response = $clients;
+
         $col = User::sum('collectable');
         $bal = User::sum('balance');
         // $clients['balance'] = $bal;
 
         $custom = collect(['collectables' => $col]);
-        $clients = $custom->merge($clients);
+        $response = $custom->merge($response);
 
         $custom = collect(['balance' => $bal]);
-        $clients = $custom->merge($clients);
+        $response = $custom->merge($response);
 
-        return Response::json($clients);
+
+				$ctr = 0;
+				//include ewallet
+				foreach($clients->items() as $s){
+					$s->wallet = $this->getClientEwallet($s->id);
+					$response[$ctr] = $s;
+					$ctr++;
+				}
+
+
+        return Response::json($response);
     }
 
     public function show($id){

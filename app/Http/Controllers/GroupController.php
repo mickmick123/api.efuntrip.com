@@ -301,6 +301,7 @@ class GroupController extends Controller
 
         $col = Group::sum('collectables');
         $bal = Group::sum('balance');
+          //$ewallet = $this->getGroupEwallet($id);
         // $clients['balance'] = $bal;
 
         $custom = collect(['collectables' => $col]);
@@ -308,6 +309,15 @@ class GroupController extends Controller
 
         $custom = collect(['balance' => $bal]);
         $response = $custom->merge($response);
+
+
+        $ctr = 0;
+        //include ewallet
+        foreach($groups->items() as $s){
+          $s->wallet = $ewallet = $this->getGroupEwallet($s->id);
+          $response[$ctr] = $s;
+          $ctr++;
+        }
 
 
         return Response::json($response);
