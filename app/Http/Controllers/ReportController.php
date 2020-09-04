@@ -2125,7 +2125,7 @@ class ReportController extends Controller
 
 
 	public function storeReceivedFiles(Request $request) {
-		$documents = $request->documents['documents'];
+		$documents = $request->documents;
 		$received = $request->received;
 		$sender = $request->sender;
 		$receiver = $request->receiver;
@@ -2137,7 +2137,7 @@ class ReportController extends Controller
 
 		// Add the submitted docs to log details
 		foreach($documents as $key => $document) {
-			$details .= "\n" . '('.$document['count'].') ' . $received[$key]['title']; 
+			$details .= "\n" . '('.$document['count'].') ' . $document['title']; 
 		}
 
 		$log = new Log;
@@ -2152,11 +2152,11 @@ class ReportController extends Controller
 		// Save submitted docs to document logs
 		foreach($documents as $document) {
 			$dl = new DocumentLog;
-			$dl->document_id = $document['id'];
+			$dl->document_id = $document['document_id'];
 			$dl->log_id = $log->id;
 			$dl->count = $document['count'];
 			$dl->pending_count = 0;
-			$dl->previous_on_hand = $document['onHandCount'];
+			$dl->previous_on_hand = $document['previous_on_hand'];
 			$dl->save();
 		}
 
