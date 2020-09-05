@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\InventoryConsumables;
+use App\InventoryParentUnit;
 use App\Location;
 use App\LocationDetail;
 use Illuminate\Support\Facades\Response;
@@ -48,55 +49,24 @@ class LocationController extends Controller
             ['inventory_id',$request->inventory_id]
         ])->pluck('location_id');
 
-        $inv = InventoryConsumables::where([
-            ['inventory_id',$request->inventory_id],
-            ['location_id',$request->location_detail]
-        ])->get();
-
-        $item = InventoryConsumables::where([
-            ['inventory_id',$request->inventory_id],
-            ['location_id',$request->location_detail]
-        ])->orderBy('id','DESC')->limit(1)->first();
-
-        if($item){
-            $remaining = $item->remaining;
-        }else{
-            $remaining = 0;
-        }
-
-        $consumed = 0;
-        $purchased = 0;
-
-        foreach($inv as $k=>$v){
-            if($v->type === 'Consumed'){
-                $consumed = $consumed + $v->qty;
-            }else if($v->type === 'Purchased'){
-                $purchased = $purchased + $v->qty;
-            }
-        }
-
-        $limit = $purchased - $consumed;
-
         $locId = LocationDetail::whereIn('id',$invId)->pluck('loc_id');
+        $locDet = LocationDetail::whereIn('id',$invId)->get();
         $loc = Location::whereIn('id',$locId)->get();
 
-        if($request->location_id === "undefined"){
-            $locDet = LocationDetail::whereIn('id',$invId)->get();
-            $loc = Location::whereIn('id',$locId)->get();
-        }else{
-            $locDet = LocationDetail::where('loc_id',$request->location_id)
-                ->whereIn('id',$invId)->get();
+        foreach ($locDet as $k=>$v){
+            $v->remaining = InventoryConsumables::where([
+                ['inventory_id',$request->inventory_id],
+                ['location_id',$v->id]
+            ])->orderBy('id','DESC')->limit(1)->pluck('remaining');
+            $v->convertedRemaining = InventoryController::unitFormat($request->inventory_id, $v->remaining[0]);
+            $min_purchase = InventoryParentUnit::where('inv_id',$request->inventory_id)->orderBy('id','DESC')->pluck('min_purchased');
+            $v->convertedMinPurchased = InventoryController::unitFormat($request->inventory_id, $min_purchase[0]);
         }
-
-        $convertedQty = InventoryController::contentToMinPurchased($request->inventory_id,$request->unit_id,$request->qty);
 
         $response['status'] = 'Success';
         $response['code'] = 200;
         $response['location'] = $loc;
         $response['locationDetail'] = $locDet;
-        $response['limit'] = $limit;
-        $response['quantities'] = $convertedQty;
-        $response['remaining'] = InventoryController::unitFormat($request->inventory_id, $remaining);
 
         return Response::json($response);
     }

@@ -2,8 +2,11 @@
 
 namespace App\Helpers;
 
+use Illuminate\Support\Collection;
+
 class ArrayHelper{
-    // $array should be like this [[],[]] or more [[],[],[]....]
+    // $array = [[1],[2]] or more [[1],[2],[3]....]
+    // return [1,2,3,4,5]
     public static function ArrayMerge($array){
         $data = [];
         foreach($array as $i){
@@ -21,5 +24,13 @@ class ArrayHelper{
             }
         }
         return $array;
+    }
+
+    // $collection = [1,2,3,4]; $optional = '5'
+    // return "1/2/3/4" or "1/2/3/4/5"
+    public static function ArrayParentImplode($collection,$optional=null){
+        $tree = new Collection($collection);
+        $optional !== null && $tree->push($optional);
+        return $tree->implode('/');
     }
 }
