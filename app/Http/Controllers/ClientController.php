@@ -499,6 +499,8 @@ class ClientController extends Controller
             $client->total_balance = $this->getClientTotalBalance($id);
             $client->total_collectables = $this->getClientTotalCollectables($id);
 
+            $client->remarks = $this->getClientsRemarks($id, true);
+
             $response['status'] = 'Success';
             $response['data'] = [
                 'client' => $client
@@ -3421,7 +3423,7 @@ class ClientController extends Controller
         return Response::json($request);
     }
 
-    public function getClientsRemarks($client_id){
+    public function getClientsRemarks($client_id,$profile=false){
         $list = Remark::select('remark','u.first_name as created_by', 'remarks.created_at')->where("client_id", $client_id)->orderBy("remarks.id", "desc")
                     ->leftjoin("users as u", "remarks.created_by", "u.id")->get();
 
@@ -3432,7 +3434,10 @@ class ClientController extends Controller
         $response['status'] = 'success';
         $response['code'] = 422;
         $response['data'] = $list;
-
-        return Response::json($response);
+        if(!$profile){
+            return Response::json($response);
+        }else{
+            return $list;
+        }
     }
 }
