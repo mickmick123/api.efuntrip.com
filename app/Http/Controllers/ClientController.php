@@ -3418,8 +3418,12 @@ class ClientController extends Controller
     }
 
     public function getClientsRemarks($client_id,$profile=false){
+        $limit = PHP_INT_MAX;
+        if($profile){
+            $limit = 3;
+        }
         $list = Remark::select('remark','u.first_name as created_by', 'remarks.created_at')->where("client_id", $client_id)->orderBy("remarks.id", "desc")
-                    ->leftjoin("users as u", "remarks.created_by", "u.id")->get();
+            ->leftjoin("users as u", "remarks.created_by", "u.id")->limit($limit)->get();
 
         foreach ($list as $l){
             $l->created_at = gmdate("F j, Y", strtotime($l->created_at));
