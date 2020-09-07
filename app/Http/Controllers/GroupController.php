@@ -532,11 +532,18 @@ class GroupController extends Controller
             $group->total_deposit = $this->getGroupDeposit($id);
             $group->total_ewallet = $this->getGroupEwallet($id);
 
+            $group->remarks = Remark::leftJoin('users','remarks.created_by','users.id')
+                ->where('remarks.group_id',$id)
+                ->orderBy('remarks.id','DESC')
+                ->limit(3)
+                ->get(['remarks.remark','users.first_name','remarks.created_at']);
+
             $response['status'] = 'Success';
             $response['data'] = [
                 'group' => $group
             ];
             $response['code'] = 200;
+            $response['1'] = $group;
         } else {
             $response['status'] = 'Failed';
             $response['errors'] = 'No query results.';
