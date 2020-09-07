@@ -387,16 +387,20 @@ class ClientController extends Controller
             ->when($mode == 'name', function ($query) use($search) {
                 return $query->where('first_name' ,'=', $search)->orwhere('last_name' ,'=', $search);
             })
-
-
-
-
             ->paginate($perPage);
+
 
         foreach ($clients as $c){
             $c->remarks = Remark::select('remark','u.first_name as created_by', 'remarks.created_at')->where("client_id", $c->id)->orderBy("remarks.id", "desc")->limit(3)
                 ->leftjoin("users as u", "remarks.created_by", "u.id")
                 ->get();
+            //include wallet
+            $c->wallet = $this->getClientEwallet($c->id);
+
+            $total_balance =  $this->getClientTotalBalance($c->id);
+            $col_balance =  $this->getClientTotalCollectables($c->id);
+            User::where('id', $c->id)
+                ->update(['balance' => $total_balance, 'collectable' => (($col_balance >= 0) ? 0 : $col_balance)]);
         }
 
 				$response = $clients;
@@ -410,16 +414,6 @@ class ClientController extends Controller
 
         $custom = collect(['balance' => $bal]);
         $response = $custom->merge($response);
-
-
-				$ctr = 0;
-				//include ewallet
-				foreach($clients->items() as $s){
-					$s->wallet = $this->getClientEwallet($s->id);
-					$response[$ctr] = $s;
-					$ctr++;
-				}
-
 
         return Response::json($response);
     }

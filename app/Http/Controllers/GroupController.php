@@ -163,10 +163,10 @@ class GroupController extends Controller
         $balance = ((
                         $this->getGroupDeposit($group_id)
                         + $this->getGroupPayment($group_id)
-                        + $this->getGroupDiscount($group_id)
+                        + $this->getGroupTotalDiscount($group_id)
                     )-(
-                        $this->getGroupRefund($group_id)
-                        + $this->getCompleteGroupCost($group_id)
+                        $this->getGroupTotalRefund($group_id)
+                        + $this->getGroupTotalCompleteServiceCost($group_id)
                     ));
         return $balance;
     }
@@ -296,7 +296,8 @@ class GroupController extends Controller
                 }
                 return $q->orderBy($sort[0], $sort[1]);
             })
-            ->paginate($request->input('perPage'));
+            // ->paginate($request->input('perPage'));
+            ->paginate(100);
 
         foreach ($groups as $k=>$v){
             $v->remarks = Remark::leftJoin('users','remarks.created_by','users.id')
@@ -304,30 +305,24 @@ class GroupController extends Controller
                 ->orderBy('remarks.id','DESC')
                 ->limit(3)
                 ->get(['remarks.remark','users.first_name','remarks.created_at']);
+            //include ewallet
+            $v->wallet =  $this->getGroupEwallet($v->id);
+            $total_balance =  $this->getGroupTotalBalance($v->id);
+            $col_balance =  $this->getGroupTotalCollectables($v->id);
+            Group::where('id', $v->id)
+                ->update(['balance' => $total_balance, 'collectables' => (($col_balance >= 0) ? 0 : $col_balance)]);
         }
 
         $response = $groups;
 
         $col = Group::sum('collectables');
         $bal = Group::sum('balance');
-          //$ewallet = $this->getGroupEwallet($id);
-        // $clients['balance'] = $bal;
 
         $custom = collect(['collectables' => $col]);
         $response = $custom->merge($response);
 
         $custom = collect(['balance' => $bal]);
         $response = $custom->merge($response);
-
-
-        $ctr = 0;
-        //include ewallet
-        foreach($groups->items() as $s){
-          $s->wallet = $ewallet = $this->getGroupEwallet($s->id);
-          $response[$ctr] = $s;
-          $ctr++;
-        }
-
 
         return Response::json($response);
     }
