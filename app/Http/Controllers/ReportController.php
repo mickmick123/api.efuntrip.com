@@ -1106,12 +1106,12 @@ class ReportController extends Controller
       }
 
       $label = 'Updated Cost';
-      $detail = 'Updated service cost from '.$previousCost.' to '.$cost.'. Total is now '.$totalPrice.'.';
+      $detail = 'Updated service cost from PHP'.number_format($previousCost,2).' to PHP'.number_format($cost,2).'.';
 
       // Update Logs
       $totalCharge = $cs->cost + $cs->charge + $cs->tip;
 
-      $labelSearch = 'Documents complete, service is now complete. Total charge is PHP' . $totalCharge . '.';
+      $labelSearch = 'Documents complete, service is now complete. Total charge is PHP' . number_format($totalCharge, 2) . '.';
 
       $getLog = Log::where('client_service_id', $cs->id)
           ->where('client_id', $cs->client_id)
@@ -1122,29 +1122,53 @@ class ReportController extends Controller
 					->first();
 
 			if($getLog) {
-					Log::where('id', $getLog['id'])
-							->update([
-								'label' => $labelSearch
-							]);
+					// $updatedLog = Log::where('id', $getLog['id'])
+					// 		->update([
+					// 			'label' => $labelSearch
+					// 		]);
+					$checkLogNotif = DB::table('logs_notification as ln')
+											->leftJoin('jobs', 'ln.job_id', '=', 'jobs.id')
+											->where('ln.log_id', $getLog['id'])
+											->first();
 
-					$this->sendPushNotification($cs->client_id, $detail, $labelSearch, $getLog['id']);
-			} else {
-				$getLog = Log::create([
-										'client_service_id' => $cs->id,
-										'client_id' => $cs->client_id,
-										'group_id' => $cs->group_id,
-										'service_procedure_id' => $serviceProcedureId,
-										'processor_id' => Auth::user()->id,
-										'log_type' => 'Action',
-										'detail' => $detail,
-										'label' => $label,
-										'log_date' => Carbon::now()->toDateString()
-									]);
+					if($checkLogNotif) {
+						DB::table('jobs')->where('id', $checkLogNotif->job_id)->delete();
+						DB::table('logs_notification')
+							->where('log_id', $getLog['id'])
+							->where('job_id', $checkLogNotif->job_id)
+							->delete();
+					}
 
-				// $this->sendPushNotification($cs->client_id, $detail);
-			}
-          
+					$prevLogDetail = $getLog['detail'];
 
+					$getLog->delete();
+
+					$newUpdateCostLog = Log::create([
+						'client_service_id' => $cs->id,
+						'client_id' => $cs->client_id,
+						'group_id' => $cs->group_id,
+						'service_procedure_id' => $serviceProcedureId,
+						'processor_id' => Auth::user()->id,
+						'log_type' => 'Action',
+						'detail' => $detail,
+						'label' => $label,
+						'log_date' => Carbon::now()->toDateString()
+					]);
+
+					$newServiceLog = Log::create([
+						'client_service_id' => $cs->id,
+						'client_id' => $cs->client_id,
+						'group_id' => $cs->group_id,
+						'service_procedure_id' => $serviceProcedureId,
+						'processor_id' => Auth::user()->id,
+						'log_type' => 'Status',
+						'detail' => $prevLogDetail,
+						'label' => $labelSearch,
+						'log_date' => Carbon::now()->toDateString()
+					]);
+
+					$this->sendPushNotification($cs->client_id, $prevLogDetail, $labelSearch, $newServiceLog->id);
+			} 
           
       // End
       
