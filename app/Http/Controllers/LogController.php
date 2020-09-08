@@ -1026,6 +1026,7 @@ class LogController extends Controller
                         $csstatus =  null;
                         $csactive =  null;
                         $currentLabel = $t->label;
+                        $currentService = $cs->id;
 
                     }
                     else{
