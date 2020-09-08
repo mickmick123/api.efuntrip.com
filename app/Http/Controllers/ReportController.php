@@ -1564,7 +1564,7 @@ class ReportController extends Controller
 
 	        $this->handleStandAloneOnHandDocuments($action, $user);
 
-	        $this->handleUpdateStatus($user['id'], 1, null, 'generate_photocopy');
+	        $this->handleUpdateStatus($user['id'], 1, null, 'generate_photocopy', $documents);
 		}
 
 		$response['status'] = 'Success';
@@ -1651,7 +1651,7 @@ class ReportController extends Controller
 		return Response::json($response);
 	}
 
-	private function handleUpdateStatus($clientId, $type, $_clientServiceId = null, $docLogType = null) {
+	private function handleUpdateStatus($clientId, $type, $_clientServiceId = null, $docLogType = null, $dcs = null) {
 		if( $type == 1 ) {
 			$status = 'pending';
 		} elseif( $type == 2 ) {
@@ -1764,7 +1764,7 @@ class ReportController extends Controller
 										$docsDetail .= "\n" . '('.$clientReportDocument['count'].')' . ' '. $onHandDocuments[$index]->title;
 										
 										$pendingCount = 0;
-										if( ($allRcvdDocs[$docIndex]['count'] - $clientReportDocument['count']) <= $onHandDocuments[$index]->count ) {
+										if( ($allRcvdDocs[$docIndex]['count'] - $clientReportDocument['count']) > $onHandDocuments[$index]->count ) {
 											$pendingCount = $clientReportDocument['count'];
 										}
 
@@ -1811,7 +1811,8 @@ class ReportController extends Controller
 												'document_id' => $onHandDocuments[$index]->id,
 												'log_id' => 0,
 												'count' => $clientReportDocument['count'],
-												'pending_count' => ($hasPending === 0) ? 0 : $clientReportDocument['count'],
+												// 'pending_count' => ($hasPending === 0) ? 0 : $clientReportDocument['count'],
+												'pending_count' => 0,
 												'previous_on_hand' => $onHandDocuments[$index]->count - $clientReportDocument['count'],
 												'created_at' => Carbon::now(),
 												'updated_at' => Carbon::now()
@@ -1931,10 +1932,24 @@ class ReportController extends Controller
                   $this->sendPushNotification($cs->client_id, $docsDetail);
   
                   foreach($docLogData as $dlc) {
+
+										if($dcs !== null) {
+											$dcscounter = 0;
+
+											foreach($dcs as $dc) {
+												if($dc['id'] === $dlc['document_id']) {
+													$dlc['log_id'] = $docLogQuery->id;
   
-                    $dlc['log_id'] = $docLogQuery->id;
+                    			DB::table('document_log')->insert($dlc);
+												}
+											}
+										} else {
+											$dlc['log_id'] = $docLogQuery->id;
   
-                    DB::table('document_log')->insert($dlc);
+                    	DB::table('document_log')->insert($dlc);
+										}
+  
+                    
   
                   }
   
