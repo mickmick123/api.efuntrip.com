@@ -983,6 +983,7 @@ class LogController extends Controller
 
 
                         $currentService = $cs->id;
+                        $currentLabel = $t->label;
 
                         $body = DB::table('logs as l')->select(DB::raw('l.detail, l.log_date, pr.first_name, l.amount'))
                         ->where('client_service_id', $cs->id)->where('group_id',$group_id)
