@@ -1011,7 +1011,7 @@ class LogController extends Controller
                     }
                     else if($t->label != null && $currentLabel != $t->label){
                         $csdetail = $t->label;
-                        $translogs = DB::table('logs')->where('group_id',$group_id)->where('log_type','Ewallet')->where('label',$t->label)->where('client_service_id',$cs->id)->orderBy('id','desc')->get();
+                        $translogs = DB::table('logs')->where('group_id',$group_id)->where('log_type','Ewallet')->where('label',$t->label)->orderBy('id','desc')->get();
 
                         $cs_ids = $translogs->pluck('client_service_id');
 
