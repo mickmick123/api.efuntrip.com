@@ -397,10 +397,10 @@ class ClientController extends Controller
             //include wallet
             $c->wallet = $this->getClientEwallet($c->id);
 
-            $total_balance =  $this->getClientTotalBalance($c->id);
-            $col_balance =  $this->getClientTotalCollectables($c->id);
-            User::where('id', $c->id)
-                ->update(['balance' => $total_balance, 'collectable' => (($col_balance >= 0) ? 0 : $col_balance)]);
+            // $total_balance =  $this->getClientTotalBalance($c->id);
+            // $col_balance =  $this->getClientTotalCollectables($c->id);
+            // User::where('id', $c->id)
+            //     ->update(['balance' => $total_balance, 'collectable' => (($col_balance >= 0) ? 0 : $col_balance)]);
         }
 
 				$response = $clients;

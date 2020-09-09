@@ -296,8 +296,8 @@ class GroupController extends Controller
                 }
                 return $q->orderBy($sort[0], $sort[1]);
             })
-            // ->paginate($request->input('perPage'));
-            ->paginate(100);
+            ->paginate($request->input('perPage'));
+            //->paginate(100);
 
         foreach ($groups as $k=>$v){
             $v->remarks = Remark::leftJoin('users','remarks.created_by','users.id')
@@ -307,10 +307,10 @@ class GroupController extends Controller
                 ->get(['remarks.remark','users.first_name','remarks.created_at']);
             //include ewallet
             $v->wallet =  $this->getGroupEwallet($v->id);
-            $total_balance =  $this->getGroupTotalBalance($v->id);
-            $col_balance =  $this->getGroupTotalCollectables($v->id);
-            Group::where('id', $v->id)
-                ->update(['balance' => $total_balance, 'collectables' => (($col_balance >= 0) ? 0 : $col_balance)]);
+            // $total_balance =  $this->getGroupTotalBalance($v->id);
+            // $col_balance =  $this->getGroupTotalCollectables($v->id);
+            // Group::where('id', $v->id)
+            //     ->update(['balance' => $total_balance, 'collectables' => (($col_balance >= 0) ? 0 : $col_balance)]);
         }
 
         $response = $groups;
