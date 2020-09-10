@@ -2051,10 +2051,13 @@ public function getClientPackagesByGroup($client_id, $group_id){
                         ->leftjoin(DB::raw('(select * from client_transactions) as ct'),'ct.client_service_id','=','cs.id')
                         ->where(DB::raw('date_format(STR_TO_DATE(cs.created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)
                         ->where('ct.type', 'Discount')
-                        ->where('ct.deleted_at', '==', null)
+                        ->where('ct.deleted_at', null)
                         ->where('cs.group_id', $groupId)
                         ->whereIn('cs.id',$csid)
                         ->sum('ct.amount');
+           \Log::info(' ');
+           \Log::info($csid);
+           \Log::info($queryTotalDiscount);
 
           $queryTotalPayment = DB::table('client_services')
                       ->where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)
@@ -2071,6 +2074,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
           $temp['total_service_cost'] = $queryTotal - $queryTotalDiscount;
           $temp['total_sub'] = ($queryTotalDiscount + $queryTotalPayment) - $queryTotal;
+          (10000 + 61636) - 71636
           $temp['members'] = [];
           $temp['status_list'] = $statusList;
           $temp['status_temp'] = $queryTotal - $queryTotalDiscount;
