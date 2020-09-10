@@ -4312,14 +4312,15 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $client_id = $request->get('client_id');
         $mode = $request->get('mode');
         $total_cost = $request->get('total_cost');
+        $reason = $request->get('reason');
 
         //Paid
         $payment = ClientTransaction::where('type','Payment')->where('client_service_id',$cs_id)->first();
-        $rson = 'Retrieved payment with the amount of Php'.$amount.' ('.date('Y-m-d H:i:s').')<br><br>';
+        //$rson = 'Retrieved payment with the amount of Php'.$amount.' ('.date('Y-m-d H:i:s').')<br><br>';
 
         if($payment){
             $payment->amount -= $amount;
-            $payment->reason = $rson.$payment->reason;
+            $payment->reason = $reason;
             $payment->save();
         }
 
@@ -4508,7 +4509,6 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
   //Distribute payment
   public function distributeOldPayment(Request $request){
-
 
     if($request->type == 'client'){
         return $this->distributeClientOldPayment($request);
