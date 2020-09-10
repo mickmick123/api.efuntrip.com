@@ -2074,7 +2074,6 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
           $temp['total_service_cost'] = $queryTotal - $queryTotalDiscount;
           $temp['total_sub'] = ($queryTotalDiscount + $queryTotalPayment) - $queryTotal;
-          (10000 + 61636) - 71636
           $temp['members'] = [];
           $temp['status_list'] = $statusList;
           $temp['status_temp'] = $queryTotal - $queryTotalDiscount;
