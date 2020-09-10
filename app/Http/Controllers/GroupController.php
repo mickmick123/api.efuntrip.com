@@ -4381,7 +4381,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
             'log_group' => 'payment',
             'detail'=> $detail,
             'detail_cn'=> $detail_cn,
-            'amount'=> '-'.$amount,
+            'amount'=> $amount,
             'label'=> $label,
         );
         LogController::save($log_data);
