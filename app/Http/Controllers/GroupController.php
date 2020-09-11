@@ -301,10 +301,11 @@ class GroupController extends Controller
 
         foreach ($groups as $k=>$v){
             $v->remarks = Remark::leftJoin('users','remarks.created_by','users.id')
+                ->select(['remarks.remark','users.first_name',DB::raw('DATE_FORMAT(remarks.created_at, "%b %d, %Y %H:%i") AS created_at')])
                 ->where('remarks.group_id',$v->id)
                 ->orderBy('remarks.id','DESC')
                 ->limit(3)
-                ->get(['remarks.remark','users.first_name','remarks.created_at']);
+                ->get();
             //include ewallet
             $v->wallet =  $this->getGroupEwallet($v->id);
             // $total_balance =  $this->getGroupTotalBalance($v->id);
@@ -528,10 +529,11 @@ class GroupController extends Controller
             $group->total_ewallet = $this->getGroupEwallet($id);
 
             $group->remarks = Remark::leftJoin('users','remarks.created_by','users.id')
+                ->select(['remarks.remark','users.first_name',DB::raw('DATE_FORMAT(remarks.created_at, "%b %d, %Y %H:%i") AS created_at')])
                 ->where('remarks.group_id',$id)
                 ->orderBy('remarks.id','DESC')
                 ->limit(3)
-                ->get(['remarks.remark','users.first_name','remarks.created_at']);
+                ->get();
 
             $response['status'] = 'Success';
             $response['data'] = [
