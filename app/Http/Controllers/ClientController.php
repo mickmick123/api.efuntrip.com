@@ -396,6 +396,9 @@ class ClientController extends Controller
                 ->get();
             //include wallet
             $c->wallet = $this->getClientEwallet($c->id);
+            foreach ($c->remarks as $l){
+                $l->created_at = Carbon::parse($l->created_at)->format('F j, Y h:i');;
+            }
 
             // $total_balance =  $this->getClientTotalBalance($c->id);
             // $col_balance =  $this->getClientTotalCollectables($c->id);
@@ -3426,7 +3429,7 @@ class ClientController extends Controller
             ->leftjoin("users as u", "remarks.created_by", "u.id")->limit($limit)->get();
 
         foreach ($list as $l){
-            $l->created_at = gmdate("F j, Y", strtotime($l->created_at));
+            $l->created_at = Carbon::parse($l->created_at)->format('F j, Y h:i');;
         }
 
         $response['status'] = 'success';
