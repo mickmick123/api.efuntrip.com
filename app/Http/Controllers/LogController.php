@@ -626,6 +626,7 @@ class LogController extends Controller
                     ->whereIn('client_id', $groupData)
                     ->where('log_date', $docLog->log_date)
                     ->where('log_type', 'Document')
+                    ->where('client_service_id',null)
                     ->where('label', 'not like', "%Documents Needed%")
                     ->where('label', 'not like', "%Prepare%")
                     ->orderBy('id', 'DESC')

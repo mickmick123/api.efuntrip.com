@@ -561,6 +561,18 @@ class ReportController extends Controller
 
 	        // Document log
 	        if( $actionName == 'Filed' || $actionName == 'Released' ) {
+
+						$log = Log::create([
+							'client_id' => $cs->client_id,
+							'group_id' => $cs->group_id,
+							'service_procedure_id' => $serviceProcedure->id,
+							'processor_id' => $processorId,
+							'log_type' => $logType,
+							'detail' => $detail,
+							'label' => $label,
+							'log_date' => Carbon::now()->toDateString()
+						]);
+
 		        foreach( $documents as $document ) {
 		        	$previousOnHand = 0;
 
@@ -1881,14 +1893,14 @@ class ReportController extends Controller
 
             if($docLogType === 'received') {
               if($docsDetail !== '') {
-                $docLabel = 'Received Documents from Client';
-                $docsDetail = 'Received Documents from Client:' . "\n" . $docsDetail;
+                $docLabel = 'Received documents from Client';
+                $docsDetail = 'Received documents from Client:' . "\n" . $docsDetail;
                 $docLogCounter++;
               }
             } else if($docLogType === 'generate_photocopy') {
               if($docsDetail !== '') {
-                $docLabel = 'Generate Photocopies of Documents';
-                $docsDetail = 'Generate Photocopies of Documents:' . "\n" . $docsDetail;
+                $docLabel = 'Generate photocopies of Documents';
+                $docsDetail = 'Generate photocopies of Documents:' . "\n" . $docsDetail;
                 $docLogCounter++;
               }
             } else if($docLogType === 'Prepare required documents, the following documents are needed') {
