@@ -4347,7 +4347,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $detail_cn =  $detail;
         $log_data = array(
             'client_service_id' => null,
-            'client_id' => null,
+            'client_id' => $client_id,
             'group_id' => $group_id,
             'log_type' => 'Transaction',
             'log_group' => 'payment',
