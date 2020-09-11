@@ -1608,6 +1608,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
         $queryx = ClientService::where('service_id',$s->service_id)->where('group_id', $groupId)->where('active', 1)->where('status','!=','cancelled')->orderBy('created_at','DESC');
         $csid = $queryx->pluck('id');
+        // \Log::info($csid);
 
         $queryStatus = $queryx->select(array('status','cost','charge', 'tip', 'com_client', 'com_agent', 'created_at'))->get();
 
@@ -1688,7 +1689,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
         foreach($servicesByDate as $sd){
 
-          $queryClients = ClientService::where('service_id', $sd->service_id)->where('created_at', $sd->created_at)->where('group_id', $groupId)->orderBy('created_at','DESC')->orderBy('client_id')->groupBy('client_id')->get();
+          $queryClients = ClientService::where('service_id', $sd->service_id)->where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$sd->sdate)->where('group_id', $groupId)->orderBy('created_at','DESC')->orderBy('client_id')->get();
 
           $memberByDate = [];
           $ctr2 = 0;
@@ -4317,12 +4318,12 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $reason = $request->get('reason');
 
         //Paid
-        $payment = ClientTransaction::where('type','Payment')->where('client_service_id',$cs_id)->first();
-        //$rson = 'Retrieved payment with the amount of Php'.$amount.' ('.date('Y-m-d H:i:s').')<br><br>';
+        $payment = ClientTransaction::where('type','Payment')->where('client_service_id',$cs_id)->orderBy('id','Desc')->first();
+        $rson = 'Retrieved payment Php'.$amount.'. Reason : <b>'.$reason.'</b> - '.Auth::user()->first_name.' ('.date('Y-m-d H:i:s').')<br><br>';
 
         if($payment){
             $payment->amount -= $amount;
-            $payment->reason = $reason;
+            $payment->reason = $rson.$payment->reason;
             $payment->save();
         }
 
@@ -4339,10 +4340,11 @@ public function getClientPackagesByGroup($client_id, $group_id){
             $service->is_full_payment = 0;
         }
         $service->save();
+        $cl = User::findOrFail($client_id);
 
         // save transaction logs
-        $detail = 'Retrieved payment with the amount of Php '.$amount.'.';
-        $detail_cn = '已支付 Php'.$amount.'.';
+        $detail = 'Retrieved payment with the amount of Php '.$amount.'. <b>['.$client_id.']'.$cl->first_name.' '.$cl->last_name.' : '.$service->detail.'.</b> ';
+        $detail_cn =  $detail;
         $log_data = array(
             'client_service_id' => null,
             'client_id' => null,
@@ -4356,31 +4358,31 @@ public function getClientPackagesByGroup($client_id, $group_id){
         LogController::save($log_data);
 
         $label = null;
-        if($mode == "batch"){
-           $label = 'Retrieved Payment for Batch '.Carbon::parse($service->created_at)->format('M d, Y');
-           $detail = '<b>['.$client_id.'] '.$service->detail.'.</b> Retrieved payment service with an amount of Php'.$amount.'.';
-           $detail_cn = '<b>['.$client_id.'] '.$service->detail.'.</b> Retrieved payment service with an amount of Php'.$amount.'.';
-        }
-        else if($mode == "members"){
-           $cl = User::findOrFail($client_id);
-           $label = 'Retrieved Payment for member <b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'</b>';
-           $detail = '<b>'.$service->detail.'.</b> Retrieved payment service with an amount of Php'.$amount.'.';
-           $detail_cn = '<b>'.$service->detail.'.</b> Retrieved payment service with an amount of Php'.$amount.'.';
-        }
-        else if($mode == "service"){
-           $cl = User::findOrFail($client_id);
-           $label = 'Retrieved Payment for sevice <b>'.$service->detail.'</b>';
-           $detail = '<b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'.</b> Retrieved payment service with an amount of Php'.$amount.'.';
-           $detail_cn = '<b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'.</b> Retrieved payment service with an amount of Php'.$amount.'.';
-        }
+        // if($mode == "batch"){
+        //    $label = 'Retrieved Payment for Batch '.Carbon::parse($service->created_at)->format('M d, Y');
+        //    $detail = '<b>['.$client_id.']'.$cl->first_name.' '.$cl->last_name.' : '.$service->detail.'.</b> Retrieved payment service with an amount of Php'.$amount.'.';
+        //    $detail_cn = '<b>['.$client_id.'] '.$service->detail.'.</b> Retrieved payment service with an amount of Php'.$amount.'.';
+        // }
+        // else if($mode == "members"){
+        //    $cl = User::findOrFail($client_id);
+        //    $label = 'Retrieved Payment for member <b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'</b>';
+        //    $detail = '<b>'.$service->detail.'.</b> Retrieved payment service with an amount of Php'.$amount.'.';
+        //    $detail_cn = '<b>'.$service->detail.'.</b> Retrieved payment service with an amount of Php'.$amount.'.';
+        // }
+        // else if($mode == "service"){
+        //    $cl = User::findOrFail($client_id);
+        //    $label = 'Retrieved Payment for sevice <b>'.$service->detail.'</b>';
+        //    $detail = '<b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'.</b> Retrieved payment service with an amount of Php'.$amount.'.';
+        //    $detail_cn = '<b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'.</b> Retrieved payment service with an amount of Php'.$amount.'.';
+        // }
 
 
         $log_data = array(
-            'client_service_id' => $cs_id,
+            'client_service_id' => null,
             'client_id' => null,
             'group_id' => $group_id,
             'log_type' => 'Ewallet',
-            'log_group' => 'payment',
+            'log_group' => 'retrieve',
             'detail'=> $detail,
             'detail_cn'=> $detail_cn,
             'amount'=> $amount,
@@ -4423,7 +4425,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
              $amount = $request->payments[$i]['amount'];
              $total_cost = $request->payments[$i]['total_cost'];
              $payment = ClientTransaction::where('type','Payment')->where('client_service_id',$cs_id)->first();
-             $rson = 'Paid Php'.$amount.' ('.date('Y-m-d H:i:s').')<br><br>';
+             $rson = 'Paid Php'.$amount.' - '.Auth::user()->first_name.' ('.date('Y-m-d H:i:s').')<br><br>';
              if($payment){
                  $payment->amount += $amount;
                  $payment->reason = $rson.$payment->reason;
