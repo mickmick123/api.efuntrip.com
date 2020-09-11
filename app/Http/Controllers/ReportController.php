@@ -1473,6 +1473,12 @@ class ReportController extends Controller
 		foreach( $request->users as $user ) {
 			$action = 'Received documents';
 
+			if( strlen(trim($user['receive_from'])) > 0 ) {
+				$action .= ' from client\'s representative ' . $user['receive_from'];
+			} else {
+				$action .= ' from client';
+			}
+
 	        $this->handleStandAloneLogDocumentLog($action, $user, $user['documents']);
 
 	        $this->handleStandAloneOnHandDocuments($action, $user);
