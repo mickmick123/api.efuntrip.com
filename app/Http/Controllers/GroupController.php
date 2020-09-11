@@ -4522,11 +4522,11 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $depo = ClientEWallet::where('group_id', $group_id)->where('type', 'Deposit')->where('reason','Generating DP')->sum('amount');
 
         if(!$depo){
-            $total = DB::table('client_transactions')
-                          ->where('group_id',$group_id)
-                          ->where('type', 'Deposit')
-                          ->orWhere('type', 'Payment')
-                          ->sum('amount');
+            // $total = DB::table('client_transactions')
+            //               ->where('group_id',$group_id)
+            //               ->where('type', 'Deposit')
+            //               ->orWhere('type', 'Payment')
+            //               ->sum('amount');
 
             $totalDepo = DB::table('client_transactions')
                           ->where('group_id',$group_id)
@@ -4569,8 +4569,9 @@ public function getClientPackagesByGroup($client_id, $group_id){
             $totalAmount = ($totalPayment + $totalDepo + $queryTotalDiscount) - $totalRefund;
 
 
-            $queryClients = ClientService::where('group_id', $group_id)->where('active', 1)->where('is_full_payment', 0)->get();
+            $queryClients = ClientService::where('group_id', $group_id)->where('active', 1)->where('is_full_payment', 0)->orderBy('id')->get();
             $totalRemaining = 0;
+            $records = [];
             foreach($queryClients as $m){
 
                $discount =  ClientTransaction::where('client_service_id', $m->id)->where('type', 'Discount')->sum('amount');
@@ -4591,14 +4592,29 @@ public function getClientPackagesByGroup($client_id, $group_id){
                     }
 
                     $data = array('is_full_payment' => 1, 'payment_amount' => $payment);
-                    $clientService->update($data);
+                    $clientService->update($data); // jeff
+
+                    $rson = 'Auto Distribution - '.Auth::user()->first_name.' ('.date('Y-m-d H:i:s').')<br><br>';
+                    if($payment > 0){                    
+
+                        $record = [
+                            'client_id' => $m->client_id,
+                            'client_service_id' => $m->id,
+                            'group_id' => $m->group_id,
+                            'amount' => 0,
+                            'reason' => $rson,
+                            'type' => 'Payment',
+                        ];
+                        // ... add to $records array...
+                        $records[] = $record;
+                    }
                }
             }
 
-
+            ClientTransaction::insert($records);
             $totalRemaining = $totalAmount;
 
-              if($totalRemaining > 0){
+            if($totalRemaining > 0){
                 $dp = new ClientEWallet;
                 $dp->client_id = 0;
                 $dp->type = 'Deposit';
@@ -4641,14 +4657,14 @@ public function getClientPackagesByGroup($client_id, $group_id){
     $depo = ClientEWallet::where('group_id', null)->where('client_id', $client_id)->where('type', 'Deposit')->where('reason','Generating DP')->sum('amount');
 
     if(!$depo){
-    $total = DB::table('client_transactions')
-                  ->where('group_id',null)
-                  ->where('client_id', $client_id)
-                  ->where(function ($query)  {
-                        $query->orwhere('type','Deposit')
-                              ->orwhere('type', 'Payment');
-                    })
-                  ->sum('amount');
+    // $total = DB::table('client_transactions')
+    //               ->where('group_id',null)
+    //               ->where('client_id', $client_id)
+    //               ->where(function ($query)  {
+    //                     $query->orwhere('type','Deposit')
+    //                           ->orwhere('type', 'Payment');
+    //                 })
+    //               ->sum('amount');
 
     $totalDepo = DB::table('client_transactions')
                   ->where('group_id',null)
@@ -4688,7 +4704,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
     $totalAmount = ($totalPayment + $totalDepo + $queryTotalDiscount) - $totalRefund;
 
 
-    $queryClients = ClientService::where('group_id', null)->where('client_id', $client_id)->where('active', 1)->where('is_full_payment', 0)->get();
+    $queryClients = ClientService::where('group_id', null)->where('client_id', $client_id)->where('active', 1)->where('is_full_payment', 0)->orderBy('id')->get();
      // return 'test : '.$queryClients;
     $totalRemaining = 0;
     foreach($queryClients as $m){
@@ -4712,10 +4728,25 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
             $data = array('is_full_payment' => 1, 'payment_amount' => $payment);
             $clientService->update($data);
+
+            $rson = 'Auto Distribution - '.Auth::user()->first_name.' ('.date('Y-m-d H:i:s').')<br><br>';
+            if($payment > 0){                    
+
+                $record = [
+                    'client_id' => $m->client_id,
+                    'client_service_id' => $m->id,
+                    'group_id' => null,
+                    'amount' => 0,
+                    'reason' => $rson,
+                    'type' => 'Payment',
+                ];
+                // ... add to $records array...
+                $records[] = $record;
+            }
        }
     }
 
-
+    ClientTransaction::insert($records);
     $totalRemaining = $totalAmount;
 
       if($totalRemaining > 0){
