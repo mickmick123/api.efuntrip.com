@@ -562,7 +562,7 @@ class ReportController extends Controller
 	        // Document log
 	        if( $actionName == 'Filed' || $actionName == 'Released' ) {
 
-						$log = Log::create([
+						$log2 = Log::create([
 							'client_id' => $cs->client_id,
 							'group_id' => $cs->group_id,
 							'service_procedure_id' => $serviceProcedure->id,
@@ -1151,7 +1151,8 @@ class ReportController extends Controller
 							->delete();
 					}
 
-					$prevLogDetail = $getLog['detail'];
+					$prevLogDetail = explode('PHP', $getLog['detail']);
+					$prevLogDetail = $prevLogDetail[0] . 'PHP'. number_format($totalCharge, 2) . '.';
 
 					$getLog->delete();
 
