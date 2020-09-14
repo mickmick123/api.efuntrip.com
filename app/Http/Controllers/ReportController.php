@@ -24,6 +24,8 @@ use App\ClientReport;
 
 use App\ClientReportDocument;
 
+use App\ClientServicePoints;
+
 use App\Service;
 
 use App\ServiceProcedure;
@@ -2309,10 +2311,19 @@ class ReportController extends Controller
 			$clientServicePoints = DB::table('client_service_points')->where('client_service_id', $clientId)
 										->first();
 
+			if($clientServicePoints === null) {
+				$csp = new ClientServicePoints;
+				$csp->client_service_id = $clientId;
+				$csp->points = 1;
+				$csp->save();
+			} else {
+				$csp = $clientServicePoints;
+			}
+
 			$data[] = [
 				'id' => $clientId,
 				'update_cost' => $clientServiceCount,
-				'points' => $clientServicePoints,
+				'points' => $csp,
 			];
 		}
 
@@ -2326,15 +2337,22 @@ class ReportController extends Controller
 
 		$data = '';
 
+		// $clientServices = ClientServicePoints::whereIn('client_service_id', $clientServices)->get();
+
 		foreach($clientServices as $cs) {
 			$value = 0;
 
 			if($status === 0) {
-				$value = $cs['points']['points'] - 4;
-
+				if($cs['points']['points'] === 0) {
+					$value = $cs['points']['points'] - 4;
+				} else if($cs['points']['points'] > 0){
+					$value = 0;
+				}
 			} else {
-				if($cs['points']['points'] > 4) {
+				if($cs['points']['points'] >= 0 && $cs['points']['points'] < 4) {
 					$value = $cs['points']['points'] + 1;
+				} else {
+					$value = $cs['points']['points'];
 				}
 			}
 
