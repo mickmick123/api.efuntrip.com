@@ -4522,12 +4522,6 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $depo = ClientEWallet::where('group_id', $group_id)->where('type', 'Deposit')->where('reason','Generating DP')->sum('amount');
 
         if(!$depo){
-            // $total = DB::table('client_transactions')
-            //               ->where('group_id',$group_id)
-            //               ->where('type', 'Deposit')
-            //               ->orWhere('type', 'Payment')
-            //               ->sum('amount');
-
             $totalDepo = DB::table('client_transactions')
                           ->where('group_id',$group_id)
                           ->where('type', 'Deposit')
@@ -4570,8 +4564,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
 
             $queryClients = ClientService::where('group_id', $group_id)->where('active', 1)->where('is_full_payment', 0)->orderBy('id')->get();
-            $totalRemaining = 0;
             $records = [];
+            $totalRemaining = 0;
             foreach($queryClients as $m){
 
                $discount =  ClientTransaction::where('client_service_id', $m->id)->where('type', 'Discount')->sum('amount');
@@ -4623,6 +4617,13 @@ public function getClientPackagesByGroup($client_id, $group_id){
                 $dp->reason = "Generating DP";
                 $dp->save();
               }
+                $response['remaining'] = $totalRemaining;
+                $response['total_payment_and_dp'] = ($totalPayment + $totalDepo);
+                $response['total_depo'] = $totalDepo;
+                $response['total_refund'] = $totalRefund;
+                $response['total_payment'] = $totalPayment;
+                $response['total_cost'] = $groupTotalCost;
+                $response['total_discount'] = $queryTotalDiscount;
             }
             else{
                 $dp = new ClientEWallet;
@@ -4633,14 +4634,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
                 $dp->reason = "Generating DP";
                 $dp->save();
             }
+
         $response['status'] = 'Success';
-        $response['remaining'] = $totalRemaining;
-        $response['total_payment_and_dp'] = ($totalPayment + $totalDepo);
-        $response['total_depo'] = $totalDepo;
-        $response['total_refund'] = $totalRefund;
-        $response['total_payment'] = $totalPayment;
-        $response['total_cost'] = $groupTotalCost;
-        $response['total_discount'] = $queryTotalDiscount;
         $response['code'] = 200;
 
         return Response::json($response);
