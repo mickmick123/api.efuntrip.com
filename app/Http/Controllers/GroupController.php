@@ -4244,7 +4244,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
      $gids = $mems->pluck('user_id');
 
 
-     $response = DB::table('users as u')->select(DB::raw('u.id, CONCAT(u.last_name, " ", u.first_name) as name, u.last_name, u.first_name, g_u.is_vice_leader, g_u.total_service_cost, g_u.id as guid, log.log_date, log.id'))
+     $response = DB::table('users as u')->select(DB::raw('u.id, CONCAT(u.last_name, " ", u.first_name) as name, u.last_name, u.first_name, g_u.is_vice_leader, g_u.total_service_cost, g_u.id as guid, log.log_date, log.id as log_id'))
                      ->leftjoin(DB::raw('(select * from group_user) as g_u'),'g_u.user_id','=','u.id')
 
                      ->leftjoin(
