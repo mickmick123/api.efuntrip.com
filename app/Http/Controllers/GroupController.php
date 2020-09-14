@@ -2241,7 +2241,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
                 $detail_cn = '已添加服务. 服务状态为 待办。';
                $log_data = array(
                     'client_service_id' => $clientService->id,
-                    'client_id' => null,
+                    'client_id' => $clientId,
                     'group_id' => $request->group_id,
                     'log_type' => 'Transaction',
                     'log_group' => 'service',
@@ -4244,17 +4244,17 @@ public function getClientPackagesByGroup($client_id, $group_id){
      $gids = $mems->pluck('user_id');
 
 
-     $response = DB::table('users as u')->select(DB::raw('u.id, CONCAT(u.last_name, " ", u.first_name) as name, u.last_name, u.first_name, g_u.is_vice_leader, g_u.total_service_cost, g_u.id as guid, log.log_date'))
+     $response = DB::table('users as u')->select(DB::raw('u.id, CONCAT(u.last_name, " ", u.first_name) as name, u.last_name, u.first_name, g_u.is_vice_leader, g_u.total_service_cost, g_u.id as guid, log.log_date, log.id'))
                      ->leftjoin(DB::raw('(select * from group_user) as g_u'),'g_u.user_id','=','u.id')
 
                      ->leftjoin(
                           DB::raw('
                               (
-                                  Select  l.created_at, l.client_id, date_format(max(l.created_at),"%Y%m%d%h%i%s") as log_date
+                                  Select  l.log_date, l.client_id, date_format(max(l.created_at),"%Y%m%d%h%i%s") as created_at, l.id
                                   from logs as l
                                   where l.client_id is not null
-                                 group by l.client_id
-                                 order by log_date desc
+                                  group by l.client_id
+                                  order by l.id desc
                               ) as log
 
                           '),
@@ -4285,7 +4285,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
                      })
 
                      ->when($sort == '', function ($q) use($sort) {
-                         return $q->orderBy('log.log_date', 'desc');
+                         return $q->orderBy('log.id', 'desc');
                      })
 
                      ->when($sort != '', function ($q) use($sort){
@@ -4589,7 +4589,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
                     $clientService->update($data); // jeff
 
                     $rson = 'Auto Distribution - '.Auth::user()->first_name.' ('.date('Y-m-d H:i:s').')<br><br>';
-                    if($payment > 0){                    
+                    if($payment > 0){
 
                         $record = [
                             'client_id' => $m->client_id,
@@ -4725,7 +4725,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
             $clientService->update($data);
 
             $rson = 'Auto Distribution - '.Auth::user()->first_name.' ('.date('Y-m-d H:i:s').')<br><br>';
-            if($payment > 0){                    
+            if($payment > 0){
 
                 $record = [
                     'client_id' => $m->client_id,
