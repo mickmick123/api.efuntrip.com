@@ -588,8 +588,13 @@ class ReportController extends Controller
 		        	$log->documents()->attach($document['id'], [
 		        		'count' => $document['count'],
 		        		'previous_on_hand' => $previousOnHand
+							]);
+							
+							$log2->documents()->attach($document['id'], [
+		        		'count' => $document['count'],
+		        		'previous_on_hand' => $previousOnHand
 		        	]);
-	            }
+						}
 	        }
 
 
