@@ -589,11 +589,17 @@ class ReportController extends Controller
 		        		'count' => $document['count'],
 		        		'previous_on_hand' => $previousOnHand
 							]);
+
+							$checkLogs2 = DB::table('document_log')->where('log_id', $log2->id)->where('document_id', $document['id'])->first();
+
+							if($checkLogs2 === null) {
+								$log2->documents()->attach($document['id'], [
+									'count' => $document['count'],
+									'previous_on_hand' => $previousOnHand
+								]);
+							}
 							
-							$log2->documents()->attach($document['id'], [
-		        		'count' => $document['count'],
-		        		'previous_on_hand' => $previousOnHand
-		        	]);
+							
 						}
 	        }
 
