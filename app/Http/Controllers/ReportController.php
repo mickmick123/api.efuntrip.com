@@ -1442,9 +1442,9 @@ class ReportController extends Controller
 				if( $onHand ) {
 					$isUnique = Document::findOrFail($document['id'])->is_unique;
 
-					if( $isUnique == 0 ) {
+					// if( $isUnique == 1 ) {
 						$onHand->increment('count', $document['count']);
-					}
+					// }
 				} else {
 					$query = OnHandDocument::create([
 						'client_id' => $user['id'],
