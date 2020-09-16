@@ -4525,20 +4525,21 @@ public function getClientPackagesByGroup($client_id, $group_id){
             $totalDepo = DB::table('client_transactions')
                           ->where('group_id',$group_id)
                           ->where('type', 'Deposit')
-                        //  ->orWhere('type', 'Payment')
+                          ->where('deleted_at', null)
                           ->sum('amount');
 
 
             $totalPayment = DB::table('client_transactions')
                         ->where('group_id',$group_id)
                         ->where('type', 'Payment')
-                      //  ->orWhere('type', 'Payment')
+                        ->where('deleted_at', null)
                         ->sum('amount');
 
 
             $totalRefund = DB::table('client_transactions')
                           ->where('group_id',$group_id)
                           ->where('type', 'Refund')
+                          ->where('deleted_at', null)
                           ->sum('amount');
 
 
@@ -4553,6 +4554,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
                   ->where('cs.type', 'Discount')
                   ->where('cs.group_id', $group_id)
                   ->where('cs.client_service_id', null)
+                  ->where('cs.deleted_at', null)
                   ->sum('cs.amount');
 
 
@@ -4564,6 +4566,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
             $groupTotalCost =   $queryTotalCost->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
 
             $totalAmount = ($totalPayment + $totalDepo + $queryTotalDiscount) - $totalRefund;
+            //55600
 
             $queryClients = ClientService::where('group_id', $group_id)->where('active', 1)
                                 ->where('is_full_payment', 0)
@@ -4685,14 +4688,14 @@ public function getClientPackagesByGroup($client_id, $group_id){
                   ->where('group_id',null)
                   ->where('client_id', $client_id)
                   ->where('type', 'Deposit')
-                //  ->orWhere('type', 'Payment')
+                  ->where('deleted_at', null)
                   ->sum('amount');
 
     $totalPayment = DB::table('client_transactions')
                 ->where('group_id',null)
                 ->where('client_id', $client_id)
                 ->where('type', 'Payment')
-              //  ->orWhere('type', 'Payment')
+                ->where('deleted_at', null)
                 ->sum('amount');
 
 
@@ -4700,6 +4703,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
                   ->where('group_id', null)
                   ->where('client_id', $client_id)
                   ->where('type', 'Refund')
+                  ->where('deleted_at', null)
                   ->sum('amount');
 
     $queryTotalDiscount = DB::table('client_transactions as cs')
@@ -4707,11 +4711,17 @@ public function getClientPackagesByGroup($client_id, $group_id){
                   ->where('cs.group_id', null)
                   ->where('cs.client_id', $client_id)
                   ->where('cs.client_service_id', null)
+                  ->where('cs.deleted_at', null)
                   ->sum('cs.amount');
 
 
     $queryTotalCost = ClientService::where('active', 1)->where('group_id', null)
-                                      ->where('client_id', $client_id)->where('status','!=','cancelled');
+                                      ->where('client_id', $client_id)
+                                      // ->where(function($q) {
+                                      //   $q->orwhere('status', 'complete')
+                                      //       ->orWhere('status', 'released');
+                                      // })
+                                      ->where('status','!=','cancelled');
 
     $groupTotalCost =   $queryTotalCost->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
 
