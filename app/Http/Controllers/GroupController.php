@@ -4568,7 +4568,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
             $queryClients = ClientService::where('group_id', $group_id)->where('active', 1)
                                 ->where('is_full_payment', 0)
                                 // ->where('status','!=','cancelled')
-                                ->where(function($q) use() {
+                                ->where(function($q) {
                                     $q->orwhere('status', 'complete')
                                         ->orWhere('status', 'released');
                                 })
@@ -4721,7 +4721,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
     $queryClients = ClientService::where('group_id', null)->where('client_id', $client_id)->where('active', 1)                  ->where('is_full_payment', 0)
                           // ->where('status','!=','cancelled')
-                          ->where(function($q) use() {
+                          ->where(function($q) {
                             $q->orwhere('status', 'complete')
                                 ->orWhere('status', 'released');
                           })
