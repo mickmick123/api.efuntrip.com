@@ -1460,129 +1460,134 @@ class ClientController extends Controller
     }
 
     public function getClientPackages($id) {
-        $onprocess = DB::table('packages as p')
-                    ->select(DB::raw('p.*,g.name as group_name, srv.latest_service'))
-                    ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','p.group_id')
-                    ->leftjoin(DB::raw('
-                    (
-                        Select date_format(max(cs.servdates),"%Y%m%d%H%i%s") as latest_service, cs.client_id, cs.tracking
-                        from( SELECT STR_TO_DATE(created_at, "%Y-%m-%d %H:%i:%s") as servdates,
-                            group_id, active,client_id,tracking
-                            FROM client_services
-                            ORDER BY servdates desc
-                        ) as cs
-                        where cs.active = 1
-                        group by cs.tracking) as srv'),
-                    'srv.tracking', '=', 'p.tracking')
-                    ->where('p.client_id', $id)
-                    ->where('p.status','on process')
-                    ->orderBy('srv.latest_service', 'desc')
-                    ->get();
+        $packs = DB::table('packages as p')->select(DB::raw('p.*,g.name as group_name'))
+            ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','p.group_id')
+            ->where('client_id', $id)
+            ->orderBy('id', 'desc')
+            ->get();
+        // $onprocess = DB::table('packages as p')
+        //             ->select(DB::raw('p.*,g.name as group_name, srv.latest_service'))
+        //             ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','p.group_id')
+        //             ->leftjoin(DB::raw('
+        //             (
+        //                 Select date_format(max(cs.servdates),"%Y%m%d%H%i%s") as latest_service, cs.client_id, cs.tracking
+        //                 from( SELECT STR_TO_DATE(created_at, "%Y-%m-%d %H:%i:%s") as servdates,
+        //                     group_id, active,client_id,tracking
+        //                     FROM client_services
+        //                     ORDER BY servdates desc
+        //                 ) as cs
+        //                 where cs.active = 1
+        //                 group by cs.tracking) as srv'),
+        //             'srv.tracking', '=', 'p.tracking')
+        //             ->where('p.client_id', $id)
+        //             ->where('p.status','on process')
+        //             ->orderBy('srv.latest_service', 'desc')
+        //             ->get();
 
-        $pending = DB::table('packages as p')
-                    ->select(DB::raw('p.*,g.name as group_name, srv.latest_service'))
-                    ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','p.group_id')
-                    ->leftjoin(DB::raw('
-                    (
-                        Select date_format(max(cs.servdates),"%Y%m%d%H%i%s") as latest_service, cs.client_id
-                        from( SELECT STR_TO_DATE(created_at, "%Y-%m-%d %H:%i:%s") as servdates,
-                            group_id, active,client_id
-                            FROM client_services
-                            ORDER BY servdates desc
-                        ) as cs
-                        where cs.active = 1
-                        group by cs.client_id) as srv'),
-                    'srv.client_id', '=', 'p.client_id')
-                    ->where('p.client_id', $id)
-                    ->where('status','pending')
-                    ->orderBy('srv.latest_service', 'desc')
-                    ->get();
+        // $pending = DB::table('packages as p')
+        //             ->select(DB::raw('p.*,g.name as group_name, srv.latest_service'))
+        //             ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','p.group_id')
+        //             ->leftjoin(DB::raw('
+        //             (
+        //                 Select date_format(max(cs.servdates),"%Y%m%d%H%i%s") as latest_service, cs.client_id
+        //                 from( SELECT STR_TO_DATE(created_at, "%Y-%m-%d %H:%i:%s") as servdates,
+        //                     group_id, active,client_id
+        //                     FROM client_services
+        //                     ORDER BY servdates desc
+        //                 ) as cs
+        //                 where cs.active = 1
+        //                 group by cs.client_id) as srv'),
+        //             'srv.client_id', '=', 'p.client_id')
+        //             ->where('p.client_id', $id)
+        //             ->where('status','pending')
+        //             ->orderBy('srv.latest_service', 'desc')
+        //             ->get();
 
-        $complete = DB::table('packages as p')
-                    ->select(DB::raw('p.*,g.name as group_name, srv.latest_service'))
-                    ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','p.group_id')
-                    ->leftjoin(DB::raw('
-                    (
-                        Select date_format(max(cs.servdates),"%Y%m%d%H%i%s") as latest_service, cs.client_id
-                        from( SELECT STR_TO_DATE(created_at, "%Y-%m-%d %H:%i:%s") as servdates,
-                            group_id, active,client_id
-                            FROM client_services
-                            ORDER BY servdates desc
-                        ) as cs
-                        where cs.active = 1
-                        group by cs.client_id) as srv'),
-                    'srv.client_id', '=', 'p.client_id')
-                    ->where('p.client_id', $id)
-                    ->where('status','complete')
-                    ->orderBy('srv.latest_service', 'desc')
-                    ->get();
+        // $complete = DB::table('packages as p')
+        //             ->select(DB::raw('p.*,g.name as group_name, srv.latest_service'))
+        //             ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','p.group_id')
+        //             ->leftjoin(DB::raw('
+        //             (
+        //                 Select date_format(max(cs.servdates),"%Y%m%d%H%i%s") as latest_service, cs.client_id
+        //                 from( SELECT STR_TO_DATE(created_at, "%Y-%m-%d %H:%i:%s") as servdates,
+        //                     group_id, active,client_id
+        //                     FROM client_services
+        //                     ORDER BY servdates desc
+        //                 ) as cs
+        //                 where cs.active = 1
+        //                 group by cs.client_id) as srv'),
+        //             'srv.client_id', '=', 'p.client_id')
+        //             ->where('p.client_id', $id)
+        //             ->where('status','complete')
+        //             ->orderBy('srv.latest_service', 'desc')
+        //             ->get();
 
-        $released = DB::table('packages as p')
-                    ->select(DB::raw('p.*,g.name as group_name, srv.latest_service'))
-                    ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','p.group_id')
-                    ->leftjoin(DB::raw('
-                    (
-                        Select date_format(max(cs.servdates),"%Y%m%d%H%i%s") as latest_service, cs.client_id
-                        from( SELECT STR_TO_DATE(created_at, "%Y-%m-%d %H:%i:%s") as servdates,
-                            group_id, active,client_id
-                            FROM client_services
-                            ORDER BY servdates desc
-                        ) as cs
-                        where cs.active = 1
-                        group by cs.client_id) as srv'),
-                    'srv.client_id', '=', 'p.client_id')
-                    ->where('p.client_id', $id)
-                    ->where('status','released')
-                    ->orderBy('srv.latest_service', 'desc')
-                    ->get();
+        // $released = DB::table('packages as p')
+        //             ->select(DB::raw('p.*,g.name as group_name, srv.latest_service'))
+        //             ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','p.group_id')
+        //             ->leftjoin(DB::raw('
+        //             (
+        //                 Select date_format(max(cs.servdates),"%Y%m%d%H%i%s") as latest_service, cs.client_id
+        //                 from( SELECT STR_TO_DATE(created_at, "%Y-%m-%d %H:%i:%s") as servdates,
+        //                     group_id, active,client_id
+        //                     FROM client_services
+        //                     ORDER BY servdates desc
+        //                 ) as cs
+        //                 where cs.active = 1
+        //                 group by cs.client_id) as srv'),
+        //             'srv.client_id', '=', 'p.client_id')
+        //             ->where('p.client_id', $id)
+        //             ->where('status','released')
+        //             ->orderBy('srv.latest_service', 'desc')
+        //             ->get();
 
-        $cancelled = DB::table('packages as p')
-                    ->select(DB::raw('p.*,g.name as group_name, srv.latest_service'))
-                    ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','p.group_id')
-                    ->leftjoin(DB::raw('
-                    (
-                        Select date_format(max(cs.servdates),"%Y%m%d%H%i%s") as latest_service, cs.client_id
-                        from( SELECT STR_TO_DATE(created_at, "%Y-%m-%d %H:%i:%s") as servdates,
-                            group_id, active,client_id
-                            FROM client_services
-                            ORDER BY servdates desc
-                        ) as cs
-                        where cs.active = 1
-                        group by cs.client_id) as srv'),
-                    'srv.client_id', '=', 'p.client_id')
-                    ->where('p.client_id', $id)
-                    ->where('status','cancelled')
-                    ->orderBy('srv.latest_service', 'desc')
-                    ->get();
+        // $cancelled = DB::table('packages as p')
+        //             ->select(DB::raw('p.*,g.name as group_name, srv.latest_service'))
+        //             ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','p.group_id')
+        //             ->leftjoin(DB::raw('
+        //             (
+        //                 Select date_format(max(cs.servdates),"%Y%m%d%H%i%s") as latest_service, cs.client_id
+        //                 from( SELECT STR_TO_DATE(created_at, "%Y-%m-%d %H:%i:%s") as servdates,
+        //                     group_id, active,client_id
+        //                     FROM client_services
+        //                     ORDER BY servdates desc
+        //                 ) as cs
+        //                 where cs.active = 1
+        //                 group by cs.client_id) as srv'),
+        //             'srv.client_id', '=', 'p.client_id')
+        //             ->where('p.client_id', $id)
+        //             ->where('status','cancelled')
+        //             ->orderBy('srv.latest_service', 'desc')
+        //             ->get();
 
-        $empty = DB::table('packages as p')
-                    ->select(DB::raw('p.*,g.name as group_name, srv.latest_service'))
-                    ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','p.group_id')
-                    ->leftjoin(DB::raw('
-                    (
-                        Select date_format(max(cs.servdates),"%Y%m%d%H%i%s") as latest_service, cs.client_id
-                        from( SELECT STR_TO_DATE(created_at, "%Y-%m-%d %H:%i:%s") as servdates,
-                            group_id, active,client_id
-                            FROM client_services
-                            ORDER BY servdates desc
-                        ) as cs
-                        where cs.active = 1
-                        group by cs.client_id) as srv'),
-                    'srv.client_id', '=', 'p.client_id')
-                    ->where('p.client_id', $id)
-                    ->where('status',null)
-                    ->orderBy('srv.latest_service', 'desc')
-                    ->get();
+        // $empty = DB::table('packages as p')
+        //             ->select(DB::raw('p.*,g.name as group_name, srv.latest_service'))
+        //             ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','p.group_id')
+        //             ->leftjoin(DB::raw('
+        //             (
+        //                 Select date_format(max(cs.servdates),"%Y%m%d%H%i%s") as latest_service, cs.client_id
+        //                 from( SELECT STR_TO_DATE(created_at, "%Y-%m-%d %H:%i:%s") as servdates,
+        //                     group_id, active,client_id
+        //                     FROM client_services
+        //                     ORDER BY servdates desc
+        //                 ) as cs
+        //                 where cs.active = 1
+        //                 group by cs.client_id) as srv'),
+        //             'srv.client_id', '=', 'p.client_id')
+        //             ->where('p.client_id', $id)
+        //             ->where('status',null)
+        //             ->orderBy('srv.latest_service', 'desc')
+        //             ->get();
 
 
-        $p1 = collect($onprocess);
-        $p2 = collect($pending);
-        $p3 = collect($complete);
-        $p4 = collect($released);
-        $p5 = collect($cancelled);
-        $p6 = collect($empty);
+        // $p1 = collect($onprocess);
+        // $p2 = collect($pending);
+        // $p3 = collect($complete);
+        // $p4 = collect($released);
+        // $p5 = collect($cancelled);
+        // $p6 = collect($empty);
 
-        $packs = (((($p1->merge($p2))->merge($p3))->merge($p4))->merge($p5))->merge($p6);
+        // $packs = (((($p1->merge($p2))->merge($p3))->merge($p4))->merge($p5))->merge($p6);
 
         foreach($packs as $p){
             $package_cost = ClientService::where('tracking', $p->tracking)
