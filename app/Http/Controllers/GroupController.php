@@ -4565,7 +4565,14 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
             $totalAmount = ($totalPayment + $totalDepo + $queryTotalDiscount) - $totalRefund;
 
-            $queryClients = ClientService::where('group_id', $group_id)->where('active', 1)->where('is_full_payment', 0)->where('status','!=','cancelled')->orderBy('id')->get();
+            $queryClients = ClientService::where('group_id', $group_id)->where('active', 1)
+                                ->where('is_full_payment', 0)
+                                // ->where('status','!=','cancelled')
+                                ->where(function($q) use() {
+                                    $q->orwhere('status', 'complete')
+                                        ->orWhere('status', 'released');
+                                })
+                                ->orderBy('id')->get();
             $records = [];
             $totalRemaining = 0;
             foreach($queryClients as $m){
@@ -4712,7 +4719,13 @@ public function getClientPackagesByGroup($client_id, $group_id){
     $totalAmount = ($totalPayment + $totalDepo + $queryTotalDiscount) - $totalRefund;
 
 
-    $queryClients = ClientService::where('group_id', null)->where('client_id', $client_id)->where('active', 1)->where('is_full_payment', 0)->where('status','!=','cancelled')->orderBy('id')->get();
+    $queryClients = ClientService::where('group_id', null)->where('client_id', $client_id)->where('active', 1)                  ->where('is_full_payment', 0)
+                          // ->where('status','!=','cancelled')
+                          ->where(function($q) use() {
+                            $q->orwhere('status', 'complete')
+                                ->orWhere('status', 'released');
+                          })
+                          ->orderBy('id')->get();
      // return 'test : '.$queryClients;
     $totalRemaining = 0;
     foreach($queryClients as $m){
