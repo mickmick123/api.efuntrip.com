@@ -1415,9 +1415,13 @@ class ClientController extends Controller
         if($tracking == 0 && strlen($tracking) == 1){
 
             $services = DB::table('client_services as cs')
-                ->select(DB::raw('cs.*,g.name as group_name, ct.amount as discount_amount,ct.reason as discount_reason, cp.reason as payment_reason, s.parent_id, s.form_id, u.arrival_date, u.first_expiration_date, u.extended_expiration_date, u.expiration_date, u.icard_issue_date, u.icard_expiration_date'))
+                ->select(DB::raw('cs.*,g.name as group_name, ct.amount as discount_amount,ct.reason as discount_reason, cp.reason as payment_reason, s.parent_id, s.form_id, u.arrival_date, u.first_expiration_date, u.extended_expiration_date, u.expiration_date, u.icard_issue_date, u.icard_expiration_date, crep.detail as cancel_reason'))
                 ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','cs.group_id')
-                // ->leftjoin(DB::raw('(select * from client_transactions) as ct'),'ct.client_service_id','=','cs.id')
+                ->leftJoin(DB::raw('(select * from client_reports) as crep'), function($join){
+                    $join->on('crep.id', '=', DB::raw("(select max(client_reports.id) from client_reports WHERE client_reports.client_service_id = cs.id)"));
+                    // $join->on('crep.client_service_id', '=', 'cs.id');
+                    $join->where('crep.detail','LIKE','%Cancelled Service%')->limit(1);
+                })
                 ->leftJoin(DB::raw('(select * from client_transactions) as ct'), function($join){
                     $join->on('ct.client_service_id', '=', 'cs.id');
                     $join->where('ct.type','=','Discount');
@@ -1434,9 +1438,13 @@ class ClientController extends Controller
         }
         else{
             $services = DB::table('client_services as cs')
-                ->select(DB::raw('cs.*,g.name as group_name, ct.amount as discount_amount,ct.reason as discount_reason,cp.reason as payment_reason, s.parent_id, s.form_id, u.arrival_date, u.first_expiration_date, u.extended_expiration_date, u.expiration_date, u.icard_issue_date, u.icard_expiration_date'))
+                ->select(DB::raw('cs.*,g.name as group_name, ct.amount as discount_amount,ct.reason as discount_reason,cp.reason as payment_reason, s.parent_id, s.form_id, u.arrival_date, u.first_expiration_date, u.extended_expiration_date, u.expiration_date, u.icard_issue_date, u.icard_expiration_date, crep.detail as cancel_reason'))
                 ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','cs.group_id')
-                // ->leftjoin(DB::raw('(select * from client_transactions) as ct'),'ct.client_service_id','=','cs.id')
+                ->leftJoin(DB::raw('(select * from client_reports) as crep'), function($join){
+                    $join->on('crep.id', '=', DB::raw("(select max(client_reports.id) from client_reports WHERE client_reports.client_service_id = cs.id)"));
+                    // $join->on('crep.client_service_id', '=', 'cs.id');
+                    $join->where('crep.detail','LIKE','%Cancelled Service%')->limit(1);
+                })
                 ->leftJoin(DB::raw('(select * from client_transactions) as ct'), function($join){
                     $join->on('ct.client_service_id', '=', 'cs.id');
                     $join->where('ct.type','=','Discount');
