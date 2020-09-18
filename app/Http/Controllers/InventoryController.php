@@ -625,39 +625,6 @@ class InventoryController extends Controller
         }
     }
 
-    public function getCategories($co_id, $categoryIds, $nFilter){
-        if($co_id>0){
-
-            if(count($categoryIds)>0){
-                $category = DB::table('inventory_parent_category AS pc')
-                    ->leftJoin('company AS com', 'pc.company_id', '=', 'com.company_id')
-                    ->leftJoin('inventory_category AS c', 'pc.category_id', '=', 'c.category_id')
-                    ->where('pc.company_id', '=', $co_id)
-                    ->whereIn("pc.parent_id", $categoryIds)
-                    ->orderBy('c.name')
-                    ->get();
-            }
-            foreach ($category as $d) {
-                $d->isCompany = false;
-            }
-        }else{
-            if(count($categoryIds)>0){
-                $category = DB::table('inventory_parent_category AS pc')
-                    ->leftJoin('company AS com', 'pc.company_id', '=', 'com.company_id')
-                    ->leftJoin('inventory_category AS c', 'pc.category_id', '=', 'c.category_id')
-                    ->whereIn("pc.parent_id", $categoryIds)
-                    ->orderBy('c.name')
-                    ->get();
-            }else {
-                $category = Company::all();
-            }
-            foreach ($category as $d) {
-                $d->isCompany = true;
-            }
-        }
-        return $category;
-    }
-
     public function list(Request $request, $id)
     {
         $name = $request->input("q", "");
