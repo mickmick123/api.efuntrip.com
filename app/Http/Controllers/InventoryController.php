@@ -614,15 +614,34 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
-    public function getCategoryIds($where,$inArray=[]){
+    public function getCategoryIds($ca_id,$where,$inArray=[]){
 //        if(count($inArray)>0 && count($where)>0){
 //            return InventoryParentCategory::where("parent_id", $ca_id)->whereIn("category_id", $inArray)->pluck('category_id');
 //        }else
-        if(count($inArray)>0) {
+        if(count($inArray)>0&&$ca_id==0) {
             return InventoryCategory::whereIn("category_id", $inArray)->pluck('category_id');
         }else{
             return InventoryCategory::where($where)->pluck('category_id');
         }
+    }
+
+    public function getParents($category){
+        foreach ($category as $d) {
+            $nParent = InventoryParentCategory::where('inventory_parent_category.category_id',$d->category_id)
+                ->where('inventory_parent_category.company_id',$d->company_id)
+                ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')->get();
+            foreach($nParent as $np){
+                $tree = $np->parents->reverse();
+                $j=0;
+                foreach($tree as $t){
+                    $d->x[$j] = $t->name;
+                    $d->path = implode(" / ", $d->x);
+                    $j++;
+                }
+            }
+            $d->isCompany = false;
+        }
+        return $category;
     }
 
     public function list(Request $request, $id)
@@ -655,7 +674,7 @@ class InventoryController extends Controller
             $nameFilter[] = ["name", $name];
             $category_ids1 = InventoryCategory::where($nameFilter)->pluck('category_id');
         }
-        $category_ids = $this->getCategoryIds($catFilter, $category_ids1);
+        $category_ids = $this->getCategoryIds($ca_id, $catFilter, $category_ids1);
 
         $filter = array();
         $filter2 = array();
@@ -715,12 +734,14 @@ class InventoryController extends Controller
             $arrFilter[] = ['pc.parent_id', '=', $ca_id];
         }
         $categoryIds = array();
-        if($name !==""){
-            $nameFilter[] = ["name", $name];
-            $categoryIds = InventoryCategory::where($nameFilter)->pluck('category_id');
+        $nFilter = array();
+        if($name !=="" && $ca_id == 0){
+            $nFilter[] = ["name", $name];
+            $categoryIds = InventoryCategory::where($nFilter)->pluck('category_id');
 
             $arrFilter[] = ['c.name','LIKE', $name];
         }
+
         if($co_id > 0) {
             if(count($categoryIds)>0){
                 $category = DB::table('inventory_parent_category AS pc')
@@ -736,26 +757,23 @@ class InventoryController extends Controller
                     ->leftJoin('inventory_category AS c', 'pc.category_id', '=', 'c.category_id')
                     ->where('pc.company_id', '=', $co_id)
                     ->where($arrFilter)
-                    ->orwhereIn("pc.parent_id", $categoryIds)
                     ->orderBy('c.name')
                     ->get();
             }
-            foreach ($category as $d) {
-                $d->isCompany = false;
-            }
+            $this->getParents($category);
         }else{
-            if(count($categoryIds)>0){
+            if($name != "") {
                 $category = DB::table('inventory_parent_category AS pc')
-                    ->leftJoin('company AS com', 'pc.company_id', '=', 'com.company_id')
+                    ->leftJoin('company AS co', 'pc.company_id', '=', 'co.company_id')
                     ->leftJoin('inventory_category AS c', 'pc.category_id', '=', 'c.category_id')
-                    ->whereIn("pc.parent_id", $categoryIds)
-                    ->orderBy('c.name')
+                    ->where("c.name", $name)
                     ->get();
-            }else {
+                $this->getParents($category);
+            }else{
                 $category = Company::all();
-            }
-            foreach ($category as $d) {
-                $d->isCompany = true;
+                foreach ($category as $d) {
+                    $d->isCompany = true;
+                }
             }
         }
 
