@@ -3471,6 +3471,26 @@ public function getClientPackagesByGroup($client_id, $group_id){
              return (($a["sdate"] > $b["sdate"]) ? -1 : 1);
     });
 
+
+    // $result2 = collect($result2)->sortByDesc('sdate')->reverse()->toArray();
+    //
+    // $ctr = 0;
+    // foreach($result2 as $r){
+    //     $j = 0;
+    //     $members = [];
+    //     $r['members'] = collect($r['members'])->reverse()->toArray();
+    //     foreach($r['members'] as $member){
+    //         $member['services'] = collect($member['services'])->sortBy('total_service_cost')->toArray();
+    //         $members[$j] = $member;
+    //         $j++;
+    //     }
+    //     $result2[$ctr]['members'] = $members;
+    //     $ctr++;
+    // }
+    // $result2 = collect($result2)->reverse()->toArray();
+
+
+
     $ctr = 0;
     $totalBal = 0;
     $totalPre = 0;
@@ -3587,7 +3607,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $lang['_discount'] = '折扣';
     }
 
-    $result2 = collect($result2)->sortByDesc('sdate')->reverse()->toArray();
+  //  $result2 = collect($result2)->sortByDesc('sdate')->reverse()->toArray();
 
     $ctr = 0;
     foreach($result2 as $r){
@@ -3602,7 +3622,9 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $result2[$ctr]['members'] = $members;
         $ctr++;
     }
+
     $result2 = collect($result2)->reverse()->toArray();
+
 
     return [
         'services' => $result2,
