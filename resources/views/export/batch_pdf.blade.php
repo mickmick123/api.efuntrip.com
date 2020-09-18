@@ -59,7 +59,8 @@
     @foreach($services as $service)
         <tr><td colspan="8"/></tr>
         <tr >
-            <td colspan="8" style="text-align:left; background-color:#d5d0b5"><b>{{ $service['service_date'] }}</b></td>
+            <td colspan="1" style="text-align:left; background-color:#d5d0b5"><b>{{ $service['service_date'] }}</b></td>
+            <td colspan="7" style="text-align:left; background-color:#d5d0b5"><b>{{ $service['total_service_cost'] }}</b></td>
         </tr>
           @foreach($service['members'] as $member)
           <tr>
