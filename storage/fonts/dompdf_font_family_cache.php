@@ -78,7 +78,7 @@
     'normal' => $rootDir . '/lib/fonts/DejaVuSerif',
   ),
   'simhei' => array(
-    'normal' => $fontDir . '/simhei-normal_aac78abfb98487e6ff1306830397fd7e',
+    'normal' => $fontDir . '/simhei-normal_140d14d93ca8f00592e80f7706a57a38',
     'bold' => $fontDir . '/simhei',
     'italic' => $fontDir . '/simhei',
     'bold_italic' => $fontDir . '/simhei',

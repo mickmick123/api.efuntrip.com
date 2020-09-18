@@ -615,7 +615,7 @@ class LogController extends Controller
             $groupData[] = $group->user_id;
         }
 
-        $documentLogs = DB::table('logs')->whereIn('client_id', $groupData)->where('log_type', 'Document')->select('log_date')->groupBy('log_date')->get();
+        $documentLogs = DB::table('logs')->whereIn('client_id', $groupData)->where('log_type', 'Document')->select('log_date', 'id')->groupBy('log_date')->get();
 
         // $documentLogs = collect($documentLogs)->sortByDesc('log_date')->toArray();
 
@@ -736,19 +736,22 @@ class LogController extends Controller
                 ->orderBy('id', 'desc')
                 ->first();
 
-            $documentLogs = DocumentLog::where('log_id', $logs->id)->get();
+            if($logs !== null) {
+                $documentLogs = DocumentLog::where('log_id', $logs->id)->get();
 
-            $onHandData = [];
-            foreach($documentLogs as $dl) {
-                $onHandData = OnHandDocument::where('client_id',$client_id)->where('document_id', $dl->document_id)->orderBy('id', 'DESC')->first();
-                $onHandData->count -= $dl->count;
-                $onHandData->save();
+                $onHandData = [];
+                foreach($documentLogs as $dl) {
+                    $onHandData = OnHandDocument::where('client_id',$client_id)->where('document_id', $dl->document_id)->orderBy('id', 'DESC')->first();
+                    $onHandData->count = $dl->previous_on_hand;
+                    $onHandData->save();
+                }
+
+                $logs->delete();
+
+                Log::where('id', $logs->id)
+                    ->delete();
             }
 
-            $logs->delete();
-
-            Log::where('id', $logs->id)
-                ->delete();
         }
     
         $response['status'] = 'Success';
