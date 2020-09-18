@@ -12,6 +12,7 @@ use App\Document;
 use App\Service;
 use App\ClientService;
 
+use App\DocumentLog;
 use App\OnHandDocument;
 
 use App\ClientReport;
@@ -576,7 +577,7 @@ class LogController extends Controller
               ];
 
 
-       }
+        }
 
         $response['status'] = 'Success';
         $response['data'] = $data;
@@ -631,27 +632,6 @@ class LogController extends Controller
                     ->where('label', 'not like', "%Prepare%")
                     ->orderBy('id', 'DESC')
                     ->get();
-            
-            // $logs = collect($logs)->sortByDesc('id')->toArray();
-
-            
-
-
-            // foreach($logs as $log) {
-                // $clients = DB::table('logs')
-                //         ->whereIn('client_id', $groupData)
-                //         ->leftJoin('users', 'logs.client_id', '=', 'users.id')
-                //         ->where('log_date', $docLog->log_date)
-                //         ->where('log_type', 'Document')
-                //         ->where('label', $log->label)
-                //         // ->where('logs.created_at', $log->created_at)
-                //         ->select('users.id', 'users.first_name', 'users.last_name')
-                //         ->orderBy('logs.id', 'DESC')
-                //         ->get();
-
-                // $log->clients = $clients;
-            // }
-
                 
                 foreach($logs as $log) {
                     $data = [];
@@ -698,120 +678,7 @@ class LogController extends Controller
 
             $docLog->logs = $logs;
             
-            // $clients = DB::table('logs')
-            //         ->leftJoin('users', 'logs.client_id', '=', 'users.id')
-            //         ->where('log_type', 'Document')
-            //         ->where('log_date', $docLog->log_date)
-            //         ->whereIn('client_id', $groupData)
-            //         ->select('users.id', 'users.first_name', 'users.last_name')
-            //         ->orderBy('id', 'DESC')
-            //         ->groupBy('client_id')
-            //         ->get();
-
-            // foreach($clients as $client) {
-            //     $dl = DB::table('logs')
-            //         ->where('log_type', 'Document')
-            //         ->where('log_date', $docLog->log_date)
-            //         ->where('client_id', $client->id)
-            //         ->where('client_service_id',null)
-            //         ->where('label', 'not like', "%Documents Needed%")
-            //         ->where('label', 'not like', "%Prepare%")
-            //         ->orderBy('id', 'DESC')
-            //         ->get();
-
-            //     $data = [];
-            //     foreach($dl as $log) {
-            //         $payload = [];
-
-            //         $payload['documents'] = DB::table('documents as doc')
-            //             ->select(DB::raw('doc_log.pending_count, doc_log.count, doc_log.previous_on_hand, doc.title, doc.is_unique, doc.title_cn, doc.shorthand_name, doc_log.document_id'))
-            //             ->join('document_log as doc_log', 'doc_log.document_id', 'doc.id')
-            //             ->where('doc_log.log_id', $log->id)
-            //             ->get();
-    
-            //         $payload['processor']  = DB::table('users')
-            //             ->select(DB::raw('CONCAT(first_name, " ", last_name) as name'))
-            //             ->where('id', $log->processor_id)
-            //             ->get();
-    
-            //         $payload['procedure']  = DB::table('service_procedures')
-            //                     ->select(DB::raw('documents_to_display, documents_mode, is_suggested_count'))
-            //                     ->where('id', $log->service_procedure_id)
-            //                     ->get();
-    
-            //         $displayDate = Carbon::parse($log->log_date)->format('F d, Y');
-    
-    
-            //         $data[] = [
-            //                 'display_date' => $displayDate,
-            //                 'info' => $log,
-            //                 'document_logs' =>$payload,
-            //         ];
-            //     }
-
-            //     $client->logs = $data;
-            // }
-
-            // $docLog->clients = $clients;
         }
-
-        // foreach($groups as $group) {
-        //     $client_id = $group->user_id;
-
-        //     $client = User::where('id', $client_id)->select('first_name', 'last_name')->first();
-
-        //     $documentLogs = DB::table('logs')->where('client_id', $client_id)
-        //     ->select(DB::raw('id, label, log_type, processor_id, service_procedure_id, detail, detail_cn, label, amount, log_type, log_date, created_at'))
-        //     ->where('log_type', 'Document')
-        //     ->where('client_service_id',null)
-        //     ->where('label', 'not like', "%Documents Needed%")
-        //     ->where('label', 'not like', "%Prepare%")
-        //     ->orderBy('id', 'desc')
-        //     ->get();
-
-        //     $onHandDocs = OnHandDocument::where('client_id', $client_id)
-        //                 ->leftJoin('documents', 'on_hand_documents.document_id', '=', 'documents.id')
-        //                 ->select('on_hand_documents.*', 'documents.title', 'documents.title_cn')
-        //                 ->orderBy('on_hand_documents.id', 'DESC')
-        //                 ->get();
-
-        //     $data = [];
-        //     foreach( $documentLogs as $log ) {
-
-        //         $payload = [];
-
-        //         $payload['documents'] = DB::table('documents as doc')
-        //             ->select(DB::raw('doc_log.pending_count, doc_log.count, doc_log.previous_on_hand, doc.title, doc.is_unique, doc.title_cn, doc.shorthand_name, doc_log.document_id'))
-        //             ->join('document_log as doc_log', 'doc_log.document_id', 'doc.id')
-        //             ->where('doc_log.log_id', $log->id)
-        //             ->get();
-
-        //         $payload['processor']  = DB::table('users')
-        //             ->select(DB::raw('CONCAT(first_name, " ", last_name) as name'))
-        //             ->where('id', $log->processor_id)
-        //             ->get();
-
-        //         $payload['procedure']  = DB::table('service_procedures')
-        //                     ->select(DB::raw('documents_to_display, documents_mode, is_suggested_count'))
-        //                     ->where('id', $log->service_procedure_id)
-        //                     ->get();
-
-        //         $displayDate = Carbon::parse($log->log_date)->format('F d, Y');
-
-
-        //         $data[] = [
-        //                 'display_date' => $displayDate,
-        //                 'info' => $log,
-        //                 'document_logs' =>$payload,
-        //         ];
-
-
-        //     }
-
-        //     $group->client = $client;
-        //     $group->onHandDocuments = $onHandDocs;
-        //     $group->logs = $data;
-        // }
         
 
         $response['status'] = 'Success';
@@ -841,6 +708,50 @@ class LogController extends Controller
 
         $response['status'] = 'Success';
         $response['data'] = $groups;
+        $response['code'] = 200;
+
+        return Response::json($response);
+    }
+
+    public function deleteLatestDocLog(Request $request) {
+        $client_ids = [];
+
+        if($request->group_id !== null) {
+            $groups = GroupUser::where('group_id', $request->group_id)->select('user_id')->get();
+
+            foreach($groups as $group) {
+                $client_ids[] = $group->user_id;
+            }
+        } else {
+            $client_ids[] = $request->client_id;
+        }
+
+        foreach($client_ids as $client_id) {
+            $logs = Log::where('client_id', $client_id)
+                ->select(DB::raw('id, label, log_type, processor_id, service_procedure_id, detail, detail_cn, label, amount, log_type, log_date, created_at'))
+                ->where('log_type', 'Document')
+                ->where('client_service_id',null)
+                ->where('label', 'not like', "%Documents Needed%")
+                ->where('label', 'not like', "%Prepare%")
+                ->orderBy('id', 'desc')
+                ->first();
+
+            $documentLogs = DocumentLog::where('log_id', $logs->id)->get();
+
+            $onHandData = [];
+            foreach($documentLogs as $dl) {
+                $onHandData = OnHandDocument::where('client_id',$client_id)->where('document_id', $dl->document_id)->orderBy('id', 'DESC')->first();
+                $onHandData->count -= $dl->count;
+                $onHandData->save();
+            }
+
+            $logs->delete();
+
+            Log::where('id', $logs->id)
+                ->delete();
+        }
+    
+        $response['status'] = 'Success';
         $response['code'] = 200;
 
         return Response::json($response);

@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Http\Request;
-Route::get('/get-group-document-logs/{client_id}', 'LogController@getGroupDocumentLogs');
 Route::middleware('auth:api')->group(function() {
 
 	Route::get('/get-transaction-logs/{client_id}/{group_id}', 'LogController@getTransactionLogs');
@@ -9,7 +8,8 @@ Route::middleware('auth:api')->group(function() {
 	Route::get('/get-commission-logs/{client_id}/{group_id}', 'LogController@getCommissionLogs');
 	Route::get('/get-action-logs/{client_id}/{group_id}', 'LogController@getActionLogs');
 	Route::get('/get-document-logs/{client_id}', 'LogController@getDocumentLogs');
-	// Route::get('/get-group-document-logs/{client_id}', 'LogController@getGroupDocumentLogs');
+	Route::get('/get-group-document-logs/{client_id}', 'LogController@getGroupDocumentLogs');
+	Route::post('/delete-latest-document-log', 'LogController@deleteLatestDocLog');
 	Route::get('/get-group-documents-onhand/{client_id}', 'LogController@getGroupDocsOnHand');
 	Route::get('/get-all-logs/{client_service_id}', 'LogController@getAllLogs');
 	Route::get('/get-transaction-history/{client_id}/{group_id}', 'LogController@getTransactionHistory');
