@@ -61,21 +61,22 @@
         <tr >
             <td colspan="1" style="text-align:left; background-color:#d5d0b5"><b>{{ $service['service_date'] }}</b></td>
             <td colspan="7" style="text-align:left; background-color:#d5d0b5"><b>{{ $lang['_total_service_cost'] }} : {{ $service['total_service_cost'] }}</b></td>
+
         </tr>
           @foreach($service['members'] as $member)
           <tr>
                 <td colspan="8" class="borderBottom" style="text-align:left"><b >{{ $member['name'] }}</b></td>
           </tr>
 
-             @foreach($member['services'] as $service)
+             @foreach($member['services'] as $s)
               <tr>
-                    <td  colspan="2" class="borderBottom" style="text-align:right; border-right: 1px solid #e0e0e0;">{{ $service['tracking'] }} &nbsp; &nbsp;</td>
-                    <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">{{ $service['status'] }}</td>
-                    <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;"><b>{{ $service['detail'] }}</b></td>
-                    <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;"><b>{{ ($service['detail'] === "Deposit" || $service['detail'] === "Payment") ? "+".$service['total_charge']  : "-" .$service['total_charge']  }}</b></td>
-                    <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">{{ $service['discount']  }}</td>
-                    <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">-{{ $service['service_cost']  }}</td>
-                    <td class="borderBottom" style="text-align:center">{{ $service['total_service_cost'] }}</td>
+                    <td  colspan="2" class="borderBottom" style="text-align:right; border-right: 1px solid #e0e0e0;">{{ $s['tracking'] }} &nbsp; &nbsp;</td>
+                    <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">{{ $s['status'] }}</td>
+                    <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;"><b>{{ $s['detail'] }}</b></td>
+                    <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;"><b>{{ ($s['detail'] === "Deposit" || $s['detail'] === "Payment") ? "+".$s['total_charge']  : "-" .$s['total_charge']  }}</b></td>
+                    <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">{{ $s['discount']  }}</td>
+                    <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">-{{ $s['service_cost']  }}</td>
+                    <td class="borderBottom" style="text-align:center">{{ $s['total_service_cost'] }}</td>
               </tr>
               @endforeach
 

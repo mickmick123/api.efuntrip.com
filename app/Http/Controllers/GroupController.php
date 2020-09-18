@@ -3487,8 +3487,11 @@ public function getClientPackagesByGroup($client_id, $group_id){
               if($s["active"] == -1){
                  $totalBal = ((float) $totalBal) - ((float) $s["total_charge"]);
               }else{
-                if($s["active"] == 1 && (strtolower($s['status']) == 'complete' || strtolower($s['status']) == 'released') ){
-                  $totalBal = ((float) $totalBal) - ((float) $s["total_charge"] - (float) $s["discount"]);
+                // if($s["active"] == 1 && (strtolower($s['status']) == 'complete' || strtolower($s['status']) == 'released') ){
+                //   $totalBal = ((float) $totalBal) - ((float) $s["total_charge"] - (float) $s["discount"]);
+                // }
+                if($s["active"] == 1 && strtolower($s['status']) == 'complete' || strtolower($s['status']) == 'released'){
+                  $totalBal = ((float) $totalBal) - ((float) $s["total_charge"]);
                 }
               }
 
@@ -3499,8 +3502,6 @@ public function getClientPackagesByGroup($client_id, $group_id){
             }else{
                 $s['status'] = $this->statusChinese($s['status']);
             }
-
-            $totalPre = $totalBal;
 
             $services[$i] = $s;
             $i++;
