@@ -3487,11 +3487,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
               if($s["active"] == -1){
                  $totalBal = ((float) $totalBal) - ((float) $s["total_charge"]);
               }else{
-                // if($s["active"] == 1 && (strtolower($s['status']) == 'complete' || strtolower($s['status']) == 'released') ){
-                //   $totalBal = ((float) $totalBal) - ((float) $s["total_charge"] - (float) $s["discount"]);
-                // }
-                if($s["active"] == 1 && strtolower($s['status']) == 'complete' || strtolower($s['status']) == 'released'){
-                  $totalBal = ((float) $totalBal) - ((float) $s["total_charge"]);
+                if($s["active"] == 1 && (strtolower($s['status']) == 'complete' || strtolower($s['status']) == 'released') ){
+                  $totalBal = ((float) $totalBal) - ((float) $s["total_charge"] - (float) $s["discount"]);
                 }
               }
 
@@ -3502,6 +3499,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
             }else{
                 $s['status'] = $this->statusChinese($s['status']);
             }
+
+            $totalPre = $totalBal;
 
             $services[$i] = $s;
             $i++;
@@ -3588,24 +3587,6 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $lang['_discount'] = '折扣';
     }
 
-    // $result2 = collect($result2)->sortByDesc('sdate')->toArray();
-    //
-    // $ctr = 0;
-    // foreach($result2 as $r){
-    //     $j = 0;
-    //     $members = [];
-    //     $r['members'] = collect($r['members'])->reverse()->toArray();
-    //     foreach($r['members'] as $member){
-    //         $member['services'] = collect($member['services'])->sortBy('total_service_cost')->toArray();
-    //         $members[$j] = $member;
-    //         $j++;
-    //     }
-    //     $result2[$ctr]['members'] = $members;
-    //     $ctr++;
-    // }
-
-    $result2 = collect($response)->sortBy('sdate')->reverse()->toArray();
-    //$result2 = collect($result2)->reverse()->toArray();
 
     return [
         'services' => $result2,
@@ -4172,7 +4153,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
                  $tempTotal +=$sub;
 
-                 $cs->total_service_cost = 0; //here
+                 $cs->total_service_cost = 110; //here
+
                  $cs->total_charge = ($cs->active == 0 || (strtolower($cs->status) !== 'complete' && strtolower($cs->status) !== 'released')) ? 0 : (($cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent));
                  $cs->service_cost =  ($cs->active == 0 || (strtolower($cs->status) !== 'complete' && strtolower($cs->status) !== 'released')) ? 0 : (($cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent)) - $cs->discount;
                  $clientServices[$tmpCtr] = $cs;
