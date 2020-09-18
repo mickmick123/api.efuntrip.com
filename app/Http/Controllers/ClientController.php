@@ -1693,7 +1693,7 @@ class ClientController extends Controller
               $sdetail = $service->detail;
               if($request->services[$i] === 454){
                   $month = $request->month;
-                  $sdetail = $service->detail.' '.$month.' months.';
+                  $sdetail = $service->detail.' '.intval($month).' months.';
               }
 
                 $cs = ClientService::create([
