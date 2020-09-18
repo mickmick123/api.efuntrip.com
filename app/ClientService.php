@@ -13,10 +13,10 @@ use App\Group;
 
 class ClientService extends Model
 {
-    
+
     protected $table = 'client_services';
 
-    protected $fillable = ['client_id', 'group_id', 'service_id', 'detail', 'cost', 'charge', 'tip', 'com_client', 'com_agent', 'client_com_id', 'agent_com_id', 'status', 'remarks', 'tracking', 'active', 'extend', 'checked'];
+    protected $fillable = ['client_id', 'group_id', 'service_id', 'detail', 'cost', 'charge', 'month', 'tip', 'com_client', 'com_agent', 'client_com_id', 'agent_com_id', 'status', 'remarks', 'tracking', 'active', 'extend', 'checked'];
 
     public static function boot() {
         parent::boot();
@@ -47,7 +47,7 @@ class ClientService extends Model
         else{
             $collectable = app(GroupController::class)->getGroupTotalCollectables($groupId);
             $balance = app(GroupController::class)->getGroupTotalBalance($groupId);
-            
+
             $collectable = ($collectable < 0 ? $collectable : 0);
             Group::where('id', $groupId)->update([
                 'balance' => $balance,

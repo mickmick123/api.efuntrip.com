@@ -1689,6 +1689,10 @@ class ClientController extends Controller
               $scharge = ($scharge > 0 ? $scharge : $service->charge);
               $scost = ($scost > 0 ? $scost : $service->cost);
               $stip = ($stip > 0 ? $stip : $service->tip);
+              $month = 0;
+              if($request->services[$i] === 454){
+                  $month = $request->month;
+              }
 
                 $cs = ClientService::create([
                     'client_id' => $request->client_id,
@@ -1696,6 +1700,7 @@ class ClientController extends Controller
                     'detail' => $service->detail,
                     'cost' => $scost,
                     'charge' => $scharge,
+                    'month' => $month,
                     'tip' => $stip,
                     'tracking' => $request->tracking,
                     'remarks' => $remarks,
