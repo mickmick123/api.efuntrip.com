@@ -1728,7 +1728,7 @@ class ClientController extends Controller
                 $totalAmount = $cs->cost + $cs->tip + $cs->charge;
                 $detail_cn = ($service->detail_cn!='' ? $service->detail_cn : $service->detail);
 
-                $detail = 'Added service "'.$service->detail.'", Service status is pending.';
+                $detail = 'Added service "'.$sdetail.'", Service status is pending.';
                 $detail_cn = '已添加服务 "'.$detail_cn.'" 服务状态为 待办。';
                 $log_data = array(
                     'client_service_id' => $cs->id,
@@ -1736,7 +1736,7 @@ class ClientController extends Controller
                     'group_id' => $cs->group_id,
                     'log_type' => 'Transaction',
                     'log_group' => 'service',
-                    'detail'=> $detail,
+                    'detail'=> $sdetail,
                     'detail_cn'=> $detail_cn,
                     'amount'=> 0,
                 );
