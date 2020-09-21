@@ -627,6 +627,7 @@ class InventoryController extends Controller
 
     public function getParents($category){
         foreach ($category as $d) {
+            $d->name = $d->name.": ".$d->category_id;
             $nParent = InventoryParentCategory::where('inventory_parent_category.category_id',$d->category_id)
                 ->where('inventory_parent_category.company_id',$d->company_id)
                 ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')->get();
@@ -662,16 +663,17 @@ class InventoryController extends Controller
             $sort_order = $x[1];
         }
 
-        $nFilter = array();
+        $nFilter1 = array();
+        $nFilter2 = array();
         if ($ca_id != 0)
         {
-            $nFilter[] = ["category_id", $ca_id];
+            $nFilter1[] = ["category_id", $ca_id];
         }
-        if ($name != "" && $ca_id == 0)
+        if ($name != "" && $ca_id ==0)
         {
-            $nFilter[] = ["name", $name];
+            $nFilter2[] = ["name", $name];
         }
-        $category_ids =  InventoryCategory::where($nFilter)->pluck('category_id');
+        $category_ids =  InventoryCategory::where($nFilter1)->orwhere($nFilter2)->pluck('category_id');
 
         $filter = array();
         if ($co_id != 0)
@@ -691,13 +693,6 @@ class InventoryController extends Controller
                 $filter1[] = ["inventory.description", "LIKE", "%" . $name . "%"];
             }
         }
-        $sql = Inventory::where($filter1)->pluck('category_id')->toArray();
-        if(count($sql)==0){
-            $filter1 = array();
-        }
-        if($ca_id != 0){
-            $sql = array();
-        }
 
         $cats = InventoryParentCategory::whereIn('category_id', $category_ids)->get();
 
@@ -705,12 +700,37 @@ class InventoryController extends Controller
         foreach($cats as $c){
             $items[] = InventoryParentCategory::where('category_id', $c->category_id)->where('company_id', $c->company_id)->first()->getAllChildren()->pluck('category_id');
         }
-
         $items1 = [];
         foreach($items as $i){
             foreach($i as $j){
                 $items1[] = $j;
             }
+        }
+
+        $filter2 = array();
+        $filter3 = array();
+        $filter4 = array();
+        $filter5 = array();
+        if($name !="") {
+            if(is_numeric($name)) {
+                $filter2[] = ["inventory.inventory_id", "LIKE", "%" . $name . "%"];
+            }
+            if($name=="Property"||$name=="Consumables") {
+                $filter3[] = ["inventory.type", $name];
+            }
+            if(!is_numeric($name)) {
+                $filter4[] = ["inventory.name", "LIKE", "%".$name."%"];
+                $filter5[] = ["inventory.description", "LIKE", "%" . $name . "%"];
+            }
+        }
+
+        $sql = Inventory::where($filter)->orwhere($filter2)->orwhere($filter3)->orwhere($filter4)->orwhere($filter5)->wherein("category_id", $items1)->pluck('category_id')->toArray();
+//        return Response::json($sql);
+        if(count($sql)==0){
+            $filter1 = array();
+        }
+        if($name == ""){
+            $sql = array();
         }
 
         $items2 = array_merge(array($ca_id), $items1, $sql);
@@ -725,11 +745,12 @@ class InventoryController extends Controller
         if (empty($page_obj)) {
             return array();
         }
+
         $count = DB::table('inventory')
-            ->where($filter)
             ->where($filter1)
+            ->whereIn("category_id", $item_found)
             ->where("status", 1)
-            ->whereIn("category_id", $item_found)->count();
+            ->where($filter)->count();
 
         $arrFilter = array();
         if($ca_id !== 0 || $name == ""){
@@ -816,10 +837,10 @@ class InventoryController extends Controller
             ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
             ->leftJoin("inventory_parent_unit as pu", "inventory.inventory_id", "pu.inv_id")
             ->leftJoin("inventory_unit as u", "pu.unit_id", "u.unit_id")
-            ->where($filter)
             ->where($filter1)
             ->whereIn("category_id", $item_found)
             ->where("status", 1)
+            ->where($filter)
             ->groupBy("inventory_id")
             ->orderBy($sort_field,$sort_order)
             ->limit($limit)->offset(($page - 1) * $limit)->get()->toArray();
