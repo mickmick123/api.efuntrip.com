@@ -614,20 +614,9 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
-    public function getCategoryIds($ca_id,$where,$inArray=[]){
-//        if(count($inArray)>0 && count($where)>0){
-//            return InventoryParentCategory::where("parent_id", $ca_id)->whereIn("category_id", $inArray)->pluck('category_id');
-//        }else
-        if(count($inArray)>0&&$ca_id==0) {
-            return InventoryCategory::whereIn("category_id", $inArray)->pluck('category_id');
-        }else{
-            return InventoryCategory::where($where)->pluck('category_id');
-        }
-    }
-
     public function getParents($category){
         foreach ($category as $d) {
-            $d->name = $d->name.": ".$d->category_id;
+            //$d->name = $d->name.": ".$d->category_id;
             $nParent = InventoryParentCategory::where('inventory_parent_category.category_id',$d->category_id)
                 ->where('inventory_parent_category.company_id',$d->company_id)
                 ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')->get();
