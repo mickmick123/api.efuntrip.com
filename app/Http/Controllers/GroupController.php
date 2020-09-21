@@ -2216,13 +2216,20 @@ public function getClientPackagesByGroup($client_id, $group_id){
               $scost = ($scost > 0 ? $scost : $service->cost);
               $stip = ($stip > 0 ? $stip : $service->tip);
 
+              $month = 0;
+              $sdetail = $service->detail;
+              if($serviceId === 454){
+                  $month = $request->month[$i];
+                  $sdetail = $service->detail.' '.intval($month).' months.';
+              }
 
               $clientService = ClientService::create([
                   'client_id' => $clientId,
                   'service_id' => $serviceId,
-                  'detail' => $service->detail,
+                  'detail' => $sdetail,
                   'cost' => $scost,
                   'charge' => $scharge,
+                  'month' => $month,
                   'tip' => $stip,
                   'status' => $service_status,
                   'com_client' => $com_client,
