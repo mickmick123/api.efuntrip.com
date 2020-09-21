@@ -644,7 +644,7 @@ class InventoryController extends Controller
         return $category;
     }
 
-    public function list(Request $request, $id)
+    public function list(Request $request)
     {
         $name = $request->input("q", "");
         $co_id = intval($request->input("company_id", 0));
@@ -662,37 +662,41 @@ class InventoryController extends Controller
             $sort_order = $x[1];
         }
 
-        $catFilter = array();
-        if ($ca_id != "")
+        $nFilter = array();
+        if ($ca_id != 0)
         {
-            $catFilter[] = ["category_id", $ca_id];
+            $nFilter[] = ["category_id", $ca_id];
         }
-        $nameFilter = array();
-        $category_ids1 = [];
-        if ($name != "")
+        if ($name != "" && $ca_id == 0)
         {
-            $nameFilter[] = ["name", $name];
-            $category_ids1 = InventoryCategory::where($nameFilter)->pluck('category_id');
+            $nFilter[] = ["name", $name];
         }
-        $category_ids = $this->getCategoryIds($ca_id, $catFilter, $category_ids1);
+        $category_ids =  InventoryCategory::where($nFilter)->pluck('category_id');
 
         $filter = array();
-        $filter2 = array();
-        $filter3 = array();
-        $filter4 = array();
-        if ($id != 0)
-        {
-            $filter[] = ["inventory_id", $id];
-        }
         if ($co_id != 0)
         {
             $filter[] = ["inventory.company_id", $co_id];
         }
-        if($name !="" && count($category_ids1)==0) {
-            $filter[] = ["inventory.name", "LIKE", "%".$name."%"];
-            $filter2[] = ["inventory.inventory_id", "LIKE", "%".$name."%"];
-            $filter3[] = ["inventory.type", $name];
-            $filter4[] = ["inventory.description", "LIKE", "%".$name."%"];
+        $filter1 = array();
+        if($name !="") {
+            if(is_numeric($name)) {
+                $filter1[] = ["inventory.inventory_id", "LIKE", "%" . $name . "%"];
+            }
+            if($name=="Property"||$name=="Consumables") {
+                $filter1[] = ["inventory.type", $name];
+            }
+            if(!is_numeric($name)) {
+                $filter1[] = ["inventory.name", "LIKE", "%".$name."%"];
+                $filter1[] = ["inventory.description", "LIKE", "%" . $name . "%"];
+            }
+        }
+        $sql = Inventory::where($filter1)->pluck('category_id')->toArray();
+        if(count($sql)==0){
+            $filter1 = array();
+        }
+        if($ca_id != 0){
+            $sql = array();
         }
 
         $cats = InventoryParentCategory::whereIn('category_id', $category_ids)->get();
@@ -709,9 +713,9 @@ class InventoryController extends Controller
             }
         }
 
-        $items2 = array_merge(array($ca_id), $items1);
+        $items2 = array_merge(array($ca_id), $items1, $sql);
 
-        if(count($items1)>0){
+        if(count($items2)>0){
             $item_found = $items2;
         }else{
             $item_found = $category_ids;
@@ -723,9 +727,7 @@ class InventoryController extends Controller
         }
         $count = DB::table('inventory')
             ->where($filter)
-            ->orwhere($filter2)
-            ->orwhere($filter3)
-            ->orwhere($filter4)
+            ->where($filter1)
             ->where("status", 1)
             ->whereIn("category_id", $item_found)->count();
 
@@ -815,11 +817,9 @@ class InventoryController extends Controller
             ->leftJoin("inventory_parent_unit as pu", "inventory.inventory_id", "pu.inv_id")
             ->leftJoin("inventory_unit as u", "pu.unit_id", "u.unit_id")
             ->where($filter)
-            ->orwhere($filter2)
-            ->orwhere($filter3)
-            ->orwhere($filter4)
-            ->where("status", 1)
+            ->where($filter1)
             ->whereIn("category_id", $item_found)
+            ->where("status", 1)
             ->groupBy("inventory_id")
             ->orderBy($sort_field,$sort_order)
             ->limit($limit)->offset(($page - 1) * $limit)->get()->toArray();
@@ -875,6 +875,72 @@ class InventoryController extends Controller
         $response['code'] = 200;
         $response['category'] = $category;
         $response['data'] = $data;
+        return Response::json($response);
+    }
+
+    public function show($id){
+        $list = DB::table('inventory')
+            ->select(DB::raw('
+                co.name as company_name, inventory.*,
+                CASE WHEN inventory.type="Consumables" THEN
+                    IFNULL(
+                        (SELECT
+                            SUM(qty)
+                        FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type="Purchased")
+                        -
+                        IFNULL((SELECT
+                            SUM(qty)
+                        FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type="Consumed"),0)
+                    ,0)
+                ELSE
+                    (SELECT COUNT(id) FROM inventory_assigned a WHERE a.inventory_id = inventory.inventory_id AND a.status !=3)
+                END AS qty,
+                u.unit_id, pu.id as parent_unit_id
+            '))
+            ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
+            ->leftJoin("inventory_parent_unit as pu", "inventory.inventory_id", "pu.inv_id")
+            ->leftJoin("inventory_unit as u", "pu.unit_id", "u.unit_id")
+            ->where("inventory_id", $id)->get();
+        foreach($list as $n){
+            $nparent = InventoryParentCategory::where('inventory_parent_category.category_id',$n->category_id)
+                ->where('inventory_parent_category.company_id',$n->company_id)
+                ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')->get();
+            $n->created_at = gmdate("F j, Y", $n->created_at);
+            $n->updated_at = gmdate("F j, Y", $n->updated_at);
+            if($n->type=="Consumables") {
+                $n->qty = self::unitFormat($n->inventory_id, (int)$n->qty);
+            }
+            foreach($nparent as $np){
+                $tree = $np->parents->reverse();
+                $n->item_name = $np->name;
+                if(count($tree)==0){
+                    $n->path = $np->name;
+                }
+                $j=0;
+                foreach($tree as $t){
+                    $n->x[$j] = $t->name;
+                    $n->asset_name = implode(" | ", $n->x);
+                    $n->path = implode(" | ", $n->x)." | ".$n->item_name;
+                    $j++;
+                }
+            }
+
+            $units = InventoryParentUnit::where('inv_id', $n->inventory_id)
+                ->leftJoin('inventory_unit as iunit', 'iunit.unit_id', '=', 'inventory_parent_unit.unit_id')
+                ->orderBy('id', 'asc')
+                ->get();
+            $xx = 0;
+            foreach ($units as $u) {
+                $n->childs[$xx] = $u['name'];
+                $xx++;
+            }
+
+            $n->unit = implode("/", $n->childs);
+        }
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $list;
         return Response::json($response);
     }
 

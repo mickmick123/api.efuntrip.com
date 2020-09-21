@@ -9,7 +9,8 @@ Route::middleware('auth:api')->group(function() {
     Route::post('/get-tab-category','InventoryController@getTabCategory');
     Route::get('/get-all-inventory-lists','InventoryController@getAllInventoryLists');
     Route::get('/get-newly-added/{perPage?}','InventoryController@getNewlyAdded');
-    Route::get('/list/{id}','InventoryController@list');
+    Route::get('/list','InventoryController@list');
+    Route::get('/item/{id}','InventoryController@show');
     Route::get('/list-assigned','InventoryController@listAssigned');
     Route::post('/edit-assigned-item','InventoryController@editAssignedItem');
     Route::get('/get-consumed','InventoryController@getConsumed');
