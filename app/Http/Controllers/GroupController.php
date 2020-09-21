@@ -1934,37 +1934,108 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
    public function getMembersPackages(Request $request, $groupId, $perPage = 10) {
 
-     $sort = $request->input('sort');
-     $search = $request->input('search');
+         $sort = $request->input('sort');
 
-     $arr = [];
-          //$group_members = GroupUser::where('group_id', $groupId)->get();
-          $group_members = GroupUser::where('group_id', $groupId)
-          // ->when($sort != '', function ($q) use($sort){
-          //     $sort = explode('-' , $sort);
-          //     return $q->orderBy($sort[0], $sort[1]);
-          // })
-          ->when($search != '', function ($q) use($search){
-              return $q->where('user_id','LIKE','%'.$search.'%');
+         $search = $request->input('search');
+
+         $search_id = 0;
+         $q1 = '';  $q2 = ''; $spaces = 0;
+         if (preg_match("/^\d+$/", $search)) {
+             $search_id = 1;
+         }
+
+         if(preg_match('/\s/',$search)){
+             $q = explode(" ", $search);
+             $spaces = substr_count($search, ' ');
+             if($spaces == 2){
+                 $q1 = $q[0]." ".$q[1];
+                 $q2 = $q[2];
+             }
+             if($spaces == 1){
+                 $q1 = $q[0];
+                 $q2 = $q[1];
+             }
+         }
+
+         $mode = '';
+         if($search_id == 1 && $spaces == 0){
+             $mode = 'id';
+         }
+         else if($search_id == 0 && $spaces == 0 && $search != ''){
+             $mode = 'name';
+         }
+         else if($spaces >0){
+             $mode = 'fullname';
+         }
+
+          $arr = [];
+
+          $mems = DB::table('group_user as g_u')
+                      ->where('g_u.group_id', $groupId)
+                      ->get();
+
+          $gids = $mems->pluck('user_id');
+
+
+          $group_members = DB::table('users as u')->select(DB::raw('u.id, u.id as client_id, CONCAT(u.first_name, " ", u.last_name) as name, u.last_name, u.first_name, g_u.id as guid, g_u.group_id,  log.log_date, log.id as log_id'))
+                          ->leftjoin(DB::raw('(select * from group_user) as g_u'),'g_u.user_id','=','u.id')
+
+          ->leftjoin(
+               DB::raw('
+                   (
+                       Select  l.log_date, l.client_id, date_format(max(l.created_at),"%Y%m%d%h%i%s") as created_at, l.id
+                       from logs as l
+                       where l.client_id is not null
+                       group by l.client_id
+                       order by l.id desc
+                   ) as log
+
+               '),
+               'log.client_id', '=', 'u.id'
+           )
+
+          ->whereIn('u.id', $gids)
+          ->where('g_u.group_id', $groupId)
+
+          ->when($mode == 'fullname', function ($query) use($q1,$q2){
+              return $query->where(function ($query1) use($q1,$q2) {
+                  return $query1->where(function ($query2) use($q1,$q2) {
+                              $query2->where('u.first_name', '=', $q1)
+                                    ->Where('u.last_name', '=', $q2);
+                          })->orwhere(function ($query2) use($q1,$q2) {
+                              $query2->where('u.last_name', '=', $q1)
+                                    ->Where('u.first_name', '=', $q2);
+                          });
+              });
+          })
+          ->when($mode == 'id', function ($query) use($search){
+                  return $query->where('u.id','LIKE','%'.$search.'%');
+          })
+          ->when($mode == 'name', function ($query) use($search){
+              return $query->where(function ($query2) use($search) {
+                  $query2->where('u.first_name' ,'=', $search)
+                               ->orwhere('u.last_name' ,'=', $search);
+              });
+          })
+
+          ->when($sort == '', function ($q) use($sort) {
+              return $q->orderBy('log.id', 'desc');
           })
           ->paginate($perPage);
 
           $response = $group_members;
 
-          $ctr=0;
-          //foreach($group_members->items() as $gm){
-          foreach($group_members as $gm){
-              $usr =  User::where('id',$gm->user_id)->select('id','first_name','last_name')->limit(1)->get();
-              if($usr){
-                  $arr[$ctr] = $gm;
-                  $arr[$ctr]['client'] =$usr[0];
-                //  $arr[$ctr]['client']['packages'] = Package::where('client_id',$gm->user_id)->where('group_id',$gm->group_id)->get();
-                  $arr[$ctr]['client']['packages'] = Package::where('client_id',$gm->user_id)->where('group_id',$gm->group_id)->get();
+          $ctr = 0;
 
+
+          foreach($response as $gm){
+                $gm->packages = Package::where('client_id',$gm->id)->where('group_id',$gm->group_id)->get();
+                $gm->client = $gm->name;
+                $arr[$ctr] = $gm;
                 $ctr++;
-              }
-          }
-          $group_members->data = $arr;
+            }
+
+          $response->data = $arr;
 
           return Response::json($response);
 
