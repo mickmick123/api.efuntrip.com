@@ -43,6 +43,7 @@ use Illuminate\Http\Request;
 
  //
   Route::post('distribute-old-payment', 'GroupController@distributeOldPayment');
+  Route::post('distribute-old-payment-by-batch', 'GroupController@distributeClientOldPayment2');
 
 
 	//Export Excel

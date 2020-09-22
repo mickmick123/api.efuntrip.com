@@ -4800,6 +4800,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
                           })
                           ->orderBy('id')->get();
      // return 'test : '.$queryClients;
+    $records = [];      
     $totalRemaining = 0;
     foreach($queryClients as $m){
 
@@ -4889,6 +4890,165 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $dp->client_id = $client_id;
         $dp->reason = "Generating DP";
         $dp->save();
+    }
+
+
+    $response['status'] = 'Success';
+    $response['code'] = 200;
+
+    return Response::json($response);
+  }
+
+  public function distributeClientOldPayment2($request){
+    $fromClient = $request->from;
+    $toClient = $request->to;
+
+    for($i = $from; $i <= $to ; $i++){
+
+    $client_id =$i;
+
+    $depo = ClientEWallet::where('group_id', null)->where('client_id', $client_id)->where('type', 'Deposit')->where('reason','Generating DP')->sum('amount');
+
+    if(!$depo){
+
+    $totalDepo = DB::table('client_transactions')
+                  ->where('group_id',null)
+                  ->where('client_id', $client_id)
+                  ->where('type', 'Deposit')
+                  ->where('deleted_at', null)
+                  ->sum('amount');
+
+    $totalPayment = DB::table('client_transactions')
+                ->where('group_id',null)
+                ->where('client_id', $client_id)
+                ->where('type', 'Payment')
+                ->where('deleted_at', null)
+                ->sum('amount');
+
+
+    $totalRefund = DB::table('client_transactions')
+                  ->where('group_id', null)
+                  ->where('client_id', $client_id)
+                  ->where('type', 'Refund')
+                  ->where('deleted_at', null)
+                  ->sum('amount');
+
+    $queryTotalDiscount = DB::table('client_transactions as cs')
+                  ->where('cs.type', 'Discount')
+                  ->where('cs.group_id', null)
+                  ->where('cs.client_id', $client_id)
+                  ->where('cs.client_service_id', null)
+                  ->where('cs.deleted_at', null)
+                  ->sum('cs.amount');
+
+
+    $queryTotalCost = ClientService::where('active', 1)->where('group_id', null)
+                                      ->where('client_id', $client_id)
+                                      ->where('status','!=','cancelled');
+
+    $groupTotalCost =   $queryTotalCost->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
+
+
+    $totalAmount = ($totalPayment + $totalDepo + $queryTotalDiscount) - $totalRefund;
+
+
+    $queryClients = ClientService::where('group_id', null)->where('client_id', $client_id)->where('active', 1)                  ->where('is_full_payment', 0)
+                          ->where(function($q) {
+                            $q->orwhere('status', 'complete')
+                                ->orWhere('status', 'released');
+                          })
+                          ->orderBy('id')->get();
+
+    $totalRemaining = 0;
+    foreach($queryClients as $m){
+
+       $discount =  ClientTransaction::where('client_service_id', $m->id)->where('type', 'Discount')->sum('amount');
+
+       $clientService = ClientService::where('id', $m->id);
+
+       $payment= (($m->cost + $m->charge + $m->tip + $m->com_agent + $m->com_client) - $discount);
+       $fullpayment = $payment;
+
+       if($totalAmount > 0){
+            if($totalAmount > $payment){
+                if($m->payment_amount != 0){
+                    $totalAmount = $totalAmount - $m->payment_amount;
+                }
+                else{
+                    $totalAmount = $totalAmount - $payment;
+                }
+            }else{
+                $payment = $totalAmount + $m->payment_amount;
+                $totalAmount = 0;
+            }
+
+            $data = array('is_full_payment' => ($fullpayment == $payment ? 1 : 0), 'payment_amount' => $payment);
+            $clientService->update($data);
+
+            $rson = 'Auto Distribution - '.Auth::user()->first_name.' ('.date('Y-m-d H:i:s').')<br><br>';
+            if($payment > 0){
+
+                $record = [
+                    'client_id' => $m->client_id,
+                    'client_service_id' => $m->id,
+                    'group_id' => null,
+                    'amount' => 0,
+                    'reason' => $rson,
+                    'type' => 'Payment',
+                ];
+                // ... add to $records array...
+                $records[] = $record;
+            }
+       }
+    }
+
+    ClientTransaction::insert($records);
+    $totalRemaining = $totalAmount;
+
+      if($totalRemaining > 0){
+        $dp = new ClientEWallet;
+        $dp->client_id = 0;
+        $dp->type = 'Deposit';
+        $dp->amount = $totalRemaining;
+        $dp->group_id = null;
+        $dp->client_id = $client_id;
+        $dp->reason = "Generating DP";
+        $dp->save();
+
+        // save transaction history
+        $detail = 'Auto Distribution : Receive deposit with an amount of Php'.$totalRemaining.'.';
+        $detail_cn = '预存了款项 Php'.$totalRemaining.'.';
+        $log_data = array(
+            'client_service_id' => null,
+            'client_id' => $client_id,
+            'group_id' => null,
+            'log_type' => 'Ewallet',
+            'log_group' => 'deposit',
+            'detail'=> $detail,
+            'detail_cn'=> $detail_cn,
+            'amount'=> $totalRemaining,
+        );
+         LogController::save($log_data);
+      }
+
+        $response['remaining'] = $totalRemaining;
+        $response['total_payment_and_dp'] = ($totalPayment + $totalDepo);
+        $response['total_depo'] = $totalDepo;
+        $response['total_refund'] = $totalRefund;
+        $response['total_payment'] = $totalPayment;
+        $response['total_cost'] = $groupTotalCost;
+        $response['total_discount'] = $queryTotalDiscount;
+    }
+    else{
+        $dp = new ClientEWallet;
+        $dp->client_id = 0;
+        $dp->type = 'Deposit';
+        $dp->amount = 0;
+        $dp->group_id = null;
+        $dp->client_id = $client_id;
+        $dp->reason = "Generating DP";
+        $dp->save();
+    }
     }
 
 
