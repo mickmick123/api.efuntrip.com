@@ -629,7 +629,23 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
-    public function getParents($category){
+//    public function getParents($category){
+    public function getParents($where, $field, $inArray){
+        if(!empty($field) && count($inArray)>0){
+            $category = DB::table('inventory_parent_category AS pc')
+                ->leftJoin('company AS com', 'pc.company_id', '=', 'com.company_id')
+                ->leftJoin('inventory_category AS c', 'pc.category_id', '=', 'c.category_id')
+                ->where($where)
+                ->whereIn($field, $inArray)
+                ->orderBy('c.name')
+                ->get();
+        }else{
+            $category = DB::table('inventory_parent_category AS pc')
+                ->leftJoin('company AS co', 'pc.company_id', '=', 'co.company_id')
+                ->leftJoin('inventory_category AS c', 'pc.category_id', '=', 'c.category_id')
+                ->where($where)
+                ->get();
+        }
         foreach ($category as $d) {
             //$d->name = $d->name.": ".$d->category_id;
             $nParent = InventoryParentCategory::where('inventory_parent_category.category_id',$d->category_id)
@@ -684,19 +700,6 @@ class InventoryController extends Controller
         {
             $filter[] = ["inventory.company_id", $co_id];
         }
-//        $filter1 = array();
-//        if($name !="") {
-//            if(is_numeric($name)) {
-//                $filter1[] = ["inventory.inventory_id", "LIKE", "%" . $name . "%"];
-//            }
-//            if($name=="Property"||$name=="Consumables") {
-//                $filter1[] = ["inventory.type", $name];
-//            }
-//            if(!is_numeric($name)) {
-//                $filter1[] = ["inventory.name", "LIKE", "%".$name."%"];
-//                $filter1[] = ["inventory.description", "LIKE", "%" . $name . "%"];
-//            }
-//        }
 
         $cats = InventoryParentCategory::whereIn('category_id', $category_ids)->get();
 
@@ -729,8 +732,7 @@ class InventoryController extends Controller
         }
 
         $sql = Inventory::where($filter)->orwhere($filter2)->orwhere($filter3)->orwhere($filter4)->orwhere($filter5)->pluck('category_id')->toArray();
-        //$sql = array();
-//        return Response::json($sql);
+
         if(count($sql)==0){
             $filter2 = array();
             $filter3 = array();
@@ -748,7 +750,7 @@ class InventoryController extends Controller
         }else{
             $item_found = $category_ids;
         }
-        //return Response::json($ca_id);
+
         $page_obj = new PageHelper($page, $pageSize);
         if (empty($page_obj)) {
             return array();
@@ -772,46 +774,32 @@ class InventoryController extends Controller
         }
         $categoryIds = array();
         $nFilter = array();
-        if($name != "" && $ca_id == 0){
+        if($name != ""){
             $nFilter[] = ["name", $name];
             $categoryIds = InventoryCategory::where($nFilter)->pluck('category_id');
 
-            $arrFilter[] = ['c.name','LIKE', $name];
+            $arrFilter[] = ['c.name', $name];
         }
 
-        if($co_id > 0) {
-            if(count($categoryIds)>0){
-                $category = DB::table('inventory_parent_category AS pc')
-                    ->leftJoin('company AS com', 'pc.company_id', '=', 'com.company_id')
-                    ->leftJoin('inventory_category AS c', 'pc.category_id', '=', 'c.category_id')
-                    ->where('pc.company_id', '=', $co_id)
-                    ->whereIn("pc.parent_id", $categoryIds)
-                    ->orderBy('c.name')
-                    ->get();
-            }else {
-                $category = DB::table('inventory_parent_category AS pc')
-                    ->leftJoin('company AS com', 'pc.company_id', '=', 'com.company_id')
-                    ->leftJoin('inventory_category AS c', 'pc.category_id', '=', 'c.category_id')
-                    ->where('pc.company_id', '=', $co_id)
-                    ->where($arrFilter)
-                    ->orderBy('c.name')
-                    ->get();
+        $category = Company::all();
+        foreach ($category as $d) {
+            $d->isCompany = true;
+        }
+        if(count($categoryIds)>0 && $co_id !=0){
+            $category = $this->getParents(array(['pc.company_id', '=', $co_id]), "pc.parent_id", $categoryIds);
+        }
+        if(count($categoryIds)==0 && $co_id !=0){
+            $arrFilter[] = ['pc.company_id', '=', $co_id];
+            $category = $this->getParents($arrFilter, "", array());
+        }
+        if($name != "" || ($name !="" && $ca_id !=0)) {
+            $items = array();
+            $field = "";
+            if($ca_id !=0) {
+                $field = "pc.category_id";
+                $items = InventoryParentCategory::where('category_id', $ca_id)->where('company_id', $co_id)->first()->getAllChildren()->pluck('category_id');
             }
-            $this->getParents($category);
-        }else{
-            if($name != "") {
-                $category = DB::table('inventory_parent_category AS pc')
-                    ->leftJoin('company AS co', 'pc.company_id', '=', 'co.company_id')
-                    ->leftJoin('inventory_category AS c', 'pc.category_id', '=', 'c.category_id')
-                    ->where("c.name", $name)
-                    ->get();
-                $this->getParents($category);
-            }else{
-                $category = Company::all();
-                foreach ($category as $d) {
-                    $d->isCompany = true;
-                }
-            }
+            $category = $this->getParents(array(["c.name", $name]), $field, $items);
         }
 
         if ($count==0)
