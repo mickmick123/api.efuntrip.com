@@ -673,30 +673,30 @@ class InventoryController extends Controller
         {
             $nFilter1[] = ["category_id", $ca_id];
         }
-        if ($name != "" && $ca_id ==0)
+        if ($name != "")
         {
             $nFilter2[] = ["name", $name];
         }
-        $category_ids =  InventoryCategory::where($nFilter1)->orwhere($nFilter2)->pluck('category_id');
+        $category_ids =  InventoryCategory::where($nFilter1)->orwhere($nFilter2)->pluck('category_id')->toArray();
 
         $filter = array();
         if ($co_id != 0)
         {
             $filter[] = ["inventory.company_id", $co_id];
         }
-        $filter1 = array();
-        if($name !="") {
-            if(is_numeric($name)) {
-                $filter1[] = ["inventory.inventory_id", "LIKE", "%" . $name . "%"];
-            }
-            if($name=="Property"||$name=="Consumables") {
-                $filter1[] = ["inventory.type", $name];
-            }
-            if(!is_numeric($name)) {
-                $filter1[] = ["inventory.name", "LIKE", "%".$name."%"];
-                $filter1[] = ["inventory.description", "LIKE", "%" . $name . "%"];
-            }
-        }
+//        $filter1 = array();
+//        if($name !="") {
+//            if(is_numeric($name)) {
+//                $filter1[] = ["inventory.inventory_id", "LIKE", "%" . $name . "%"];
+//            }
+//            if($name=="Property"||$name=="Consumables") {
+//                $filter1[] = ["inventory.type", $name];
+//            }
+//            if(!is_numeric($name)) {
+//                $filter1[] = ["inventory.name", "LIKE", "%".$name."%"];
+//                $filter1[] = ["inventory.description", "LIKE", "%" . $name . "%"];
+//            }
+//        }
 
         $cats = InventoryParentCategory::whereIn('category_id', $category_ids)->get();
 
@@ -728,12 +728,16 @@ class InventoryController extends Controller
             }
         }
 
-        $sql = Inventory::where($filter)->orwhere($filter2)->orwhere($filter3)->orwhere($filter4)->orwhere($filter5)->wherein("category_id", $items1)->pluck('category_id')->toArray();
+        $sql = Inventory::where($filter)->orwhere($filter2)->orwhere($filter3)->orwhere($filter4)->orwhere($filter5)->pluck('category_id')->toArray();
+        //$sql = array();
 //        return Response::json($sql);
         if(count($sql)==0){
-            $filter1 = array();
+            $filter2 = array();
+            $filter3 = array();
+            $filter4 = array();
+            $filter5 = array();
         }
-        if($name == ""){
+        if($name == "" || $ca_id !=0){
             $sql = array();
         }
 
@@ -744,17 +748,23 @@ class InventoryController extends Controller
         }else{
             $item_found = $category_ids;
         }
-
+        //return Response::json($ca_id);
         $page_obj = new PageHelper($page, $pageSize);
         if (empty($page_obj)) {
             return array();
         }
 
         $count = DB::table('inventory')
-            ->where($filter1)
+            ->where($filter)
+            ->where(function ($sql) use ($filter2,$filter3,$filter4,$filter5){
+                $sql->where($filter2)
+                    ->orwhere($filter3)
+                    ->orwhere($filter4)
+                    ->orwhere($filter5);
+            })
             ->whereIn("category_id", $item_found)
             ->where("status", 1)
-            ->where($filter)->count();
+            ->count();
 
         $arrFilter = array();
         if($ca_id !== 0 || $name == ""){
@@ -762,7 +772,7 @@ class InventoryController extends Controller
         }
         $categoryIds = array();
         $nFilter = array();
-        if($name !=="" && $ca_id == 0){
+        if($name != "" && $ca_id == 0){
             $nFilter[] = ["name", $name];
             $categoryIds = InventoryCategory::where($nFilter)->pluck('category_id');
 
@@ -841,10 +851,15 @@ class InventoryController extends Controller
             ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
             ->leftJoin("inventory_parent_unit as pu", "inventory.inventory_id", "pu.inv_id")
             ->leftJoin("inventory_unit as u", "pu.unit_id", "u.unit_id")
-            ->where($filter1)
+            ->where($filter)
+            ->where(function ($sql) use ($filter2,$filter3,$filter4,$filter5){
+                $sql->where($filter2)
+                    ->orwhere($filter3)
+                    ->orwhere($filter4)
+                    ->orwhere($filter5);
+            })
             ->whereIn("category_id", $item_found)
             ->where("status", 1)
-            ->where($filter)
             ->groupBy("inventory_id")
             ->orderBy($sort_field,$sort_order)
             ->limit($limit)->offset(($page - 1) * $limit)->get()->toArray();
