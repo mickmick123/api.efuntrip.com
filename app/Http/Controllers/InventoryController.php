@@ -59,7 +59,8 @@ class InventoryController extends Controller
             ->when($categ != '', function ($q) use($categ){
                 return $q->whereIn('inventory_parent_category.category_id',$categ);
             })
-            ->where('inv.name','LIKE','%'.$request->name.'%')
+            ->where('icat.name','LIKE','%'.$request->name.'%')
+            ->orWhere('inv.name','LIKE','%'.$request->name.'%')
             ->get(['inventory_parent_category.*','icat.name AS CategoryName','inv.name AS ItemName']);
 
         foreach($list as $k=>$v){
