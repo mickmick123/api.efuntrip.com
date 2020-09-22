@@ -14,4 +14,6 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::delete('{id}', 'ServiceProfileController@destroy');
 
+  Route::get('get-users-groups/{id}', 'ServiceProfileController@getUsersGroups');
+
 });

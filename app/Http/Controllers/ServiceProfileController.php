@@ -2,9 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Group;
+
 use App\ServiceProfile;
 
 use App\ServiceProfileCost;
+
+use App\User;
 
 use DB, Response, Validator;
 
@@ -117,7 +121,7 @@ class ServiceProfileController extends Controller
         return Response::json($response);
     }
 
-    public function destroy($id) {
+  public function destroy($id) {
 		$serviceProfile = ServiceProfile::find($id);
 
 		if( $serviceProfile ) {
@@ -132,6 +136,42 @@ class ServiceProfileController extends Controller
 		}
 
 		return Response::json($response);
-	}
+  }
+  
+
+  public function getUsersGroups($id) {
+    $groups = Group::where('service_profile_id', $id)->select('id', 'name', 'balance')->get();
+    $users = User::where('service_profile_id', $id)->select('id', DB::raw('CONCAT(first_name," ",last_name) AS name'), 'balance')->get();
+
+    $data = [];
+
+    if(count($groups) > 0) {
+      foreach($groups as $group) {
+        $data[] = [
+          'id' => $group->id,
+          'name' => $group->name,
+          'balance' => $group->balance,
+          'type' => 'group'
+        ];
+      }
+    }
+
+    if(count($users) > 0) {
+      foreach($users as $user) {
+        $data[] = [
+          'id' => $user->id,
+          'name' => $user->name,
+          'balance' => $user->balance,
+          'type' => 'client'
+        ];
+      }
+    }
+
+    $response['status'] = 'Success';
+    $response['code'] = 200;
+    $response['data'] = $data;
+    return Response::json($response);
+  }
+
 
 }

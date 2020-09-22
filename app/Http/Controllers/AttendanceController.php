@@ -189,10 +189,4 @@ class AttendanceController extends Controller
 
         }
     }
-
-
-    public function attendance() {
-      
-    }
-
 }
