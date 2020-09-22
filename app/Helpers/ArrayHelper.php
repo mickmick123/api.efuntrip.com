@@ -28,9 +28,9 @@ class ArrayHelper{
 
     // $collection = [1,2,3,4]; $optional = '5'
     // return "1/2/3/4" or "1/2/3/4/5"
-    public static function ArrayParentImplode($collection,$optional=null){
+    public static function ArrayParentImplode($collection,$separator,$optional=null){
         $tree = new Collection($collection);
         $optional !== null && $tree->push($optional);
-        return $tree->implode('/');
+        return $tree->implode($separator);
     }
 }
