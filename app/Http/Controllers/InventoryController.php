@@ -629,7 +629,6 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
-//    public function getParents($category){
     public function getParents($where, $field, $inArray){
         if(!empty($field) && count($inArray)>0){
             $category = DB::table('inventory_parent_category AS pc')
@@ -689,11 +688,13 @@ class InventoryController extends Controller
         {
             $nFilter1[] = ["category_id", $ca_id];
         }
-        if ($name != "")
+        $category_ids =  InventoryCategory::where($nFilter1)->pluck('category_id')->toArray();
+        if ($name != "" && $ca_id ==0)
         {
             $nFilter2[] = ["name", $name];
+            $category_ids =  InventoryCategory::where($nFilter2)->pluck('category_id')->toArray();
         }
-        $category_ids =  InventoryCategory::where($nFilter1)->orwhere($nFilter2)->pluck('category_id')->toArray();
+//        $category_ids =  InventoryCategory::where($nFilter1)->orwhere($nFilter2)->pluck('category_id')->toArray();
 
         $filter = array();
         if ($co_id != 0)
@@ -733,13 +734,13 @@ class InventoryController extends Controller
 
         $sql = Inventory::where($filter)->orwhere($filter2)->orwhere($filter3)->orwhere($filter4)->orwhere($filter5)->pluck('category_id')->toArray();
 
-        if(count($sql)==0){
+        if(count($sql)==0 || ($ca_id==0 && $co_id!=0 && $name!="" && count($category_ids)>0)){
             $filter2 = array();
             $filter3 = array();
             $filter4 = array();
             $filter5 = array();
         }
-        if($name == "" || $ca_id !=0){
+        if($name == "" || $ca_id !=0 || ($ca_id==0 && $co_id!=0 && $name!="" && count($category_ids)>0)){
             $sql = array();
         }
 
@@ -799,7 +800,12 @@ class InventoryController extends Controller
                 $field = "pc.category_id";
                 $items = InventoryParentCategory::where('category_id', $ca_id)->where('company_id', $co_id)->first()->getAllChildren()->pluck('category_id');
             }
-            $category = $this->getParents(array(["c.name", $name]), $field, $items);
+            $filterX = array();
+            if($co_id!=0){
+                $filterX[] = ['pc.company_id', '=', $co_id];
+            }
+            $filterX[] = ["c.name", $name];
+            $category = $this->getParents($filterX, $field, $items);
         }
 
         if ($count==0)
