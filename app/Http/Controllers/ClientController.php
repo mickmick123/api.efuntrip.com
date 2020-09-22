@@ -3206,9 +3206,9 @@ class ClientController extends Controller
     private function getClientTotalRefund($id) {
         $trans = ClientTransaction::where('client_id', $id)->where('group_id', null)->where('type', 'Refund')->sum('amount');
 
-        $ewall = ClientEWallet::where('client_id', $id)->where('group_id', null)->where('type', 'Refund')->sum('amount');
+        //$ewall = ClientEWallet::where('client_id', $id)->where('group_id', null)->where('type', 'Refund')->sum('amount');
 
-        return $trans + $ewall;
+        return $trans;
     }
 
     private function getClientTotalCost($id) {
