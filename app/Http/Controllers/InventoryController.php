@@ -59,8 +59,8 @@ class InventoryController extends Controller
             ->when($categ != '', function ($q) use($categ){
                 return $q->whereIn('inventory_parent_category.category_id',$categ);
             })
-            ->where('icat.name','LIKE','%'.$request->name.'%')
-            ->orWhere('inv.name','LIKE','%'.$request->name.'%')
+            ->where([['icat.name','LIKE','%'.$request->name.'%'],['inv.name','!=',null]])
+            ->orWhere([['inv.name','LIKE','%'.$request->name.'%'],['inv.name','!=',null]])
             ->get(['inventory_parent_category.*','icat.name AS CategoryName','inv.name AS ItemName']);
 
         foreach($list as $k=>$v){
@@ -69,6 +69,7 @@ class InventoryController extends Controller
 
         $response['status'] = 'Success';
         $response['code'] = 200;
+        $response['count'] = count($list);
         $response['data'] = $list;
         return Response::json($response);
     }
