@@ -48,6 +48,20 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    public function getNewList(Request $request){
+        $list = InventoryParentCategory::leftJoin('inventory_category AS icat','inventory_parent_category.category_id','icat.category_id')
+            ->leftJoin('inventory AS inv','inventory_parent_category.category_id','inv.category_id')
+            ->where('icat.name','LIKE','%'.$request->name.'%')->orWhere('inv.name','LIKE','%'.$request->name.'%')->get(['inventory_parent_category.*','icat.name AS CategoryName','inv.name AS ItemName']);
+        foreach($list as $k=>$v){
+            $v->tree = ArrayHelper::ArrayParentImplode($v->parents->pluck('name')->reverse(),$v->CategoryName);
+        }
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $list;
+        return Response::json($response);
+    }
+
     public function getTreeCategory(Request $request){
         if(in_array($request->company_id,[null,0])){
             $com = Company::orderBy('name','ASC')->get();
