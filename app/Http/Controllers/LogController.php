@@ -871,6 +871,12 @@ class LogController extends Controller
 
             $cs = ClientService::where('id',$a->service_id)->first();
 
+            if(strpos($a->detail, 'Added a service') !== false || strpos($a->detail, 'Updated Service') !== false){
+                if($a->amount > 0){
+                    $a->amount *= -1;
+                }
+            }
+
             $a->balance = $currentBalance;
             $currentBalance -= $a->amount;
             $cdate = Carbon::parse($a->log_date)->format('M d Y');
