@@ -50,6 +50,7 @@ class UserController extends Controller
         	   $user = User::where('email', $request->email)->get();
             }
 
+            $count = 0;
         	if( $user ) {
                 foreach($user as $u){
             		if( Hash::check($request->password, $u->password) ) {
@@ -67,6 +68,7 @@ class UserController extends Controller
     		            	'token' => $token
     		            ];
     		            $response['code'] = 200;
+                        $count++;
     		        } 
                 }  
 		        
@@ -74,8 +76,14 @@ class UserController extends Controller
             else {
         		$response['status'] = 'Failed';
             	$response['errors'] = 'Invalid username/password.';
-            	$response['code'] = 422;   
+            	$response['code'] = 401;   
         	}
+        }
+
+        if($count == 0){
+            $response['status'] = 'Failed';
+            $response['errors'] = 'Invalid username/password.';
+            $response['code'] = 401;
         }
 
         return Response::json($response);
