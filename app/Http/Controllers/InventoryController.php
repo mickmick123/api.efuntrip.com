@@ -704,8 +704,37 @@ class InventoryController extends Controller
         {
             $nFilter2[] = ["name", $name];
             $category_ids =  InventoryCategory::where($nFilter2)->pluck('category_id')->toArray();
+
         }
-//        $category_ids =  InventoryCategory::where($nFilter1)->orwhere($nFilter2)->pluck('category_id')->toArray();
+        $category_ids1 = array();
+        $category_ids2 = array();
+        if($name != "" && $ca_id != 0 || $co_id==0){
+            $xx = array();
+            $limit = PHP_INT_MAX;
+            if($name != "" && $co_id !=0){
+                $xx[] = ["pc.company_id", $co_id];
+                $limit = 1;
+            }
+            $cat = DB::table('inventory_parent_category AS pc')->select("c.category_id", "pc.company_id")
+                ->leftJoin('company AS co', 'pc.company_id', '=', 'co.company_id')
+                ->leftJoin('inventory_category AS c', 'pc.category_id', '=', 'c.category_id')
+                ->where("c.name", $name)
+                ->where($xx)
+                ->limit($limit)->get();
+            if(count($cat) > 0){
+                foreach ($cat as $c){
+                    $category_ids2[] = InventoryParentCategory::where('category_id', $c->category_id)->where('company_id', $c->company_id)->first()->getAllChildren()->pluck('category_id');
+                }
+                foreach($category_ids2 as $i){
+                    foreach($i as $j){
+                        $category_ids1[] = $j;
+                    }
+                }
+            }
+            if(count($category_ids1)<=0 && count($cat)>0){
+                $category_ids1 = array($cat[0]->category_id);
+            }
+        }
 
         $filter = array();
         if ($co_id != 0)
@@ -777,6 +806,7 @@ class InventoryController extends Controller
                     ->orwhere($filter5);
             })
             ->whereIn("category_id", $item_found)
+            ->orwherein("category_id", $category_ids1)
             ->where("status", 1)
             ->count();
 
@@ -864,6 +894,7 @@ class InventoryController extends Controller
                     ->orwhere($filter5);
             })
             ->whereIn("category_id", $item_found)
+            ->orwherein("category_id", $category_ids1)
             ->where("status", 1)
             ->groupBy("inventory_id")
             ->orderBy($sort_field,$sort_order)
