@@ -49,9 +49,12 @@ class InventoryController extends Controller
     }
 
     public function getNewList(Request $request){
+        $categ = InventoryParentCategory::where('category_id', $request->category_id)->where('company_id', $request->company_id)->first()->getAllChildren()->pluck('category_id');
+
         $list = InventoryParentCategory::leftJoin('inventory_category AS icat','inventory_parent_category.category_id','icat.category_id')
             ->leftJoin('inventory AS inv','inventory_parent_category.category_id','inv.category_id')
-            ->where('icat.name','LIKE','%'.$request->name.'%')->orWhere('inv.name','LIKE','%'.$request->name.'%')
+            ->whereIn('inventory_parent_category.category_id',$categ)
+            ->where('inv.name','LIKE','%'.$request->name.'%')
             ->get(['inventory_parent_category.*','icat.name AS CategoryName','inv.name AS ItemName']);
         foreach($list as $k=>$v){
             $v->tree = ArrayHelper::ArrayParentImplode($v->parents->pluck('name')->reverse(),'|',$v->CategoryName);
