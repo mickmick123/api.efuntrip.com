@@ -48,32 +48,6 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
-    public function getNewList(Request $request){
-        $categ = '';
-        if($request->category_id != ''){
-            $categ = InventoryParentCategory::where('category_id', $request->category_id)->first()->getAllChildren()->pluck('category_id');
-        }
-
-        $list = InventoryParentCategory::leftJoin('inventory_category AS icat','inventory_parent_category.category_id','icat.category_id')
-            ->leftJoin('inventory AS inv','inventory_parent_category.category_id','inv.category_id')
-            ->when($categ != '', function ($q) use($categ){
-                return $q->whereIn('inventory_parent_category.category_id',$categ);
-            })
-            ->where([['icat.name','LIKE','%'.$request->name.'%'],['inv.name','!=',null]])
-            ->orWhere([['inv.name','LIKE','%'.$request->name.'%'],['inv.name','!=',null]])
-            ->get(['inventory_parent_category.*','icat.name AS CategoryName','inv.name AS ItemName']);
-
-        foreach($list as $k=>$v){
-            $v->tree = ArrayHelper::ArrayParentImplode($v->parents->pluck('name')->reverse(),'|',$v->CategoryName);
-        }
-
-        $response['status'] = 'Success';
-        $response['code'] = 200;
-        $response['count'] = count($list);
-        $response['data'] = $list;
-        return Response::json($response);
-    }
-
     public function getTreeCategory(Request $request){
         if(in_array($request->company_id,[null,0])){
             $com = Company::orderBy('name','ASC')->get();
@@ -187,8 +161,7 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
-    public function addInventory(Request $request)
-    {
+    public function addInventory(Request $request){
         $validator = Validator::make($request->all(), [
             'company_id' => 'required',
             'category_id' => 'required',
@@ -239,17 +212,17 @@ class InventoryController extends Controller
             }elseif($request->type === 'Consumables'){
                 $unitOption = [];
                 foreach (json_decode($request->unit_option, true) as $k=>$v) {
-                    $unit = InventoryUnit::where('name',$v['unit'.$k])->get();
+                    $unit = InventoryUnit::where('name',$v['unit'])->get();
                     if(count($unit) === 0) {
                         $addUnit = new InventoryUnit;
                         $addUnit->name = $v['unit'.$k];
                         $addUnit->created_at = strtotime("now");
                         $addUnit->updated_at = strtotime("now");
                         $addUnit->save();
-                        $unit = InventoryUnit::where('name', $v['unit'.$k])->get();
+                        $unit = InventoryUnit::where('name', $v['unit'])->get();
                     }
                     $unitOption[$k] = $unit;
-                    ArrayHelper::ArrayQueryPush($unitOption[$k],['content'],[$v["content".$k]]);
+                    ArrayHelper::ArrayQueryPush($unitOption[$k],['content'],[$v["content"]]);
                 }
                 $unitOption = ArrayHelper::ArrayMerge($unitOption);
                 foreach ($unitOption as $k=>$v){
