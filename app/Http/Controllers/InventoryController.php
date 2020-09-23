@@ -708,8 +708,10 @@ class InventoryController extends Controller
         }
         $category_ids1 = array();
         $category_ids2 = array();
-        if($name != "" && $ca_id != 0 || $co_id==0){
+        //if($name != "" && $ca_id != 0 || $co_id==0 || ($co_id !=0 && $name !="")){
+        if($name != ""){
             $xx = array();
+            $xxx = array();
             $limit = PHP_INT_MAX;
             if($name != "" && $co_id !=0){
                 $xx[] = ["pc.company_id", $co_id];
@@ -721,6 +723,16 @@ class InventoryController extends Controller
                 ->where("c.name", $name)
                 ->where($xx)
                 ->limit($limit)->get();
+            if($ca_id != ""){
+                $xxx = array($ca_id);
+                $cat = DB::table('inventory_parent_category AS pc')->select("c.category_id", "pc.company_id")
+                    ->leftJoin('company AS co', 'pc.company_id', '=', 'co.company_id')
+                    ->leftJoin('inventory_category AS c', 'pc.category_id', '=', 'c.category_id')
+                    ->where("c.name", $name)
+                    ->wherein("pc.parent_id", $xxx)
+                    ->limit($limit)->get();
+            }
+
             if(count($cat) > 0){
                 foreach ($cat as $c){
                     $category_ids2[] = InventoryParentCategory::where('category_id', $c->category_id)->where('company_id', $c->company_id)->first()->getAllChildren()->pluck('category_id');
@@ -774,13 +786,15 @@ class InventoryController extends Controller
 
         $sql = Inventory::where($filter)->orwhere($filter2)->orwhere($filter3)->orwhere($filter4)->orwhere($filter5)->pluck('category_id')->toArray();
 
-        if(count($sql)==0 || ($ca_id==0 && $co_id!=0 && $name!="" && count($category_ids)>0)){
+        //if(count($sql)==0 || ($ca_id==0 && $co_id!=0 && $name!="" && count($category_ids)>0)){
+        if(count($sql)==0){
             $filter2 = array();
             $filter3 = array();
             $filter4 = array();
             $filter5 = array();
         }
-        if($name == "" || $ca_id !=0 || ($ca_id==0 && $co_id!=0 && $name!="" && count($category_ids)>0)){
+        //if($name == "" || $ca_id !=0 || ($ca_id==0 && $co_id!=0 && $name!="" && count($category_ids)>0)){
+        if($name == "" || $ca_id !=0){
             $sql = array();
         }
 
@@ -839,7 +853,7 @@ class InventoryController extends Controller
             $field = "";
             if($ca_id !=0) {
                 $field = "pc.category_id";
-                $items = InventoryParentCategory::where('category_id', $ca_id)->where('company_id', $co_id)->first()->getAllChildren()->pluck('category_id');
+                $items = InventoryParentCategory::where('category_id', $ca_id)->where('company_id', InventoryParentCategory::where('category_id', $ca_id)->first()->company_id)->first()->getAllChildren()->pluck('category_id');
             }
             $filterX = array();
             if($co_id!=0){
