@@ -1852,32 +1852,30 @@ class InventoryController extends Controller
 
     // Unit Formatting
     public static function unitFormat($inventory_id, $qty){
-        $list = Inventory::select('inventory_id')->where('inventory_id',$inventory_id)->get();
         $array_m = [];
-        foreach ($list as $k) {
-            $k->unit = InventoryParentUnit::where('inv_id', $k->inventory_id)
-                ->leftJoin('inventory_unit as iunit', 'iunit.unit_id', '=', 'inventory_parent_unit.unit_id')
-                ->orderBy('id', 'desc')
-                ->get();
-            $x = 0;
-            foreach ($k->unit as $u) {
-                $array_m[$x] = $u['content'];
-                $x++;
-            }
-            $tree = $k->unit->reverse();
-            $j = 0;
-            foreach ($tree as $u) {
-                $name[$j] = $u['name'];
-                $j++;
-            }
-            $array_o = array_reverse($name);
+        $unit = InventoryParentUnit::where('inv_id', $inventory_id)
+            ->leftJoin('inventory_unit as iunit', 'iunit.unit_id', '=', 'inventory_parent_unit.unit_id')
+            ->orderBy('id', 'desc')
+            ->get();
+        $x = 0;
+        foreach ($unit as $u) {
+            $array_m[$x] = $u['content'];
+            $x++;
         }
+        $tree = $unit->reverse();
+        $j = 0;
+        $name = [];
+        foreach ($tree as $u) {
+            $name[$j] = $u['name'];
+            $j++;
+        }
+        $array_o = array_reverse($name);
         $units = array_combine($array_o, $array_m);
 
         if($qty == 0){
             return '0 '.$array_o[0];
         }
-
+        $sections = [];
         if(count($units) == 1){
             $g = [];
             foreach ($units as $key=>$val){
