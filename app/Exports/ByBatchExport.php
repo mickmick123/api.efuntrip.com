@@ -264,7 +264,7 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
           $lang['_total_balance'] = 'Total Balance : ';
           $lang['_total_collectables'] = 'Total Collectables : ';
           $lang['_total_complete_cost'] = 'Total Complete Cost : ';
-
+          $lang['_payment'] = 'Payment';
           $lang['_servic_name'] = 'Service Name';
           $lang['_latest_date'] = 'Latest Date';
           $lang['_total_service_cost'] = 'Total Service Cost';
@@ -309,6 +309,7 @@ class ByBatchExport implements FromView, WithEvents, ShouldAutoSize
           $lang['_amount'] = '共计';
           $lang['_type'] = '类型';
           $lang['_deposit'] = '预存款';
+          $lang['_payment'] = '付款';
 
           $lang['_service_date'] = '服务日期';
           $lang['_package'] = '查询编号';

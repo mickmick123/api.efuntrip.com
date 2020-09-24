@@ -297,6 +297,8 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
           $lang['_type'] = 'Type';
           $lang['_deposit'] = 'Deposit';
 
+          $lang['_payment'] = 'Payment';
+
       }else{
           $lang['_date'] = '建立日期';
           $lang['_service'] = '服务';
@@ -315,7 +317,7 @@ class ByServiceExport implements FromView, WithEvents, ShouldAutoSize
           $lang['_latest_date'] = '最近的服务日期';
           $lang['_total_service_cost'] = '总服务费';
           $lang['_package'] = '查询编号';
-
+          $lang['_payment'] = '付款';
           $lang['_transcation_history'] = '交易记录 : ';
           $lang['_service_sub'] = '服务小计';
           $lang['_discount'] = '折扣';

@@ -7,15 +7,16 @@
         <th style="text-align:center; background-color:#63b8d5"><b>{{ $lang['_details'] }}</b></th>
         <th style="text-align:center; background-color:#63b8d5"><b>{{ $lang['_charge'] }}</b></th>
         <th style="text-align:center; background-color:#63b8d5"><b>{{ $lang['_discount'] }}</b></th>
+        <th style="text-align:center; background-color:#63b8d5"><b>{{ $lang['_payment'] }}</b></th>
         <th style="text-align:center; background-color:#63b8d5"><b>{{ $lang['_service_sub'] }}</b></th>
         <th style="text-align:center; background-color:#63b8d5"><b>{{ $lang['_group_total_bal'] }}</b></th>
     </tr>
     </thead>
     <tbody>
     @foreach($services as $service)
-        <tr><td colspan="8"/></tr>
+        <tr><td colspan="9"/></tr>
         <tr >
-            <td colspan="8" style="text-align:left; background-color:#d5d0b5"><b>{{ $service['service_date'] }}</b></td>
+            <td colspan="9" style="text-align:left; background-color:#d5d0b5"><b>{{ $service['service_date'] }}</b></td>
         </tr>
 
 
@@ -40,7 +41,8 @@
                     <td style="text-align:center"><b>{{ $service['detail'] }}</b></td>
                     <td style="text-align:center"><b>{{ ($service['detail'] === "Deposit" || $service['detail'] === "Payment") ? "+".$service['total_charge']  : "-" .$service['total_charge']  }}</b></td>
                     <td style="text-align:center">{{ $service['discount']  }}</td>
-                    <td style="text-align:center">{{ $service['service_cost']  }}</td>
+                    <td style="text-align:center">{{ $service['payment_amount'] }}</td>
+                    <td style="text-align:center">{{ ($service['is_full_payment']) ? 0 : (($service['payment_amount'] > 0) ? "-". ($service['service_cost'] - $service['payment_amount']) : (($service['service_cost'] > 0) ? "-". $service['service_cost'] : 0)) }}</td>
                     <td style="text-align:center">{{ $service['total_service_cost'] }}</td>
               </tr>
 

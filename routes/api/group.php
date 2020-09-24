@@ -41,6 +41,10 @@ use Illuminate\Http\Request;
 	Route::post('by-members-service', 'GroupController@getMemberByService');
 	Route::post('by-service-members', 'GroupController@getServicesByMembers');
 
+
+	Route::post('by-group-services', 'GroupController@getServicesByGroup');
+
+
  //
   Route::post('distribute-old-payment', 'GroupController@distributeOldPayment');
   Route::post('distribute-old-payment-by-batch', 'GroupController@distributeClientOldPayment2');

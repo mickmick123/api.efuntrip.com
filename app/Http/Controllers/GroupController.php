@@ -41,6 +41,8 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\ByServiceExport;
 use App\Exports\ByMemberExport;
 use App\Exports\ByBatchExport;
+use App\Exports\TransactionsExport;
+use App\Exports\ServicesExport;
 
 use Status;
 use PDF;
@@ -795,7 +797,7 @@ public function members(Request $request, $id, $page = 20) {
 
     $sort = $request->input('sort');
     $search = $request->input('search');
-
+    $from = $request->input('from');
 
     $search_id = 0;
     $q1 = '';  $q2 = ''; $spaces = 0;
@@ -914,7 +916,12 @@ public function members(Request $request, $id, $page = 20) {
         $temp['total_service_cost'] = $totalServiceCost - $queryTotalDiscount;
         $temp['total_sub'] = ($queryTotalDiscount + $queryTotalPayment) - $totalServiceCost;
 
-        $temp['packages'] = [];
+        if($from != ''){
+          $temp['packages'] = $this->getPackagesByMemberAndGroup($g->id, $id);
+        }else{
+          $temp['packages'] = [];
+        }
+        //here
 
         $temp['id'] = $g->guid;
         $temp['group_id'] = $id;
@@ -932,6 +939,33 @@ public function members(Request $request, $id, $page = 20) {
       return Response::json($response);
 }
 
+
+public function getPackagesByMemberAndGroup($client_id = 0, $group_id = 0){
+
+
+  $services = DB::table('client_services as cs')
+      ->select(DB::raw('cs.*'))
+      ->where('client_id',$client_id)
+      ->where('group_id',$group_id)
+      ->orderBy('id', 'desc')
+      ->get();
+
+      $ctr2 = 0;
+      $totalSub = 0;
+      foreach($services as $s){
+        $s->package_cost = $s->cost+ $s->charge + $s->tip + $s->com_agent + $s->com_client;
+        $s->detail =  $s->detail;
+        $s->discount =  ClientTransaction::where('client_service_id', $s->id)->where('type', 'Discount')->sum('amount');
+
+        //Discount Details
+        $s->discount_details =  ClientTransaction::where('client_service_id', $s->id)->where('type', 'Discount')->select('amount','reason','created_at')->first();
+
+        //Payment details
+        $s->payment_details = ClientTransaction::where('client_service_id', $s->id)->where('type', 'Payment')->select('amount','reason','created_at')->first();
+      }
+
+      return $services;
+}
 
 
 public function getServicesByMembers(Request $request){
@@ -963,6 +997,37 @@ public function getServicesByMembers(Request $request){
 
           return Response::json($response);
 }
+
+
+public function getServicesByGroup(Request $request){
+
+      $services = DB::table('client_services as cs')
+          ->select(DB::raw('cs.*'))
+          ->where('group_id',$request->group_id)
+          ->orderBy('id', 'desc')
+          ->get();
+
+          $ctr2 = 0;
+          $totalSub = 0;
+          foreach($services as $s){
+            $s->package_cost = $s->cost+ $s->charge + $s->tip + $s->com_agent + $s->com_client;
+            $s->detail =  $s->detail;
+            $s->discount =  ClientTransaction::where('client_service_id', $s->id)->where('type', 'Discount')->sum('amount');
+
+            //Discount Details
+            $s->discount_details =  ClientTransaction::where('client_service_id', $s->id)->where('type', 'Discount')->select('amount','reason','created_at')->first();
+
+            //Payment details
+            $s->payment_details = ClientTransaction::where('client_service_id', $s->id)->where('type', 'Payment')->select('amount','reason','created_at')->first();
+          }
+
+          $response['status'] = 'Success';
+          $response['data'] = $services;
+          $response['code'] = 200;
+
+          return Response::json($response);
+}
+
 
 
 
@@ -3457,6 +3522,16 @@ public function getClientPackagesByGroup($client_id, $group_id){
         case 'by-batch':
               $export = new ByBatchExport($request->id, $request->lang, $request->data, $groupInfo, $request);
         break;
+
+        case 'services':
+              $export = new ServicesExport($request->id, $request->lang, $request->data, $groupInfo, $request);
+        break;
+
+        case 'transactions':
+              $export = new TransactionsExport($request->id, $request->lang, $request->data, $groupInfo, $request);
+        break;
+
+
       }
 
       if($request->export_type =='excel'){
@@ -3466,6 +3541,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
       }
       else{
+
         PDF::setOptions(['dpi' => 150, 'defaultFont' => 'simhei']);
 
         switch($request->type){
@@ -3484,6 +3560,11 @@ public function getClientPackagesByGroup($client_id, $group_id){
                 $export = $this->getExportedByBatch($request);
                 $pdf = PDF::loadView('export.batch_pdf', $export);
           break;
+
+          case 'transactions':
+                $export = $this->getExportedTransactionHistory($request);
+                $pdf = PDF::loadView('export.transaction_pdf', $export);
+          break;
         }
 
          return $pdf->download('xxxx.pdf');
@@ -3495,6 +3576,50 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
      $response = $this->getExportedByService($request);
     return $response;
+ }
+
+
+
+
+ public function getExportedTransactionHistory($request){
+
+   $lang = [];
+
+   if($request->lang === 'EN'){
+       $lang['_date_time'] = 'Date and Time';
+       $lang['_load'] = 'Load';
+       $lang['_client_name'] = 'Client Name';
+       $lang['_service_name'] = 'Service Name';
+       $lang['_amount_paid'] = 'Amount Paid';
+       $lang['_sub_total'] = 'Sub Total';
+       $lang['_previous_balance'] = 'Previous Balance';
+       $lang['_current_balance'] = 'Current Balance';
+       $lang['_operator'] = 'Operator';
+       $lang['_source'] = 'Source';
+       $lang['_type'] = 'Type';
+   }else{
+       $lang['_date_time'] = 'Date and Time';
+       $lang['_load'] = 'Load';
+       $lang['_client_name'] = 'Client Name';
+       $lang['_service_name'] = 'Service Name';
+       $lang['_amount_paid'] = 'Amount Paid';
+       $lang['_sub_total'] = 'Sub Total';
+       $lang['_previous_balance'] = 'Previous Balance';
+       $lang['_current_balance'] = 'Current Balance';
+       $lang['_operator'] = 'Operator';
+       $lang['_source'] = 'Source';
+       $lang['_type'] = '类型';
+   }
+
+
+   return [
+       'transactions' => $request->data,
+       'lang' => $lang,
+       'watermark' => public_path()."/images/watermark.png",
+       'logo' => public_path()."/images/logo.png",
+       'font'=> public_path()."/assets/fonts/simhei.ttf"
+   ];
+
  }
 
 
@@ -3611,13 +3736,15 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $lang['_servic_name'] = 'Service Name';
         $lang['_latest_date'] = 'Latest Date';
         $lang['_total_service_cost'] = 'Total Service Cost';
-
+        $lang['_payment'] = 'Payment';
 
         $lang['_transcation_history'] = 'Transactions History : ';
 
         $lang['_amount'] = 'Amount';
         $lang['_type'] = 'Type';
         $lang['_deposit'] = 'Deposit';
+
+        $lang['_payment'] = 'Payment';
 
         $lang['_service_date'] = 'Service Date';
         $lang['_package'] = 'Package';
@@ -3642,12 +3769,12 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $lang['_total_balance'] = '总余额 : ';
         $lang['_total_collectables'] = '总应收款 : ';
         $lang['_total_complete_cost'] = '总服务费 : ';
-
+        $lang['_payment'] = '付款';
         $lang['_servic_name'] = '服务明细';
         $lang['_latest_date'] = '最近的服务日期';
         $lang['_total_service_cost'] = '总服务费';
         $lang['_transcation_history'] = '交易记录 : ';
-
+        $lang['_payment'] = '付款';
         $lang['_amount'] = '共计';
         $lang['_type'] = '类型';
         $lang['_deposit'] = '预存款';
@@ -3778,6 +3905,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
          $lang['_discount'] = 'Discount';
          $lang['_service_sub'] = 'Service Sub Total';
 
+         $lang['_payment'] = 'Payment';
+
      }else{
          $lang['_date'] = '建立日期';
          $lang['_service'] = '服务';
@@ -3797,6 +3926,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
          $lang['_amount'] = '共计';
          $lang['_type'] = '类型';
          $lang['_deposit'] = '预存款';
+         $lang['_payment'] = '付款';
          $lang['_service_sub'] = '服务小计';
          $lang['_discount'] = '折扣';
      }
@@ -3904,6 +4034,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $lang['_amount'] = 'Amount';
         $lang['_type'] = 'Type';
         $lang['_deposit'] = 'Deposit';
+        $lang['_payment'] = 'Payment';
 
     }else{
         $lang['_date'] = '建立日期';
@@ -3930,6 +4061,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $lang['_amount'] = '共计';
         $lang['_type'] = '类型';
         $lang['_deposit'] = '预存款';
+        $lang['_payment'] = '付款';
     }
 
     return [
@@ -3991,6 +4123,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
        ->paginate($page);
 
    }
+
    else{
      $clientServices = DB::table('client_services')
        ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, created_at'))
@@ -4029,14 +4162,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
              if($request->input('lang') === 'CN'){
                $temp['detail'] = (($translated->detail_cn != '' && $translated->detail_cn != 'NULL') ? $translated->detail_cn : $translated->detail);
              }
-         //$temp['total_service_cost'] = $translated->charge + $translated->cost + $translated->tip + $translated->com_client + $translated->com_agent;
        }
-
-       // if($temp['total_service_cost'] == 0){
-       //   $temp['detail'] = $s->detail;
-       //   $temp['total_service_cost'] = ($query->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)")));
-       // }
-
 
        $temp['service_date'] = $s->sdate;
        $temp['group_id'] = $id;
@@ -4097,8 +4223,6 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
         $sd->members = $memberByDate;
      }
-
-
 
        $temp['total_service'] = ($query->value(DB::raw("SUM(cost + charge + tip + com_client + com_agent)")));
        $temp['service_count'] = $totalServiceCount;
@@ -4205,11 +4329,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
                        }
                  }
 
-                 // if($request->input('lang') === 'EN'){
-                 //     $cs->status = ucfirst($cs->status);
-                 // }else{
-                 //     $cs->status = $this->statusChinese($cs->status);
-                 // }
+                // $cs->payment_details = ClientTransaction::where('client_service_id', $cs->id)->where('type', 'Payment')->select('amount','reason','created_at')->first();
+
 
                  $cs->remarks = strip_tags($cs->remarks);
 
@@ -4234,7 +4355,11 @@ public function getClientPackagesByGroup($client_id, $group_id){
                  $cs->total_service_cost = 110; //here
 
                  $cs->total_charge = ($cs->active == 0 || (strtolower($cs->status) !== 'complete' && strtolower($cs->status) !== 'released')) ? 0 : (($cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent));
+
                  $cs->service_cost =  ($cs->active == 0 || (strtolower($cs->status) !== 'complete' && strtolower($cs->status) !== 'released')) ? 0 : (($cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent)) - $cs->discount;
+
+
+
                  $clientServices[$tmpCtr] = $cs;
                  $tmpCtr++;
                }
@@ -4604,14 +4729,6 @@ public function getClientPackagesByGroup($client_id, $group_id){
                           ->where('type', 'Refund')
                           ->where('deleted_at', null)
                           ->sum('amount');
-
-
-
-            // $queryTotalDiscount = DB::table('client_services as cs')
-            //               ->leftjoin(DB::raw('(select * from client_transactions) as ct'),'ct.client_service_id','=','cs.id')
-            //               ->where('ct.type', 'Discount')
-            //               ->where('cs.group_id', $group_id)
-            //               ->sum('ct.amount');
 
             $queryTotalDiscount = DB::table('client_transactions as cs')
                   ->where('cs.type', 'Discount')

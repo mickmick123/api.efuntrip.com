@@ -49,6 +49,7 @@
         <th style="text-align:center; background-color:#63b8d5"><b>{{ $lang['_status'] }}</b></th>
         <th style="text-align:center; background-color:#63b8d5"><b>{{ $lang['_charge'] }}</b></th>
         <th style="text-align:center; background-color:#63b8d5"><b>{{ $lang['_discount'] }}</b></th>
+        <th style="text-align:center; background-color:#63b8d5"><b>{{ $lang['_payment'] }}</b></th>
         <th style="text-align:center; background-color:#63b8d5"><b>{{ $lang['_service_sub'] }}</b></th>
         <th style="text-align:center; background-color:#63b8d5"><b>{{ $lang['_group_total'] }}</b></th>
     </tr>
@@ -56,10 +57,10 @@
     <tbody>
     @foreach($members as $member)
         <tr>
-            <td colspan="7"></td>
+            <td colspan="8"></td>
         </tr>
         <tr >
-            <td colspan="7" style="text-align:center;  background-color:#63b8d5"><b>{{ $member['name'] }}</b></td>
+            <td colspan="8" style="text-align:center;  background-color:#63b8d5"><b>{{ $member['name'] }}</b></td>
         </tr>
 
 
@@ -70,7 +71,8 @@
                 <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">{{ $service['status'] }}</td>
                 <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">{{ $service['package_cost'] }}</td>
                 <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">{{ $service['discount']  }}</td>
-                <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">{{ $service['service_cost']  }}</td>
+                <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">{{ $service['payment_amount'] }}</td>
+                <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">{{ ($service['is_full_payment']) ? 0 : (($service['payment_amount'] > 0) ? "-". ($service['package_cost'] - $service['payment_amount']) : (($service['package_cost'] > 0) ? "-". $service['package_cost'] : 0)) }}</td>
                 <td class="borderBottom" style="text-align:center">{{ $service['total_service_cost'] }}</td>
           </tr>
 
@@ -78,7 +80,7 @@
 
           <tr>
               <td class="borderBottom" colspan="3" style="border-right: 1px solid #e0e0e0; text-align:center"><b> {{ $lang['_member_subtotal'] }} </b></td>
-              <td class="borderBottom" colspan="4" style="text-align:center"><b>{{ $member['total_service_cost'] }}</b></td>
+              <td class="borderBottom" colspan="5" style="text-align:center"><b>{{ $member['total_service_cost'] }}</b></td>
           </tr>
 
           <tr>

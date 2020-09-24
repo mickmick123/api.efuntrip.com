@@ -45,46 +45,59 @@
 <table>
     <thead>
     <tr>
-        <th style="text-align:center; background-color:#63b8d5"><b>{{ $lang['_service_date'] }}</b></th>
-        <th style="text-align:center; background-color:#63b8d5"><b>{{ $lang['_package'] }}</b></th>
-        <th style="text-align:center; background-color:#63b8d5"><b>{{ $lang['_status'] }}</b></th>
-        <th style="text-align:center; background-color:#63b8d5"><b>{{ $lang['_details'] }}</b></th>
-        <th style="text-align:center; background-color:#63b8d5"><b>{{ $lang['_charge'] }}</b></th>
-        <th style="text-align:center; background-color:#63b8d5"><b>{{ $lang['_discount'] }}</b></th>
-        <th style="text-align:center; background-color:#63b8d5"><b>{{ $lang['_payment'] }}</b></th>
-        <th style="text-align:center; background-color:#63b8d5"><b>{{ $lang['_service_sub'] }}</b></th>
-        <th style="text-align:center; background-color:#63b8d5"><b>{{ $lang['_group_total_bal'] }}</b></th>
+        <th style="text-align:center; background-color:#63b8d5;"><b>{{ $lang['_date_time'] }}</b></th>
+        <th style="text-align:center; background-color:#63b8d5;"><b>{{ $lang['_load'] }}</b></th>
+        <th style="text-align:center; background-color:#63b8d5;"><b>{{ $lang['_client_name'] }}</b></th>
+        <th style="text-align:center; background-color:#63b8d5;"><b>{{ $lang['_service_name'] }}</b></th>
+        <th style="text-align:center; background-color:#63b8d5;"><b>{{ $lang['_amount_paid'] }}</b></th>
+        <th style="text-align:center; background-color:#63b8d5;"><b>{{ $lang['_sub_total'] }}</b></th>
+        <th style="text-align:center; background-color:#63b8d5;"><b>{{ $lang['_previous_balance'] }}</b></th>
+        <th style="text-align:center; background-color:#63b8d5;"><b>{{ $lang['_current_balance'] }}</b></th>
+        <th style="text-align:center; background-color:#63b8d5;"><b>{{ $lang['_operator'] }}</b></th>
+        <th style="text-align:center; background-color:#63b8d5;"><b>{{ $lang['_source'] }}</b></th>
     </tr>
     </thead>
     <tbody>
-    @foreach($services as $service)
-        <tr><td colspan="9"/></tr>
-        <tr >
-            <td colspan="1" style="text-align:left; background-color:#d5d0b5"><b>{{ $service['service_date'] }}</b></td>
-            <td colspan="8" style="text-align:left; background-color:#d5d0b5"><b>{{ $lang['_total_service_cost'] }} : {{ $service['total_service_cost'] }}</b></td>
+    @foreach($transactions as $t)
 
+    <tr>
+        <td colspan="10"></td>
+    </tr>
+
+
+
+    <tr>
+        <td  style="text-align:center; background-color:#cccccc;" ><b>{{ $t['display_date'] }}</b></td>
+        <td  style="text-align:center; background-color:#cccccc;">{{ $t['data']['amount'] }}</td>
+        <td  style="text-align:center; background-color:#cccccc;"></td>
+        <td  style="text-align:center; background-color:#cccccc;"></td>
+        <td  style="text-align:center; background-color:#cccccc;"></td>
+        <td  style="text-align:center; background-color:#cccccc;">{{ $t['data']['amount'] }}</td>
+        <td  style="text-align:center; background-color:#cccccc;">{{ $t['data']['prevbalance'] }}</td>
+        <td  style="text-align:center; background-color:#cccccc;">{{ $t['data']['balance'] }}</td>
+        <td  style="text-align:center; background-color:#cccccc;">{{ $t['data']['processor'] }}</td>
+        <td  style="text-align:center; background-color:#cccccc;">{{ ($t['data']['body'] !=='') ? $t['data']['body'][0]['log_type'] : $t['data']['type'] }}</td>
+    </tr>
+
+
+      @if($t['data']['type'] == 'payment')
+
+        @foreach($t['data']['body'] as $s)
+        <tr>
+            <td  class="borderBottom" style="text-align:center;"></td>
+            <td  class="borderBottom" style="text-align:center;"></td>
+            <td  class="borderBottom" style="text-align:center;"><b>{{ $s['services']['name'] }}</b></td>
+            <td  class="borderBottom" style="text-align:center;"><b>{{ $s['services']['detail'] }}</b></td>
+            <td  class="borderBottom" style="text-align:center;"><b>{{ $s['amount'] }}</b></td>
+            <td  class="borderBottom" style="text-align:center;"></td>
+            <td  class="borderBottom" style="text-align:center;"></td>
+            <td  class="borderBottom" style="text-align:center;"></td>
+            <td  class="borderBottom" style="text-align:center;"></td>
+            <td  class="borderBottom" style="text-align:center;"></td>
         </tr>
-          @foreach($service['members'] as $member)
-          <tr>
-                <td colspan="9" class="borderBottom" style="text-align:left"><b >{{ $member['name'] }}</b></td>
-          </tr>
-             @foreach($member['services'] as $s)
-              <tr>
-                    <td  colspan="2" class="borderBottom" style="text-align:right; border-right: 1px solid #e0e0e0; margin-right:2%;">{{ $s['tracking'] }}</td>
-                    <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">{{ $s['status'] }}</td>
-                    <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;"><b>{{ $s['detail'] }}</b></td>
-                    <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;"><b>{{ ($s['detail'] === "Deposit" || $s['detail'] === "Payment") ? "+".$s['total_charge']  : "-" .$s['total_charge']  }}</b></td>
-                    <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">{{ $s['discount']  }}</td>
-                    <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">{{ $s['payment_amount'] }}</td>
-                    <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">{{ ($s['is_full_payment']) ? 0 : (($s['payment_amount'] > 0) ? "-". ($s['service_cost'] - $s['payment_amount']) : (($s['service_cost'] > 0) ? "-". $s['service_cost'] : 0)) }}</td>
-                    <td class="borderBottom" style="text-align:center">{{ $s['total_service_cost'] }}</td>
-              </tr>
-              @endforeach
-          @endforeach
+        @endforeach
 
-          <tr>
-              <td></td>
-          </tr>
+      @endif
 
     @endforeach
 
