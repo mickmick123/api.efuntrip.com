@@ -1089,8 +1089,7 @@ class LogController extends Controller
 
     public function groupServiceHistory($group_id){
 
-      $translogs = DB::table('client_transactions')->where('group_id',$group_id)->where('type','<>','Discount')->orderBy('id','desc')->get();
-
+      $translogs = DB::table('logs')->where('group_id',$group_id)->where('log_type','Ewallet')->orderBy('id','desc')->get();
 
       $arraylogs = [];
       $month = null;
@@ -1100,50 +1099,9 @@ class LogController extends Controller
       $currentService = null;
       $currentLabel = null;
 
-
       foreach($translogs as $t){
-        $transactions = [];
-          if($t->client_service_id !== null){
-              $transactions = ClientService::where('id',$t->client_service_id)
-                    ->first();
 
-              $log = DB::table('logs')->where('group_id',$group_id)->where('client_service_id',$t->client_service_id)->where('log_type','<>','Discount')->orderBy('id','desc')->first();
-
-              $t->log = $log;
-
-              $t->available_balance = 0;
-
-              if($log !== null){
-                $log->processor =  User::where('id',$log->processor_id)->select('id','first_name','last_name')->first();
-              }
-
-              $services = DB::table('client_services as cs')->select(DB::raw('*, user.first_name, user.last_name'))
-              ->where('cs.id',$t->client_service_id)->orderBy('cs.id','desc')
-              ->leftjoin(
-                  DB::raw('
-                      (
-                          Select id, first_name, last_name
-                          from users as u
-                      ) as user
-                  '),
-                  'user.id', '=', 'cs.client_id'
-              )->get();
-
-              $t->services = $services;
-
-          }else{
-            $t->available_balance = 0;
-            $t->log = null;
-            $t->services = [];
-
-
-          }
-        $t->transactions = $transactions;
-      }
-
-
-      /*
-      foreach($translogs as $t){
+          $t->services = [];
           if(($t->log_group == 'payment' && $t->client_service_id != $currentService && $t->label != $currentLabel) || $t->log_group != 'payment'){
               $body = "";
               $usr =  User::where('id',$t->processor_id)->select('id','first_name','last_name')->get();
@@ -1208,6 +1166,7 @@ class LogController extends Controller
                           '),
                           'pr.id', '=', 'l.processor_id'
                       )
+
                       ->where('log_type','Ewallet')
                       ->orderBy('l.id', 'desc')
                       //->distinct('detail')
@@ -1216,6 +1175,8 @@ class LogController extends Controller
                       $t->amount = DB::table('logs as l')
                                       ->where('client_service_id', $cs->id)->where('group_id',$group_id)
                                       ->sum('amount');
+
+
 
                       $data = collect($body->toArray())->flatten()->all();
 
@@ -1231,6 +1192,10 @@ class LogController extends Controller
                                       ->where('label', $t->label)->where('group_id',$group_id)
                                       ->sum('amount');
                       $t->detail = "Total payment Php".abs($t->amount);
+
+
+
+
 
                       $body = $translogs;
 
@@ -1266,6 +1231,33 @@ class LogController extends Controller
               $currentBalance -= ($t->amount);
 
               if($csshow){
+                if($body != ''){
+                   foreach($body as $b){
+                      $b->services = DB::table('client_services as cs')
+                                    ->where('cs.id', $b->client_service_id)->where('cs.group_id',$group_id)
+                                    ->leftjoin(
+                                        DB::raw('
+                                            (
+                                                Select id, CONCAT(u.first_name, " ", u.last_name) as name
+                                                from users as u
+                                            ) as u
+                                        '),
+                                        'u.id', '=', 'cs.client_id'
+                                    )->first();
+                    }
+                }
+
+
+                  if($t->client_service_id !== null){
+                    $ewallet = DB::table('client_ewallet')
+                                   ->where('client_service_id', $t->client_service_id)->where('group_id',$group_id)
+                                   ->first();
+                    $t->storage = $ewallet['storage_type'];
+                  }else{
+                    $t->storage = 'Cash';
+                  }
+
+
                   $arraylogs[] = array(
                       'month' => $m,
                       'day' => $d,
@@ -1285,6 +1277,7 @@ class LogController extends Controller
                           'tracking' => $cstracking,
                           'status' => $csstatus,
                           'active' => $csactive,
+                          'storage' => $t->storage
 
                       )
                   );
@@ -1292,10 +1285,9 @@ class LogController extends Controller
 
           }
       }
-      */
+
       $response['status'] = 'Success';
-      //$response['data'] = $arraylogs;
-      $response['data'] = $translogs;
+      $response['data'] = $arraylogs;
       $response['code'] = 200;
 
       return Response::json($response);

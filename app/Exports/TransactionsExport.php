@@ -160,7 +160,9 @@ class TransactionsExport implements FromView, WithEvents, ShouldAutoSize
 
     return $response;*/
 
-    $response = $this->data;
+
+    $response = collect($this->data)->reverse()->toArray();
+
     return $response;
 
   }
@@ -256,7 +258,11 @@ class TransactionsExport implements FromView, WithEvents, ShouldAutoSize
 
     }*/
 
+
+
       $transactions = $this->transactions($this->id);
+
+
 
       return view('export.transaction', [
           'transactions' => $transactions,

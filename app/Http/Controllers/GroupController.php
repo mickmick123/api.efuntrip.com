@@ -3612,8 +3612,11 @@ public function getClientPackagesByGroup($client_id, $group_id){
    }
 
 
+   $result = collect($request->data)->reverse()->toArray();
+
+
    return [
-       'transactions' => $request->data,
+       'transactions' => $result,
        'lang' => $lang,
        'watermark' => public_path()."/images/watermark.png",
        'logo' => public_path()."/images/logo.png",
@@ -4917,7 +4920,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
                           })
                           ->orderBy('id')->get();
      // return 'test : '.$queryClients;
-    $records = [];      
+    $records = [];
     $totalRemaining = 0;
     foreach($queryClients as $m){
 
