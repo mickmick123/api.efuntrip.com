@@ -215,7 +215,7 @@ class InventoryController extends Controller
                     $unit = InventoryUnit::where('name',$v['unit'])->get();
                     if(count($unit) === 0) {
                         $addUnit = new InventoryUnit;
-                        $addUnit->name = $v['unit'.$k];
+                        $addUnit->name = $v['unit'];
                         $addUnit->created_at = strtotime("now");
                         $addUnit->updated_at = strtotime("now");
                         $addUnit->save();
