@@ -613,7 +613,7 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
-    public function getParents($coId,$where, $field, $inArray){
+    public function getParents($where, $field, $inArray){
         if(!empty($field) && count($inArray)>0){
             $category = DB::table('inventory_parent_category AS pc')
                 ->select(DB::raw("pc.*,com.name as company,c.name"))
@@ -818,11 +818,11 @@ class InventoryController extends Controller
             $d->isCompany = true;
         }
         if(count($categoryIds)>0 && $co_id !=0){
-            $category = $this->getParents($co_id,array(['pc.company_id', '=', $co_id]), "pc.parent_id", $categoryIds);
+            $category = $this->getParents(array(['pc.company_id', '=', $co_id]), "pc.parent_id", $categoryIds);
         }
         if(count($categoryIds)==0 && $co_id !=0){
             $arrFilter[] = ['pc.company_id', '=', $co_id];
-            $category = $this->getParents($co_id,$arrFilter, "", array());
+            $category = $this->getParents($arrFilter, "", array());
         }
         if($name != "" || ($name !="" && $ca_id !=0)) {
             $items = array();
@@ -836,7 +836,7 @@ class InventoryController extends Controller
                 $filterX[] = ['pc.company_id', '=', $co_id];
             }
             $filterX[] = ["c.name", $name];
-            $category = $this->getParents($co_id,$filterX, $field, $items);
+            $category = $this->getParents($filterX, $field, $items);
         }
 
         if ($count==0)
