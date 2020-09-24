@@ -19,4 +19,21 @@ class Role extends Model
         return $this->belongsToMany('App\User', 'role_user', 'role_id', 'user_id');
     }
 
+    public function permissions()
+    {
+        return $this->belongsToMany(Permission::class)
+            ->withTimestamps();
+    }
+
+    public function assignPermission($permission)
+    {
+        if (is_string($permission)) {
+            $this->permissions()->save(
+                Permission::whereName($permission)->firstOrFail()
+            );
+        } elseif (is_array($permission)) {
+            $this->permissions()->attach($permission);
+        }
+    }
+
 }

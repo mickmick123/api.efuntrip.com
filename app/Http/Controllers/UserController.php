@@ -5,6 +5,10 @@ namespace App\Http\Controllers;
 use App\Device;
 use App\User;
 use App\ContactNumber;
+use App\Role;
+use App\RoleUser;
+use App\PermissionRole;
+use App\Permission;
 
 use Auth, Hash, Response, Validator;
 
@@ -116,9 +120,15 @@ class UserController extends Controller
 	}
 
 	public function userInformation() {
+        $user = User::with('branches')->findorfail(Auth::user()->id);
+
+        $roles = RoleUser::where('user_id', $user->id)->pluck('role_id');
+        $perm = PermissionRole::whereIn('role_id',$roles)->groupBy('permission_id')->pluck('permission_id');
+        $permissions = Permission::whereIn('id',$perm)->pluck('name');
+        $user->permissions = $permissions;
 		$response['status'] = 'Success';
 		$response['data'] = [
-			'information' => User::with('branches')->findorfail(Auth::user()->id)
+			'information' => $user
 		];
 		$response['code'] = 200;
 

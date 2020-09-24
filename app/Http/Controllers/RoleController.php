@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Role;
+use App\PermissionRole;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -44,6 +45,37 @@ class RoleController extends Controller
         $response['status'] = 'Success';
         $response['code'] = 200;
         $response['data'] = $list;
+        return Response::json($response);
+    }
+
+    public function getRolePermissions($role_id) {
+        $perIds = PermissionRole::where('role_id',$role_id)->pluck('permission_id');
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $perIds;
+        return Response::json($response);
+    }
+
+    public function updateRoleAccess(Request $request){
+
+        $permissions = $request->get('permissions');
+
+        $permissions = explode(',', $permissions);
+
+        PermissionRole::where('role_id', $request->get('role_id'))->delete();
+
+        foreach ($permissions as $per) {
+
+            $data = new PermissionRole($request->all());
+            $data->permission_id = $per;
+            $data->role_id = $request->get('role_id');
+            $data->save();
+
+        }
+        
+        $response['status'] = 'Success';
+        $response['code'] = 200;
         return Response::json($response);
     }
 }
