@@ -76,8 +76,8 @@
         <td  style="text-align:center; background-color:#cccccc;">{{ $t['data']['prevbalance'] }}</td>
         <td  style="text-align:center; background-color:#cccccc;">{{ $t['data']['balance'] }}</td>
         <td  style="text-align:center; background-color:#cccccc;">{{ $t['data']['processor'] }}</td>
-        <td  style="text-align:center; background-color:#cccccc;">{{ ($t['data']['storage'] != null) ? $t['data']['storage'] : 'Cash' }}</td>
-    </tr>
+        <td  style="text-align:center; background-color:#cccccc;">{{ ($t['data']['body'] != '') ? $t['data']['body'][0]['log_type'] : $t['data']['storage'] }}</td>
+   </tr>
 
 
       @if($t['data']['type'] == 'payment')
