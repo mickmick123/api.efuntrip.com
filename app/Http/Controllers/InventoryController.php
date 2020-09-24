@@ -614,22 +614,17 @@ class InventoryController extends Controller
     }
 
     public function getParents($where, $field, $inArray){
+        $category = DB::table('inventory_parent_category AS pc')
+            ->select(DB::raw("pc.*,com.name as company,c.name"))
+            ->leftJoin('company AS com', 'pc.company_id', '=', 'com.company_id')
+            ->leftJoin('inventory_category AS c', 'pc.category_id', '=', 'c.category_id')
+            ->where($where);
         if(!empty($field) && count($inArray)>0){
-            $category = DB::table('inventory_parent_category AS pc')
-                ->select(DB::raw("pc.*,com.name as company,c.name"))
-                ->leftJoin('company AS com', 'pc.company_id', '=', 'com.company_id')
-                ->leftJoin('inventory_category AS c', 'pc.category_id', '=', 'c.category_id')
-                ->where($where)
-                ->whereIn($field, $inArray)
-                ->orderBy('c.name')
-                ->get();
+            $category = $category->whereIn($field, $inArray)
+                    ->orderBy('c.name')
+                    ->get();
         }else{
-            $category = DB::table('inventory_parent_category AS pc')
-                ->select(DB::raw("pc.*,co.name as company,c.name"))
-                ->leftJoin('company AS co', 'pc.company_id', '=', 'co.company_id')
-                ->leftJoin('inventory_category AS c', 'pc.category_id', '=', 'c.category_id')
-                ->where($where)
-                ->get();
+            $category = $category->get();
         }
         foreach ($category as $d) {
             //$d->name = $d->name.": ".$d->category_id;
@@ -696,16 +691,13 @@ class InventoryController extends Controller
             $cat = DB::table('inventory_parent_category AS pc')->select("c.category_id", "pc.company_id")
                 ->leftJoin('company AS co', 'pc.company_id', '=', 'co.company_id')
                 ->leftJoin('inventory_category AS c', 'pc.category_id', '=', 'c.category_id')
-                ->where("c.name", $name)
-                ->where($xx)
-                ->limit($limit)->get();
+                ->where("c.name", $name);
             if($ca_id != ""){
                 $xxx = array($ca_id);
-                $cat = DB::table('inventory_parent_category AS pc')->select("c.category_id", "pc.company_id")
-                    ->leftJoin('company AS co', 'pc.company_id', '=', 'co.company_id')
-                    ->leftJoin('inventory_category AS c', 'pc.category_id', '=', 'c.category_id')
-                    ->where("c.name", $name)
-                    ->wherein("pc.parent_id", $xxx)
+                $cat = $cat->wherein("pc.parent_id", $xxx)
+                    ->limit($limit)->get();
+            }else{
+                $cat = $cat->where($xx)
                     ->limit($limit)->get();
             }
 
@@ -762,14 +754,12 @@ class InventoryController extends Controller
 
         $sql = Inventory::where($filter)->orwhere($filter2)->orwhere($filter3)->orwhere($filter4)->orwhere($filter5)->pluck('category_id')->toArray();
 
-        //if(count($sql)==0 || ($ca_id==0 && $co_id!=0 && $name!="" && count($category_ids)>0)){
         if(count($sql)==0){
             $filter2 = array();
             $filter3 = array();
             $filter4 = array();
             $filter5 = array();
         }
-        //if($name == "" || $ca_id !=0 || ($ca_id==0 && $co_id!=0 && $name!="" && count($category_ids)>0)){
         if($name == "" || $ca_id !=0){
             $sql = array();
         }
