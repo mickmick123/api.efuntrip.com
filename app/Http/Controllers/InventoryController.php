@@ -639,7 +639,7 @@ class InventoryController extends Controller
                 $j=0;
                 foreach($tree as $t){
                     $d->x[$j] = $t->name;
-                    $d->path = implode(" / ", $d->x);
+                    $d->path = implode(" > ", $d->x);
                     $j++;
                 }
             }
@@ -905,8 +905,8 @@ class InventoryController extends Controller
                 $j=0;
                 foreach($tree as $t){
                     $n->x[$j] = $t->name;
-                    $n->asset_name = implode(" | ", $n->x);
-                    $n->path = implode(" | ", $n->x)." | ".$n->item_name;
+                    $n->asset_name = implode(" > ", $n->x);
+                    $n->path = implode(" > ", $n->x)." > ".$n->item_name;
                     $j++;
                 }
             }
@@ -982,8 +982,8 @@ class InventoryController extends Controller
                 $j=0;
                 foreach($tree as $t){
                     $n->x[$j] = $t->name;
-                    $n->asset_name = implode(" | ", $n->x);
-                    $n->path = implode(" | ", $n->x)." | ".$n->item_name;
+                    $n->asset_name = implode(" > ", $n->x);
+                    $n->path = implode(" > ", $n->x)." > ".$n->item_name;
                     $j++;
                 }
             }
