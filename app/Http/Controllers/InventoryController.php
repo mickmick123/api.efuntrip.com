@@ -613,9 +613,10 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
-    public function getParents($where, $field, $inArray){
+    public function getParents($coId,$where, $field, $inArray){
         if(!empty($field) && count($inArray)>0){
             $category = DB::table('inventory_parent_category AS pc')
+                ->select(DB::raw("pc.*,com.name as company,c.name"))
                 ->leftJoin('company AS com', 'pc.company_id', '=', 'com.company_id')
                 ->leftJoin('inventory_category AS c', 'pc.category_id', '=', 'c.category_id')
                 ->where($where)
@@ -624,6 +625,7 @@ class InventoryController extends Controller
                 ->get();
         }else{
             $category = DB::table('inventory_parent_category AS pc')
+                ->select(DB::raw("pc.*,co.name as company,c.name"))
                 ->leftJoin('company AS co', 'pc.company_id', '=', 'co.company_id')
                 ->leftJoin('inventory_category AS c', 'pc.category_id', '=', 'c.category_id')
                 ->where($where)
@@ -636,10 +638,11 @@ class InventoryController extends Controller
                 ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')->get();
             foreach($nParent as $np){
                 $tree = $np->parents->reverse();
+                $d->path = $d->company;
                 $j=0;
                 foreach($tree as $t){
                     $d->x[$j] = $t->name;
-                    $d->path = implode(" > ", $d->x);
+                    $d->path = $d->company." > ".implode(" > ", $d->x);
                     $j++;
                 }
             }
@@ -815,11 +818,11 @@ class InventoryController extends Controller
             $d->isCompany = true;
         }
         if(count($categoryIds)>0 && $co_id !=0){
-            $category = $this->getParents(array(['pc.company_id', '=', $co_id]), "pc.parent_id", $categoryIds);
+            $category = $this->getParents($co_id,array(['pc.company_id', '=', $co_id]), "pc.parent_id", $categoryIds);
         }
         if(count($categoryIds)==0 && $co_id !=0){
             $arrFilter[] = ['pc.company_id', '=', $co_id];
-            $category = $this->getParents($arrFilter, "", array());
+            $category = $this->getParents($co_id,$arrFilter, "", array());
         }
         if($name != "" || ($name !="" && $ca_id !=0)) {
             $items = array();
@@ -833,7 +836,7 @@ class InventoryController extends Controller
                 $filterX[] = ['pc.company_id', '=', $co_id];
             }
             $filterX[] = ["c.name", $name];
-            $category = $this->getParents($filterX, $field, $items);
+            $category = $this->getParents($co_id,$filterX, $field, $items);
         }
 
         if ($count==0)
