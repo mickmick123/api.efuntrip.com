@@ -1194,9 +1194,6 @@ class LogController extends Controller
                       $t->detail = "Total payment Php".abs($t->amount);
 
 
-
-
-
                       $body = $translogs;
 
                       $cstracking =  null;

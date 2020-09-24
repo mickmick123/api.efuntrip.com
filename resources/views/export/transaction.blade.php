@@ -39,6 +39,7 @@
 
       @if($t['data']['type'] == 'payment')
 
+       @if($t['data']['body'] !== '')  
         @foreach($t['data']['body'] as $s)
         <tr>
             <td  style="text-align:center;"></td>
@@ -53,7 +54,7 @@
             <td  style="text-align:center;"></td>
         </tr>
         @endforeach
-
+        @endif
       @endif
 
     @endforeach

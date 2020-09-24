@@ -3611,12 +3611,10 @@ public function getClientPackagesByGroup($client_id, $group_id){
        $lang['_type'] = '类型';
    }
 
-
-   $result = collect($request->data)->reverse()->toArray();
-
+   //$result = collect($request->data)->reverse()->toArray();
 
    return [
-       'transactions' => $result,
+       'transactions' => $request->data,
        'lang' => $lang,
        'watermark' => public_path()."/images/watermark.png",
        'logo' => public_path()."/images/logo.png",

@@ -161,9 +161,9 @@ class TransactionsExport implements FromView, WithEvents, ShouldAutoSize
     return $response;*/
 
 
-    $response = collect($this->data)->reverse()->toArray();
+    //$response = collect($this->data)->reverse()->toArray();
 
-    return $response;
+    return $this->data;
 
   }
 
