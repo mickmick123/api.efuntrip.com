@@ -1386,17 +1386,17 @@ class InventoryController extends Controller
 
             $unitOption = [];
             foreach (json_decode($request->unit_option, true) as $k=>$v) {
-                $unit = InventoryUnit::where('name',$v['unit'.$k])->get();
+                $unit = InventoryUnit::where('name',$v['unit'])->get();
                 if(count($unit) === 0) {
                     $addUnit = new InventoryUnit;
-                    $addUnit->name = $v['unit'.$k];
+                    $addUnit->name = $v['unit'];
                     $addUnit->created_at = strtotime("now");
                     $addUnit->updated_at = strtotime("now");
                     $addUnit->save();
-                    $unit = InventoryUnit::where('name', $v['unit'.$k])->get();
+                    $unit = InventoryUnit::where('name', $v['unit'])->get();
                 }
                 $unitOption[$k] = $unit;
-                ArrayHelper::ArrayQueryPush($unitOption[$k],['content'],[$v["content".$k]]);
+                ArrayHelper::ArrayQueryPush($unitOption[$k],['content'],[$v["content"]]);
             }
             $unitOption = ArrayHelper::ArrayMerge($unitOption);
             foreach ($unitOption as $k=>$v){
