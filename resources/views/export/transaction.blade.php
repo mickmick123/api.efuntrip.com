@@ -24,7 +24,7 @@
 
     <tr>
         <td  style="text-align:center; background-color:#cccccc;" ><b>{{ $t['display_date'] }}</b></td>
-        <td  style="text-align:center; background-color:#cccccc;">{{ $t['data']['amount'] }}</td>
+        <td  style="text-align:center; background-color:#cccccc;">{{ ($t['data']['type'] != 'payment') ? $t['data']['amount'] : '' }}</td>
         <td  style="text-align:center; background-color:#cccccc;"></td>
         <td  style="text-align:center; background-color:#cccccc;"></td>
         <td  style="text-align:center; background-color:#cccccc;"></td>
@@ -39,7 +39,7 @@
 
       @if($t['data']['type'] == 'payment')
 
-       @if($t['data']['body'] !== '')  
+       @if($t['data']['body'] !== '')
         @foreach($t['data']['body'] as $s)
         <tr>
             <td  style="text-align:center;"></td>

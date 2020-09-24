@@ -1150,7 +1150,6 @@ class LogController extends Controller
                           $csstatus =  'Disabled';
                       }
 
-
                       $currentService = $cs->id;
                       $currentLabel = $t->label;
 
