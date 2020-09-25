@@ -561,7 +561,7 @@ class InventoryController extends Controller
         $sort = $request->sort;
         $search = $request->search;
 
-        $newlyAdded = Inventory::select(['inventory.*',
+        $newlyAdded = Inventory::select(['inventory.*','u.name as unit',
             DB::raw("(inventory.name) AS name,
                 (co.name) AS company,
                 CASE WHEN inventory.type='Consumables' THEN
@@ -601,6 +601,7 @@ class InventoryController extends Controller
                     ->limit(1);
             },
         ])
+            ->leftJoin("inventory_unit as u", "inventory.unit_id", "u.unit_id")
             ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
             ->orHaving('datetime', 'LIKE','%'.$search.'%')
             ->orHaving('total_asset', 'LIKE','%'.$search.'%')
@@ -614,8 +615,9 @@ class InventoryController extends Controller
             })->paginate($perPage);
 
         foreach($newlyAdded as $n){
-            if($n->type=="Consumables") {
-                //$n->total_asset = self::unitFormat($n->inventory_id, (int)$n->total_asset);
+            if($n->type=="Consumables" && $n->sell>0) {
+                //$n->total_asset = self::unitFormat($n->inventory_id, (int)$n->qty);
+                $n->total_asset = self::unitFormat($n->unit, $n->sell, (int)$n->qty);
             }
         }
 
@@ -861,7 +863,7 @@ class InventoryController extends Controller
 
         $list = DB::table('inventory')
             ->select(DB::raw('
-                co.name as company_name, inventory.*,
+                co.name as company_name, inventory.*, u.name as unit,
                 CASE WHEN inventory.type="Consumables" THEN
                     IFNULL(
                         (SELECT
@@ -874,12 +876,12 @@ class InventoryController extends Controller
                     ,0)
                 ELSE
                     (SELECT COUNT(id) FROM inventory_assigned a WHERE a.inventory_id = inventory.inventory_id AND a.status !=3)
-                END AS qty,
-                u.unit_id, pu.id as parent_unit_id
+                END AS qty
             '))
             ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
-            ->leftJoin("inventory_parent_unit as pu", "inventory.inventory_id", "pu.inv_id")
-            ->leftJoin("inventory_unit as u", "pu.unit_id", "u.unit_id")
+            //->leftJoin("inventory_parent_unit as pu", "inventory.inventory_id", "pu.inv_id")
+            //->leftJoin("inventory_unit as u", "pu.unit_id", "u.unit_id")
+            ->leftJoin("inventory_unit as u", "inventory.unit_id", "u.unit_id")
             ->where($filter)
             ->where(function ($sql) use ($filter2,$filter3,$filter4,$filter5){
                 $sql->where($filter2)
@@ -900,8 +902,10 @@ class InventoryController extends Controller
                 ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')->get();
             $n->created_at = gmdate("F j, Y", $n->created_at);
             $n->updated_at = gmdate("F j, Y", $n->updated_at);
-            if($n->type=="Consumables") {
+            if($n->type=="Consumables" && $n->sell>0) {
                 //$n->qty = self::unitFormat($n->inventory_id, (int)$n->qty);
+                $n->qty = self::unitFormat($n->unit, $n->sell, (int)$n->qty);
+                $n->unit = "Set/".$n->unit;
             }
             foreach($nparent as $np){
                 $tree = $np->parents->reverse();
@@ -918,17 +922,16 @@ class InventoryController extends Controller
                 }
             }
 
-            $units = InventoryParentUnit::where('inv_id', $n->inventory_id)
-                ->leftJoin('inventory_unit as iunit', 'iunit.unit_id', '=', 'inventory_parent_unit.unit_id')
-                ->orderBy('id', 'asc')
-                ->get();
-            $xx = 0;
-            foreach ($units as $u) {
-                $n->childs[$xx] = $u['name'];
-                $xx++;
-            }
-
-            $n->unit = implode("/", $n->childs);
+            //$units = InventoryParentUnit::where('inv_id', $n->inventory_id)
+            //    ->leftJoin('inventory_unit as iunit', 'iunit.unit_id', '=', 'inventory_parent_unit.unit_id')
+            //    ->orderBy('id', 'asc')
+            //    ->get();
+            //$xx = 0;
+            //foreach ($units as $u) {
+            //    $n->childs[$xx] = $u['name'];
+            //    $xx++;
+            //}
+            //$n->unit = implode("/", $n->childs);
 
             $i++;
         }
@@ -968,8 +971,8 @@ class InventoryController extends Controller
                 u.unit_id, pu.id as parent_unit_id
             '))
             ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
-            ->leftJoin("inventory_parent_unit as pu", "inventory.inventory_id", "pu.inv_id")
-            ->leftJoin("inventory_unit as u", "pu.unit_id", "u.unit_id")
+            //->leftJoin("inventory_parent_unit as pu", "inventory.inventory_id", "pu.inv_id")
+            ->leftJoin("inventory_unit as u", "inventory.unit_id", "u.unit_id")
             ->where("inventory_id", $id)->get();
         foreach($list as $n){
             $nparent = InventoryParentCategory::where('inventory_parent_category.category_id',$n->category_id)
@@ -979,6 +982,7 @@ class InventoryController extends Controller
             $n->updated_at = gmdate("F j, Y", $n->updated_at);
             if($n->type=="Consumables") {
                 //$n->qty = self::unitFormat($n->inventory_id, (int)$n->qty);
+                $n->qty = $n->qty/$n->sell." Set";
             }
             foreach($nparent as $np){
                 $tree = $np->parents->reverse();
@@ -1866,7 +1870,7 @@ class InventoryController extends Controller
     }
 
     // Unit Formatting
-    public static function unitFormat($inventory_id, $qty){
+    public static function unitFormat1($inventory_id, $qty){
         $array_m = [];
         $unit = InventoryParentUnit::where('inv_id', $inventory_id)
             ->leftJoin('inventory_unit as iunit', 'iunit.unit_id', '=', 'inventory_parent_unit.unit_id')
@@ -1985,6 +1989,22 @@ class InventoryController extends Controller
 
         return implode(', ', $g);
 
+    }
+
+    protected static function unitFormat($u, $sell, $qty){ //ie. unit=Box, sell=10, qty=22 : return 2 Sets, 2 Boxs
+        if($qty == 0){
+            return 0;
+        }
+        $unit = array();
+        $unit['Set'] = floor($qty / $sell);
+        $unit[$u] = ceil($qty % $sell);
+        $g = array();
+        foreach ($unit as $name => $value){
+            if ($value > 0){
+                $g[] = $value. ' '.$name.($value == 1 ? '' : 's');
+            }
+        }
+        return implode(', ', $g);
     }
 
     public function testKo(){
