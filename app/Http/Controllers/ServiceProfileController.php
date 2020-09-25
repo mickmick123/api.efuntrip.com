@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\ClientService;
+
 use App\Group;
+
+use App\OnHandDocument;
 
 use App\ServiceProfile;
 
@@ -141,7 +145,9 @@ class ServiceProfileController extends Controller
 
   public function getUsersGroups($id) {
     $groups = Group::where('service_profile_id', $id)->select('id', 'name', 'balance')->get();
-    $users = User::where('service_profile_id', $id)->select('id', DB::raw('CONCAT(first_name," ",last_name) AS name'), 'balance')->get();
+    $users = User::where('service_profile_id', $id)
+            ->select('users.id', DB::raw('CONCAT(users.first_name," ",users.last_name) AS name'), 'users.balance')
+            ->get();
 
     $data = [];
 
@@ -158,11 +164,22 @@ class ServiceProfileController extends Controller
 
     if(count($users) > 0) {
       foreach($users as $user) {
+
+        $onHand = DB::table('on_hand_documents as ohd')
+                  ->leftJoin('documents as docs', 'ohd.document_id', 'docs.id')
+                  ->where('client_id', $user->id)
+                  ->where('count', '>', 0)
+                  ->select('ohd.*', 'docs.title')
+                  ->get();
+        $cs = DB::table('client_services')->where('client_id', $user->id)->whereIn('status', ['pending', 'on process'])->get();
+
         $data[] = [
           'id' => $user->id,
           'name' => $user->name,
           'balance' => $user->balance,
-          'type' => 'client'
+          'type' => 'client',
+          'on_hand_documents' => $onHand,
+          'client_services' => $cs
         ];
       }
     }
