@@ -615,7 +615,7 @@ class InventoryController extends Controller
 
         foreach($newlyAdded as $n){
             if($n->type=="Consumables") {
-                $n->total_asset = self::unitFormat($n->inventory_id, (int)$n->total_asset);
+                //$n->total_asset = self::unitFormat($n->inventory_id, (int)$n->total_asset);
             }
         }
 
@@ -901,7 +901,7 @@ class InventoryController extends Controller
             $n->created_at = gmdate("F j, Y", $n->created_at);
             $n->updated_at = gmdate("F j, Y", $n->updated_at);
             if($n->type=="Consumables") {
-                $n->qty = self::unitFormat($n->inventory_id, (int)$n->qty);
+                //$n->qty = self::unitFormat($n->inventory_id, (int)$n->qty);
             }
             foreach($nparent as $np){
                 $tree = $np->parents->reverse();
@@ -978,7 +978,7 @@ class InventoryController extends Controller
             $n->created_at = gmdate("F j, Y", $n->created_at);
             $n->updated_at = gmdate("F j, Y", $n->updated_at);
             if($n->type=="Consumables") {
-                $n->qty = self::unitFormat($n->inventory_id, (int)$n->qty);
+                //$n->qty = self::unitFormat($n->inventory_id, (int)$n->qty);
             }
             foreach($nparent as $np){
                 $tree = $np->parents->reverse();
@@ -995,17 +995,17 @@ class InventoryController extends Controller
                 }
             }
 
-            $units = InventoryParentUnit::where('inv_id', $n->inventory_id)
-                ->leftJoin('inventory_unit as iunit', 'iunit.unit_id', '=', 'inventory_parent_unit.unit_id')
-                ->orderBy('id', 'asc')
-                ->get();
-            $xx = 0;
-            foreach ($units as $u) {
-                $n->childs[$xx] = $u['name'];
-                $xx++;
-            }
-
-            $n->unit = implode("/", $n->childs);
+//            $units = InventoryParentUnit::where('inv_id', $n->inventory_id)
+//                ->leftJoin('inventory_unit as iunit', 'iunit.unit_id', '=', 'inventory_parent_unit.unit_id')
+//                ->orderBy('id', 'asc')
+//                ->get();
+//            $xx = 0;
+//            foreach ($units as $u) {
+//                $n->childs[$xx] = $u['name'];
+//                $xx++;
+//            }
+//
+//            $n->unit = implode("/", $n->childs);
         }
 
         $response['status'] = 'Success';
@@ -1449,27 +1449,28 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
-    public function getInventory(Request $request){
-        $list = Inventory::where('inventory_id',$request->inventory_id)->get();
-        foreach($list as $k=>$v){
-            $v->unit_option = InventoryParentUnit::leftJoin('inventory_unit AS iu','inventory_parent_unit.unit_id','iu.unit_id')
-                ->where('inventory_parent_unit.inv_id',$v->inventory_id)->get();
-
-            $xx = 0;
-            foreach ($v->unit_option as $u) {
-                $childs[$xx] = $u['name'];
-                if((count($v->unit_option)-1)==$xx){
-                    $v->min_purchased = $u['min_purchased'];
-                }
-                $xx++;
-            }
-            $v->unit = implode("/", $childs);
-            $v->specification = $v->specification?$v->specification:'';
-        }
+    //to be modified
+    public function getInventory(Request $request){ //to be modified
+//        $list = Inventory::where('inventory_id',$request->inventory_id)->get();
+//        foreach($list as $k=>$v){
+//            $v->unit_option = InventoryParentUnit::leftJoin('inventory_unit AS iu','inventory_parent_unit.unit_id','iu.unit_id')
+//                ->where('inventory_parent_unit.inv_id',$v->inventory_id)->get();
+//
+//            $xx = 0;
+//            foreach ($v->unit_option as $u) {
+//                $childs[$xx] = $u['name'];
+//                if((count($v->unit_option)-1)==$xx){
+//                    $v->min_purchased = $u['min_purchased'];
+//                }
+//                $xx++;
+//            }
+//            $v->unit = implode("/", $childs);
+//            $v->specification = $v->specification?$v->specification:'';
+//        }
 
         $response['status'] = 'Success';
         $response['code'] = 200;
-        $response['data'] = $list;
+        $response['data'] = [];
 
         return Response::json($response);
     }
