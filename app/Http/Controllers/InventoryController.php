@@ -1654,7 +1654,7 @@ class InventoryController extends Controller
         $validator = Validator::make($request->all(), [
             'inventory_id' => 'required',
             'qty' => 'required',
-            'unit' => 'required',
+//            'unit' => 'required',
             'price' => 'nullable',
             'location' => 'required',
             'location_detail' => 'required',
@@ -1687,16 +1687,21 @@ class InventoryController extends Controller
                 $location = Location::where("id", $request->location)->first()->location;
             }
 
-            $qty = self::contentToMinPurchased($request->inventory_id,$request->unit,$request->qty);
+//            $qty = self::contentToMinPurchased($request->inventory_id,$request->unit,$request->qty);
+            $qty = $request->qty;
             //Logs
-            $reason = "$user->first_name purchased ".self::unitFormat($request->inventory_id,$qty)." with the price of Php$request->price
+            $inv = Inventory::leftJoin('inventory_unit AS iun','inventory.unit_id','iun.unit_id')
+                ->where('inventory.inventory_id',$request->inventory_id)
+                ->get(['iun.name AS unit','inventory.sell']);
+//            $reason = "$user->first_name purchased ".self::unitFormat($inv[0]->unit, (float)$inv[0]->sell, (int)$request->qty)." with the price of Php$request->price
+            $reason = "$user->first_name purchased ".$qty." with the price of Php$request->price
                     Stored at $location from $request->sup_name.";
             self::saveLogs($request->inventory_id, 'Stored', $reason);
 
             $icon = new InventoryConsumables;
             $icon->inventory_id = $request->inventory_id;
             $icon->qty = $qty;
-            $icon->unit_id = $request->unit;
+//            $icon->unit_id = $request->unit;
             $icon->price = $request->price;
             $icon->remaining = $remaining + $qty;
             $icon->location_id = $locId;
