@@ -341,13 +341,14 @@ class InventoryController extends Controller
                 $u = InventoryUnit::where("unit_id", $request->unit_id)->first();
             }
 
-            $pUnit = InventoryParentUnit::find($request->parent_unit_id);
-            $pUnit->unit_id = $u->unit_id;
-            $pUnit->save();
+//            $pUnit = InventoryParentUnit::find($request->parent_unit_id);
+//            $pUnit->unit_id = $u->unit_id;
+//            $pUnit->save();
 
             $inv = Inventory::find($request->inventory_id);
             $inv->description = $request->description;
             $inv->type = $request->type;
+            $inv->unit_id = $u->unit_id;
 
             if($request->specification !== null) {
                 $inv->specification = $request->specification;
@@ -954,7 +955,7 @@ class InventoryController extends Controller
     public function show($id){
         $list = DB::table('inventory')
             ->select(DB::raw('
-                co.name as company_name, inventory.*,
+                co.name as company_name, inventory.*, u.name as unit,
                 CASE WHEN inventory.type="Consumables" THEN
                     IFNULL(
                         (SELECT
@@ -967,8 +968,7 @@ class InventoryController extends Controller
                     ,0)
                 ELSE
                     (SELECT COUNT(id) FROM inventory_assigned a WHERE a.inventory_id = inventory.inventory_id AND a.status !=3)
-                END AS qty,
-                u.unit_id, pu.id as parent_unit_id
+                END AS qty
             '))
             ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
             //->leftJoin("inventory_parent_unit as pu", "inventory.inventory_id", "pu.inv_id")
@@ -980,7 +980,7 @@ class InventoryController extends Controller
                 ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')->get();
             $n->created_at = gmdate("F j, Y", $n->created_at);
             $n->updated_at = gmdate("F j, Y", $n->updated_at);
-            if($n->type=="Consumables") {
+            if($n->type=="Consumables" && $n->sell>0) {
                 //$n->qty = self::unitFormat($n->inventory_id, (int)$n->qty);
                 $n->qty = $n->qty/$n->sell." Set";
             }
