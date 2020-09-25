@@ -4606,6 +4606,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
           $group_id = $request->get('group_id');
           $mode = $request->get('mode');
+          $datenow = (Carbon::now())->format('M d, Y H:i:s');
 
           for($i=0; $i<count($request->payments); $i++) {
 
@@ -4660,21 +4661,21 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
              $label = null;
              $cl = User::findOrFail($client_id);
-             if($mode == "batch"){
-                $label = 'Payment for Batch '.Carbon::parse($service->created_at)->format('M d, Y');
+             // if($mode == "batch"){
+                $label = 'Payment Date : '.$datenow;
                 $detail = '<b>['.$client_id.']'.$cl->first_name.' '.$cl->last_name.' : '.$service->detail.'.</b> Paid service with an amount of Php'.$amount.'.';
                 $detail_cn = '<b>['.$client_id.']'.$cl->first_name.' '.$cl->last_name.' : '.$service->detail.'.</b> Paid service with an amount of Php'.$amount.'.';
-             }
-             else if($mode == "members"){
-                $label = 'Payment for member <b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'</b>';
-                $detail = '<b>'.$service->detail.'.</b> Paid service with an amount of Php'.$amount.'.';
-                $detail_cn = '<b>'.$service->detail.'.</b> Paid service with an amount of Php'.$amount.'.';
-             }
-             else if($mode == "service"){
-                $label = 'Payment for sevice <b>'.$service->detail.'</b>';
-                $detail = '<b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'.</b> Paid service with an amount of Php'.$amount.'.';
-                $detail_cn = '<b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'.</b> Paid service with an amount of Php'.$amount.'.';
-             }
+             // }
+             // else if($mode == "members"){
+             //    $label = 'Payment for member <b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'</b>';
+             //    $detail = '<b>'.$service->detail.'.</b> Paid service with an amount of Php'.$amount.'.';
+             //    $detail_cn = '<b>'.$service->detail.'.</b> Paid service with an amount of Php'.$amount.'.';
+             // }
+             // else if($mode == "service"){
+             //    $label = 'Payment for sevice <b>'.$service->detail.'</b>';
+             //    $detail = '<b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'.</b> Paid service with an amount of Php'.$amount.'.';
+             //    $detail_cn = '<b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'.</b> Paid service with an amount of Php'.$amount.'.';
+             // }
 
 
              $log_data = array(
