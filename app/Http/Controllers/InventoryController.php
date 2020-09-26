@@ -14,6 +14,7 @@ use App\Role;
 use App\User;
 use App\InventoryParentUnit;
 use App\InventoryUnit;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\DB;
 use App\InventoryParentCategory;
@@ -356,17 +357,8 @@ class InventoryController extends Controller
             $inv->updated_at = strtotime("now");
             $inv->save();
 
-            $array = [
-                'description' => $inv['description'],
-                'specification' => $inv['specification'],
-                'type' => $inv['type'],
-                'unit' => $u->name
-            ];
-
             $response['status'] = 'Success';
             $response['code'] = 200;
-            $response['data'] = $array;
-
         }
         return Response::json($response);
     }
@@ -1671,15 +1663,15 @@ class InventoryController extends Controller
             $locId = self::location($request->location, $request->location_detail,2);
             $supLocId = self::location($request->sup_location, $request->sup_location_detail,3);
 
-            $item = InventoryConsumables::where([
-                ["inventory_id", $request->inventory_id],
-                ["location_id", $locId]
-            ])->orderBy("id", "DESC")->limit(1)->first();
-            if($item){
-                $remaining = $item->remaining;
-            }else{
-                $remaining = 0;
-            }
+//            $item = InventoryConsumables::where([
+//                ["inventory_id", $request->inventory_id],
+//                ["location_id", $locId]
+//            ])->orderBy("id", "DESC")->limit(1)->first();
+//            if($item){
+//                $remaining = $item->remaining;
+//            }else{
+//                $remaining = 0;
+//            }
 
             if(!is_numeric($request->loc_site_id)){
                 $location = $request->loc_site_id;
@@ -1693,8 +1685,8 @@ class InventoryController extends Controller
             $inv = Inventory::leftJoin('inventory_unit AS iun','inventory.unit_id','iun.unit_id')
                 ->where('inventory.inventory_id',$request->inventory_id)
                 ->get(['iun.name AS unit','inventory.sell']);
-//            $reason = "$user->first_name purchased ".self::unitFormat($inv[0]->unit, (float)$inv[0]->sell, (int)$request->qty)." with the price of Php$request->price
-            $reason = "$user->first_name purchased ".$qty." with the price of Php$request->price
+//            $reason = "$user->first_name purchased ".$qty." with the price of Php$request->price
+            $reason = "$user->first_name purchased ".self::unitFormat($inv[0]->unit, (float)$inv[0]->sell, (int)$qty)." with the price of Php$request->price
                     Stored at $location from $request->sup_name.";
             self::saveLogs($request->inventory_id, 'Stored', $reason);
 
@@ -1703,7 +1695,7 @@ class InventoryController extends Controller
             $icon->qty = $qty;
 //            $icon->unit_id = $request->unit;
             $icon->price = $request->price;
-            $icon->remaining = $remaining + $qty;
+//            $icon->remaining = $remaining + $qty;
             $icon->location_id = $locId;
             $icon->sup_name = $request->sup_name;
             $icon->sup_location_id = $supLocId;
@@ -1783,93 +1775,90 @@ class InventoryController extends Controller
 
     public function getInventoryConsumable(Request $request){
         $list = DB::table('inventory_consumables as c')
-            ->select(DB::raw("c.*, l.location, ld.location_detail,
-                    iu.name as unit, CONCAT(u.first_name, ' ', u.last_name) as operator, CONCAT(w.first_name, ' ', w.last_name) as who,
-                    l1.location as sup_location, ld1.location_detail as sup_location_detail"))
-            ->where("inventory_id", $request->inventory_id)
+            ->select(DB::raw("c.*, l.location, ld.location_detail, l.id as storageId,
+                    CONCAT(u.first_name, ' ', u.last_name) as operator, CONCAT(w.first_name, ' ', w.last_name) as who,
+                    l1.location as sup_location, ld1.location_detail as sup_location_detail,iu.name as unit,i.sell"))
+            ->where("c.inventory_id", $request->inventory_id)
             ->leftJoin("users as u", "c.created_by", "u.id")
             ->leftJoin("users as w", "c.assigned_to", "w.id")
-            ->leftJoin("inventory_unit as iu", "c.unit_id", "iu.unit_id")
             ->leftJoin("ref_location_detail as ld","c.location_id","ld.id")
             ->leftJoin("ref_location as l","ld.loc_id","l.id")
             ->leftJoin("ref_location_detail as ld1","c.sup_location_id","ld1.id")
             ->leftJoin("ref_location as l1","ld1.loc_id","l1.id")
-            ->orderBy("id", "DESC")
+            ->leftJoin("inventory as i", "c.inventory_id", "i.inventory_id")
+            ->leftJoin("inventory_unit as iu", "i.unit_id", "iu.unit_id")
+            ->orderBy("id", "ASC")
             ->get();
-
+        $collection = new Collection($list);
+        $storage = $collection->unique('storageId')->values()->pluck('storageId');
+        $i = 0;
+        foreach ($storage as $id){
+            $qty[$id]=0;
+        }
         foreach ($list as $l){
             $l->created_at = gmdate("F j, Y", $l->created_at);
             $l->updated_at = gmdate("F j, Y", $l->updated_at);
-            $l->qty = self::unitFormat($request->inventory_id, $l->qty);
-            $l->remaining = self::unitFormat($request->inventory_id, $l->remaining);
             $l->location = $l->location?$l->location:'';
             $l->location_detail = $l->location_detail?$l->location_detail:'';
             $l->sup_name = $l->sup_name?$l->sup_name:'';
             $s = $l->sup_location;
             $l->sup_location = $s?$s.' ('.$l->sup_location_detail.')':'';
+            if($i==0) {
+                $qty[$l->storageId] = $l->qty;
+            }
+            if($i!=0) {
+                if ($l->type == "Purchased") {
+                    $qty[$l->storageId] += $l->qty;
+                }
+                if ($l->type == "Consumed") {
+                    $qty[$l->storageId] -= $l->qty;
+                }
+            }
+            $l->qty = self::unitFormat($l->unit, $l->sell, $l->qty);
+            $l->remaining = self::unitFormat($l->unit, $l->sell, $qty[$l->storageId]);
+            $qty[$l->storageId] = $qty[$l->storageId];
+            $i++;
         }
-
+        $data = $list->toArray();
         $response['status'] = 'Success';
         $response['code'] = 200;
-        $response['data'] = $list;
+        $response['data'] = array_reverse($data);
+//        $response['data'] = $qty;
 
         return Response::json($response);
     }
 
     public function locationListConsumable(Request $request){
         $location = DB::table("inventory_consumables as c")
-            ->select(DB::raw('l.location, l.id'))
+            ->select(DB::raw('l.location, l.id, u.name as unit, i.sell'))
+            ->leftJoin("inventory as i", "c.inventory_id", "i.inventory_id")
+            ->leftJoin("inventory_unit as u", "i.unit_id", "u.unit_id")
             ->leftjoin("ref_location_detail as ld", "c.location_id", "ld.id")
             ->leftjoin("ref_location as l", "ld.loc_id", "l.id")
             ->where([["c.inventory_id", $request->inventory_id],["c.type","=","Purchased"]])
             ->groupBy('ld.loc_id')
             ->orderBy("l.location", "ASC")
             ->get();
-        $spent = DB::table('inventory_consumables as c')
-            ->select(DB::raw('SUM(price) as price'))
-            ->where([["inventory_id", $request->inventory_id],["c.type", "=", "Purchased"]])
-            ->leftjoin("ref_location_detail as ld", "c.location_id", "ld.id")
-            ->leftjoin("ref_location as l", "ld.loc_id", "l.id")
-            ->groupBy('c.inventory_id')
-            ->first();
-        $lastUnit = InventoryParentUnit::select("u.name")->where("inv_id", $request->inventory_id)
-            ->leftJoin("inventory_unit as u", "inventory_parent_unit.unit_id", "u.unit_id")
-            ->orderBy("id", "DESC")->get();
-        if($spent) {
-            $price = number_format($spent->price, 2);
-        }else {
-            $price = 0.00;
-        }
         foreach ($location as $l){
             $purchased = DB::table('inventory_consumables as c')
-                ->select(DB::raw('SUM(qty) as qty'))
                 ->where([["inventory_id", $request->inventory_id],["c.type", "=", "Purchased"],["l.id", $l->id]])
                 ->leftjoin("ref_location_detail as ld", "c.location_id", "ld.id")
                 ->leftjoin("ref_location as l", "ld.loc_id", "l.id")
-                ->groupBy('c.inventory_id')
-                ->first();
+                ->sum('qty');
             $consumed = DB::table('inventory_consumables as c')
-                ->select(DB::raw('SUM(qty) as qty'))
                 ->where([["inventory_id", $request->inventory_id],["c.type", "=", "Consumed"],["l.id", $l->id]])
                 ->leftjoin("ref_location_detail as ld", "c.location_id", "ld.id")
                 ->leftjoin("ref_location as l", "ld.loc_id", "l.id")
-                ->groupBy('c.inventory_id')
-                ->first();
-
-            $purchased = $purchased?(int)$purchased->qty:0;
-            $consumed = $consumed?(int)$consumed->qty:0;
-            $l->remaining = self::unitFormat($request->inventory_id,$purchased-$consumed);
-            $l->uTotal = number_format($purchased-$consumed);
-            if(count($lastUnit) > 1){
-                $l->uTotal = $l->uTotal!=0?$l->uTotal." ".($lastUnit[0]['name'].($l->uTotal>0?'s':'')):'';
-            }else{
-                $l->uTotal = "";
-            }
+                ->sum('qty');
+            $qty = $purchased-$consumed;
+            $l->remaining = self::unitFormat($l->unit, $l->sell, $qty);
+            $l->uTotal = $qty>0?number_format($qty)." ".$l->unit.($qty>1?'s':''):'';
         }
+        $spent = InventoryConsumables::where([["inventory_id", $request->inventory_id],["type", "=", "Purchased"]])->sum('price');
 
         $response['status'] = 'Success';
         $response['code'] = 200;
-        $response['data'] = array('spent' => $price, 'location' => $location);
+        $response['data'] = array('spent' => $spent, 'location' => $location);
 
         return Response::json($response);
     }
@@ -2002,7 +1991,8 @@ class InventoryController extends Controller
         }
         $unit = array();
         $unit['Set'] = floor($qty / $sell);
-        $unit[$u] = ceil($qty % $sell);
+        $fr = $qty / $sell - floor($qty / $sell);
+        $unit[$u] = $fr * $sell;
         $g = array();
         foreach ($unit as $name => $value){
             if ($value > 0){
