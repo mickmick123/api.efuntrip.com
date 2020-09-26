@@ -1823,7 +1823,6 @@ class InventoryController extends Controller
         $response['status'] = 'Success';
         $response['code'] = 200;
         $response['data'] = array_reverse($data);
-//        $response['data'] = $qty;
 
         return Response::json($response);
     }
