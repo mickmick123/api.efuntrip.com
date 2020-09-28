@@ -608,9 +608,9 @@ class InventoryController extends Controller
             })->paginate($perPage);
 
         foreach($newlyAdded as $n){
-            if($n->type=="Consumables" && $n->sell>0) {
+            if($n->type=="Consumables") {
                 //$n->total_asset = self::unitFormat($n->inventory_id, (int)$n->qty);
-                $n->total_asset = self::unitFormat($n->unit, $n->sell, (int)$n->qty);
+                $n->total_asset = self::unitFormat($n->unit, $n->sell, (int)$n->total_asset);
             }
         }
 
