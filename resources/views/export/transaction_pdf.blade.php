@@ -83,9 +83,12 @@
                   @foreach($t['data']['body'] as $s)
                       <table>
                         <tr>
-                          <td  style="text-align:center;"><label><b>{{ $s['services']['name'] }}</b></label></td>
-                          <td  style="text-align:center;"><label><b>{{ $s['services']['detail'] }}</b></label></td>
-                          <td  style="text-align:center;"><label><b>Php {{ number_format($s['amount'],2) }}</b></label></td>
+                          <td><label><b>{{ $s['services']['name'] }}</b></label></td>
+                          <td align="right"><label><b>Php {{ number_format($s['amount'],2) }}</b></label></td>
+                        </tr>
+
+                        <tr>
+                           <td colspan="2"><label><b>{{ $s['services']['detail'] }}</b></label></td>
                         </tr>
                      </table>
                   @endforeach
