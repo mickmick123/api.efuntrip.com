@@ -1774,7 +1774,7 @@ class InventoryController extends Controller
             $icon = new InventoryConsumables;
             $icon->inventory_id = $request->inventory_id;
             $icon->qty = $qty;
-            $icon->remaining = $remaining - $qty;
+//            $icon->remaining = $remaining - $qty;
             $icon->location_id = $request->location_id;
 //            $icon->unit_id = $request->unit_id;
             $icon->assigned_to = $request->user;
