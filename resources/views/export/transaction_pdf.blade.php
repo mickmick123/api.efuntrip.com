@@ -42,7 +42,67 @@
 </div>
 </div>
 
-<table>
+<?php
+    $currentDate = "";
+?>
+
+@foreach($transactions as $t)
+
+<?php
+ $hasSameDate = false;
+  if($currentDate == $t['display_date']){
+      $hasSameDate = true;
+  }
+  $currentDate = $t['display_date'];
+?>
+
+<div class="container">
+
+
+    @if(!$hasSameDate)
+      <div class="title"><b style="color:#1d8ce0">{{ $t['display_date'] }}</b></div>
+    @endif
+
+      <div class="content">
+            <div class="col1">
+                <div><label>{{ $lang['_current_balance'] }} : <b>Php {{ (($t['data']['balance'] > 0) ? "+" : "") . number_format($t['data']['balance'],2) }}</b></label></div>
+                <div><label>{{ $lang['_previous_balance'] }} : <b>Php {{ (($t['data']['prevbalance'] > 0) ? "+" : ""). number_format($t['data']['prevbalance'],2) }}</b></label></div>
+                <div><label style="color: {{ ($t['data']['type'] != 'payment') ? '#0db502' : 'red' }}">{{ ($t['data']['type'] != 'payment') ? ($lang['_load'] .": Php +". number_format($t['data']['amount'],2)) : ($lang['_amount_paid'] .": Php ". number_format($t['data']['amount'],2)) }}</label></div>
+                <div><label>{{ $lang['_type'] }} : <b>{{ ucfirst($t['data']['type']) }}</b></label></div>
+            </div>
+            <div class="col2">
+              <div style="padding:5px;">
+
+                <div style="text-align: right; color: #0db502"><label><b>{{ ($t['data']['body'] != '') ? $t['data']['body'][0]['log_type'] : $t['data']['storage'] }}</b></label></div>
+                <div class="divider"></div>
+
+                <div style="padding:5px;"><label><b>{{ ($t['data']['type'] != 'payment') ? $t['data']['head'] : '' }}</b></label></div>
+
+                @if($t['data']['type'] == 'payment')
+                  @foreach($t['data']['body'] as $s)
+                      <table>
+                        <tr>
+                          <td  style="text-align:center;"><label><b>{{ $s['services']['name'] }}</b></label></td>
+                          <td  style="text-align:center;"><label><b>{{ $s['services']['detail'] }}</b></label></td>
+                          <td  style="text-align:center;"><label><b>Php {{ number_format($s['amount'],2) }}</b></label></td>
+                        </tr>
+                     </table>
+                  @endforeach
+
+
+                @endif
+
+                <div style="padding:5px; text-align: right;"><label>{{ $lang['_operator'] }} : <b> {{ $t['data']['processor'] }}</b></label></div>
+
+              </div>
+            </div>
+      </div>
+
+</div>
+
+@endforeach
+
+<!--<table>
     <thead>
     <tr>
         <th style="text-align:center; background-color:#63b8d5;"><b>{{ $lang['_date_time'] }}</b></th>
@@ -102,11 +162,59 @@
     @endforeach
 
     </tbody>
-</table>
+</table> -->
 
 </body>
 
 <style type="text/css">
+
+.container{
+  /*padding:20px;*/
+}
+
+.title{
+   background-color: #e0e0e0;
+   padding:5px;
+   width:100%;
+   font-size: 14px;
+}
+
+.red{
+  color: red;
+}
+
+.content:after {
+  content: "";
+  display: table;
+  clear: both;
+  padding:5px;
+}
+
+.col1 {
+  float: left;
+  width: 27%;
+  margin-top:2%;
+  border: 2px solid #e0e0e0;
+  padding:5px;
+}
+
+.col2 {
+  float: left;
+  width: 68%;
+  border: 2px solid #e0e0e0;
+  padding:5px;
+  margin-left: 1%;
+}
+
+label{
+  font-size: 11px;
+}
+
+.divider{
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 5px;
+}
+
 table{
   border: 1px solid #e0e0e0;
   width:100%;
