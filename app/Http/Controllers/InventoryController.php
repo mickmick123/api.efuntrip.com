@@ -323,7 +323,7 @@ class InventoryController extends Controller
             'description' => 'required',
             'specification' => 'nullable',
             'type' => 'required',
-            'unit_id' => 'required'
+            'unit_id' => 'required',
         ]);
         $response = [];
         if($validator->fails()) {
@@ -1380,6 +1380,7 @@ class InventoryController extends Controller
             'description' => 'required',
             'specification' => 'nullable',
             'unit' => 'required',
+            'sell' => 'required',
         ]);
         if($validator->fails()) {
             $response['status'] = 'Failed';
@@ -1400,6 +1401,7 @@ class InventoryController extends Controller
                 $unit = InventoryUnit::where('name', $request->unit)->get();
             }
             $inv->unit_id = $unit[0]->unit_id;
+            $inv->sell = $request->sell;
             $inv->updated_at = strtotime("now");
             $inv->save();
 
