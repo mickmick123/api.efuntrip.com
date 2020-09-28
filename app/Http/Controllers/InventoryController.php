@@ -2008,7 +2008,11 @@ class InventoryController extends Controller
         $unit = array();
         $unit['Set'] = floor($qty / $sell);
         $fr = $qty / $sell - floor($qty / $sell);
-        $unit[$u] = $fr * $sell;
+        $res = $fr * $sell;
+        if(is_float($res)){
+            $res = number_format($res, 2);
+        }
+        $unit[$u] = $res;
         $g = array();
         foreach ($unit as $name => $value){
             if ($value > 0){
