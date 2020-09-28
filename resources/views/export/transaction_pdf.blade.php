@@ -65,9 +65,9 @@
 
       <div class="content">
             <div class="col1">
-                <div><label>{{ $lang['_current_balance'] }} : <b>Php {{ (($t['data']['balance'] > 0) ? "+" : "") . number_format($t['data']['balance'],2) }}</b></label></div>
-                <div><label>{{ $lang['_previous_balance'] }} : <b>Php {{ (($t['data']['prevbalance'] > 0) ? "+" : ""). number_format($t['data']['prevbalance'],2) }}</b></label></div>
-                <div><label style="color: {{ ($t['data']['type'] != 'payment') ? '#0db502' : 'red' }}">{{ ($t['data']['type'] != 'payment') ? ($lang['_load'] .": Php +". number_format($t['data']['amount'],2)) : ($lang['_amount_paid'] .": Php ". number_format($t['data']['amount'],2)) }}</label></div>
+                <div><label>{{ $lang['_current_balance'] }} : <b>Php {{ (($t['data']['balance'] > 0) ? "+" : "") . $t['data']['balance'] }}</b></label></div>
+                <div><label>{{ $lang['_previous_balance'] }} : <b>Php {{ (($t['data']['prevbalance'] > 0) ? "+" : ""). $t['data']['prevbalance'] }}</b></label></div>
+                <div><label style="color: {{ ($t['data']['type'] != 'payment') ? '#0db502' : 'red' }}">{{ ($t['data']['type'] != 'payment') ? ($lang['_load'] .": Php +". $t['data']['amount']) : ($lang['_amount_paid'] .": Php ". $t['data']['amount']) }}</label></div>
                 <div><label>{{ $lang['_type'] }} : <b>{{ ucfirst($t['data']['type']) }}</b></label></div>
             </div>
             <div class="col2">
@@ -84,7 +84,7 @@
                       <table>
                         <tr>
                           <td><label><b>{{ $s['services']['name'] }}</b></label></td>
-                          <td align="right"><label><b>Php {{ number_format($s['amount'],2) }}</b></label></td>
+                          <td align="right"><label><b>Php {{ $s['amount'] }}</b></label></td>
                         </tr>
 
                         <tr>
@@ -92,8 +92,6 @@
                         </tr>
                      </table>
                   @endforeach
-
-
                 @endif
 
                 <div style="padding:5px; text-align: right;">
@@ -109,67 +107,6 @@
 
 @endforeach
 
-<!--<table>
-    <thead>
-    <tr>
-        <th style="text-align:center; background-color:#63b8d5;"><b>{{ $lang['_date_time'] }}</b></th>
-        <th style="text-align:center; background-color:#63b8d5;"><b>{{ $lang['_load'] }}</b></th>
-        <th style="text-align:center; background-color:#63b8d5;"><b>{{ $lang['_client_name'] }}</b></th>
-        <th style="text-align:center; background-color:#63b8d5;"><b>{{ $lang['_service_name'] }}</b></th>
-        <th style="text-align:center; background-color:#63b8d5;"><b>{{ $lang['_amount_paid'] }}</b></th>
-        <th style="text-align:center; background-color:#63b8d5;"><b>{{ $lang['_sub_total'] }}</b></th>
-        <th style="text-align:center; background-color:#63b8d5;"><b>{{ $lang['_previous_balance'] }}</b></th>
-        <th style="text-align:center; background-color:#63b8d5;"><b>{{ $lang['_current_balance'] }}</b></th>
-        <th style="text-align:center; background-color:#63b8d5;"><b>{{ $lang['_operator'] }}</b></th>
-        <th style="text-align:center; background-color:#63b8d5;"><b>{{ $lang['_source'] }}</b></th>
-    </tr>
-    </thead>
-    <tbody>
-    @foreach($transactions as $t)
-
-    <tr>
-        <td colspan="10"></td>
-    </tr>
-
-
-
-    <tr>
-        <td  style="text-align:center; background-color:#cccccc;" ><b>{{ $t['display_date'] }}</b></td>
-        <td  style="text-align:center; background-color:#cccccc;">{{ ($t['data']['type'] != 'payment') ? $t['data']['amount'] : '' }}</td>
-        <td  style="text-align:center; background-color:#cccccc;"></td>
-        <td  style="text-align:center; background-color:#cccccc;"></td>
-        <td  style="text-align:center; background-color:#cccccc;"></td>
-        <td  style="text-align:center; background-color:#cccccc;">{{ $t['data']['amount'] }}</td>
-        <td  style="text-align:center; background-color:#cccccc;">{{ $t['data']['prevbalance'] }}</td>
-        <td  style="text-align:center; background-color:#cccccc;">{{ $t['data']['balance'] }}</td>
-        <td  style="text-align:center; background-color:#cccccc;">{{ $t['data']['processor'] }}</td>
-        <td  style="text-align:center; background-color:#cccccc;">{{ ($t['data']['body'] != '') ? $t['data']['body'][0]['log_type'] : $t['data']['storage'] }}</td>
-   </tr>
-
-
-      @if($t['data']['type'] == 'payment')
-
-        @foreach($t['data']['body'] as $s)
-        <tr>
-            <td  class="borderBottom" style="text-align:center;"></td>
-            <td  class="borderBottom" style="text-align:center;"></td>
-            <td  class="borderBottom" style="text-align:center;"><b>{{ $s['services']['name'] }}</b></td>
-            <td  class="borderBottom" style="text-align:center;"><b>{{ $s['services']['detail'] }}</b></td>
-            <td  class="borderBottom" style="text-align:center;"><b>{{ $s['amount'] }}</b></td>
-            <td  class="borderBottom" style="text-align:center;"></td>
-            <td  class="borderBottom" style="text-align:center;"></td>
-            <td  class="borderBottom" style="text-align:center;"></td>
-            <td  class="borderBottom" style="text-align:center;"></td>
-            <td  class="borderBottom" style="text-align:center;"></td>
-        </tr>
-        @endforeach
-
-      @endif
-
-    @endforeach
-
-    </tbody>
-</table> -->
 
 </body>
 
