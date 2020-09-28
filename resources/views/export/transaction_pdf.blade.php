@@ -76,7 +76,7 @@
                 <div style="text-align: right; color: #0db502"><label><b>{{ ($t['data']['body'] != '') ? $t['data']['body'][0]['log_type'] : $t['data']['storage'] }}</b></label></div>
                 <div class="divider"></div>
 
-                <div style="padding:5px;"><label><b>{{ ($t['data']['type'] != 'payment') ? $t['data']['head'] : '' }}</b></label></div>
+                <div style="padding:5px;"><label><b>{{ $t['data']['head'] }}</b></label></div>
 
                 @if($t['data']['type'] == 'payment')
                   @foreach($t['data']['body'] as $s)
