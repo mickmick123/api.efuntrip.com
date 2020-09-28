@@ -73,10 +73,11 @@
             <div class="col2">
               <div style="padding:5px;">
 
-                <div style="text-align: right; color: #0db502"><label><b>{{ ($t['data']['body'] != '') ? $t['data']['body'][0]['log_type'] : $t['data']['storage'] }}</b></label></div>
-                <div class="divider"></div>
 
                 <div style="padding:5px;"><label><b>{{ $t['data']['head'] }}</b></label></div>
+
+                <div class="divider"></div>
+
 
                 @if($t['data']['type'] == 'payment')
                   @foreach($t['data']['body'] as $s)
@@ -92,7 +93,10 @@
 
                 @endif
 
-                <div style="padding:5px; text-align: right;"><label>{{ $lang['_operator'] }} : <b> {{ $t['data']['processor'] }}</b></label></div>
+                <div style="padding:5px; text-align: right;">
+                    <label style="padding-right:20px;">{{ $lang['_source'] }} : <b style="text-align: right; color: #0db502">{{ ($t['data']['body'] != '') ? $t['data']['body'][0]['log_type'] : $t['data']['storage'] }}  </b></label>
+                    <label>{{ $lang['_operator'] }} : <b> {{ $t['data']['processor'] }}</b></label>
+                </div>
 
               </div>
             </div>
