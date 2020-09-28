@@ -71,10 +71,10 @@
                 <div><label>{{ $lang['_type'] }} : <b>{{ ucfirst($t['data']['type']) }}</b></label></div>
             </div>
             <div class="col2">
-              <div style="padding:5px;">
+              <div style="padding:5px; padding-top: 0px;">
 
 
-                <div style="padding:5px;"><label><b>{{ $t['data']['head'] }}</b></label></div>
+                <div style="padding:5px; padding-top: 0px;"><label><b>{{ $t['data']['head'] }}</b></label></div>
 
                 <div class="divider"></div>
 
