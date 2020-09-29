@@ -53,16 +53,6 @@ class LocationController extends Controller
         $locDet = LocationDetail::whereIn('id',$invId)->get();
         $loc = Location::whereIn('id',$locId)->get();
 
-        foreach ($locDet as $k=>$v){
-//            $v->remaining = InventoryConsumables::where([
-//                ['inventory_id',$request->inventory_id],
-//                ['location_id',$v->id]
-//            ])->orderBy('id','DESC')->limit(1)->pluck('remaining');
-//            $v->convertedRemaining = InventoryController::unitFormat($request->inventory_id, $v->remaining[0]);
-            $min_purchase = InventoryParentUnit::where('inv_id',$request->inventory_id)->orderBy('id','DESC')->pluck('min_purchased');
-//            $v->convertedMinPurchased = InventoryController::unitFormat($request->inventory_id, $min_purchase[0]);
-        }
-
         $response['status'] = 'Success';
         $response['code'] = 200;
         $response['location'] = $loc;

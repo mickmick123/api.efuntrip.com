@@ -1629,9 +1629,9 @@ class InventoryController extends Controller
 
     public function getUnit(Request $request){
         if(count($request->all()) !== 0){
-            $unit = InventoryParentUnit::leftJoin('inventory_unit AS iu','inventory_parent_unit.unit_id','iu.unit_id')
-                ->where('inventory_parent_unit.inv_id',$request->inv_id)
-                ->get();
+            $unit = Inventory::leftJoin('inventory_unit as iun','inventory.unit_id','iun.unit_id')
+                ->where('inventory.inventory_id',$request->inventory_id)
+                ->get(['iun.unit_id','iun.name']);
         }else{
             $unit = InventoryUnit::orderBy('name','ASC')->get();
         }
@@ -1733,7 +1733,7 @@ class InventoryController extends Controller
         $validator = Validator::make($request->all(), [
             'inventory_id' => 'required',
             'qty' => 'required',
-//            'unit_id' => 'required',
+            'set' => 'required',
             'user' => 'nullable',
         ]);
 
@@ -1744,23 +1744,14 @@ class InventoryController extends Controller
         } else {
             $user = auth()->user();
 
-            $item = InventoryConsumables::where([
-                ["inventory_id", $request->inventory_id],
-                ["location_id", $request->location_id]
-            ])->orderBy("id", "DESC")->limit(1)->first();
-            if($item){
-                $remaining = $item->remaining;
-            }else{
-                $remaining = 0;
-            }
-
             if(!is_numeric($request->loc_site_id)){
                 $location = $request->loc_site_id;
             }else{
                 $location = Location::where("id", $request->location)->first()->location;
             }
 
-//            $qty = self::contentToMinPurchased($request->inventory_id,$request->unit_id,$request->qty);
+            $set = (int)$request->set !== 0 ? 1 : 0;
+
             $qty = $request->qty;
 
             //Logs
@@ -1773,10 +1764,9 @@ class InventoryController extends Controller
 
             $icon = new InventoryConsumables;
             $icon->inventory_id = $request->inventory_id;
-            $icon->qty = $qty;
-//            $icon->remaining = $remaining - $qty;
             $icon->location_id = $request->location_id;
-//            $icon->unit_id = $request->unit_id;
+            $icon->qty = $qty;
+            $icon->set = $set;
             $icon->assigned_to = $request->user;
             $icon->type = 'Consumed';
             $icon->created_by = $user->id;
@@ -1787,6 +1777,7 @@ class InventoryController extends Controller
             $response['status'] = 'Success';
             $response['code'] = 200;
             $response['data'] = 'Consumable has been Created!';
+            $response['request'] = $request->all();
         }
 
         return Response::json($response);
