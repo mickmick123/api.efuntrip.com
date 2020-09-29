@@ -1795,9 +1795,10 @@ class InventoryController extends Controller
         $collection = new Collection($list);
         $storage = $collection->unique('storageId')->values()->pluck('storageId');
         $i = 0;
-        foreach ($storage as $id){
-            $qty[$id]=0;
-        }
+//        foreach ($storage as $id){
+//            $qty[$id]=0;
+//        }
+        $qty = 0;
         foreach ($list as $l){
             $l->subTotal = number_format($l->qty * $l->price, 2);
             $l->purchased = $l->qty.' '.($l->set>0?'Set':$l->unit);
@@ -1811,20 +1812,33 @@ class InventoryController extends Controller
             if($l->set>0){
                 $l->qty = $l->qty * $l->sell;
             }
+//            if($i==0) {
+//                $qty[$l->storageId] = $l->qty;
+//            }
+//            if($i!=0) {
+//                if ($l->type == "Purchased") {
+//                    $qty[$l->storageId] += $l->qty;
+//                }
+//                if ($l->type == "Consumed") {
+//                    $qty[$l->storageId] -= $l->qty;
+//                }
+//            }
             if($i==0) {
-                $qty[$l->storageId] = $l->qty;
+                $qty = $l->qty;
             }
             if($i!=0) {
                 if ($l->type == "Purchased") {
-                    $qty[$l->storageId] += $l->qty;
+                    $qty += $l->qty;
                 }
                 if ($l->type == "Consumed") {
-                    $qty[$l->storageId] -= $l->qty;
+                    $qty -= $l->qty;
                 }
             }
             $l->qty = self::unitFormat($l->unit, $l->sell, $l->qty);
-            $l->remaining = self::unitFormat($l->unit, $l->sell, $qty[$l->storageId]);
-            $qty[$l->storageId] = $qty[$l->storageId];
+            $l->remaining = self::unitFormat($l->unit, $l->sell, $qty);
+//            $l->remaining = self::unitFormat($l->unit, $l->sell, $qty[$l->storageId]);
+//            $qty[$l->storageId] = $qty[$l->storageId];
+            $qty = $qty;
             $i++;
         }
         $data = $list->toArray();
