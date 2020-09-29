@@ -1799,6 +1799,8 @@ class InventoryController extends Controller
             $qty[$id]=0;
         }
         foreach ($list as $l){
+            $l->subTotal = number_format($l->qty * $l->price, 2);
+            $l->purchased = $l->qty.' '.($l->set>0?'Set':$l->unit);
             $l->created_at = gmdate("F j, Y", $l->created_at);
             $l->updated_at = gmdate("F j, Y", $l->updated_at);
             $l->location = $l->location?$l->location:'';
@@ -1806,6 +1808,9 @@ class InventoryController extends Controller
             $l->sup_name = $l->sup_name?$l->sup_name:'';
             $s = $l->sup_location;
             $l->sup_location = $s?$s.' ('.$l->sup_location_detail.')':'';
+            if($l->set>0){
+                $l->qty = $l->qty * $l->sell;
+            }
             if($i==0) {
                 $qty[$l->storageId] = $l->qty;
             }
