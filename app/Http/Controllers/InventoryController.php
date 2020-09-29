@@ -1732,9 +1732,11 @@ class InventoryController extends Controller
     public function addInventoryConsume(Request $request){
         $validator = Validator::make($request->all(), [
             'inventory_id' => 'required',
+            'location_id' => 'required',
             'qty' => 'required',
             'set' => 'required',
-            'user' => 'nullable',
+            'user' => 'required',
+            'reason' => 'required',
         ]);
 
         if($validator->fails()) {
@@ -1743,24 +1745,8 @@ class InventoryController extends Controller
             $response['code'] = 422;
         } else {
             $user = auth()->user();
-
-            if(!is_numeric($request->loc_site_id)){
-                $location = $request->loc_site_id;
-            }else{
-                $location = Location::where("id", $request->location)->first()->location;
-            }
-
             $set = (int)$request->set !== 0 ? 1 : 0;
-
             $qty = $request->qty;
-
-            //Logs
-            $name = User::select('first_name')->where("id", $request->user)->first();
-            $inv = Inventory::leftJoin('inventory_unit AS iun','inventory.unit_id','iun.unit_id')
-                ->where('inventory.inventory_id',$request->inventory_id)
-                ->get(['iun.name AS unit','inventory.sell']);
-            $reason = "$name->first_name consumed ".self::unitFormat($inv[0]->unit, (float)$inv[0]->sell, (int)$qty);
-            self::saveLogs($request->inventory_id, 'Stored', $reason);
 
             $icon = new InventoryConsumables;
             $icon->inventory_id = $request->inventory_id;
@@ -1768,16 +1754,23 @@ class InventoryController extends Controller
             $icon->qty = $qty;
             $icon->set = $set;
             $icon->assigned_to = $request->user;
+            $icon->reason = $request->reason;
             $icon->type = 'Consumed';
             $icon->created_by = $user->id;
             $icon->created_at = strtotime("now");
             $icon->updated_at = strtotime("now");
             $icon->save();
 
+            $name = User::select('first_name')->where("id", $request->user)->first();
+            $inv = Inventory::leftJoin('inventory_unit AS iun','inventory.unit_id','iun.unit_id')
+                ->where('inventory.inventory_id',$request->inventory_id)
+                ->get(['iun.name AS unit','inventory.sell']);
+            $reason = "$name->first_name consumed ".self::unitFormat($inv[0]->unit, (float)$inv[0]->sell, (int)$qty);
+            self::saveLogs($request->inventory_id, 'Stored', $reason);
+
             $response['status'] = 'Success';
             $response['code'] = 200;
             $response['data'] = 'Consumable has been Created!';
-            $response['request'] = $request->all();
         }
 
         return Response::json($response);
