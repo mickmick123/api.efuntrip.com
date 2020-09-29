@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\DB;
 class CompanyController extends Controller
 {
     public function getCompany(){
-        $com = Company::all();
+        $com = Company::orderBy('name','ASC')->get();
 
         $response['status'] = 'Success';
         $response['code'] = 200;
