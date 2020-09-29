@@ -1745,7 +1745,7 @@ class InventoryController extends Controller
             $response['code'] = 422;
         } else {
             $user = auth()->user();
-            $set = (int)$request->set !== 0 ? 1 : 0;
+            $set = (int)$request->set !== 0 ? 0 : 1;
             $qty = $request->qty;
 
             $icon = new InventoryConsumables;
