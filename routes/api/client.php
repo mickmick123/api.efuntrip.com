@@ -73,4 +73,6 @@ Route::middleware('auth:api')->group(function() {
 
     Route::get('get-clients-remarks/{client_id}', 'ClientController@getClientsRemarks');
 
+    Route::get('get-pay-services/{id}', 'ClientController@getPayServices');
+
 });
