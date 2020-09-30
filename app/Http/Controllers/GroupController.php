@@ -3692,7 +3692,10 @@ public function getClientPackagesByGroup($client_id, $group_id){
                  $totalBal = ((float) $totalBal) - ((float) $s["total_charge"]);
               }else{
                 if($s["active"] == 1 && (strtolower($s['status']) == 'complete' || strtolower($s['status']) == 'released') ){
-                  $totalBal = ((float) $totalBal) - ((float) $s["total_charge"] - (float) $s["discount"]);
+
+                //$totalBal = ((float) $totalBal) - ((float) $s["total_charge"] - (float) $s["discount"]);
+                  $totalBal = ((float) $totalBal) - ($s['service_cost'] - $s['payment_amount']);
+
                 }
               }
 
@@ -3828,21 +3831,27 @@ public function getClientPackagesByGroup($client_id, $group_id){
        $j = 0;
 
        $totalServiceCost = 0;
-
+       $totalService = 0;
        foreach($data['packages'] as $p){
 
          $datetime = new DateTime($p['created_at']);
          $getdate = $datetime->format('M d,Y');
          $gettime = $datetime->format('h:i A');
 
-         $chrg = ($p['active'] == 0 || $p['status'] !== 'complete') ? 0 : ($p['charge'] + $p['cost'] + $p['tip']);
+         $totalService = (($p['cost']) + ($p['charge']) + ($p['tip']) + ($p['com_agent']) + ($p['com_client']));
+
+
+         $chrg = ($p['active'] == 0 || $p['status'] !== 'complete') ? 0 : ($totalService - $p['payment_amount']);
 
          if($p['active'] == 0){
               $sub = 0;
          }
          //
          if($p['active'] !== 0){
-             $totalServiceCost += ($p['package_cost'] - $p['discount']);
+             $totalServiceCost += (($totalService - $p['discount']) - $p['payment_amount']);
+             //$totalServiceCost += ($p['package_cost'] - $p['discount'])
+
+             //$totalBal = ((float) $totalBal) - ($p['service_cost'] - $p['payment_amount']);
          }
          //
          //Subtotal
@@ -3857,9 +3866,14 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
          $tempTotal +=$sub;
 
-         $p['total_service_cost'] = $tempTotal;
+         //$totalBal = ((float) $totalBal) - ($p['service_cost'] - $p['payment_amount']);
+
+
+
+         $p['total_service_cost'] = $totalServiceCost;
          $p['discount'] = ($p['active'] == 1) ? $p['discount'] : 0;
          $p['service_cost'] = ($p['active'] == 1) ? (($p['cost']) + ($p['charge']) + ($p['tip'])) : 0;
+
 
 
          if($request->lang === 'EN'){
@@ -3979,15 +3993,18 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
          $members = [];
          $ctrM = 0;
+         $totalService = 0;
          foreach($p['members'] as $m){
            $clientServices = [];
            $tmpCtr = 0;
 
+           $totalService = (($m['service']['cost']) + ($m['service']['charge']) + ($m['service']['tip']) + ($m['service']['com_agent']) + ($m['service']['com_client']));
+
            $m['name'] = ((isset($m['first_name'])) ? $m['first_name'] : ""). " " . (isset($m['last_name']) ? $m['last_name'] : '');
            $m['discount'] = ($m['service']['active'] == 1) ? $m['service']['discount'] : 0;
-           $m['service_cost'] = ($m['service']['active'] == 1) ? (($m['service']['cost']) + ($m['service']['charge']) + ($m['service']['tip'])) : 0;
+           $m['service_cost'] = ($m['service']['active'] == 1) ? $totalService : 0;
            $stat =($m['service']['status'] = ($m['service']['active'] == 0) ? 'CANCELLED' : $m['service']['status']);
-           $m['total_charge'] =  ($m['service']['active'] == 1) ? ((($m['service']['cost']) + ($m['service']['charge']) + ($m['service']['tip'])) - $m['service']['discount']) : 0;
+           $m['total_charge'] =  ($m['service']['active'] == 1) ? ($totalService - $m['service']['discount']) : 0;
 
            if($request->lang === 'EN'){
                $m['service']['status'] = ucfirst($stat);
@@ -4210,7 +4227,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
            $bal += $sub;
 
-           $tempTotal +=$sub;
+           $tempTotal += ($sub - $m->payment_amount);
 
            $m->total_service_cost = $tempTotal;
 
@@ -4245,6 +4262,9 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
             $ds = explode(',', $dates);
 
+            //$queryMembers = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'), $request->sdate)->where('group_id', $request->group_id)->orderBy('created_at','DESC')->orderBy('client_id')->groupBy('client_id')->get();
+
+
             $clientServices = DB::table('client_services')
               ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, id, detail, created_at, service_id'))
               ->where('active',1)->where('group_id',$groupId)
@@ -4260,6 +4280,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
               ->groupBy(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'))
               ->orderBy('id','DESC')
+              //->orderBy('created_at','DESC')->orderBy('client_id')->groupBy('client_id')
               ->paginate($perPage);
       }else{
             $clientServices = DB::table('client_services')
