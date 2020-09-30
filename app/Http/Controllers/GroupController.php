@@ -4634,7 +4634,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
             $paymode = 'Ewallet';
           }
 
-          if($paymode == 'Ewallet' || $paymode == 'Cash'){   
+          if($paymode == 'Ewallet' || $paymode == 'Cash'){
               if($paymode == 'Cash'){
                 $amount = 0;
                 $gname = Group::where('id',$group_id)->first()->name;
@@ -4785,6 +4785,10 @@ public function getClientPackagesByGroup($client_id, $group_id){
              $qr->save();
 
              $total_amount = $amount/0.975;
+             $response['data'] = [
+                 'qr_code'=>$qr->id,
+                 'service'=>$request->payments,
+                 'total'=>number_format($total_amount, 2, '.', ',')];
           }
 
 
