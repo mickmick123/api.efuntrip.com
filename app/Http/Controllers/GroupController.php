@@ -1968,7 +1968,6 @@ public function getClientPackagesByGroup($client_id, $group_id){
       return Response::json($response);
    }
 
-
    public function addServicePayment(Request $request){
 
        if($request->group_id !== null){
@@ -4628,94 +4627,152 @@ public function getClientPackagesByGroup($client_id, $group_id){
           $group_id = $request->get('group_id');
           $mode = $request->get('mode');
           $datenow = (Carbon::now())->format('M d, Y H:i:s');
+          $paymode = $request->get('paymode');
 
-          for($i=0; $i<count($request->payments); $i++) {
+          if($request == null){
+            $paymode = 'Ewallet';
+          }
 
-             $client_id = $request->payments[$i]['client_id'];
-             $cs_id = $request->payments[$i]['id'];
-             $amount = $request->payments[$i]['amount'];
-             $total_cost = $request->payments[$i]['total_cost'];
-             $payment = ClientTransaction::where('type','Payment')->where('client_service_id',$cs_id)->first();
-             $rson = 'Paid Php'.$amount.' - '.Auth::user()->first_name.' ('.date('Y-m-d H:i:s').')<br><br>';
-             if($payment){
-                 $payment->amount += $amount;
-                 $payment->reason = $rson.$payment->reason;
-                 $payment->save();
-             }
-             else{
-                 $payment = new ClientTransaction;
-                 $payment->client_id = $client_id;
-                 $payment->client_service_id = $cs_id;
-                 $payment->type = 'Payment';
-                 $payment->group_id = $group_id;
-                 $payment->amount = $amount;
-                 $payment->reason = $rson;
-                 $payment->save();
-             }
+          if($paymode == 'Ewallet' || $paymode == 'Cash'){   
+              if($paymode == 'Cash'){
+                $amount = 0;
+                $gname = Group::where('id',$group_id)->first()->name;
+                //collect total amount
+                for($i=0; $i<count($request->payments); $i++) {
+                    $amount += $request->payments[$i]['amount'];
+                }
 
-             $service = ClientService::findOrFail($cs_id);
-             if($service->payment_amount > 0){
-                 $service->payment_amount += $amount;
-             }
-             else{
-                 $service->payment_amount = $amount;
-             }
-             if($amount == $total_cost){
-                 $service->is_full_payment = 1;
-             }
-             $service->save();
+                $dp = new ClientEWallet;
+                $dp->client_id = 0;
+                $dp->type = 'Deposit';
+                $dp->amount = $amount;
+                $dp->group_id = $group_id;
+                // $dp->reason = "Generating DP";
+                $dp->save();
 
-             // save transaction logs
-             $detail = 'Paid an amount of Php '.$amount.'.';
-             $detail_cn = '已支付 Php'.$amount.'.';
-             $log_data = array(
-                 'client_service_id' => null,
-                 'client_id' => null,
-                 'group_id' => $group_id,
-                 'log_type' => 'Transaction',
-                 'log_group' => 'payment',
-                 'detail'=> $detail,
-                 'detail_cn'=> $detail_cn,
-                 'amount'=> $amount,
-             );
-             LogController::save($log_data);
+                $finance = new Financing;
+                $finance->user_sn = Auth::user()->id;
+                $finance->type = "deposit";
+                $finance->record_id = $dp->id;
+                $finance->cat_type = "process";
+                $finance->cat_storage = 'cash';
+                $finance->branch_id = 1;
+                $finance->storage_type = null;
+                $finance->trans_desc = Auth::user()->first_name.' received deposit from group '.$gname;
+                // if($storage=='Alipay'){
+                //     $finance->trans_desc = Auth::user()->first_name.' received deposit from group '.$gname.' with Alipay reference: '.$alipay_reference;
+                // }
+                $finance->cash_client_depo_payment = $amount;
+                $finance->save();
 
-             $label = null;
-             $cl = User::findOrFail($client_id);
-             // if($mode == "batch"){
-                $label = 'Payment Date : '.$datenow;
-                $detail = '
-                           <div class="el-col el-col-11" style="padding-left: 10px; padding-right: 10px;"><b>'.$service->detail.'</b></div>
-                           <div class="el-col el-col-8" style="padding-left: 10px; padding-right: 10px;"><b>['.$client_id.']'.$cl->first_name.' '.$cl->last_name.' : </b> Paid service Php'.$amount.'. </div>';
-                $detail_cn = $detail;
+                $detail = 'Receive Cash deposit with an amount of Php'.$amount.'.';
+                $detail_cn = '预存了款项 Php'.$amount.'.';
+                $log_data = array(
+                    'client_service_id' => null,
+                    'client_id' => null,
+                    'group_id' => $group_id,
+                    'log_type' => 'Ewallet',
+                    'log_group' => 'deposit',
+                    'detail'=> $detail,
+                    'detail_cn'=> $detail_cn,
+                    'amount'=> $amount,
+                );
+                LogController::save($log_data);
+              }
 
-             // }
-             // else if($mode == "members"){
-             //    $label = 'Payment for member <b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'</b>';
-             //    $detail = '<b>'.$service->detail.'.</b> Paid service with an amount of Php'.$amount.'.';
-             //    $detail_cn = '<b>'.$service->detail.'.</b> Paid service with an amount of Php'.$amount.'.';
-             // }
-             // else if($mode == "service"){
-             //    $label = 'Payment for sevice <b>'.$service->detail.'</b>';
-             //    $detail = '<b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'.</b> Paid service with an amount of Php'.$amount.'.';
-             //    $detail_cn = '<b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'.</b> Paid service with an amount of Php'.$amount.'.';
-             // }
+              for($i=0; $i<count($request->payments); $i++) {
+
+                 $client_id = $request->payments[$i]['client_id'];
+                 $cs_id = $request->payments[$i]['id'];
+                 $amount = $request->payments[$i]['amount'];
+                 $total_cost = $request->payments[$i]['total_cost'];
+                 $payment = ClientTransaction::where('type','Payment')->where('client_service_id',$cs_id)->first();
+                 $rson = 'Paid Php'.$amount.' - '.Auth::user()->first_name.' ('.date('Y-m-d H:i:s').')<br><br>';
+                 if($payment){
+                     $payment->amount += $amount;
+                     $payment->reason = $rson.$payment->reason;
+                     $payment->save();
+                 }
+                 else{
+                     $payment = new ClientTransaction;
+                     $payment->client_id = $client_id;
+                     $payment->client_service_id = $cs_id;
+                     $payment->type = 'Payment';
+                     $payment->group_id = $group_id;
+                     $payment->amount = $amount;
+                     $payment->reason = $rson;
+                     $payment->save();
+                 }
+
+                 $service = ClientService::findOrFail($cs_id);
+                 if($service->payment_amount > 0){
+                     $service->payment_amount += $amount;
+                 }
+                 else{
+                     $service->payment_amount = $amount;
+                 }
+                 if($amount == $total_cost){
+                     $service->is_full_payment = 1;
+                 }
+                 $service->save();
+
+                 // save transaction logs
+                 $detail = 'Paid an amount of Php '.$amount.'.';
+                 $detail_cn = '已支付 Php'.$amount.'.';
+                 $log_data = array(
+                     'client_service_id' => null,
+                     'client_id' => null,
+                     'group_id' => $group_id,
+                     'log_type' => 'Transaction',
+                     'log_group' => 'payment',
+                     'detail'=> $detail,
+                     'detail_cn'=> $detail_cn,
+                     'amount'=> $amount,
+                 );
+                 LogController::save($log_data);
+
+                 $label = null;
+                 $cl = User::findOrFail($client_id);
+                 // if($mode == "batch"){
+                    $label = 'Payment Date : '.$datenow;
+                    $detail = '
+                               <div class="el-col el-col-11" style="padding-left: 10px; padding-right: 10px;"><b>'.$service->detail.'</b></div>
+                               <div class="el-col el-col-8" style="padding-left: 10px; padding-right: 10px;"><b>['.$client_id.']'.$cl->first_name.' '.$cl->last_name.' : </b> Paid service Php'.$amount.'. </div>';
+                    $detail_cn = $detail;
+
+                 // }
+                 // else if($mode == "members"){
+                 //    $label = 'Payment for member <b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'</b>';
+                 //    $detail = '<b>'.$service->detail.'.</b> Paid service with an amount of Php'.$amount.'.';
+                 //    $detail_cn = '<b>'.$service->detail.'.</b> Paid service with an amount of Php'.$amount.'.';
+                 // }
+                 // else if($mode == "service"){
+                 //    $label = 'Payment for sevice <b>'.$service->detail.'</b>';
+                 //    $detail = '<b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'.</b> Paid service with an amount of Php'.$amount.'.';
+                 //    $detail_cn = '<b>['.$client_id.'] '.$cl->first_name.' '.$cl->last_name.'.</b> Paid service with an amount of Php'.$amount.'.';
+                 // }
 
 
-             $log_data = array(
-                 'client_service_id' => $cs_id,
-                 'client_id' => null,
-                 'group_id' => $group_id,
-                 'log_type' => 'Ewallet',
-                 'log_group' => 'payment',
-                 'detail'=> $detail,
-                 'detail_cn'=> $detail_cn,
-                 'amount'=> '-'.$amount,
-                 'label'=> $label,
-             );
-             LogController::save($log_data);
+                 $log_data = array(
+                     'client_service_id' => $cs_id,
+                     'client_id' => null,
+                     'group_id' => $group_id,
+                     'log_type' => 'Ewallet',
+                     'log_group' => 'payment',
+                     'detail'=> $detail,
+                     'detail_cn'=> $detail_cn,
+                     'amount'=> '-'.$amount,
+                     'label'=> $label,
+                 );
+                 LogController::save($log_data);
 
-           }
+               }
+          }
+          else{
+            //Generate QR CODE
+             $response['test'] = 'Generate QR Code';
+          }
+
 
            $response['status'] = 'Success';
            $response['code'] = 200;
