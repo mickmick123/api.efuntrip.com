@@ -2209,7 +2209,7 @@ class ClientController extends Controller
                     'detail_cn'=> $detail_cn,
                     'amount'=> $amount,
                 );
-                LogController::save($log_data);
+                LogController::save($log_data); // jeff
 
                 $detail = 'Paid '.strtolower($request->get('paytype')).' with an amount of Php'.$amount.'.';
                 $detail_cn = '已支付 Php'.$amount.'.';
@@ -2663,6 +2663,169 @@ class ClientController extends Controller
 
         return Response::json($response);
     }
+
+    function addClientPayment(Request $request){
+
+         $validator = Validator::make($request->all(), [
+               'client_id' => 'required',
+           ]);
+
+           if($validator->fails()) {
+               $response['status'] = 'Failed';
+               $response['errors'] = $validator->errors();
+               $response['code'] = 422;
+           } else {
+               // $tracking = $request->get('tracking');
+
+              $client_id = $request->get('client_id');
+              $mode = $request->get('mode');
+              $datenow = (Carbon::now())->format('M d, Y H:i:s');
+              $paymode = $request->get('paymode');
+
+              if($request == null){
+                $paymode = 'Ewallet';
+              }
+
+              if($paymode == 'Ewallet' || $paymode == 'Cash'){   
+                  if($paymode == 'Cash'){
+                    $amount = 0;
+                    $gname = User::where('id',$client_id)->first()->first_name;
+                    //collect total amount
+                    for($i=0; $i<count($request->payments); $i++) {
+                        $amount += $request->payments[$i]['amount'];
+                    }
+
+                    $dp = new ClientEWallet;
+                    $dp->client_id = $client_id;
+                    $dp->type = 'Deposit';
+                    $dp->amount = $amount;
+                    $dp->group_id = null;
+                    // $dp->reason = "Generating DP";
+                    $dp->save();
+
+                    $finance = new Financing;
+                    $finance->user_sn = Auth::user()->id;
+                    $finance->type = "deposit";
+                    $finance->record_id = $dp->id;
+                    $finance->cat_type = "process";
+                    $finance->cat_storage = 'cash';
+                    $finance->branch_id = 1;
+                    $finance->storage_type = null;
+                    $finance->trans_desc = Auth::user()->first_name.' received deposit from client # '.$client_id;
+                    // if($storage=='Alipay'){
+                    //     $finance->trans_desc = Auth::user()->first_name.' received deposit from group '.$gname.' with Alipay reference: '.$alipay_reference;
+                    // }
+                    $finance->cash_client_depo_payment = $amount;
+                    $finance->save();
+
+                    $detail = 'Receive Cash deposit with an amount of Php'.$amount.'.';
+                    $detail_cn = '预存了款项 Php'.$amount.'.';
+                    $log_data = array(
+                        'client_service_id' => null,
+                        'client_id' => $client_id,
+                        'group_id' => null,
+                        'log_type' => 'Ewallet',
+                        'log_group' => 'deposit',
+                        'detail'=> $detail,
+                        'detail_cn'=> $detail_cn,
+                        'amount'=> $amount,
+                    );
+                    LogController::save($log_data);
+                  }
+
+                  for($i=0; $i<count($request->payments); $i++) {
+
+                     $client_id = $request->payments[$i]['client_id'];
+                     $cs_id = $request->payments[$i]['id'];
+                     $amount = $request->payments[$i]['amount'];
+                     $total_cost = $request->payments[$i]['total_cost'];
+                     $payment = ClientTransaction::where('type','Payment')->where('client_service_id',$cs_id)->first();
+                     $rson = 'Paid Php'.$amount.' - '.Auth::user()->first_name.' ('.date('Y-m-d H:i:s').')<br><br>';
+                     if($payment){
+                         $payment->amount += $amount;
+                         $payment->reason = $rson.$payment->reason;
+                         $payment->save();
+                     }
+                     else{
+                         $payment = new ClientTransaction;
+                         $payment->client_id = $client_id;
+                         $payment->client_service_id = $cs_id;
+                         $payment->type = 'Payment';
+                         $payment->group_id = null;
+                         $payment->amount = $amount;
+                         $payment->reason = $rson;
+                         $payment->save();
+                     }
+
+                     $service = ClientService::findOrFail($cs_id);
+                     if($service->payment_amount > 0){
+                         $service->payment_amount += $amount;
+                     }
+                     else{
+                         $service->payment_amount = $amount;
+                     }
+                     if($amount == $total_cost){
+                         $service->is_full_payment = 1;
+                     }
+                     $service->save();
+
+                     // save transaction logs
+                     $detail = 'Paid an amount of Php '.$amount.'.';
+                     $detail_cn = '已支付 Php'.$amount.'.';
+                     $log_data = array(
+                         'client_service_id' => null,
+                         'client_id' => $client_id,
+                         'group_id' => null,
+                         'log_type' => 'Transaction',
+                         'log_group' => 'payment',
+                         'detail'=> $detail,
+                         'detail_cn'=> $detail_cn,
+                         'amount'=> $amount,
+                     );
+                     LogController::save($log_data);
+
+                    $detail = 'Paid service with an amount of Php'.$amount.'.';
+                    $detail_cn = '已支付 Php'.$amount.'.';
+                    $log_data = array(
+                        'client_service_id' => $cs_id,
+                        'client_id' => $client_id,
+                        'group_id' => null,
+                        'log_type' => 'Ewallet',
+                        'log_group' => 'payment',
+                        'detail'=> $detail,
+                        'detail_cn'=> $detail_cn,
+                        'amount'=> '-'.$amount,
+                    );
+                    LogController::save($log_data);
+
+                   }
+              }
+              else{
+                //Generate QR CODE
+                 $response['test'] = 'Generate QR Code';
+                 $amount = 0;
+                 $cs_id = '';
+                 for($i=0; $i<count($request->payments); $i++) {
+                    $amount += $request->payments[$i]['amount'];
+                    $cs_id .= $request->payments[$i]['id'].',';
+                 }
+                 $qr = new QrCode;
+                 $qr->client_id = $client_id;
+                 $qr->group_id = null;
+                 $qr->service_ids = rtrim($cs_id, ',');
+                 $qr->save();
+
+                 $total_amount = $amount/0.975;
+              }
+
+
+               $response['status'] = 'Success';
+               $response['code'] = 200;
+          }
+
+
+          return Response::json($response);
+      }
 
     public function addClientPackage(Request $request){
         $client_id = $request->client_id;
