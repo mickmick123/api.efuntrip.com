@@ -4784,11 +4784,14 @@ public function getClientPackagesByGroup($client_id, $group_id){
              $qr->service_ids = rtrim($cs_id, ',');
              $qr->save();
 
-             $total_amount = $amount/0.975;
+             $total_amount = $amount / 0.975;
+             $total_fee = $total_amount - $amount;
              $response['data'] = [
                  'qr_code'=>$qr->id,
                  'service'=>$request->payments,
-                 'total'=>number_format($total_amount, 2, '.', ',')];
+                 'total_fee'=>number_format($total_fee, 2, '.', ','),
+                 'total_amount'=>number_format($total_amount, 2, '.', ',')
+             ];
           }
 
 

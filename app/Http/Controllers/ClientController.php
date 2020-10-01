@@ -21,6 +21,7 @@ use App\Group;
 
 use App\Package;
 
+use App\QrCode;
 use App\Remark;
 use App\RoleUser;
 
@@ -2686,7 +2687,7 @@ class ClientController extends Controller
                 $paymode = 'Ewallet';
               }
 
-              if($paymode == 'Ewallet' || $paymode == 'Cash'){   
+              if($paymode == 'Ewallet' || $paymode == 'Cash'){
                   if($paymode == 'Cash'){
                     $amount = 0;
                     $gname = User::where('id',$client_id)->first()->first_name;
@@ -2815,7 +2816,14 @@ class ClientController extends Controller
                  $qr->service_ids = rtrim($cs_id, ',');
                  $qr->save();
 
-                 $total_amount = $amount/0.975;
+                 $total_amount = $amount / 0.975;
+                 $total_fee = $total_amount - $amount;
+                 $response['data'] = [
+                     'qr_code'=>$qr->id,
+                     'service'=>$request->payments,
+                     'total_fee'=>number_format($total_fee, 2, '.', ','),
+                     'total_amount'=>number_format($total_amount, 2, '.', ',')
+                 ];
               }
 
 
