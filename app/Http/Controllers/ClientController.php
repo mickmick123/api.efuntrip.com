@@ -1752,7 +1752,8 @@ class ClientController extends Controller
 								]);
 
 
-								$job = (new LogsPushNotification($request->client_id, $detail));
+                                $job = (new LogsPushNotification($request->client_id, $detail));
+                                $this->dispatch($job);
 
 								DB::table('logs_notification')->insert([
 									'log_id' => $log2->id,
@@ -2070,7 +2071,8 @@ class ClientController extends Controller
 
 										$log2 = Log::create($log_data);
 
-										$job = (new LogsPushNotification($cs->client_id, $log_data['detail']));
+                                        $job = (new LogsPushNotification($cs->client_id, $log_data['detail']));
+                                        $this->dispatch($job);
 
 										DB::table('logs_notification')->insert([
 											'log_id' => $log2->id,
