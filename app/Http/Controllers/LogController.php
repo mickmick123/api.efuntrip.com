@@ -34,6 +34,7 @@ class LogController extends Controller
             //Insert new transaction log
             $log_data['processor_id'] = Auth::user()->id;
             $log_data['log_date'] = date('Y-m-d');
+
             Log::insert($log_data);
         }
     }

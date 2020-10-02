@@ -48,23 +48,23 @@ class LogsPushNotification implements ShouldQueue
         }
         }
 
-        $push = new PushNotification('fcm'); 
+        $push = new PushNotification('fcm');
         $push->setUrl('https://fcm.googleapis.com/fcm/send')
-        ->setMessage([ 
-        'notification' => [ 
-            // 'title'=>'Title', 
-            'body' => $this->message, 
-            'sound' => 'default' 
-        ] 
-        ]) 
-        ->setConfig(['dry_run' => false,'priority' => 'high']) 
-        ->setApiKey('AAAAIynhqO8:APA91bH5P-SGimP4b0jazCrC8ya7bV9LoR57wWB9zLqatXfRyxSIdKs2_q4-e01Ofce6oxW-7YQOGlk4Sov4WwiUAE7qojRu-3xb9429ve0Ufkh4JDMaod7cKBAxbypFUPJNKX0yoe98') 
+        ->setMessage([
+        'notification' => [
+            // 'title'=>'Title',
+            'body' => $this->message,
+            'sound' => 'default'
+        ]
+        ])
+        ->setConfig(['dry_run' => false,'priority' => 'high'])
+        ->setApiKey('AAAAIynhqO8:APA91bH5P-SGimP4b0jazCrC8ya7bV9LoR57wWB9zLqatXfRyxSIdKs2_q4-e01Ofce6oxW-7YQOGlk4Sov4WwiUAE7qojRu-3xb9429ve0Ufkh4JDMaod7cKBAxbypFUPJNKX0yoe98')
         ->setDevicesToken($deviceToken)
         ->send();
 
-        DB::table('logs_notification')
-            ->where('log_id', $this->log_id)
-            ->where('job_id', $this->job->getJobId())
-            ->delete();
+        // DB::table('logs_notification')
+        //     ->where('log_id', $this->log_id)
+        //     ->where('job_id', $this->job->getJobId())
+        //     ->delete();
     }
 }

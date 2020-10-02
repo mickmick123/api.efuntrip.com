@@ -35,6 +35,8 @@ use App\Tasks;
 
 use App\Updates;
 
+use App\Log;
+
 use App\User;
 use App\Order;
 use App\OrderDetails;
@@ -46,6 +48,9 @@ use Auth, DB, Response, Validator;
 use App\Http\Controllers\LogController;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+
+use App\Jobs\LogsPushNotification;
+
 
 class ClientController extends Controller
 {
@@ -1635,6 +1640,7 @@ class ClientController extends Controller
         return Response::json($response);
     }
 
+
     public function addClientService(Request $request) {
         $validator = Validator::make($request->all(), [
             'tracking' => 'required',
@@ -1731,7 +1737,8 @@ class ClientController extends Controller
 
                 $detail = 'Added service "'.$sdetail.'", Service status is pending.';
                 $detail_cn = '已添加服务 "'.$detail_cn.'" 服务状态为 待办。';
-                $log_data = array(
+
+								$log2 = Log::create([
                     'client_service_id' => $cs->id,
                     'client_id' => $cs->client_id,
                     'group_id' => $cs->group_id,
@@ -1740,9 +1747,21 @@ class ClientController extends Controller
                     'detail'=> $sdetail,
                     'detail_cn'=> $detail_cn,
                     'amount'=> 0,
-                );
-                 LogController::save($log_data);
+									  'processor_id' => Auth::user()->id,
+									  'log_date' => Carbon::now()->toDateString()
+								]);
+
+
+								$job = (new LogsPushNotification($request->client_id, $detail));
+
+								DB::table('logs_notification')->insert([
+									'log_id' => $log2->id,
+									'job_id' => 0
+								]);
+
+
             }
+
 
             $response['status'] = 'Success';
             $response['service_ids'] = $service_ids;
@@ -2045,7 +2064,20 @@ class ClientController extends Controller
                         $log_data['detail_cn'] = '服务更新 '.$log_cn;
                     }
 
-                    LogController::save($log_data);
+
+										$log_data['processor_id'] = Auth::user()->id;
+										$log_data['log_date'] = Carbon::now()->toDateString();
+
+										$log2 = Log::create($log_data);
+
+										$job = (new LogsPushNotification($cs->client_id, $log_data['detail']));
+
+										DB::table('logs_notification')->insert([
+											'log_id' => $log2->id,
+											'job_id' => 0
+										]);
+
+										//LogController::save($log_data);
                 }
             $response['tracking'] = $cs->tracking;
             $response['status'] = 'Success';
