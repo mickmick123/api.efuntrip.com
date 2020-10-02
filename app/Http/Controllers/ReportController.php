@@ -2670,7 +2670,7 @@ class ReportController extends Controller
   public function sendPushNotification($user_id, $message = null, $label = null, $log_id = null) {
 
 		if($label !== null) {
-			$job = (new LogsPushNotification($user_id, $message, $log_id))->delay(now()->addMinutes(5));
+			$job = (new LogsPushNotification($user_id, $message, $log_id))->delay(now()->addMinutes(120));
 		} else {
 			$job = (new LogsPushNotification($user_id, $message, $log_id));
 		}
@@ -2681,6 +2681,7 @@ class ReportController extends Controller
 			$checkLogNotif = DB::table('logs_notification as ln')
 											->leftJoin('jobs', 'ln.job_id', '=', 'jobs.id')
 											->where('ln.log_id', $log_id)
+											->where('status', 1)
 											->first();
 
 			if($checkLogNotif) {
@@ -2688,12 +2689,15 @@ class ReportController extends Controller
 				DB::table('logs_notification')
 					->where('log_id', $log_id)
 					->where('job_id', $checkLogNotif->job_id)
-					->delete();
+					->update([
+						'status' => 0
+					]);
 			}
 
 			DB::table('logs_notification')->insert([
 				'log_id' => $log_id,
-				'job_id' => $jobID
+				'job_id' => $jobID,
+				'status' => 1
 			]);
 		}
 
@@ -2720,7 +2724,7 @@ class ReportController extends Controller
     ])
     ->setConfig(['dry_run' => false,'priority' => 'high'])
     ->setApiKey('AAAAIynhqO8:APA91bH5P-SGimP4b0jazCrC8ya7bV9LoR57wWB9zLqatXfRyxSIdKs2_q4-e01Ofce6oxW-7YQOGlk4Sov4WwiUAE7qojRu-3xb9429ve0Ufkh4JDMaod7cKBAxbypFUPJNKX0yoe98')
-    ->setDevicesToken('4892bc15f44d6cd3c0f53fa8c98024fc00945c438baaae66904b46f33fdb3a05d2125c735d4cbf92')
+    ->setDevicesToken('eYCA9ybQBak:APA91bGeormdqS1wOYJ9lrGv9DhBH9HN2VUpB-0odTjr51pwdZo_bWBRrUS8oMtQ7A2mXQV46U-Ib55CtvjT7Ff-opzvsuqrPKEif8DDWRRZYUh7g5nG5yfY8Dk64WeulGla-w9Y7q3y')
     ->send();
 	}
 }
