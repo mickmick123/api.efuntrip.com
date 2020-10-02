@@ -16,6 +16,8 @@ Route::middleware('auth:api')->group(function() {
 	Route::get('/get-transaction-history/{client_id}/{group_id}', 'LogController@getTransactionHistory');
 	Route::get('/get-service-history/{group_id}', 'LogController@groupServiceHistory');
 
+	Route::get('/get-notification/{client_id}', 'LogController@getAllNotification');
+
 
 
     // OLD LOGS //
