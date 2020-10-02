@@ -990,6 +990,7 @@ class InventoryController extends Controller
                     $j++;
                 }
             }
+            $n->unit = "1 Set = ".$n->sell." ".$n->unit;
 
 //            $units = InventoryParentUnit::where('inv_id', $n->inventory_id)
 //                ->leftJoin('inventory_unit as iunit', 'iunit.unit_id', '=', 'inventory_parent_unit.unit_id')
@@ -1851,7 +1852,7 @@ class InventoryController extends Controller
 
     public function locationListConsumable(Request $request){
         $location = DB::table("inventory_consumables as c")
-            ->select(DB::raw('l.location, l.id, u.name as unit, i.sell'))
+            ->select(DB::raw('l.location, l.id, u.name as unit, i.sell, c.qty, c.price'))
             ->leftJoin("inventory as i", "c.inventory_id", "i.inventory_id")
             ->leftJoin("inventory_unit as u", "i.unit_id", "u.unit_id")
             ->leftjoin("ref_location_detail as ld", "c.location_id", "ld.id")
@@ -1860,6 +1861,7 @@ class InventoryController extends Controller
             ->groupBy('ld.loc_id')
             ->orderBy("l.location", "ASC")
             ->get();
+        $spent = 0;
         foreach ($location as $l){
             $purchased = DB::table('inventory_consumables as c')
                 ->where([["inventory_id", $request->inventory_id],["c.type", "=", "Purchased"],["l.id", $l->id]])
@@ -1874,12 +1876,13 @@ class InventoryController extends Controller
             $qty = $purchased-$consumed;
             $l->remaining = self::unitFormat($l->unit, $l->sell, $qty);
             $l->uTotal = $qty>0?number_format($qty)." ".$l->unit.($qty>1?'s':''):'';
+            $spent += $l->qty * $l->price;
         }
-        $spent = InventoryConsumables::where([["inventory_id", $request->inventory_id],["type", "=", "Purchased"]])->sum('price');
+        //$spent = InventoryConsumables::where([["inventory_id", $request->inventory_id],["type", "=", "Purchased"]])->sum('price');
 
         $response['status'] = 'Success';
         $response['code'] = 200;
-        $response['data'] = array('spent' => $spent, 'location' => $location);
+        $response['data'] = array('spent' => number_format($spent, 2), 'location' => $location);
 
         return Response::json($response);
     }
