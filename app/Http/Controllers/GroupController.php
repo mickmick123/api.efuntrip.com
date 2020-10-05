@@ -313,10 +313,10 @@ class GroupController extends Controller
             $v->wallet =  $this->getGroupEwallet($v->id);
 
             if($v->balance == null){
-                $v->balance = number_format((float)0, 2, '.', '');
+                $v->balance = 0;
             }
             if($v->collectables == null){
-                $v->collectables = number_format((float)0, 2, '.', '');
+                $v->collectables = 0;
             }
             // $total_balance =  $this->getGroupTotalBalance($v->id);
             // $col_balance =  $this->getGroupTotalCollectables($v->id);
