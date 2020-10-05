@@ -266,7 +266,8 @@ class GroupController extends Controller
         $search = $request->input('search');
 
         $groups = DB::table('groups as g')
-            ->select(DB::raw('g.id, g.name, CONCAT(u.first_name, " ", u.last_name) as leader, g.risk, g.balance, g.collectables, p.latest_package, srv.latest_service, p.latest_package2, srv.latest_service2'))
+            ->select(DB::raw('g.id, g.name, CONCAT(u.first_name, " ", u.last_name) as leader, g.risk,   
+                IFNULL(g.balance,0) as balance, IFNULL(g.collectables,0) as collectables, p.latest_package, srv.latest_service, p.latest_package2, srv.latest_service2'))
             ->leftjoin(DB::raw('(select * from users) as u'),'u.id','=','g.leader_id')
             ->leftjoin(DB::raw('
                     (
