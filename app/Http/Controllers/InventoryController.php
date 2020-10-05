@@ -1787,7 +1787,7 @@ class InventoryController extends Controller
                     $inv = Inventory::leftJoin('inventory_unit AS iun','inventory.unit_id','iun.unit_id')
                         ->where('inventory.inventory_id',$request->inventory_id)
                         ->get(['iun.name AS unit','inventory.sell']);
-                    $reason = "$name->first_name ".$set." ".self::unitFormat($inv[0]->unit, (float)$inv[0]->sell, (int)$v->qty);
+                    $reason = "$name->first_name ".$set." ".(int)$v->qty." ".$inv[0]->unit;
                     self::saveLogs($request->inventory_id, 'Stored', $reason);
                 }
             }
