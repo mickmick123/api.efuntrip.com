@@ -990,6 +990,7 @@ class InventoryController extends Controller
                     $j++;
                 }
             }
+            $n->unitSelected = $n->unit;
             $n->unit = "1 Set = ".$n->sell." ".$n->unit;
 
 //            $units = InventoryParentUnit::where('inv_id', $n->inventory_id)
@@ -1783,16 +1784,11 @@ class InventoryController extends Controller
             ->leftJoin("inventory_unit as iu", "i.unit_id", "iu.unit_id")
             ->orderBy("id", "ASC")
             ->get();
-        $collection = new Collection($list);
-        $storage = $collection->unique('storageId')->values()->pluck('storageId');
-        $i = 0;
-//        foreach ($storage as $id){
-//            $qty[$id]=0;
-//        }
-        $qty = 0;
+        $qty = 0; $set = 0; $i = 0;
+        $totalPrice = 0;
         foreach ($list as $l){
             $l->subTotal = number_format($l->qty * $l->price, 2);
-//            $l->purchased = $l->qty.' '.($l->set>0?'Set':$l->unit);
+            $l->purchased = $l->qty;
             $l->created_at = gmdate("F j, Y", $l->created_at);
             $l->updated_at = gmdate("F j, Y", $l->updated_at);
             $l->location = $l->location?$l->location:'';
@@ -1800,42 +1796,39 @@ class InventoryController extends Controller
             $l->sup_name = $l->sup_name?$l->sup_name:'';
             $s = $l->sup_location;
             $l->sup_location = $s?$s.' ('.$l->sup_location_detail.')':'';
-//            if($l->set>0){
-//                $l->qty = $l->qty * $l->sell;
-//            }
-//            if($i==0) {
-//                $qty[$l->storageId] = $l->qty;
-//            }
-//            if($i!=0) {
-//                if ($l->type == "Purchased") {
-//                    $qty[$l->storageId] += $l->qty;
-//                }
-//                if ($l->type == "Consumed") {
-//                    $qty[$l->storageId] -= $l->qty;
-//                }
-//            }
-            if($i==0) {
-                $qty = $l->qty;
+
+            $l->qtyUnit = $l->qty;
+            $l->qtySet = 0;
+            if($i==0 && $l->type == "Purchased") {
+                $qty += $l->qty;
             }
             if($i!=0) {
                 if ($l->type == "Purchased") {
                     $qty += $l->qty;
                 }
-                if ($l->type == "Consumed") {
+                if ($l->type == "Consumed" || $l->type == "Wasted" || $l->type == "Converted") {
                     $qty -= $l->qty;
                 }
+                if ($l->type == "Converted") {
+                    $set += $l->qty;
+                }
+                if ($l->type == "Sold") {
+                    $set -= $l->qty;
+                }
             }
-            $l->qty = self::unitFormat($l->unit, $l->sell, $l->qty);
-            $l->remaining = self::unitFormat($l->unit, $l->sell, $qty);
-//            $l->remaining = self::unitFormat($l->unit, $l->sell, $qty[$l->storageId]);
-//            $qty[$l->storageId] = $qty[$l->storageId];
+            $l->remainingUnit = $qty;
+            $l->remainingSet = $set/$l->sell;
             $qty = $qty;
+            $set = $set;
+            $totalPrice += $l->subTotal;
             $i++;
         }
+
         $data = $list->toArray();
         $response['status'] = 'Success';
         $response['code'] = 200;
         $response['data'] = array_reverse($data);
+        $response['price'] = number_format($totalPrice, 2);
 
         return Response::json($response);
     }
@@ -1851,7 +1844,7 @@ class InventoryController extends Controller
             ->groupBy('ld.loc_id')
             ->orderBy("l.location", "ASC")
             ->get();
-        $spent = 0;
+        //$spent = 0;
         foreach ($location as $l){
             $purchased = DB::table('inventory_consumables as c')
                 ->where([["inventory_id", $request->inventory_id],["c.type", "=", "Purchased"],["l.id", $l->id]])
@@ -1866,13 +1859,11 @@ class InventoryController extends Controller
             $qty = $purchased-$consumed;
             $l->remaining = self::unitFormat($l->unit, $l->sell, $qty);
             $l->uTotal = $qty>0?number_format($qty)." ".$l->unit.($qty>1?'s':''):'';
-            $spent += $l->qty * $l->price;
+            //$spent += $l->qty * $l->price;
         }
-        //$spent = InventoryConsumables::where([["inventory_id", $request->inventory_id],["type", "=", "Purchased"]])->sum('price');
-
         $response['status'] = 'Success';
         $response['code'] = 200;
-        $response['data'] = array('spent' => number_format($spent, 2), 'location' => $location);
+        $response['data'] = $location;
 
         return Response::json($response);
     }
