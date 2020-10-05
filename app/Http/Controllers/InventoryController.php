@@ -774,9 +774,9 @@ class InventoryController extends Controller
             $filter4 = array();
             $filter5 = array();
         }
-        if($name == "" || $ca_id !=0){
-            $sql = array();
-        }
+        //if($name == "" || $ca_id !=0){
+        //    $sql = array();
+        //}
 
         $items2 = array_merge(array($ca_id), $items1, $sql);
 
