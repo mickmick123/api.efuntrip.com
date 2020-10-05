@@ -52,11 +52,28 @@ class LocationController extends Controller
         $locId = LocationDetail::whereIn('id',$invId)->pluck('loc_id');
         $locDet = LocationDetail::whereIn('id',$invId)->get();
         $loc = Location::whereIn('id',$locId)->get();
+        $remCalc = InventoryConsumables::where('inventory_id',$request->inventory_id)
+            ->whereIn('location_id',$invId)->get();
+        $remaining = [];
+        foreach($locDet as $k=>$v){
+            $purchased = 0;
+            $notPurchased = 0;
+            foreach($remCalc as $kk=>$vv){
+                if($v->id === $vv->location_id){
+                    if($vv->type === 'Purchased'){
+                        $purchased += $vv->qty;
+                    }else{
+                        $notPurchased += $vv->qty;
+                    }
+                    $remaining[$k] = ['id'=>$v->id,'remaining'=>$purchased - $notPurchased];
+                }
+            }
+        }
+        $data = ['location'=>$loc,'locationDetail'=>$locDet,'locationRemaining'=>$remaining];
 
         $response['status'] = 'Success';
         $response['code'] = 200;
-        $response['location'] = $loc;
-        $response['locationDetail'] = $locDet;
+        $response['data'] = $data;
 
         return Response::json($response);
     }
