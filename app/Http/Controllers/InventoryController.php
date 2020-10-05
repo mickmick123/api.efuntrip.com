@@ -557,20 +557,27 @@ class InventoryController extends Controller
         $newlyAdded = Inventory::select(['inventory.*','u.name as unit',
             DB::raw("(inventory.name) AS name,
                 (co.name) AS company,
-                CASE WHEN inventory.type='Consumables' THEN
-                    IFNULL(
-                        (SELECT
-                            SUM(qty)
-                        FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type='Purchased')
-                        -
-                        IFNULL((SELECT
-                            SUM(qty)
-                        FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type='Consumed'),
-                        0)
-                    ,0)
-                ELSE
+                CASE WHEN inventory.type!='Consumables' THEN
                     (SELECT COUNT(id) FROM inventory_assigned a WHERE a.inventory_id = inventory.inventory_id AND a.status !=3)
-                END AS total_asset"),
+                END AS total_asset,
+                CASE WHEN inventory.type='Consumables' THEN
+                    IFNULL((SELECT
+                        SUM(qty)
+                    FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type='Purchased'),0)
+                    -
+                    IFNULL((SELECT
+                        SUM(qty)
+                    FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type IN ('Consumed', 'Converted', 'Wasted')),0)
+                END AS rUnit,
+                CASE WHEN inventory.type='Consumables' THEN
+                    IFNULL((SELECT
+                        SUM(qty)
+                    FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type='Converted'),0)
+                    -
+                    IFNULL((SELECT
+                        SUM(qty)
+                    FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type='Sold'),0)
+                END AS rSet"),
             'datetime' => function ($query) {
                 $query->select(DB::raw("FROM_UNIXTIME(created_at, '%m/%d/%Y %H:%i:%s') AS datatime"))
                     ->from('inventory_logs')
@@ -609,11 +616,9 @@ class InventoryController extends Controller
 
         foreach($newlyAdded as $n){
             if($n->type=="Consumables") {
-                //$n->total_asset = self::unitFormat($n->inventory_id, (int)$n->qty);
-                $n->total_asset = self::unitFormat($n->unit, $n->sell, (int)$n->total_asset);
+                $n->total_asset = ($n->rSet>0?$n->rSet/$n->sell:0)." Set / $n->rUnit $n->unit";
             }
         }
-
 
         $response['status'] = 'Success';
         $response['code'] = 200;
@@ -857,19 +862,27 @@ class InventoryController extends Controller
         $list = DB::table('inventory')
             ->select(DB::raw('
                 co.name as company_name, inventory.*, u.name as unit,
-                CASE WHEN inventory.type="Consumables" THEN
-                    IFNULL(
-                        (SELECT
-                            SUM(qty)
-                        FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type="Purchased")
-                        -
-                        IFNULL((SELECT
-                            SUM(qty)
-                        FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type="Consumed"),0)
-                    ,0)
-                ELSE
+                CASE WHEN inventory.type!="Consumables" THEN
                     (SELECT COUNT(id) FROM inventory_assigned a WHERE a.inventory_id = inventory.inventory_id AND a.status !=3)
-                END AS qty
+                END AS qty,
+                CASE WHEN inventory.type="Consumables" THEN
+                    IFNULL((SELECT
+                        SUM(qty)
+                    FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type="Purchased"),0)
+                    -
+                    IFNULL((SELECT
+                        SUM(qty)
+                    FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type IN ("Consumed", "Converted", "Wasted")),0)
+                END AS rUnit,
+                CASE WHEN inventory.type="Consumables" THEN
+                    IFNULL((SELECT
+                        SUM(qty)
+                    FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type="Converted"),0)
+                    -
+                    IFNULL((SELECT
+                        SUM(qty)
+                    FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type="Sold"),0)
+                END AS rSet
             '))
             ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
             //->leftJoin("inventory_parent_unit as pu", "inventory.inventory_id", "pu.inv_id")
@@ -895,9 +908,8 @@ class InventoryController extends Controller
                 ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')->get();
             $n->created_at = gmdate("F j, Y", $n->created_at);
             $n->updated_at = gmdate("F j, Y", $n->updated_at);
-            if($n->type=="Consumables" && $n->sell>0) {
-                //$n->qty = self::unitFormat($n->inventory_id, (int)$n->qty);
-                $n->qty = self::unitFormat($n->unit, $n->sell, (int)$n->qty);
+            if($n->type=="Consumables") {
+                $n->qty = ($n->rSet>0?$n->rSet/$n->sell:0)." Set / $n->rUnit $n->unit";
                 $n->unit = "Set/".$n->unit;
             }
             foreach($nparent as $np){
