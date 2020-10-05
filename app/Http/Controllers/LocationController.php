@@ -65,7 +65,7 @@ class LocationController extends Controller
                     }else{
                         $notPurchased += $vv->qty;
                     }
-                    $remaining[$k] = ['id'=>$v->id,'remaining'=>number_format($purchased - $notPurchased, 2, '.', ',')];
+                    $remaining[$k] = ['id'=>$v->id,'remaining'=>(float)number_format($purchased - $notPurchased, 2, '.', ',')];
                 }
             }
         }
