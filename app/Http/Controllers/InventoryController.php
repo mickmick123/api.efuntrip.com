@@ -1691,10 +1691,28 @@ class InventoryController extends Controller
             $locId = self::location($request->location, $request->location_detail,2);
             $supLocId = self::location($request->sup_location, $request->sup_location_detail,3);
 
-            if(!is_numeric($request->loc_site_id)){
-                $location = $request->loc_site_id;
+            if(!is_numeric($request->location)){
+                $location = $request->location;
             }else{
                 $location = Location::where("id", $request->location)->first()->location;
+            }
+
+            if(!is_numeric($request->location_detail)){
+                $locDetail = $request->location_detail;
+            }else{
+                $locDetail = LocationDetail::where("id", $request->location_detail)->first()->location_detail;
+            }
+
+            if(!is_numeric($request->sup_location)){
+                $sLocation = $request->sup_location;
+            }else{
+                $sLocation = Location::where("id", $request->sup_location)->first()->location;
+            }
+
+            if(!is_numeric($request->sup_location_detail)){
+                $sLocDetail = $request->sup_location_detail;
+            }else{
+                $sLocDetail = LocationDetail::where("id", $request->sup_location_detail)->first()->location_detail;
             }
 
             $qty = $request->qty;
@@ -1702,8 +1720,10 @@ class InventoryController extends Controller
             $inv = Inventory::leftJoin('inventory_unit AS iun','inventory.unit_id','iun.unit_id')
                 ->where('inventory.inventory_id',$request->inventory_id)
                 ->get(['iun.name AS unit','inventory.sell']);
-            $reason = "$user->first_name purchased ".self::unitFormat($inv[0]->unit, (float)$inv[0]->sell, (int)$qty)." with the price of Php$request->price
-                    Stored at $location from $request->sup_name.";
+
+            $reason = "$user->first_name purchased $qty ".$inv[0]->unit." from $request->sup_name($sLocation $sLocDetail) with the price of Php$request->price
+                    Stored at $location $locDetail.";
+
             self::saveLogs($request->inventory_id, 'Stored', $reason);
 
             $icon = new InventoryConsumables;
