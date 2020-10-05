@@ -1813,6 +1813,7 @@ class InventoryController extends Controller
                     $set += $l->qty;
                 }
                 if ($l->type == "Sold") {
+                    $l->qtySet = $l->qty;
                     $set -= $l->qty;
                 }
             }
@@ -1835,7 +1836,17 @@ class InventoryController extends Controller
 
     public function locationListConsumable(Request $request){
         $location = DB::table("inventory_consumables as c")
-            ->select(DB::raw('l.location, l.id, u.name as unit, i.sell, c.qty, c.price'))
+            ->select(DB::raw('
+                IFNULL((SELECT SUM(qty) FROM inventory_consumables as ic WHERE ic.inventory_id=c.inventory_id AND ic.type = "Purchased"),0)
+                -
+                IFNULL((SELECT SUM(qty) FROM inventory_consumables as ic WHERE ic.inventory_id=c.inventory_id AND ic.type IN ("Consumed", "Converted", "Wasted")),0)
+            as rUnit,
+                (IFNULL((SELECT SUM(qty) FROM inventory_consumables as ic WHERE ic.inventory_id=c.inventory_id AND ic.type = "Converted"),0)
+                -
+                IFNULL((SELECT SUM(qty) FROM inventory_consumables as ic WHERE ic.inventory_id=c.inventory_id AND ic.type IN ("Sold")),0))
+            as rSet,
+                u.name as unit, i.sell, l.location
+            '))
             ->leftJoin("inventory as i", "c.inventory_id", "i.inventory_id")
             ->leftJoin("inventory_unit as u", "i.unit_id", "u.unit_id")
             ->leftjoin("ref_location_detail as ld", "c.location_id", "ld.id")
@@ -1844,22 +1855,9 @@ class InventoryController extends Controller
             ->groupBy('ld.loc_id')
             ->orderBy("l.location", "ASC")
             ->get();
-        //$spent = 0;
         foreach ($location as $l){
-            $purchased = DB::table('inventory_consumables as c')
-                ->where([["inventory_id", $request->inventory_id],["c.type", "=", "Purchased"],["l.id", $l->id]])
-                ->leftjoin("ref_location_detail as ld", "c.location_id", "ld.id")
-                ->leftjoin("ref_location as l", "ld.loc_id", "l.id")
-                ->sum('qty');
-            $consumed = DB::table('inventory_consumables as c')
-                ->where([["inventory_id", $request->inventory_id],["c.type", "=", "Consumed"],["l.id", $l->id]])
-                ->leftjoin("ref_location_detail as ld", "c.location_id", "ld.id")
-                ->leftjoin("ref_location as l", "ld.loc_id", "l.id")
-                ->sum('qty');
-            $qty = $purchased-$consumed;
-            $l->remaining = self::unitFormat($l->unit, $l->sell, $qty);
-            $l->uTotal = $qty>0?number_format($qty)." ".$l->unit.($qty>1?'s':''):'';
-            //$spent += $l->qty * $l->price;
+            $l->rSet = ($l->rSet>0?$l->rSet/$l->sell:0)." Set";
+            $l->rUnit = $l->rUnit." ".$l->unit;
         }
         $response['status'] = 'Success';
         $response['code'] = 200;
