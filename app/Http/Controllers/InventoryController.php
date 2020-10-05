@@ -1742,8 +1742,20 @@ class InventoryController extends Controller
             $response['status'] = 'Success';
             $response['code'] = 200;
             $response['data'] = 'Consumable has been Created!';
-            $response['request'] = $request->all();
         }
+
+        return Response::json($response);
+    }
+
+    public function getSupplier(){
+        $data = InventoryConsumables::where('type','Purchased')
+            ->groupBy('sup_name')
+            ->orderBy('updated_at','DESC')
+            ->get();
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $data;
 
         return Response::json($response);
     }
