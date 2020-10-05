@@ -1772,7 +1772,8 @@ class InventoryController extends Controller
         $list = DB::table('inventory_consumables as c')
             ->select(DB::raw("c.*, l.location, ld.location_detail, l.id as storageId,
                     CONCAT(u.first_name, ' ', u.last_name) as operator, CONCAT(w.first_name, ' ', w.last_name) as who,
-                    l1.location as sup_location, ld1.location_detail as sup_location_detail,iu.name as unit,i.sell"))
+                    l1.location as sup_location, ld1.location_detail as sup_location_detail,iu.name as unit,i.sell,
+                    IFNULL(c.price, 0) as price"))
             ->where("c.inventory_id", $request->inventory_id)
             ->leftJoin("users as u", "c.created_by", "u.id")
             ->leftJoin("users as w", "c.assigned_to", "w.id")
@@ -1787,7 +1788,7 @@ class InventoryController extends Controller
         $qty = 0; $set = 0; $i = 0;
         $totalPrice = 0;
         foreach ($list as $l){
-            $l->subTotal = number_format($l->qty * $l->price, 2);
+            $l->subTotal = $l->qty * $l->price;
             $l->purchased = $l->qty;
             $l->created_at = gmdate("F j, Y", $l->created_at);
             $l->updated_at = gmdate("F j, Y", $l->updated_at);
@@ -1829,7 +1830,7 @@ class InventoryController extends Controller
         $response['status'] = 'Success';
         $response['code'] = 200;
         $response['data'] = array_reverse($data);
-        $response['price'] = number_format($totalPrice, 2);
+        $response['price'] = $totalPrice;
 
         return Response::json($response);
     }
@@ -1837,13 +1838,21 @@ class InventoryController extends Controller
     public function locationListConsumable(Request $request){
         $location = DB::table("inventory_consumables as c")
             ->select(DB::raw('
-                IFNULL((SELECT SUM(qty) FROM inventory_consumables as ic WHERE ic.inventory_id=c.inventory_id AND ic.type = "Purchased"),0)
+                IFNULL(
+                    (SELECT SUM(qty) FROM inventory_consumables as ic WHERE ic.inventory_id=c.inventory_id AND ic.type = "Purchased" AND ic.location_id = c.location_id),
+                0)
                 -
-                IFNULL((SELECT SUM(qty) FROM inventory_consumables as ic WHERE ic.inventory_id=c.inventory_id AND ic.type IN ("Consumed", "Converted", "Wasted")),0)
+                IFNULL(
+                    (SELECT SUM(qty) FROM inventory_consumables as ic WHERE ic.inventory_id=c.inventory_id AND ic.type IN ("Consumed", "Converted", "Wasted") AND ic.location_id = c.location_id)
+                ,0)
             as rUnit,
-                (IFNULL((SELECT SUM(qty) FROM inventory_consumables as ic WHERE ic.inventory_id=c.inventory_id AND ic.type = "Converted"),0)
+                IFNULL(
+                    (SELECT SUM(qty) FROM inventory_consumables as ic WHERE ic.inventory_id=c.inventory_id AND ic.type = "Converted" AND ic.location_id = c.location_id),
+                0)
                 -
-                IFNULL((SELECT SUM(qty) FROM inventory_consumables as ic WHERE ic.inventory_id=c.inventory_id AND ic.type IN ("Sold")),0))
+                IFNULL(
+                    (SELECT SUM(qty) FROM inventory_consumables as ic WHERE ic.inventory_id=c.inventory_id AND ic.type = "Sold" AND ic.location_id = c.location_id),
+                0)
             as rSet,
                 u.name as unit, i.sell, l.location
             '))
