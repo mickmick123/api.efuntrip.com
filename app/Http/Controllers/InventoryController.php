@@ -1776,19 +1776,19 @@ class InventoryController extends Controller
 
             foreach (json_decode($request->set) as $k=>$v) {
                 if($v->qty !== ''){
+                    $icon = new InventoryConsumables;
+                    $icon->inventory_id = $request->inventory_id;
+                    $icon->location_id = $request->location_id;
+                    $icon->qty = $v->qty;
+                    $icon->reason = $v->reason;
                     if($k === 0){
                         $set = 'Consumed';
+                        $icon->assigned_to = $request->user;
                     }elseif($k === 1){
                         $set = 'Converted';
                     }elseif($k === 2){
                         $set = 'Wasted';
                     }
-                    $icon = new InventoryConsumables;
-                    $icon->inventory_id = $request->inventory_id;
-                    $icon->location_id = $request->location_id;
-                    $icon->qty = $v->qty;
-                    $icon->assigned_to = $request->user;
-                    $icon->reason = $v->reason;
                     $icon->type = $set;
                     $icon->created_by = $user->id;
                     $icon->created_at = strtotime("now");
