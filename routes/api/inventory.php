@@ -49,6 +49,7 @@ Route::middleware('auth:api')->group(function() {
     Route::post('/delete-inventory','InventoryController@deleteInventory');
     Route::post('/delete-inventory-category','InventoryController@deleteInventoryCategory');
 
+    Route::post('/get-supplier','InventoryController@getSupplier');
     Route::get('/get-users-list','InventoryController@getUsersList');
 
     Route::match(array('get','post'),'/test','InventoryController@test');
