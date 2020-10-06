@@ -1472,26 +1472,10 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
-    //to be modified
-    public function getInventory(Request $request){ //to be modified
+    public function getInventory(Request $request){
         $list = Inventory::leftJoin('inventory_unit as iun','inventory.unit_id','iun.unit_id')
             ->where('inventory.inventory_id',$request->inventory_id)
-            ->get(['inventory.description','inventory.specification','iun.name as unit','inventory.sell']);
-//        foreach($list as $k=>$v){
-//            $v->unit_option = InventoryParentUnit::leftJoin('inventory_unit AS iu','inventory_parent_unit.unit_id','iu.unit_id')
-//                ->where('inventory_parent_unit.inv_id',$v->inventory_id)->get();
-//
-//            $xx = 0;
-//            foreach ($v->unit_option as $u) {
-//                $childs[$xx] = $u['name'];
-//                if((count($v->unit_option)-1)==$xx){
-//                    $v->min_purchased = $u['min_purchased'];
-//                }
-//                $xx++;
-//            }
-//            $v->unit = implode("/", $childs);
-//            $v->specification = $v->specification?$v->specification:'';
-//        }
+            ->get(['inventory.inventory_id','inventory.description','inventory.specification','iun.name as unit','inventory.sell']);
 
         $response['status'] = 'Success';
         $response['code'] = 200;
@@ -1773,7 +1757,7 @@ class InventoryController extends Controller
             $response['code'] = 422;
         } else {
             $user = auth()->user();
-
+            $name_id = '';
             foreach (json_decode($request->set) as $k=>$v) {
                 if($v->qty !== ''){
                     $icon = new InventoryConsumables;
@@ -1782,11 +1766,14 @@ class InventoryController extends Controller
                     $icon->qty = $v->qty;
                     $icon->reason = $v->reason;
                     if($k === 0){
+                        $name_id = $request->user;
                         $set = 'Consumed';
                         $icon->assigned_to = $request->user;
                     }elseif($k === 1){
+                        $name_id = $user->id;
                         $set = 'Converted';
                     }elseif($k === 2){
+                        $name_id = $user->id;
                         $set = 'Wasted';
                     }
                     $icon->type = $set;
@@ -1795,7 +1782,7 @@ class InventoryController extends Controller
                     $icon->updated_at = strtotime("now");
                     $icon->save();
 
-                    $name = User::select('first_name')->where("id", $request->user)->first();
+                    $name = User::select('first_name')->where("id", $name_id)->first();
                     $inv = Inventory::leftJoin('inventory_unit AS iun','inventory.unit_id','iun.unit_id')
                         ->where('inventory.inventory_id',$request->inventory_id)
                         ->get(['iun.name AS unit','inventory.sell']);
