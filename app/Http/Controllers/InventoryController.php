@@ -958,36 +958,18 @@ class InventoryController extends Controller
 
     public function show($id){
         $list = DB::table('inventory')
-            ->select(DB::raw('
-                co.name as company_name, inventory.*, u.name as unit,
-                CASE WHEN inventory.type="Consumables" THEN
-                    IFNULL(
-                        (SELECT
-                            SUM(qty)
-                        FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type="Purchased")
-                        -
-                        IFNULL((SELECT
-                            SUM(qty)
-                        FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type="Consumed"),0)
-                    ,0)
-                ELSE
-                    (SELECT COUNT(id) FROM inventory_assigned a WHERE a.inventory_id = inventory.inventory_id AND a.status !=3)
-                END AS qty
-            '))
+            ->select(DB::raw('co.name as company_name, inventory.*, u.name as unit'))
             ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
             //->leftJoin("inventory_parent_unit as pu", "inventory.inventory_id", "pu.inv_id")
             ->leftJoin("inventory_unit as u", "inventory.unit_id", "u.unit_id")
             ->where("inventory_id", $id)->get();
         foreach($list as $n){
+            $n->units = Inventory::with('units')->where("inventory_id", $n->inventory_id)->first()->units;
             $nparent = InventoryParentCategory::where('inventory_parent_category.category_id',$n->category_id)
                 ->where('inventory_parent_category.company_id',$n->company_id)
                 ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')->get();
             $n->created_at = gmdate("F j, Y", $n->created_at);
             $n->updated_at = gmdate("F j, Y", $n->updated_at);
-            if($n->type=="Consumables" && $n->sell>0) {
-                //$n->qty = self::unitFormat($n->inventory_id, (int)$n->qty);
-                $n->qty = $n->qty/$n->sell." Set";
-            }
             foreach($nparent as $np){
                 $tree = $np->parents->reverse();
                 $n->item_name = $np->name;
@@ -1659,6 +1641,7 @@ class InventoryController extends Controller
         $validator = Validator::make($request->all(), [
             'inventory_id' => 'required',
             'qty' => 'required',
+            'unit' => 'required',
             'price' => 'nullable',
             'location' => 'required',
             'location_detail' => 'required',
@@ -1701,11 +1684,8 @@ class InventoryController extends Controller
 
             $qty = $request->qty;
             //Logs
-            $inv = Inventory::leftJoin('inventory_unit AS iun','inventory.unit_id','iun.unit_id')
-                ->where('inventory.inventory_id',$request->inventory_id)
-                ->get(['iun.name AS unit','inventory.sell']);
-
-            $reason = "$user->first_name purchased $qty ".$inv[0]->unit." from $request->sup_name($sLocation $sLocDetail) with the price of Php$request->price
+            $unit = InventoryUnit::where("unit_id", $request->unit)->first()->name;
+            $reason = "$user->first_name purchased $qty ".$unit." from $request->sup_name($sLocation $sLocDetail) with the price of Php$request->price
                     Stored at $location $locDetail.";
 
             self::saveLogs($request->inventory_id, 'Stored', $reason);
@@ -1713,6 +1693,7 @@ class InventoryController extends Controller
             $icon = new InventoryConsumables;
             $icon->inventory_id = $request->inventory_id;
             $icon->qty = $qty;
+            $icon->unit_id = $request->unit;
             $icon->price = $request->price;
             $icon->location_id = $locId;
             $icon->sup_name = $request->sup_name;
