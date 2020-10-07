@@ -1622,14 +1622,24 @@ class InventoryController extends Controller
         $log->save();
     }
 
-    public function getUnit(Request $request){
+    public function getPurchaseUnit(Request $request){
         if(count($request->all()) !== 0){
-            $unit = Inventory::leftJoin('inventory_unit as iun','inventory.unit_id','iun.unit_id')
-                ->where('inventory.inventory_id',$request->inventory_id)
-                ->get(['iun.unit_id','iun.name']);
+            $unit = InventoryPurchaseUnit::leftJoin('inventory_unit as iun','inventory_purchase_unit.unit_id','iun.unit_id')
+                ->where('inventory_purchase_unit.inv_id',$request->inventory_id)->get();
         }else{
             $unit = InventoryUnit::orderBy('name','ASC')->get();
         }
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $unit;
+
+        return Response::json($response);
+    }
+
+    public function getSellingUnit(Request $request){
+        $unit = InventorySellingUnit::leftJoin('inventory_unit as iun','inventory_selling_unit.unit_id','iun.unit_id')
+            ->where('inventory_selling_unit.inv_id',$request->inventory_id)->get();
 
         $response['status'] = 'Success';
         $response['code'] = 200;
@@ -1768,6 +1778,7 @@ class InventoryController extends Controller
                     }elseif($k === 1){
                         $name_id = $user->id;
                         $set = 'Converted';
+                        $icon->selling_id = $request->set_unit;
                     }elseif($k === 2){
                         $name_id = $user->id;
                         $set = 'Wasted';
