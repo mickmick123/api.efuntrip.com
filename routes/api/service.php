@@ -2,6 +2,8 @@
 
 use Illuminate\Http\Request;
 
+Route::get('our-services', 'ServiceController@ourServices');
+
 Route::middleware('auth:api')->group(function() {
 
 	Route::get('manage-services', 'ServiceController@manageServices');
@@ -19,6 +21,7 @@ Route::middleware('auth:api')->group(function() {
 	Route::get('{id}/service-profiles-details', 'ServiceController@serviceProfilesDetails');
 
 	Route::get('{id}/expanded-details', 'ServiceController@expandedDetails');
+
 
 	Route::get('get-service-rate/{type}/{id}/{service_id?}', 'ServiceController@getServiceRate');
 

@@ -72,6 +72,22 @@ class ServiceController extends Controller
 		return Response::json($response);
 	}
 
+	public function ourServices(){
+		$parentServices = Service::where('parent_id', 0)->where('is_active', 1)->orderBy('detail')
+			->select(array('id', 'parent_id', 'detail', 'description', 'description_cn'))
+			->groupBy('id')
+			->get();
+
+		$response['status'] = 'Success';
+		$response['data'] = $parentServices;
+		$response['code'] = 200;
+
+		return Response::json($response);
+	}
+
+
+
+
 	public function store(Request $request) {
 		$validator = Validator::make($request->all(), [
             'type' => 'required',
@@ -96,19 +112,19 @@ class ServiceController extends Controller
         		]);
 
         		$branchIds  = DB::table('branches')->where('name', '<>', 'Manila')->pluck('id');
-        		
+
         		foreach( $branchIds  as $branchId ) {
         			ServiceBranchCost::create([
         				'service_id' => $service->id,
         				'branch_id' => $branchId,
-        				'cost' => 0, 
+        				'cost' => 0,
 						'charge' => 0,
 						'tip' => 0,
 						'com_agent' => 0,
 						'com_client' => 0
         			]);
         		}
-        		
+
         		$profileIds = DB::table('service_profiles')->pluck('id');
         		$branchIds  = DB::table('branches')->pluck('id');
 
@@ -118,7 +134,7 @@ class ServiceController extends Controller
         					'service_id' => $service->id,
         					'profile_id' => $profileId,
         					'branch_id' => $branchId,
-        					'cost' => 0, 
+        					'cost' => 0,
 							'charge' => 0,
 							'tip' => 0,
 							'com_agent' => 0,
@@ -228,7 +244,7 @@ class ServiceController extends Controller
 
 		if( $service ) {
 			$service['breakdowns'] = DB::table('breakdowns')->where('service_id', $id)->get();
-			
+
 			$response['status'] = 'Success';
 			$response['data'] = [
 			    'service' => $service
@@ -514,8 +530,8 @@ class ServiceController extends Controller
 			->get();
 
 		$marketPrice = [
-			'id' => 0, 
-			'name' => 'Market Price', 
+			'id' => 0,
+			'name' => 'Market Price',
 			'type' => 'default'
 		];
 		$serviceProfiles->prepend(collect($marketPrice));
@@ -596,16 +612,16 @@ class ServiceController extends Controller
 	          $bcost = ServiceBranchCost::where('branch_id',$branch_id)->where('service_id',$service_id)->first();
 	          $scost = $bcost->cost;
 	          $stip = $bcost->tip;
-	          $scharge = $bcost->charge; 
+	          $scharge = $bcost->charge;
 	          $sclient = $bcost->com_client;
-	      	  $sagent = $bcost->com_agent;  
+	      	  $sagent = $bcost->com_agent;
 	      }
 	      else{
 	          $scost = $service->cost;
 	          $stip = $service->tip;
 	          $scharge = $service->charge;
 	          $sclient = $service->com_client;
-	      	  $sagent = $service->com_agent;  
+	      	  $sagent = $service->com_agent;
 	      }
 
 	      //has profile id
@@ -619,7 +635,7 @@ class ServiceController extends Controller
 	              $scost = $newcost->cost;
 	              $stip = $newcost->tip;
 	              $sclient = $newcost->com_client;
-	      	  	  $sagent = $newcost->com_agent; 
+	      	  	  $sagent = $newcost->com_agent;
 	          }
 	      }
 
