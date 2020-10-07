@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\InventoryConsumables;
-use App\InventoryParentUnit;
+use App\InventoryPurchaseUnit;
 use App\Location;
 use App\LocationDetail;
 use Illuminate\Support\Facades\Response;

@@ -8,11 +8,12 @@ use App\Inventory;
 use App\InventoryConsumables;
 use App\InventoryLogs;
 use App\InventoryLocation;
+use App\InventorySellingUnit;
 use App\Location;
 use App\LocationDetail;
 use App\Role;
 use App\User;
-use App\InventoryParentUnit;
+use App\InventoryPurchaseUnit;
 use App\InventoryUnit;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Response;
@@ -162,6 +163,37 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    protected static function checkUnit($data, $loop = false){
+        if($loop === true){
+            $units = [];
+            foreach(json_decode($data) as $k=>$v) {
+                $unit = InventoryUnit::where('name',$v->unit)->get();
+                if(count($unit) === 0) {
+                    $addUnit = new InventoryUnit;
+                    $addUnit->name = $v->unit;
+                    $addUnit->created_at = strtotime("now");
+                    $addUnit->updated_at = strtotime("now");
+                    $addUnit->save();
+                    $unit = InventoryUnit::where('name', $v->unit)->get();
+                }
+                $units[$k] = $unit;
+                ArrayHelper::ArrayQueryPush($units[$k],['qty'],[$v->qty]);
+            }
+            return ArrayHelper::ArrayMerge($units);
+        }else if($loop === false){
+            $unit = InventoryUnit::where('name',$data)->get();
+            if(count($unit) === 0) {
+                $addUnit = new InventoryUnit;
+                $addUnit->name = $data;
+                $addUnit->created_at = strtotime("now");
+                $addUnit->updated_at = strtotime("now");
+                $addUnit->save();
+                $unit = InventoryUnit::where('name', $data)->get();
+            }
+            return $unit;
+        }
+    }
+
     public function addInventory(Request $request){
         $validator = Validator::make($request->all(), [
             'company_id' => 'required',
@@ -169,7 +201,6 @@ class InventoryController extends Controller
             'name' => 'required',
             'description' => 'required',
             'type' => 'required',
-            'unit' => 'required',
         ]);
 
         if ($validator->fails()) {
@@ -190,76 +221,50 @@ class InventoryController extends Controller
             $inv->description = $request->description;
             $inv->specification = $request->specification;
             $inv->type = $request->type;
-            $unit = InventoryUnit::where('name',$request->unit)->get();
-            if(count($unit) === 0) {
-                $addUnit = new InventoryUnit;
-                $addUnit->name = $request->unit;
-                $addUnit->created_at = strtotime("now");
-                $addUnit->updated_at = strtotime("now");
-                $addUnit->save();
-                $unit = InventoryUnit::where('name', $request->unit)->get();
-            }
-            $inv->unit_id = $unit[0]->unit_id;
-            if($request->type === 'Consumables'){
-                $inv->sell = $request->sell;
-            }
             $inv->created_at = strtotime("now");
             $inv->updated_at = strtotime("now");
             $inv->save();
 
-//            if($request->type === 'Property'){
-//                $unit = InventoryUnit::where('name',$request->unit)->get();
-//                if(count($unit) === 0) {
-//                    $addUnit = new InventoryUnit;
-//                    $addUnit->name = $request->unit;
-//                    $addUnit->created_at = strtotime("now");
-//                    $addUnit->updated_at = strtotime("now");
-//                    $addUnit->save();
-//                    $unit = InventoryUnit::where('name', $request->unit)->get();
-//                }
-//                $addParentUnit = new InventoryParentUnit;
-//                $addParentUnit->inv_id = $inv->inventory_id;
-//                $addParentUnit->unit_id = $unit[0]->unit_id;
-//                $addParentUnit->parent_id = 0;
-//                $addParentUnit->content = 0;
-//                $addParentUnit->min_purchased = 0;
-//                $addParentUnit->save();
-//            }elseif($request->type === 'Consumables'){
-//                $unitOption = [];
-//                foreach (json_decode($request->unit_option, true) as $k=>$v) {
-//                    $unit = InventoryUnit::where('name',$v['unit'])->get();
-//                    if(count($unit) === 0) {
-//                        $addUnit = new InventoryUnit;
-//                        $addUnit->name = $v['unit'];
-//                        $addUnit->created_at = strtotime("now");
-//                        $addUnit->updated_at = strtotime("now");
-//                        $addUnit->save();
-//                        $unit = InventoryUnit::where('name', $v['unit'])->get();
-//                    }
-//                    $unitOption[$k] = $unit;
-//                    ArrayHelper::ArrayQueryPush($unitOption[$k],['content'],[$v["content"]]);
-//                }
-//                $unitOption = ArrayHelper::ArrayMerge($unitOption);
-//                foreach ($unitOption as $k=>$v){
-//                    $addParentUnit = new InventoryParentUnit;
-//                    $addParentUnit->inv_id = $inv->inventory_id;
-//                    $addParentUnit->unit_id = $v->unit_id;
-//                    if($k+1 === count($unitOption)){
-//                        $addParentUnit->parent_id = $unitOption[count($unitOption)-1]->unit_id;
-//                        $addParentUnit->content = 0;
-//                        $addParentUnit->min_purchased = $v->content;
-//                    }elseif($k === 0){
-//                        $addParentUnit->parent_id = 0;
-//                        $addParentUnit->content = $v->content;
-//                        $addParentUnit->min_purchased = 0;
-//                    }else{
-//                        $addParentUnit->parent_id = $unitOption[$k-1]->unit_id;
-//                        $addParentUnit->content = $v->content;
-//                        $addParentUnit->min_purchased = 0;
-//                    }
-//                    $addParentUnit->save();
-//                }
-//            }
+            if($request->type === 'Property'){
+                $unit = self::checkUnit($request->unit);
+                $addPurchaseUnit = new InventoryPurchaseUnit;
+                $addPurchaseUnit->inv_id = $inv->inventory_id;
+                $addPurchaseUnit->unit_id = $unit[0]->unit_id;
+                $addPurchaseUnit->qty = 0;
+                $addPurchaseUnit->last_unit_id = 0;
+                $addPurchaseUnit->parent_id = 0;
+                $addPurchaseUnit->save();
+            }elseif($request->type === 'Consumables'){
+                $purchase = self::checkUnit($request->purchase, true);
+                $last_unit = collect(json_decode($request->purchase));
+                foreach($purchase as $k=>$v){
+                    $ret['after'][$k] = $v;
+                    $addPurchaseUnit = new InventoryPurchaseUnit;
+                    $addPurchaseUnit->inv_id = $inv->inventory_id;
+                    $addPurchaseUnit->unit_id = $v->unit_id;
+                    $addPurchaseUnit->qty = $v->qty;
+                    if($k+1 === count($purchase)){
+                        $unit = self::checkUnit($last_unit[count($last_unit)-1]->last_unit_id);
+                        $addPurchaseUnit->last_unit_id = $unit[0]->unit_id;
+                        $addPurchaseUnit->parent_id = $purchase[$k-1]->unit_id;;
+                    }elseif($k === 0){
+                        $addPurchaseUnit->last_unit_id = 0;
+                        $addPurchaseUnit->parent_id = 0;
+                    }else{
+                        $addPurchaseUnit->last_unit_id = 0;
+                        $addPurchaseUnit->parent_id = $purchase[$k-1]->unit_id;
+                    }
+                    $addPurchaseUnit->save();
+                }
+                $selling = self::checkUnit($request->selling, true);
+                foreach($selling as $k=>$v){
+                    $addSellingUnit = new InventorySellingUnit;
+                    $addSellingUnit->inv_id = $inv->inventory_id;
+                    $addSellingUnit->unit_id = $v->unit_id;
+                    $addSellingUnit->qty = $v->qty;
+                    $addSellingUnit->save();
+                }
+            }
 
             $ilog = new InventoryLogs;
             $ilog->inventory_id = $inv->inventory_id;
@@ -342,7 +347,7 @@ class InventoryController extends Controller
                 $u = InventoryUnit::where("unit_id", $request->unit_id)->first();
             }
 
-//            $pUnit = InventoryParentUnit::find($request->parent_unit_id);
+//            $pUnit = InventoryPurchaseUnit::find($request->parent_unit_id);
 //            $pUnit->unit_id = $u->unit_id;
 //            $pUnit->save();
 
@@ -494,13 +499,13 @@ class InventoryController extends Controller
 
     public function test(Request $request){
         $tree = Inventory::where('inventory_id',$request->inventory_id)->get();
-        InventoryParentUnit::$inventory_id = $request->inventory_id;
+        InventoryPurchaseUnit::$inventory_id = $request->inventory_id;
         foreach ($tree as $k=>$v) {
-            $v->sub_categories = InventoryParentUnit::with('subCategories')
-                ->leftJoin('inventory_unit as iunit', 'iunit.unit_id', '=', 'inventory_parent_unit.unit_id')
+            $v->sub_categories = InventoryPurchaseUnit::with('subCategories')
+                ->leftJoin('inventory_unit as iunit', 'iunit.unit_id', '=', 'inventory_purchase_unit.unit_id')
                 ->where([
-                    ['inventory_parent_unit.inv_id', $request->inventory_id],
-                    ['inventory_parent_unit.parent_id', $request->unit_id]
+                    ['inventory_purchase_unit.inv_id', $request->inventory_id],
+                    ['inventory_purchase_unit.parent_id', $request->unit_id]
                 ])
                 ->get();
         }
@@ -519,8 +524,8 @@ class InventoryController extends Controller
 
         $record = 0;
         $ctr = 0;
-        $data = InventoryParentUnit::leftJoin('inventory_unit AS iu','inventory_parent_unit.unit_id','iu.unit_id')
-            ->where('inventory_parent_unit.inv_id',$inventory_id)->get();
+        $data = InventoryPurchaseUnit::leftJoin('inventory_unit AS iu','inventory_purchase_unit.unit_id','iu.unit_id')
+            ->where('inventory_purchase_unit.inv_id',$inventory_id)->get();
         for($i=0;$i<count($data);$i++){
             if($data[$i]->unit_id == $unit_id){
                 $record = 1;
@@ -885,7 +890,7 @@ class InventoryController extends Controller
                 END AS rSet
             '))
             ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
-            //->leftJoin("inventory_parent_unit as pu", "inventory.inventory_id", "pu.inv_id")
+            //->leftJoin("inventory_purchase_unit as pu", "inventory.inventory_id", "pu.inv_id")
             //->leftJoin("inventory_unit as u", "pu.unit_id", "u.unit_id")
             ->leftJoin("inventory_unit as u", "inventory.unit_id", "u.unit_id")
             ->where($filter)
@@ -927,8 +932,8 @@ class InventoryController extends Controller
                 }
             }
 
-            //$units = InventoryParentUnit::where('inv_id', $n->inventory_id)
-            //    ->leftJoin('inventory_unit as iunit', 'iunit.unit_id', '=', 'inventory_parent_unit.unit_id')
+            //$units = InventoryPurchaseUnit::where('inv_id', $n->inventory_id)
+            //    ->leftJoin('inventory_unit as iunit', 'iunit.unit_id', '=', 'inventory_purchase_unit.unit_id')
             //    ->orderBy('id', 'asc')
             //    ->get();
             //$xx = 0;
@@ -975,7 +980,7 @@ class InventoryController extends Controller
                 END AS qty
             '))
             ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
-            //->leftJoin("inventory_parent_unit as pu", "inventory.inventory_id", "pu.inv_id")
+            //->leftJoin("inventory_purchase_unit as pu", "inventory.inventory_id", "pu.inv_id")
             ->leftJoin("inventory_unit as u", "inventory.unit_id", "u.unit_id")
             ->where("inventory_id", $id)->get();
         foreach($list as $n){
@@ -1005,8 +1010,8 @@ class InventoryController extends Controller
             $n->unitSelected = $n->unit;
             $n->unit = "1 Set = ".$n->sell." ".$n->unit;
 
-//            $units = InventoryParentUnit::where('inv_id', $n->inventory_id)
-//                ->leftJoin('inventory_unit as iunit', 'iunit.unit_id', '=', 'inventory_parent_unit.unit_id')
+//            $units = InventoryPurchaseUnit::where('inv_id', $n->inventory_id)
+//                ->leftJoin('inventory_unit as iunit', 'iunit.unit_id', '=', 'inventory_purchase_unit.unit_id')
 //                ->orderBy('id', 'asc')
 //                ->get();
 //            $xx = 0;
@@ -1419,10 +1424,10 @@ class InventoryController extends Controller
             $inv->updated_at = strtotime("now");
             $inv->save();
 
-//            InventoryParentUnit::where('inv_id',$inv->inventory_id)->delete();
+//            InventoryPurchaseUnit::where('inv_id',$inv->inventory_id)->delete();
 
 //            $unitOption = [];
-//            foreach (json_decode($request->unit_option, true) as $k=>$v) {
+//            foreach (json_decode($request->purchase, true) as $k=>$v) {
 //                $unit = InventoryUnit::where('name',$v['unit'])->get();
 //                if(count($unit) === 0) {
 //                    $addUnit = new InventoryUnit;
@@ -1437,23 +1442,23 @@ class InventoryController extends Controller
 //            }
 //            $unitOption = ArrayHelper::ArrayMerge($unitOption);
 //            foreach ($unitOption as $k=>$v){
-//                $addParentUnit = new InventoryParentUnit;
-//                $addParentUnit->inv_id = $inv->inventory_id;
-//                $addParentUnit->unit_id = $v->unit_id;
+//                $addPurchaseUnit = new InventoryPurchaseUnit;
+//                $addPurchaseUnit->inv_id = $inv->inventory_id;
+//                $addPurchaseUnit->unit_id = $v->unit_id;
 //                if($k === 0){
-//                    $addParentUnit->parent_id = 0;
-//                    $addParentUnit->content = $v->content;
-//                    $addParentUnit->min_purchased = 0;
+//                    $addPurchaseUnit->parent_id = 0;
+//                    $addPurchaseUnit->content = $v->content;
+//                    $addPurchaseUnit->min_purchased = 0;
 //                }elseif($k+1 === count($unitOption)){
-//                    $addParentUnit->parent_id = $unitOption[$k-1]->unit_id;
-//                    $addParentUnit->content = 0;
-//                    $addParentUnit->min_purchased = $v->content;
+//                    $addPurchaseUnit->parent_id = $unitOption[$k-1]->unit_id;
+//                    $addPurchaseUnit->content = 0;
+//                    $addPurchaseUnit->min_purchased = $v->content;
 //                }else{
-//                    $addParentUnit->parent_id = $unitOption[$k-1]->unit_id;
-//                    $addParentUnit->content = $v->content;
-//                    $addParentUnit->min_purchased = 0;
+//                    $addPurchaseUnit->parent_id = $unitOption[$k-1]->unit_id;
+//                    $addPurchaseUnit->content = $v->content;
+//                    $addPurchaseUnit->min_purchased = 0;
 //                }
-//                $addParentUnit->save();
+//                $addPurchaseUnit->save();
 //            }
 
             $ilog = new InventoryLogs;
@@ -1909,8 +1914,8 @@ class InventoryController extends Controller
     // Unit Formatting
     public static function unitFormat1($inventory_id, $qty){
         $array_m = [];
-        $unit = InventoryParentUnit::where('inv_id', $inventory_id)
-            ->leftJoin('inventory_unit as iunit', 'iunit.unit_id', '=', 'inventory_parent_unit.unit_id')
+        $unit = InventoryPurchaseUnit::where('inv_id', $inventory_id)
+            ->leftJoin('inventory_unit as iunit', 'iunit.unit_id', '=', 'inventory_purchase_unit.unit_id')
             ->orderBy('id', 'desc')
             ->get();
         $x = 0;
