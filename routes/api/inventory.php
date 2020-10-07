@@ -20,7 +20,8 @@ Route::middleware('auth:api')->group(function() {
     Route::post('/get-company-category-inventory','InventoryController@getCompanyCategoryInventory');
     Route::post('/get-category-inventory','InventoryController@getCategoryInventory');
     Route::post('/get-action-log','InventoryController@getActionLog');
-    Route::post('/get-unit','InventoryController@getUnit');
+    Route::post('/get-purchase-unit','InventoryController@getPurchaseUnit');
+    Route::post('/get-selling-unit','InventoryController@getSellingUnit');
 
     Route::post('/move-inventory-category','InventoryController@moveInventoryCategory');
 
