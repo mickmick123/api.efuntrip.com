@@ -19,4 +19,10 @@ class Inventory extends Model
             ->leftJoin('inventory_unit', 'inventory_unit.unit_id', '=', 'inventory_purchase_unit.unit_id')
             ->orderBy("inventory_purchase_unit.id", "ASC");
     }
+
+    public function selling(){
+        return $this->hasMany('App\InventorySellingUnit', 'inv_id','inventory_id')
+            ->leftJoin('inventory_unit', 'inventory_unit.unit_id', '=', 'inventory_selling_unit.unit_id')
+            ->orderBy("inventory_selling_unit.id", "ASC");
+    }
 }

@@ -963,10 +963,8 @@ class InventoryController extends Controller
 
     public function show($id){
         $list = DB::table('inventory')
-            ->select(DB::raw('co.name as company_name, inventory.*, u.name as unit'))
+            ->select(DB::raw('co.name as company_name, inventory.*'))
             ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
-            //->leftJoin("inventory_purchase_unit as pu", "inventory.inventory_id", "pu.inv_id")
-            ->leftJoin("inventory_unit as u", "inventory.unit_id", "u.unit_id")
             ->where("inventory_id", $id)->get();
         foreach($list as $n){
             $n->units = Inventory::with('units')->where("inventory_id", $n->inventory_id)->first()->units;
@@ -989,20 +987,32 @@ class InventoryController extends Controller
                     $j++;
                 }
             }
-            $n->unitSelected = $n->unit;
-            $n->unit = "1 Set = ".$n->sell." ".$n->unit;
+            if($n->type == "Consumables") {
+                $i=0;
+                foreach ($n->units as $u){
+                    $unitA[$i+1] = "1 $u->name = $u->qty";
+                    if($i!=0){
+                        $unitB[$i] = $u->name;
+                    }
+                    if($i == count($n->units)-1){
+                        $unitB[count($n->units)] = InventoryUnit::where("unit_id", $u->last_unit_id)->first()->name;
+                    }
+                    $i++;
+                }
+                foreach ($unitA as $k => $v) {
+                    $units[] = $v.$unitB[$k];
+                }
+                $n->pUnit = implode(", ", $units);
 
-//            $units = InventoryPurchaseUnit::where('inv_id', $n->inventory_id)
-//                ->leftJoin('inventory_unit as iunit', 'iunit.unit_id', '=', 'inventory_purchase_unit.unit_id')
-//                ->orderBy('id', 'asc')
-//                ->get();
-//            $xx = 0;
-//            foreach ($units as $u) {
-//                $n->childs[$xx] = $u['name'];
-//                $xx++;
-//            }
-//
-//            $n->unit = implode("/", $n->childs);
+                $selling = Inventory::with('selling')->where("inventory_id", $n->inventory_id)->first()->selling;
+                foreach ($selling as $s){
+                    $sell[] = "$s->qty $s->name = 1 Set";
+                }
+
+                $n->sUnit = implode(", ", $sell);
+            }else{
+                $n->unit = $n->units[0]['name'];
+            }
         }
 
         $response['status'] = 'Success';
@@ -1789,7 +1799,7 @@ class InventoryController extends Controller
         $list = DB::table('inventory_consumables as c')
             ->select(DB::raw("c.*, l.location, ld.location_detail, l.id as storageId,
                     CONCAT(u.first_name, ' ', u.last_name) as operator, CONCAT(w.first_name, ' ', w.last_name) as who,
-                    l1.location as sup_location, ld1.location_detail as sup_location_detail,iu.name as unit,i.sell,
+                    l1.location as sup_location, ld1.location_detail as sup_location_detail, iu.name as unit,
                     IFNULL(c.price, 0) as price"))
             ->where("c.inventory_id", $request->inventory_id)
             ->leftJoin("users as u", "c.created_by", "u.id")
@@ -1798,12 +1808,20 @@ class InventoryController extends Controller
             ->leftJoin("ref_location as l","ld.loc_id","l.id")
             ->leftJoin("ref_location_detail as ld1","c.sup_location_id","ld1.id")
             ->leftJoin("ref_location as l1","ld1.loc_id","l1.id")
-            ->leftJoin("inventory as i", "c.inventory_id", "i.inventory_id")
-            ->leftJoin("inventory_unit as iu", "i.unit_id", "iu.unit_id")
+            //->leftJoin("inventory as i", "c.inventory_id", "i.inventory_id")
+            //->leftJoin("inventory_unit as iu", "i.unit_id", "iu.unit_id")
+            ->leftJoin("inventory_unit as iu", "c.unit_id", "iu.unit_id")
             ->orderBy("id", "ASC")
             ->get();
-        $qty = 0; $set = 0; $i = 0;
+        //$qty = 0;
+        $set = 0; $i = 0;
         $totalPrice = 0;
+        $units = InventoryPurchaseUnit::where("inv_id", $request->inventory_id)->orderBy("id", "ASC")->get('unit_id as unitId');
+        foreach ($units as $u) {
+            $qty[$u->unitId] = 0;
+            $rUnit[$i] = "";
+            $i++;
+        }
         foreach ($list as $l){
             $l->subTotal = $l->qty * $l->price;
             $l->purchased = $l->qty;
@@ -1815,18 +1833,21 @@ class InventoryController extends Controller
             $s = $l->sup_location;
             $l->sup_location = $s?$s.' ('.$l->sup_location_detail.')':'';
 
-            $l->qtyUnit = $l->qty;
+            $l->qtyUnit = $l->qty." $l->unit";
             $l->qtySet = 0;
+
             if($i==0 && $l->type == "Purchased") {
-                $qty += $l->qty;
+                $qty[$l->unit_id] += $l->qty;
             }
             if($i!=0) {
                 if ($l->type == "Purchased") {
-                    $qty += $l->qty;
+                    $qty[$l->unit_id] += $l->qty;
                 }
                 if ($l->type == "Consumed" || $l->type == "Wasted" || $l->type == "Converted") {
-                    $qty -= $l->qty;
+                    $qty[$l->unit_id] -= $l->qty;
                 }
+
+                /*
                 if ($l->type == "Converted") {
                     $set += $l->qty;
                 }
@@ -1834,11 +1855,23 @@ class InventoryController extends Controller
                     $l->qtySet = $l->qty;
                     $set -= $l->qty;
                 }
+                */
             }
-            $l->remainingUnit = $qty;
-            $l->remainingSet = $set/$l->sell;
-            $qty = $qty;
+
+            $j=0;
+            foreach ($units as $u) {
+                if($l->unit_id == $u->unitId) {
+                    $rUnit[$j] = $qty[$l->unit_id]." $l->unit";
+                }
+                $j++;
+            }
+
+            $l->remainingUnit = implode(" ", $rUnit);
+            $l->remainingSet = $set;
+
+            $qty[$l->unit_id] = $qty[$l->unit_id];
             $set = $set;
+
             $totalPrice += $l->subTotal;
             $i++;
         }
