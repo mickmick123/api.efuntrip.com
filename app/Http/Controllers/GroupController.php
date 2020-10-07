@@ -1047,8 +1047,10 @@ public function getFunds($group_id, $page = 20){
                   ->leftjoin(DB::raw('(select * from users) as u'),'u.id','=','cs.client_id')
                   ->where([['ct.group_id', '=', $group_id]])
                   ->where('type','!=','Discount')
+                  ->where('amount','>',0)
                   ->orderBy('id', 'desc')
-                  ->paginate($page);
+                  ->get();
+                  // ->paginate($page);
 
       $response['status'] = 'Success';
       $response['data'] = $funds;
