@@ -1470,9 +1470,18 @@ class InventoryController extends Controller
     }
 
     public function getInventory(Request $request){
-        $list = Inventory::leftJoin('inventory_unit as iun','inventory.unit_id','iun.unit_id')
-            ->where('inventory.inventory_id',$request->inventory_id)
-            ->get(['inventory.inventory_id','inventory.description','inventory.specification','iun.name as unit','inventory.sell']);
+        $list = Inventory::where('inventory_id',$request->inventory_id)->get(['inventory_id','description','specification']);
+        foreach ($list as $k=>$v){
+            $v->purchase = InventoryPurchaseUnit::leftJoin('inventory_unit as iun','inventory_purchase_unit.unit_id','iun.unit_id')
+                ->where('inventory_purchase_unit.inv_id',$v->inventory_id)->get(['iun.name','inventory_purchase_unit.qty']);
+            foreach($v->purchase as $kk=>$vv){
+                $last_unit_name = InventoryPurchaseUnit::leftJoin('inventory_unit as iun','inventory_purchase_unit.last_unit_id','iun.unit_id')
+                    ->where('inventory_purchase_unit.inv_id',$v->inventory_id)->get(['iun.name']);
+                $vv->last_unit_id = $kk === (count($v->purchase)-1) ? $last_unit_name[count($v->purchase)-1]['name'] : '';
+            }
+            $v->selling = InventorySellingUnit::leftJoin('inventory_unit as iun','inventory_selling_unit.unit_id','iun.unit_id')
+                ->where('inv_id',$v->inventory_id)->get(['iun.name','inventory_selling_unit.qty']);
+        }
 
         $response['status'] = 'Success';
         $response['code'] = 200;
