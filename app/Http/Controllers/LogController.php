@@ -264,13 +264,14 @@ class LogController extends Controller
                     $total_disc = 0;
                     foreach($servs as $s){
                         $client = User::findorfail($s->client_id);
-                        $head[$ctr]['status'] = $csstatus;
+                        $head[$ctr]['status'] = $s->status;
                         $head[$ctr]['id'] = $s->client_id;
                         $head[$ctr]['client'] = $client->first_name.' '.$client->last_name;
-                        $loghead =  DB::table('logs')->where('client_service_id', $s->id)->where('group_id',"!=",null)
+                        $loghead =  DB::table('logs')->where('client_service_id', $s->id)->where('group_id',$t->group_id)
                                     ->where('log_type', 'Transaction')
                                     ->orderBy('id', 'desc')
-                                    ->distinct('detail')->get();
+                                    ->distinct('detail')
+                                    ->get();
                                     // ->pluck('detail');
 
                         $head[$ctr]['details'] = $loghead->pluck('detail');
@@ -285,7 +286,11 @@ class LogController extends Controller
                         }
                         $ctr++;
                     }
-                    $t->amount = '-'.$total_cost;
+                    if($total_cost > 0){
+                        $t->amount = '-'.$total_cost;
+                        $currentBalance = $t->balance;
+                        $currentBalance -= ($t->amount);
+                    }
 
                     $body = '';
                 }
@@ -332,6 +337,7 @@ class LogController extends Controller
 
         $response['status'] = 'Success';
         $response['data'] = $arraylogs;
+        $response['lastBalance'] = $currentBalance;
         $response['code'] = 200;
 
         return Response::json($response);
@@ -764,7 +770,7 @@ class LogController extends Controller
 
     // OLD LOGS //
 
-    public function getOldTransactionLogs($client_id, $group_id){
+    public function getOldTransactionLogs($client_id, $group_id, $last_balance = 0){
         $arraylogs = [];
 
         if($group_id == 0 || $group_id == null){
@@ -843,14 +849,14 @@ class LogController extends Controller
             }
         }
         else{
-            return $this->groupOldTransactionLogs($group_id, 0);
+            return $this->groupOldTransactionLogs($group_id, 0, $last_balance);
         }
 
         return json_encode($arraylogs);
     }
 
 
-    public function groupOldTransactionLogs($groupId, $limit = 0) {
+    public function groupOldTransactionLogs($groupId, $limit = 0, $lastBalance = 0) {
         $transtotal = DB::table('logs')->where('group_id',$groupId)->where('log_type','Transaction')->sum('amount');
 
         $transaction =  DB::table('old_logs_transaction')->where('group_id', $groupId)
@@ -865,7 +871,8 @@ class LogController extends Controller
         $month = null;
         $day = null;
         $year = null;
-        $currentBalance = app(GroupController::class)->getGroupTotalCollectables($groupId) - $transtotal;
+        $currentBalance = $lastBalance;
+        // $currentBalance = app(GroupController::class)->getGroupTotalCollectables($groupId) - $transtotal;
         foreach($transaction as $a){
 
             $usr =  User::where('id',$a->user_id)->select('id','first_name','last_name')->limit(1)->get()->makeHidden(['full_name', 'avatar', 'permissions', 'access_control', 'binded', 'unread_notif', 'group_binded', 'document_receive', 'is_leader', 'total_points', 'total_deposit', 'total_discount', 'total_refund', 'total_payment', 'total_cost', 'total_complete_cost', 'total_balance', 'collectable', 'branch', 'three_days']);

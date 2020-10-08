@@ -21,7 +21,7 @@ Route::middleware('auth:api')->group(function() {
 
 
     // OLD LOGS //
-	Route::get('/get-old-transaction-logs/{client_id}/{group_id}', 'LogController@getOldTransactionLogs');
+	Route::get('/get-old-transaction-logs/{client_id}/{group_id}/{last_balance}', 'LogController@getOldTransactionLogs');
 
 
 });
