@@ -1820,7 +1820,7 @@ class InventoryController extends Controller
             ->select(DB::raw("c.*, l.location, ld.location_detail, l.id as storageId,
                     CONCAT(u.first_name, ' ', u.last_name) as operator, CONCAT(w.first_name, ' ', w.last_name) as who,
                     l1.location as sup_location, ld1.location_detail as sup_location_detail, iu.name as unit,
-                    IFNULL(c.price, 0) as price"))
+                    iu1.name as sUnit, su.qty as sQty, IFNULL(c.price, 0) as price"))
             ->where("c.inventory_id", $request->inventory_id)
             ->leftJoin("users as u", "c.created_by", "u.id")
             ->leftJoin("users as w", "c.assigned_to", "w.id")
@@ -1828,18 +1828,21 @@ class InventoryController extends Controller
             ->leftJoin("ref_location as l","ld.loc_id","l.id")
             ->leftJoin("ref_location_detail as ld1","c.sup_location_id","ld1.id")
             ->leftJoin("ref_location as l1","ld1.loc_id","l1.id")
-            //->leftJoin("inventory as i", "c.inventory_id", "i.inventory_id")
-            //->leftJoin("inventory_unit as iu", "i.unit_id", "iu.unit_id")
             ->leftJoin("inventory_unit as iu", "c.unit_id", "iu.unit_id")
-            ->orderBy("id", "ASC")
-            ->get();
-        //$qty = 0;
-        $set = 0; $i = 0;
-        $totalPrice = 0;
+            ->leftJoin("inventory_selling_unit as su", "c.selling_id", "su.id")
+            ->leftJoin("inventory_unit as iu1", "su.unit_id", "iu1.unit_id")
+            ->orderBy("id", "ASC")->get();
+        $set = 0; $i = 0; $totalPrice = 0;
         $units = InventoryPurchaseUnit::where("inv_id", $request->inventory_id)->orderBy("id", "ASC")->get('unit_id as unitId');
+        $sell = InventorySellingUnit::where("inv_id", $request->inventory_id)->orderBy("id", "ASC")->get('id');
         foreach ($units as $u) {
             $qty[$u->unitId] = 0;
             $rUnit[$i] = "";
+            $i++;
+        }
+        foreach ($sell as $s) {
+            $sellQty[$s->id] = 0;
+            $rSet[$s->id] = "";
             $i++;
         }
         foreach ($list as $l){
@@ -1867,15 +1870,17 @@ class InventoryController extends Controller
                     $qty[$l->unit_id] -= $l->qty;
                 }
 
-                /*
                 if ($l->type == "Converted") {
-                    $set += $l->qty;
+                    $cQty = self::convertToSet($request->inventory_id, $l->unit_id, $l->selling_id, $l->qty);
+                    $sellQty[$l->selling_id] += $cQty;
+                    $set += $cQty;
                 }
                 if ($l->type == "Sold") {
-                    $l->qtySet = $l->qty;
-                    $set -= $l->qty;
+                    $cQty = self::convertToSet($request->inventory_id, $l->unit_id, $l->selling_id, $l->qty);
+                    $l->qtySet = $cQty;
+                    $sellQty[$l->selling_id] -= $cQty;
+                    $set -= $cQty;
                 }
-                */
             }
 
             $j=0;
@@ -1886,11 +1891,23 @@ class InventoryController extends Controller
                 $j++;
             }
 
+            foreach ($sell as $s) {
+                if (($l->type == "Converted" || $l->type == "Sold")) {
+                    $rSet[$l->selling_id] = $sellQty[$l->selling_id]." Set($l->sQty $l->sUnit)";
+                }
+
+                $j++;
+            }
+
             $l->remainingUnit = implode(" ", $rUnit);
             $l->remainingSet = $set;
+            $l->toolTipSet = trim(implode(" ",$rSet));
 
             $qty[$l->unit_id] = $qty[$l->unit_id];
             $set = $set;
+            if ($l->type == "Converted" || $l->type == "Sold") {
+                $sellQty[$l->selling_id] = $sellQty[$l->selling_id];
+            }
 
             $totalPrice += $l->subTotal;
             $i++;
@@ -1906,37 +1923,85 @@ class InventoryController extends Controller
     }
 
     public function locationListConsumable(Request $request){
-        $location = DB::table("inventory_consumables as c")
-            ->select(DB::raw('
-                IFNULL(
-                    (SELECT SUM(qty) FROM inventory_consumables as ic WHERE ic.inventory_id=c.inventory_id AND ic.type = "Purchased" AND ic.location_id = c.location_id),
-                0)
-                -
-                IFNULL(
-                    (SELECT SUM(qty) FROM inventory_consumables as ic WHERE ic.inventory_id=c.inventory_id AND ic.type IN ("Consumed", "Converted", "Wasted") AND ic.location_id = c.location_id)
-                ,0)
-            as rUnit,
-                IFNULL(
-                    (SELECT SUM(qty) FROM inventory_consumables as ic WHERE ic.inventory_id=c.inventory_id AND ic.type = "Converted" AND ic.location_id = c.location_id),
-                0)
-                -
-                IFNULL(
-                    (SELECT SUM(qty) FROM inventory_consumables as ic WHERE ic.inventory_id=c.inventory_id AND ic.type = "Sold" AND ic.location_id = c.location_id),
-                0)
-            as rSet,
-                u.name as unit, i.sell, l.location
-            '))
-            ->leftJoin("inventory as i", "c.inventory_id", "i.inventory_id")
-            ->leftJoin("inventory_unit as u", "i.unit_id", "u.unit_id")
+        $location = DB::table("inventory_consumables as c")->select(DB::raw('l.location, l.id as locId, c.location_id'))
             ->leftjoin("ref_location_detail as ld", "c.location_id", "ld.id")
             ->leftjoin("ref_location as l", "ld.loc_id", "l.id")
             ->where([["c.inventory_id", $request->inventory_id],["c.type","=","Purchased"]])
-            ->groupBy('ld.loc_id')
-            ->orderBy("l.location", "ASC")
-            ->get();
+            ->groupBy('ld.loc_id')->orderBy("l.location", "ASC")->get();
+        $i=0;
+        $units = InventoryPurchaseUnit::where("inv_id", $request->inventory_id)->orderBy("id", "ASC")->get('unit_id as unitId');
+        $sell = InventorySellingUnit::where("inv_id", $request->inventory_id)->orderBy("id", "ASC")->get('id');
         foreach ($location as $l){
-            $l->rSet = ($l->rSet>0?$l->rSet/$l->sell:0)." Set";
-            $l->rUnit = $l->rUnit." ".$l->unit;
+            $d_unit = DB::table('inventory_consumables as c')
+                ->select(DB::raw('c.*, iu.name as unit, iu1.name as sUnit, su.qty as sQty'))
+                ->leftjoin("ref_location_detail as ld", "c.location_id", "ld.id")
+                ->leftjoin("ref_location as l", "ld.loc_id", "l.id")
+                ->leftJoin("inventory_unit as iu", "c.unit_id", "iu.unit_id")
+                ->leftJoin("inventory_selling_unit as su", "c.selling_id", "su.id")
+                ->leftJoin("inventory_unit as iu1", "su.unit_id", "iu1.unit_id")
+                ->where([["inventory_id", $request->inventory_id], ["l.id", $l->locId]])->get();
+            foreach ($units as $u) {
+                $qty[$l->locId][$u->unitId] = 0;
+                $rUnit[$l->locId][$i] = "";
+                $i++;
+            }
+            foreach ($sell as $s) {
+                $sellQty[$l->locId][$s->id] = 0;
+                $rSet[$l->locId][$s->id] = "";
+                $i++;
+            }
+            $set = 0;
+            foreach ($d_unit as $p) {
+                if($i==0 && $p->type == "Purchased") {
+                    $qty[$l->locId][$p->unit_id] += $p->qty;
+                }
+                if($i!=0) {
+                    if ($p->type == "Purchased") {
+                        $qty[$l->locId][$p->unit_id] += $p->qty;
+                    }
+                    if ($p->type == "Consumed" || $p->type == "Wasted" || $p->type == "Converted") {
+                        $qty[$l->locId][$p->unit_id] -= $p->qty;
+                    }
+
+                    if ($p->type == "Converted") {
+                        $cQty = self::convertToSet($request->inventory_id, $p->unit_id, $p->selling_id, $p->qty);
+                        $sellQty[$l->locId][$p->selling_id] += $cQty;
+                        $set += $cQty;
+                    }
+                    if ($p->type == "Sold") {
+                        $cQty = self::convertToSet($request->inventory_id, $p->unit_id, $p->selling_id, $p->qty);
+                        $p->qtySet = $cQty;
+                        $sellQty[$l->locId][$p->selling_id] -= $cQty;
+                        $set -= $cQty;
+                    }
+                }
+
+                $j=0;
+                foreach ($units as $u) {
+                    if($p->unit_id == $u->unitId) {
+                        $rUnit[$l->locId][$j] = $qty[$l->locId][$p->unit_id]." $p->unit";
+                    }
+                    $j++;
+                }
+                foreach ($sell as $s) {
+                    if (($p->type == "Converted" || $p->type == "Sold")) {
+                        $rSet[$l->locId][$p->selling_id] = $sellQty[$l->locId][$p->selling_id]." Set($p->sQty $p->sUnit)";
+                    }
+
+                    $j++;
+                }
+
+                $l->rUnit = trim(implode(" ", $rUnit[$l->locId]));
+                $l->rSet = $set;
+                $l->toolTipSet = trim(implode(" ",$rSet[$l->locId]));
+
+                $qty[$l->locId][$p->unit_id] = $qty[$l->locId][$p->unit_id];
+                $set = $set;
+                if ($p->type == "Converted" || $p->type == "Sold") {
+                    $sellQty[$l->locId][$p->selling_id] = $sellQty[$l->locId][$p->selling_id];
+                }
+            }
+
         }
         $response['status'] = 'Success';
         $response['code'] = 200;
@@ -2086,6 +2151,61 @@ class InventoryController extends Controller
             }
         }
         return implode(', ', $g);
+    }
+
+    protected static function convertToSet($inventoryId, $pUnitId, $sId, $qty){
+        $units = InventoryPurchaseUnit::where("inv_id", $inventoryId)->get();
+        $sell = InventorySellingUnit::where("id", $sId)->first();
+        $a=0;$b=0;
+        foreach ($units as $k=>$v){
+            if($v->unit_id == $pUnitId){
+                $a = $k;
+            }
+            if($v->unit_id == $sell->unit_id){
+                $b = $k;
+            }
+        }
+        if($pUnitId == $sell->unit_id){
+            return $qty/$sell->qty;
+        }
+        $i=0; $unit = [];
+        if(($a-$b)>0){
+            $units = array_reverse($units->toArray());
+            foreach ($units as $k=>$u){
+                $cond = $i;
+                if($u['unit_id']==$pUnitId)
+                    continue;
+                if($cond>=$k)
+                    continue;
+                $qty = $qty / $u['qty'];
+                $unit[$i] = $qty;
+
+                if($u['unit_id'] == $sell->unit_id)
+                    break;
+                $i++;
+            }
+            return $unit[count($unit)-1] / $sell->qty;
+        }
+
+        foreach ($units as $k=>$u){
+            $cond = $i;
+            if($u->unit_id==$pUnitId){
+                $qty = $qty * $u->qty;
+                $unit[$i] = $qty;
+            }
+            if($u->unit_id==$pUnitId)
+                continue;
+            if($cond>=$k)
+                continue;
+            if($u->unit_id != $sell->unit_id) {
+                $qty = $qty * $u->qty;
+                $unit[$i] = $qty;
+            }
+            if($u->unit_id == $sell->unit_id)
+                break;
+            $i++;
+        }
+        return $unit[count($unit)-1] / $sell->qty;
     }
 
     public function testKo(){
