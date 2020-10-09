@@ -347,18 +347,14 @@ class InventoryController extends Controller
                 $u = InventoryUnit::where("unit_id", $request->unit_id)->first();
             }
 
-//            $pUnit = InventoryPurchaseUnit::find($request->parent_unit_id);
-//            $pUnit->unit_id = $u->unit_id;
-//            $pUnit->save();
+            $pUnit = InventoryPurchaseUnit::find($request->parent_unit_id);
+            $pUnit->unit_id = $u->unit_id;
+            $pUnit->save();
 
             $inv = Inventory::find($request->inventory_id);
             $inv->description = $request->description;
             $inv->type = $request->type;
-            $inv->unit_id = $u->unit_id;
-
-            if($request->specification !== null) {
-                $inv->specification = $request->specification;
-            }
+            $inv->specification = $request->specification;
             $inv->updated_at = strtotime("now");
             $inv->save();
 
@@ -1102,9 +1098,10 @@ class InventoryController extends Controller
                 }
 
                 $n->sUnit = implode(", ", $sell);
-            }else{
-                $n->unit = $n->units[0]['name'];
             }
+//            else{
+//                $n->unit = $n->units[0]['name'];
+//            }
         }
 
         $response['status'] = 'Success';
