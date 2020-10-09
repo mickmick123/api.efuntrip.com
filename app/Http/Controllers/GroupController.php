@@ -266,7 +266,7 @@ class GroupController extends Controller
         $search = $request->input('search');
 
         $groups = DB::table('groups as g')
-            ->select(DB::raw('g.id, g.name, CONCAT(u.first_name, " ", u.last_name) as leader, g.risk,   
+            ->select(DB::raw('g.id, g.name, CONCAT(u.first_name, " ", u.last_name) as leader, g.risk,
                 IFNULL(g.balance,0) as balance, IFNULL(g.collectables,0) as collectables, p.latest_package, srv.latest_service, p.latest_package2, srv.latest_service2'))
             ->leftjoin(DB::raw('(select * from users) as u'),'u.id','=','g.leader_id')
             ->leftjoin(DB::raw('
@@ -2176,14 +2176,12 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
         foreach($clientServices->items() as $s){
 
-          $query = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId);
-
           $temp['detail'] = $s->detail;
           $temp['service_date'] = $s->sdate;
           $temp['sdate'] = $s->sdate;
           $temp['group_id'] = $groupId;
 
-          $queryMembers = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->orderBy('created_at','DESC')->orderBy('client_id')->groupBy('client_id')->get();
+          $queryMembers = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->groupBy('client_id')->get();
 
           $queryStatus = DB::table('client_services')->select(DB::raw('status'))
           ->where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->get();
@@ -2224,6 +2222,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
           $temp['status_list'] = $statusList;
           $temp['status_temp'] = $queryTotal - $queryTotalDiscount;
           $temp['status'] = $this->checkOverallStatus($statusList);
+          $temp['total_members'] = $queryMembers->count();
 
           $response[$ctr] = $temp;
           $ctr++;
