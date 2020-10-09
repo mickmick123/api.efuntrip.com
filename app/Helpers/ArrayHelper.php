@@ -33,4 +33,24 @@ class ArrayHelper{
         $optional !== null && $tree->push($optional);
         return $tree->implode($separator);
     }
+    // $object = pluck('column');
+    // return [1,2,3,4....]
+    public static function ObjectToArray($object){
+        $array = [];
+        foreach ($object as $k=>$v){
+            $array[$k] = $v;
+        }
+        return $array;
+    }
+    // $object = {2:1,3:4};
+    // return [1,4]
+    public static function ArrayDiffAssocToArray($object){
+        $i = 0;
+        $array = [];
+        foreach($object as $k=>$v){
+            $array[$i] = $v;
+            $i++;
+        }
+        return $array;
+    }
 }

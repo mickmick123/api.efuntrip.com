@@ -35,7 +35,7 @@ Route::middleware('auth:api')->group(function() {
 
     Route::post('/add-more-item','InventoryController@addMoreItem');
     Route::post('/edit-inventory','InventoryController@editInventory');
-    Route::post('/edit-inventory-consumables','InventoryController@editInventoryConsumables');
+    Route::post('/update-item-profile-consumable','InventoryController@updateItemProfileConsumable');
     Route::post('/get-inventory','InventoryController@getInventory');
     Route::post('/assign-inventory','InventoryController@assignInventory');
     Route::post('/retrieve-inventory','InventoryController@retrieveInventory');
