@@ -99,6 +99,18 @@ class LogController extends Controller
                     }
                     $currentService = $cs->id;
 
+                    $servs = DB::table('client_services')
+                                ->where('id', $currentService)
+                                ->where('group_id', null)
+                                ->where('client_id', $client_id)
+                                // ->where('created_at','LIKE', '%'.$t->log_date.'%')
+                                ->orderBy('id','Desc')
+                                ->get();
+
+                                // \Log::info($cs->id);
+
+                    $servs_id = $servs->pluck('id');
+
                     $body = DB::table('logs as l')->select(DB::raw('l.detail, l.log_date, pr.first_name'))
                     ->where('client_service_id', $cs->id)->where('group_id',null)
                     ->where('l.id','!=', $t->id)
@@ -121,12 +133,59 @@ class LogController extends Controller
                     $data = collect($body->toArray())->flatten()->all();
 
                     $body = $data;
+
+                    $head = '';
+                    $ctr = 0;
+                    $total_cost = 0;
+                    $total_disc = 0;
+                    foreach($servs as $s){
+                        $client = User::findorfail($s->client_id);
+                        //$head[$ctr]['status'] = $s->status;
+                        //$head[$ctr]['id'] = $s->client_id;
+                        //$head[$ctr]['client'] = $client->first_name.' '.$client->last_name;
+                        $loghead =  DB::table('logs')->where('client_service_id', $s->id)->where('group_id',null)->where('client_id', $s->client_id)
+                                    ->where('log_type', 'Transaction')
+                                    ->orderBy('id', 'desc')
+                                    ->distinct('detail')
+                                    ->get();
+                                    // ->pluck('detail');
+
+                        $head = $loghead->pluck('detail');
+                        //$head[$ctr]['details_cn'] = $loghead->pluck('detail_cn');
+
+                        if($s->status == 'complete' && $s->active != 0){
+                            $total_disc = DB::table('client_transactions')
+                                    ->where('type', 'Discount')->where('group_id',null)
+                                    ->where('client_service_id', $s->id)
+                                    ->where('client_id', $s->client_id)
+                                    ->sum('amount');
+                            $total_cost += ($s->charge + $s->cost + $s->tip + $s->com_agent + $s->com_client) - $total_disc;
+                        }
+                        else{
+                            $total_cost = 0;
+                            $t->amount = 0;
+                            $currentBalance = $t->balance;
+                            $currentBalance -= ($t->amount);
+                        }
+                        $ctr++;
+                    }
+                    if($total_cost > 0){
+                        $t->amount = '-'.$total_cost;
+                        $currentBalance = $t->balance;
+                        $currentBalance -= ($t->amount);
+                    }
+
+                    //$body = $head;
                 }
                 else{
                     $csdetail = ucfirst($t->log_group);
+                    $csdetail_cn = ucfirst($t->log_group);
                     $cstracking = '';
                     $csstatus = '';
                     $csactive = 'none';
+                    $head = '';
+                    $head = $t->detail;
+                    // $head[0]['details_cn'] = $t->detail_cn;
                     $body = '';
                     //$currentService = null;
                 }
@@ -158,6 +217,7 @@ class LogController extends Controller
 
         $response['status'] = 'Success';
         $response['data'] = $arraylogs;
+        $response['lastBalance'] = $currentBalance;
         $response['code'] = 200;
 
         return Response::json($response);
@@ -782,11 +842,27 @@ class LogController extends Controller
             $month = null;
             $day = null;
             $year = null;
-            $currentBalance = app(ClientController::class)->getClientTotalCollectables($client_id)-$transtotal;
+            $currentBalance = $last_balance;
+            // $currentBalance = app(ClientController::class)->getClientTotalCollectables($client_id)-$transtotal;
             foreach($transaction as $a){
                 $usr =  User::where('id',$a->user_id)->select('id','first_name','last_name')->limit(1)->get()->makeHidden(['full_name', 'avatar', 'permissions', 'access_control', 'binded', 'unread_notif', 'group_binded', 'document_receive', 'is_leader', 'total_points', 'total_deposit', 'total_discount', 'total_refund', 'total_payment', 'total_cost', 'total_complete_cost', 'total_balance', 'collectable', 'branch', 'three_days']);
 
                 $cs = ClientService::where('id',$a->service_id)->first();
+                if($cs->active == 0 && $cs->status != 'cancelled'){
+                    $cs->status =  'Disabled';
+                }
+                if(($cs->status == 'complete' || $cs->status == 'released') && $cs->active == 1){
+                    $total_disc = DB::table('client_transactions')
+                                    ->where('type', 'Discount')->where('group_id',null)
+                                    ->where('client_service_id', $cs->id)
+                                    ->where('client_id', $cs->client_id)
+                                    ->sum('amount');
+                            $total_cost += ($s->charge + $s->cost + $s->tip + $s->com_agent + $s->com_client) - $total_disc;
+                    $a->amount = $total_cost;
+                }
+                else{
+                    $a->amount = 0;
+                }
 
                 $a->balance = $currentBalance;
                 $currentBalance -= $a->amount;
