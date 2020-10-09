@@ -917,13 +917,12 @@ class InventoryController extends Controller
 
         $list = DB::table('inventory')
             ->select(DB::raw('
-                co.name as company_name, inventory.*, u.name as unit,
+                co.name as company_name, inventory.*,
                 CASE WHEN inventory.type!="Consumables" THEN
                     (SELECT COUNT(id) FROM inventory_assigned a WHERE a.inventory_id = inventory.inventory_id AND a.status !=3)
                 END AS qty
             '))
             ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
-            ->leftJoin("inventory_unit as u", "inventory.unit_id", "u.unit_id")
             ->where($filter)
             ->where(function ($sql) use ($filter2,$filter3,$filter4,$filter5){
                 $sql->where($filter2)
