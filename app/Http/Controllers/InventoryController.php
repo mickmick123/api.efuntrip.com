@@ -623,6 +623,9 @@ class InventoryController extends Controller
                     $sellQty[$s->id] = 0;
                     $rSet[$s->id] = "";
                 }
+                $n->rUnit = 0;
+                $n->rSet = 0;
+                $n->toolTipSet = "";
                 foreach ($dUnit as $p) {
                     if($i==0 && $p->type == "Purchased") {
                         $qty[$p->unit_id] += $p->qty;
@@ -979,6 +982,9 @@ class InventoryController extends Controller
                     $sellQty[$s->id] = 0;
                     $rSet[$s->id] = "";
                 }
+                $n->rUnit = 0;
+                $n->rSet = 0;
+                $n->toolTipSet = "";
                 foreach ($dUnit as $p) {
                     if($i==0 && $p->type == "Purchased") {
                         $qty[$p->unit_id] += $p->qty;
