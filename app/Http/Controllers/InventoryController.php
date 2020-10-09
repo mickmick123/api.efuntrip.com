@@ -559,30 +559,12 @@ class InventoryController extends Controller
         $sort = $request->sort;
         $search = $request->search;
 
-        $newlyAdded = Inventory::select(['inventory.*','u.name as unit',
+        $newlyAdded = Inventory::select(['inventory.*',
             DB::raw("(inventory.name) AS name,
                 (co.name) AS company,
                 CASE WHEN inventory.type!='Consumables' THEN
                     (SELECT COUNT(id) FROM inventory_assigned a WHERE a.inventory_id = inventory.inventory_id AND a.status !=3)
-                END AS total_asset,
-                CASE WHEN inventory.type='Consumables' THEN
-                    IFNULL((SELECT
-                        SUM(qty)
-                    FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type='Purchased'),0)
-                    -
-                    IFNULL((SELECT
-                        SUM(qty)
-                    FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type IN ('Consumed', 'Converted', 'Wasted')),0)
-                END AS rUnit,
-                CASE WHEN inventory.type='Consumables' THEN
-                    IFNULL((SELECT
-                        SUM(qty)
-                    FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type='Converted'),0)
-                    -
-                    IFNULL((SELECT
-                        SUM(qty)
-                    FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type='Sold'),0)
-                END AS rSet"),
+                END AS total_asset"),
             'datetime' => function ($query) {
                 $query->select(DB::raw("FROM_UNIXTIME(created_at, '%m/%d/%Y %H:%i:%s') AS datatime"))
                     ->from('inventory_logs')
@@ -606,7 +588,7 @@ class InventoryController extends Controller
                     ->limit(1);
             },
         ])
-            ->leftJoin("inventory_unit as u", "inventory.unit_id", "u.unit_id")
+            //->leftJoin("inventory_unit as u", "inventory.unit_id", "u.unit_id")
             ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
             ->orHaving('datetime', 'LIKE','%'.$search.'%')
             ->orHaving('total_asset', 'LIKE','%'.$search.'%')
@@ -620,8 +602,81 @@ class InventoryController extends Controller
             })->paginate($perPage);
 
         foreach($newlyAdded as $n){
+//            if($n->type=="Consumables") {
+//                $n->total_asset = ($n->rSet>0?$n->rSet/$n->sell:0)." Set / $n->rUnit $n->unit";
+//            }
             if($n->type=="Consumables") {
-                $n->total_asset = ($n->rSet>0?$n->rSet/$n->sell:0)." Set / $n->rUnit $n->unit";
+                $units = DB::table('inventory_purchase_unit as su')->select(DB::raw('su.unit_id as unitId, u.name as unit'))
+                    ->leftJoin("inventory_unit as u", "su.unit_id", "u.unit_id")
+                    ->where("inv_id", $n->inventory_id)->orderBy("id", "ASC")->get();
+                $sell = InventorySellingUnit::where("inv_id", $n->inventory_id)->orderBy("id", "ASC")->get('id');
+
+                $dUnit = DB::table('inventory_consumables as c')
+                    ->select(DB::raw('c.*, iu.name as unit, iu1.name as sUnit, su.qty as sQty'))
+                    ->leftJoin("inventory_unit as iu", "c.unit_id", "iu.unit_id")
+                    ->leftJoin("inventory_selling_unit as su", "c.selling_id", "su.id")
+                    ->leftJoin("inventory_unit as iu1", "su.unit_id", "iu1.unit_id")
+                    ->where("inventory_id", $n->inventory_id)->get();
+                $set = 0; $qty = []; $sellQty = []; $i=0;
+                foreach ($units as $u) {
+                    $qty[$u->unitId] = 0;
+                    $rUnit[$i] = "";
+                    $i++;
+                }
+                foreach ($sell as $s) {
+                    $sellQty[$s->id] = 0;
+                    $rSet[$s->id] = "";
+                }
+                foreach ($dUnit as $p) {
+                    if($i==0 && $p->type == "Purchased") {
+                        $qty[$p->unit_id] += $p->qty;
+                    }
+                    if($i!=0) {
+                        if ($p->type == "Purchased") {
+                            $qty[$p->unit_id] += $p->qty;
+                        }
+                        if ($p->type == "Consumed" || $p->type == "Wasted" || $p->type == "Converted") {
+                            $qty[$p->unit_id] -= $p->qty;
+                        }
+
+                        if ($p->type == "Converted") {
+                            $cQty = self::convertToSet($n->inventory_id, $p->unit_id, $p->selling_id, $p->qty);
+                            $sellQty[$p->selling_id] += $cQty;
+                            $set += $cQty;
+                        }
+                        if ($p->type == "Sold") {
+                            $cQty = self::convertToSet($n->inventory_id, $p->unit_id, $p->selling_id, $p->qty);
+                            $p->qtySet = $cQty;
+                            $sellQty[$p->selling_id] -= $cQty;
+                            $set -= $cQty;
+                        }
+
+                        $i++;
+                    }
+
+                    $j=0;
+                    foreach ($units as $u) {
+                        if($p->unit_id == $u->unitId) {
+                            $rUnit[$j] = $qty[$p->unit_id]." $p->unit";
+                        }
+                        $j++;
+                    }
+                    foreach ($sell as $s) {
+                        if (($p->type == "Converted" || $p->type == "Sold")) {
+                            $rSet[$p->selling_id] = $sellQty[$p->selling_id]." Set($p->sQty $p->sUnit)";
+                        }
+                    }
+
+                    $n->rUnit = trim(implode(" ", $rUnit));
+                    $n->rSet = $set;
+                    $n->toolTipSet = trim(implode(" ",$rSet));
+
+                    $qty[$p->unit_id] = $qty[$p->unit_id];
+                    $set = $set;
+                    if ($p->type == "Converted" || $p->type == "Sold") {
+                        $sellQty[$p->selling_id] = $sellQty[$p->selling_id];
+                    }
+                }
             }
         }
 
@@ -698,7 +753,6 @@ class InventoryController extends Controller
         }
         $category_ids1 = array();
         $category_ids2 = array();
-        //if($name != "" && $ca_id != 0 || $co_id==0 || ($co_id !=0 && $name !="")){
         if($name != ""){
             $xx = array();
             $xxx = array();
@@ -779,9 +833,6 @@ class InventoryController extends Controller
             $filter4 = array();
             $filter5 = array();
         }
-        //if($name == "" || $ca_id !=0){
-        //    $sql = array();
-        //}
 
         $items2 = array_merge(array($ca_id), $items1, $sql);
 
@@ -869,29 +920,9 @@ class InventoryController extends Controller
                 co.name as company_name, inventory.*, u.name as unit,
                 CASE WHEN inventory.type!="Consumables" THEN
                     (SELECT COUNT(id) FROM inventory_assigned a WHERE a.inventory_id = inventory.inventory_id AND a.status !=3)
-                END AS qty,
-                CASE WHEN inventory.type="Consumables" THEN
-                    IFNULL((SELECT
-                        SUM(qty)
-                    FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type="Purchased"),0)
-                    -
-                    IFNULL((SELECT
-                        SUM(qty)
-                    FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type IN ("Consumed", "Converted", "Wasted")),0)
-                END AS rUnit,
-                CASE WHEN inventory.type="Consumables" THEN
-                    IFNULL((SELECT
-                        SUM(qty)
-                    FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type="Converted"),0)
-                    -
-                    IFNULL((SELECT
-                        SUM(qty)
-                    FROM inventory_consumables as c WHERE c.inventory_id = inventory.inventory_id AND c.type="Sold"),0)
-                END AS rSet
+                END AS qty
             '))
             ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
-            //->leftJoin("inventory_purchase_unit as pu", "inventory.inventory_id", "pu.inv_id")
-            //->leftJoin("inventory_unit as u", "pu.unit_id", "u.unit_id")
             ->leftJoin("inventory_unit as u", "inventory.unit_id", "u.unit_id")
             ->where($filter)
             ->where(function ($sql) use ($filter2,$filter3,$filter4,$filter5){
@@ -913,10 +944,6 @@ class InventoryController extends Controller
                 ->leftJoin('inventory_category', 'inventory_category.category_id', '=', 'inventory_parent_category.category_id')->get();
             $n->created_at = gmdate("F j, Y", $n->created_at);
             $n->updated_at = gmdate("F j, Y", $n->updated_at);
-            if($n->type=="Consumables") {
-                $n->qty = ($n->rSet>0?$n->rSet/$n->sell:0)." Set / $n->rUnit $n->unit";
-                $n->unit = "Set/".$n->unit;
-            }
             foreach($nparent as $np){
                 $tree = $np->parents->reverse();
                 $n->item_name = $np->name;
@@ -931,17 +958,83 @@ class InventoryController extends Controller
                     $j++;
                 }
             }
+            $units = DB::table('inventory_purchase_unit as su')->select(DB::raw('su.unit_id as unitId, u.name as unit'))
+                ->leftJoin("inventory_unit as u", "su.unit_id", "u.unit_id")
+                ->where("inv_id", $n->inventory_id)->orderBy("id", "ASC")->get();
+            $n->unit = $units[0]->unit;
 
-            //$units = InventoryPurchaseUnit::where('inv_id', $n->inventory_id)
-            //    ->leftJoin('inventory_unit as iunit', 'iunit.unit_id', '=', 'inventory_purchase_unit.unit_id')
-            //    ->orderBy('id', 'asc')
-            //    ->get();
-            //$xx = 0;
-            //foreach ($units as $u) {
-            //    $n->childs[$xx] = $u['name'];
-            //    $xx++;
-            //}
-            //$n->unit = implode("/", $n->childs);
+            if($n->type=="Consumables") {
+                $sell = InventorySellingUnit::where("inv_id", $n->inventory_id)->orderBy("id", "ASC")->get('id');
+
+                $dUnit = DB::table('inventory_consumables as c')
+                    ->select(DB::raw('c.*, iu.name as unit, iu1.name as sUnit, su.qty as sQty'))
+                    ->leftJoin("inventory_unit as iu", "c.unit_id", "iu.unit_id")
+                    ->leftJoin("inventory_selling_unit as su", "c.selling_id", "su.id")
+                    ->leftJoin("inventory_unit as iu1", "su.unit_id", "iu1.unit_id")
+                    ->where("inventory_id", $n->inventory_id)->get();
+                $set = 0; $qty = []; $sellQty = []; $unit = [];
+                foreach ($units as $u) {
+                    $qty[$u->unitId] = 0;
+                    $rUnit[$i] = "";
+                    $unit[$i] = $u->unit;
+                    $i++;
+                }
+                $n->unit = implode(" / ", $unit);
+                foreach ($sell as $s) {
+                    $sellQty[$s->id] = 0;
+                    $rSet[$s->id] = "";
+                }
+                foreach ($dUnit as $p) {
+                    if($i==0 && $p->type == "Purchased") {
+                        $qty[$p->unit_id] += $p->qty;
+                    }
+                    if($i!=0) {
+                        if ($p->type == "Purchased") {
+                            $qty[$p->unit_id] += $p->qty;
+                        }
+                        if ($p->type == "Consumed" || $p->type == "Wasted" || $p->type == "Converted") {
+                            $qty[$p->unit_id] -= $p->qty;
+                        }
+
+                        if ($p->type == "Converted") {
+                            $cQty = self::convertToSet($n->inventory_id, $p->unit_id, $p->selling_id, $p->qty);
+                            $sellQty[$p->selling_id] += $cQty;
+                            $set += $cQty;
+                        }
+                        if ($p->type == "Sold") {
+                            $cQty = self::convertToSet($n->inventory_id, $p->unit_id, $p->selling_id, $p->qty);
+                            $p->qtySet = $cQty;
+                            $sellQty[$p->selling_id] -= $cQty;
+                            $set -= $cQty;
+                        }
+
+                        $i++;
+                    }
+
+                    $j=0;
+                    foreach ($units as $u) {
+                        if($p->unit_id == $u->unitId) {
+                            $rUnit[$j] = $qty[$p->unit_id]." $p->unit";
+                        }
+                        $j++;
+                    }
+                    foreach ($sell as $s) {
+                        if (($p->type == "Converted" || $p->type == "Sold")) {
+                            $rSet[$p->selling_id] = $sellQty[$p->selling_id]." Set($p->sQty $p->sUnit)";
+                        }
+                    }
+
+                    $n->rUnit = trim(implode(" ", $rUnit));
+                    $n->rSet = $set;
+                    $n->toolTipSet = trim(implode(" ",$rSet));
+
+                    $qty[$p->unit_id] = $qty[$p->unit_id];
+                    $set = $set;
+                    if ($p->type == "Converted" || $p->type == "Sold") {
+                        $sellQty[$p->selling_id] = $sellQty[$p->selling_id];
+                    }
+                }
+            }
 
             $i++;
         }
