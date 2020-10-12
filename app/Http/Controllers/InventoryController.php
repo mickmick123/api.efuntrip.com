@@ -1886,6 +1886,10 @@ class InventoryController extends Controller
                         $name_id = $user->id;
                         $set = 'Converted';
                         $icon->selling_id = $request->set_unit;
+                        $selling = InventoryConsumables::leftJoin('inventory_selling_unit AS isu','inventory_consumables.selling_id','isu.id')
+                            ->leftJoin('inventory_unit AS iun','isu.unit_id','iun.unit_id')
+                            ->where([['inventory_consumables.inventory_id',$request->inventory_id],['inventory_consumables.selling_id',$request->set_unit]])
+                            ->get(['iun.name AS unit','isu.qty']);
                     }elseif($k === 2){
                         $name_id = $user->id;
                         $set = 'Wasted';
@@ -1897,10 +1901,14 @@ class InventoryController extends Controller
                     $icon->save();
 
                     $name = User::select('first_name')->where("id", $name_id)->first();
-                    $inv = InventoryConsumables::leftJoin('inventory_unit AS iun','inventory_consumables.unit_id','iun.unit_id')
-                        ->where('inventory_consumables.inventory_id',$request->inventory_id)
+                    $purchase = InventoryConsumables::leftJoin('inventory_unit AS iun','inventory_consumables.unit_id','iun.unit_id')
+                        ->where([['inventory_consumables.inventory_id',$request->inventory_id],['inventory_consumables.unit_id',$v->unit]])
                         ->get(['iun.name AS unit']);
-                    $reason = "$name->first_name ".$set." ".(int)$v->qty." ".$inv[0]->unit;
+                    if($k !== 1){
+                        $reason = "$name->first_name ".$set." ".(int)$v->qty." ".$purchase[0]->unit;
+                    }else{
+                        $reason = "$name->first_name ".$set." ".(int)$v->qty." ".$purchase[0]->unit." -> ".$selling[0]->qty." ".$selling[0]->unit;
+                    }
                     self::saveLogs($request->inventory_id, 'Stored', $reason);
                 }
             }
