@@ -1947,8 +1947,8 @@ class InventoryController extends Controller
         foreach ($list as $l){
             $l->subTotal = $l->qty * $l->price;
             $l->purchased = $l->qty;
-            $l->created_at = gmdate("F j, Y", $l->created_at);
-            $l->updated_at = gmdate("F j, Y", $l->updated_at);
+            $l->created_at = gmdate("M j, Y", $l->created_at);
+            $l->updated_at = gmdate("M j, Y", $l->updated_at);
             $l->location = $l->location?$l->location:'';
             $l->location_detail = $l->location_detail?$l->location_detail:'';
             $l->sup_name = $l->sup_name?$l->sup_name:'';
