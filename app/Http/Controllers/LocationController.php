@@ -52,24 +52,24 @@ class LocationController extends Controller
         $locId = LocationDetail::whereIn('id',$invId)->pluck('loc_id');
         $locDet = LocationDetail::whereIn('id',$invId)->get();
         $loc = Location::whereIn('id',$locId)->get();
-        $remCalc = InventoryConsumables::where('inventory_id',$request->inventory_id)
-            ->whereIn('location_id',$invId)->get();
-        $remaining = [];
-        foreach($locDet as $k=>$v){
-            $purchased = 0;
-            $notPurchased = 0;
-            foreach($remCalc as $kk=>$vv){
-                if($v->id === $vv->location_id){
-                    if($vv->type === 'Purchased'){
-                        $purchased += $vv->qty;
-                    }else{
-                        $notPurchased += $vv->qty;
-                    }
-                    $remaining[$k] = ['id'=>$v->id,'remaining'=>(float)number_format($purchased - $notPurchased, 2, '.', ',')];
+        $getRemaining = InventoryPurchaseUnit::leftJoin('inventory_unit as iun','inventory_purchase_unit.unit_id','iun.unit_id')
+            ->where('inventory_purchase_unit.inv_id',$request->inventory_id)
+            ->get(['inventory_purchase_unit.inv_id','inventory_purchase_unit.unit_id','iun.name','inventory_purchase_unit.qty']);
+        foreach($getRemaining as $k=>$v){
+            $purchased[$k] = 0;
+            $notPurchased[$k] = 0;
+            $icon = InventoryConsumables::where([['inventory_id',$v->inv_id],['unit_id',$v->unit_id]])->get();
+            foreach($icon as $kk=>$vv){
+                if($vv->type === 'Purchased'){
+                    $purchased[$k] += $vv->qty;
+                }else{
+                    $notPurchased[$k] += $vv->qty;
                 }
             }
+            $v->remaining = $purchased[$k] - $notPurchased[$k];
         }
-        $data = ['location'=>$loc,'locationDetail'=>$locDet,'locationRemaining'=>$remaining];
+
+        $data = ['location'=>$loc,'locationDetail'=>$locDet,'locationRemaining'=>$getRemaining];
 
         $response['status'] = 'Success';
         $response['code'] = 200;
