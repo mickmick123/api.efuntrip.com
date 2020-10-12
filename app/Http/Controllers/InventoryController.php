@@ -1530,7 +1530,7 @@ class InventoryController extends Controller
             $checkSellingId = InventorySellingUnit::where('inv_id',$request->inventory_id)->pluck('id');
             $selling = self::checkUnit($request->selling, true,true);
 
-            $selling_id = ArrayHelper::ArrayDiffAssocToArray(array_diff_assoc(ArrayHelper::ObjectToArray($checkSellingId),ArrayHelper::ObjectToArray(collect($selling)->pluck('id'))));
+            $selling_id = ArrayHelper::ArrayIndexFixed(array_diff_assoc(ArrayHelper::ObjectToArray($checkSellingId),ArrayHelper::ObjectToArray(collect($selling)->pluck('id'))));
             InventorySellingUnit::whereIn('id',$selling_id)->delete();
             foreach($selling as $k=>$v){
                 if(!in_array($v->id, ArrayHelper::ObjectToArray($checkSelling))){
@@ -1578,7 +1578,7 @@ class InventoryController extends Controller
             $v->selling = InventorySellingUnit::leftJoin('inventory_unit as iun','inventory_selling_unit.unit_id','iun.unit_id')
                 ->where('inv_id',$v->inventory_id)->get(['inventory_selling_unit.id','iun.name','inventory_selling_unit.qty']);
             $v->consumable = InventoryConsumables::where('inventory_id',$v->inventory_id)->get()->count();
-            $v->selling_id = collect(InventoryConsumables::where([['inventory_id',$v->inventory_id],['selling_id','!=',null]])->pluck('selling_id'))->unique();
+            $v->selling_id = ArrayHelper::ArrayIndexFixed(collect(InventoryConsumables::where([['inventory_id',$v->inventory_id],['selling_id','!=',null]])->pluck('selling_id'))->unique());
         }
 
         $response['status'] = 'Success';

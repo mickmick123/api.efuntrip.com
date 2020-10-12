@@ -44,7 +44,7 @@ class ArrayHelper{
     }
     // $object = {2:1,3:4};
     // return [1,4]
-    public static function ArrayDiffAssocToArray($object){
+    public static function ArrayIndexFixed($object){
         $i = 0;
         $array = [];
         foreach($object as $k=>$v){
