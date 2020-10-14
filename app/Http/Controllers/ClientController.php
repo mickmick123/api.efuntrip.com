@@ -1631,6 +1631,7 @@ class ClientController extends Controller
                 ->select(array('created_at'))->orderBy('created_at','Desc')->first();
             $g->group_latest_active = DB::table('client_services')->where('group_id', $g->id)
                 ->select(array('created_at'))->orderBy('created_at','Desc')->first();
+						$g->total_members =	DB::table('group_user')->where('group_id', $g->id)->count();
         }
 
         $response['status'] = 'Success';

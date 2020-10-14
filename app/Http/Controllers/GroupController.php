@@ -528,6 +528,10 @@ class GroupController extends Controller
                     ->select(array('number'))->first(); //here
 
 
+
+            $group->total_members =	DB::table('group_user')->where('group_id', $id)->count();        
+
+
             $group->total_complete_service_cost = $this->getGroupTotalCompleteServiceCost($id);
             $group->total_cost = $this->getGroupTotalCost($id);
             //$group->total_payment = $this->getGroupDeposit($id) + $this->getGroupPayment($id);
@@ -939,6 +943,7 @@ public function members(Request $request, $id, $page = 20) {
         $temp['user_id'] = $g->id;
         $temp['status'] = $this->checkOverallStatus($statusList);
         $temp['status_list']= $statusList;
+        $temp['total_no_of_service'] = count($csid);
 
 
         $response[$ctr] =  $temp;
