@@ -13,7 +13,7 @@ class OnHandDocument extends Model
     
 	protected $table = 'on_hand_documents';
 
-    protected $fillable = ['client_id', 'document_id', 'count', 'processor_id', 'sender_id'];
+    protected $fillable = ['client_id', 'document_id', 'count', 'processor_id', 'sender_id', 'employee_id'];
 
     public function client() {
     	return $this->belongsTo('App\User', 'client_id', 'id');
