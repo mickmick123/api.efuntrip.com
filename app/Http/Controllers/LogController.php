@@ -1599,6 +1599,35 @@ class LogController extends Controller
               return Response::json($response);
     }
 
+    public function getEmployeeDocsOnHand(Request $request){
+        $search = $request->input("search", "");
+
+        $user = auth()->user();
+        $data = OnHandDocument::leftJoin('users as u', 'on_hand_documents.client_id', 'u.id')
+                ->where('employee_id', $user->id)->where('count', '>', 0)
+                ->when($search != '', function ($sql) use($search) {
+                    return $sql->where('first_name', 'LIKE', $search . "%")->orwhere('last_name', 'LIKE', $search . "%");
+                })
+                ->whereNotNull('employee_id')
+                ->groupBy('client_id')->get('on_hand_documents.*');
+        foreach($data as $d) {
+            $client = User::where('id', $d->client_id)->select('first_name', 'last_name')->first();
+            $onHandDocs = OnHandDocument::where('client_id', $d->client_id)
+                ->leftJoin('documents', 'on_hand_documents.document_id', '=', 'documents.id')
+                ->select('on_hand_documents.*', 'documents.title', 'documents.title_cn')
+                ->orderBy('on_hand_documents.id', 'DESC')
+                ->get();
+            $d->client = $client;
+            $d->onHandDocuments = $onHandDocs;
+        }
+
+        $response['status'] = 'success';
+        $response['data'] = $data;
+        $response['code'] = 200;
+
+        return Response::json($response);
+    }
+
 
 
 }

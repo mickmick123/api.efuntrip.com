@@ -18,6 +18,8 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('/get-notification/{client_id}', 'LogController@getAllNotification');
 
+    Route::get('/get-employee-documents-onhand', 'LogController@getEmployeeDocsOnHand');
+
 
 
     // OLD LOGS //
