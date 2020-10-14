@@ -52,6 +52,10 @@ Route::middleware('auth:api')->group(function() {
 
     Route::post('get-today-tasks', 'ClientController@getTodayTasks');
 
+    Route::get('get-tomorrow-tasks/{perPage?}', 'ClientController@getTomorrowTasks');
+
+    Route::post('add-tomorrow-tasks', 'ClientController@addTomorrowTasks');
+
     Route::post('get-employee', 'ClientController@getEmployees');
 
 	Route::get('unpaid-services/{group_id}/{is_auto_generated}/{page?}', 'ClientController@getUnpaidServices');

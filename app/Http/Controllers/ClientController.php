@@ -3177,6 +3177,50 @@ class ClientController extends Controller
       return Response::json($response);
     }
 
+    // List of Tomorrow's Tasks
+    public function getTomorrowTasks(Request $request, $perPage = 20){
+        $sort = $request->input('sort');
+        $search = $request->input('search');
+
+        $taskId = Tasks::pluck('client_service_id');
+        $services = ClientService::select(['client_services.id','client_services.client_id','client_services.updated_at','client_services.detail','client_services.remarks',
+            'users.first_name','users.last_name','users.gender',
+            'groups.name as group'])
+            ->leftJoin('users','client_services.client_id','users.id')
+            ->leftJoin('groups','client_services.group_id','groups.id')
+            ->whereNotIn('client_services.id',$taskId)
+            ->where(function ($query) use($search) {
+                $query->orWhere('client_services.updated_at','LIKE','%'.$search.'%')
+                    ->orWhere(DB::raw("CONCAT(users.first_name,' ',users.last_name)"),'LIKE','%'.$search.'%')
+                    ->orWhere('client_services.detail','LIKE','%'.$search.'%')
+                    ->orWhere('groups.name','LIKE','%'.$search.'%');
+            })
+            ->when($sort != '', function ($q) use($sort){
+                $sort = explode('-' , $sort);
+                return $q->orderBy($sort[0], $sort[1]);
+            })->paginate($perPage);
+
+        $response['status'] = 'Success';
+        $response['data'] = $services;
+        $response['code'] = 200;
+        return Response::json($response);
+    }
+
+    public function addTomorrowTasks(Request $request){
+        $user = auth()->user();
+	    foreach(json_decode($request->tasks) as $k=>$v){
+	        $addTask = new Tasks;
+	        $addTask->client_service_id = $v->id;
+	        $addTask->who_is_in_charge = $user->id;
+            $addTask->date = date("Y-m-d",strtotime("now" . ' +1 day'));
+	        $addTask->save();
+        }
+        $response['status'] = 'Success';
+        $response['data'] = $request->all();
+        $response['code'] = 200;
+        return Response::json($response);
+    }
+
     public function getEmployees() {
       $role = DB::table('role_user')
               ->leftjoin('users', 'role_user.user_id', '=', 'users.id')
