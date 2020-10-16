@@ -1612,7 +1612,7 @@ class LogController extends Controller
                 ->groupBy('client_id')->get('on_hand_documents.*');
         foreach($data as $d) {
             $client = User::where('id', $d->client_id)->select('first_name', 'last_name')->first();
-            $onHandDocs = OnHandDocument::where('client_id', $d->client_id)
+            $onHandDocs = OnHandDocument::where('client_id', $d->client_id)->where('employee_id', $user->id)
                 ->leftJoin('documents', 'on_hand_documents.document_id', '=', 'documents.id')
                 ->select('on_hand_documents.*', 'documents.title', 'documents.title_cn')
                 ->orderBy('on_hand_documents.id', 'DESC')

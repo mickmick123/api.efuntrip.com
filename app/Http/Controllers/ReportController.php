@@ -598,8 +598,8 @@ class ReportController extends Controller
 									'previous_on_hand' => $previousOnHand
 								]);
 							}
-							
-							
+
+
 						}
 	        }
 
@@ -1430,7 +1430,7 @@ class ReportController extends Controller
 
 	private function handleStandAloneOnHandDocuments($action, $user) {
 		$documents = collect($user['documents'])->filter(function($item) {
-			return $item['count'] > 0;
+            return $item['count'] > 0;
 		})->values()->toArray();
 
 		// on_hand_documents
@@ -1627,6 +1627,23 @@ class ReportController extends Controller
 		$response['code'] = 200;
 
 		return Response::json($response);
+	}
+
+    public function preparationForFiling(Request $request) {
+        foreach( $request->users as $user ) {
+            $documents = collect($user['documents'])->filter(function($item) {
+                return $item['user'] != null && $item['is_assigned'] == false;
+            })->values()->toArray();
+            foreach( $documents as $document ) {
+                $onHand = OnHandDocument::find($document['id']);
+                $onHand->employee_id = $document['user'];
+                $onHand->save();
+            }
+        }
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+
+        return Response::json($response);
 	}
 
 	public function getDocuments() {

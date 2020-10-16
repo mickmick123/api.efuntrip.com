@@ -21,7 +21,7 @@ Route::middleware('auth:api')->group(function() {
 	Route::get('report-services', 'ReportController@reportServices');
 
 	Route::get('filed-reports', 'ReportController@getFiledReports');
-	
+
 	Route::get('/{perPage?}', 'ReportController@index');
 
 	Route::get('get-client-reports/{id}', 'ReportController@getClientReports');
@@ -43,6 +43,8 @@ Route::middleware('auth:api')->group(function() {
 	Route::post('released-documents', 'ReportController@releasedDocuments');
 
 	Route::post('generate-photocopies', 'ReportController@generatePhotocopies');
+
+    Route::post('preparation-for-filing', 'ReportController@preparationForFiling');
 
 	Route::post('/', 'ReportController@store');
 
