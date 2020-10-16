@@ -19,6 +19,7 @@ use App\ContactAlternate;
 
 use App\Group;
 
+use App\Helpers\DateHelper;
 use App\Package;
 
 use App\QrCode;
@@ -3156,25 +3157,74 @@ class ClientController extends Controller
     }
 
     // List of Today's Tasks
-    public function getTodayTasks(Request $request) {
-      $date = $request['data'];
+    public function getTodayTasks(Request $request, $perPage = 20) {
+//        $date = $request['data'];
+//
+//        $tasks = Tasks::with('client_service')
+//            ->with(array('client_service.client'))
+//            ->leftjoin('users as u', 'tasks.who_is_in_charge', '=', 'u.id')
+//            ->when($date != null, function ($q) use ($date) {
+//                return $q->where('tasks.date', '>=', $date);
+//            })
+//            ->select('tasks.*', 'u.first_name as in_charge_first_name', 'u.last_name as in_charge_last_name')
+//            ->orderBy('tasks.date', 'desc')
+//            ->get();
+//
+//        $response['status'] = 'Success';
+//        $response['data'] = $tasks;
+//        $response['code'] = 200;
+//        $response['test'] = $request['data'];
+//        return Response::json($response);
+        $sort = $request->input('sort');
+        $search = $request->input('search');
 
-      $tasks = Tasks::with('client_service')
-                ->with(array('client_service.client'))
-                ->leftjoin('users as u', 'tasks.who_is_in_charge', '=', 'u.id')
-                ->when($date != null, function ($q) use ($date) {
-                  return $q->where('tasks.date', '>=', $date);
-                })
-                ->select('tasks.*', 'u.first_name as in_charge_first_name', 'u.last_name as in_charge_last_name')
-                ->orderBy('tasks.date', 'desc')
-                ->get();
+        $user = auth()->user();
+        $taskId = Tasks::where([['date',date("Y-m-d")],['who_is_in_charge',$user->id]])->pluck('client_service_id');
+        $services = ClientService::select(['client_services.id','client_services.client_id','client_services.detail','client_services.remarks',
+            'users.first_name','users.last_name','users.gender',
+            'groups.name as group'])
+            ->leftJoin('users','client_services.client_id','users.id')
+            ->leftJoin('groups','client_services.group_id','groups.id')
+            ->whereIn('client_services.id',$taskId)
+            ->where(function ($query) use($search) {
+                $query->orWhere('client_services.updated_at','LIKE','%'.$search.'%')
+                    ->orWhere(DB::raw("CONCAT(users.first_name,' ',users.last_name)"),'LIKE','%'.$search.'%')
+                    ->orWhere('client_services.detail','LIKE','%'.$search.'%')
+                    ->orWhere('groups.name','LIKE','%'.$search.'%');
+            })
+            ->when($sort != '', function ($q) use($sort){
+                $sort = explode('-' , $sort);
+                return $q->orderBy($sort[0], $sort[1]);
+            })->paginate($perPage);
 
+        $response['status'] = 'Success';
+        $response['data'] = $services;
+        $response['code'] = 200;
+        return Response::json($response);
+    }
 
-      $response['status'] = 'Success';
-      $response['data'] = $tasks;
-      $response['code'] = 200;
-      $response['test'] = $request['data'];
-      return Response::json($response);
+    // List of Past's Tasks
+    public function getPastTasks(Request $request, $perPage = 20){
+        $sort = $request->input('sort');
+
+        $user = auth()->user();
+        $services = Tasks::select(['tasks.reason',
+            'cse.id','cse.client_id','cse.detail','cse.remarks',
+            'users.first_name','users.last_name','users.gender',
+            'groups.name as group'])
+            ->leftJoin('client_services as cse','tasks.client_service_id','cse.id')
+            ->leftJoin('users','cse.client_id','users.id')
+            ->leftJoin('groups','cse.group_id','groups.id')
+            ->where([['tasks.date','<',date("Y-m-d")],['tasks.who_is_in_charge',$user->id]])
+            ->when($sort != '', function ($q) use($sort){
+                $sort = explode('-' , $sort);
+                return $q->orderBy($sort[0], $sort[1]);
+            })->paginate($perPage);
+
+        $response['status'] = 'Success';
+        $response['data'] = $services;
+        $response['code'] = 200;
+        return Response::json($response);
     }
 
     // List of Tomorrow's Tasks
@@ -3212,8 +3262,23 @@ class ClientController extends Controller
 	        $addTask = new Tasks;
 	        $addTask->client_service_id = $v->id;
 	        $addTask->who_is_in_charge = $user->id;
-            $addTask->date = date("Y-m-d",strtotime("now" . ' +1 day'));
+            $addTask->date = DateHelper::nextWeekDays();
 	        $addTask->save();
+        }
+        $response['status'] = 'Success';
+        $response['data'] = 'Successfully Created!';
+        $response['code'] = 200;
+        return Response::json($response);
+    }
+
+    public function updatePastTasks(Request $request){
+        $dt = Carbon::now();
+	    foreach(json_decode($request->reason) as $k=>$v){
+            $addTask = Tasks::where('client_service_id',$v->id)->first();
+            $addTask->update([
+                'reason'=>$addTask->reason.$v->reason.' - <small>'.$dt->format('m/d/Y').'</small><br/>',
+                'date'=>DateHelper::nextWeekDays()
+            ]);
         }
         $response['status'] = 'Success';
         $response['data'] = $request->all();

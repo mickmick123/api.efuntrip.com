@@ -50,11 +50,15 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::patch('{id}', 'ClientController@update');
 
-    Route::post('get-today-tasks', 'ClientController@getTodayTasks');
+    Route::get('get-today-tasks/{perPage?}', 'ClientController@getTodayTasks');
+
+    Route::get('get-past-tasks/{perPage?}', 'ClientController@getPastTasks');
 
     Route::get('get-tomorrow-tasks/{perPage?}', 'ClientController@getTomorrowTasks');
 
     Route::post('add-tomorrow-tasks', 'ClientController@addTomorrowTasks');
+
+    Route::post('update-past-tasks', 'ClientController@updatePastTasks');
 
     Route::post('get-employee', 'ClientController@getEmployees');
 
