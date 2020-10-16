@@ -11,7 +11,7 @@ class DateHelper{
             return $dt->addDays(3)->format('Y-m-d');
         }else if($dt->isoFormat('dddd') === 'Saturday'){
             return $dt->addDays(2)->format('Y-m-d');
-        }else if($dt->isoFormat('dddd') === 'Sunday'){
+        }else{
             return $dt->addDay()->format('Y-m-d');
         }
     }
