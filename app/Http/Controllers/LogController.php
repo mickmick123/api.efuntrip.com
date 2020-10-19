@@ -26,6 +26,8 @@ use Illuminate\Http\Request;
 
 use Carbon\Carbon;
 
+use PDF;
+
 class LogController extends Controller
 {
 
@@ -1600,16 +1602,53 @@ class LogController extends Controller
     }
 
     public function getEmployeeDocsOnHand(Request $request){
+        $data = $this->employeeDocsOnHand($request, 'get');
+
+        $response['status'] = 'success';
+        $response['data'] = $data;
+        $response['code'] = 200;
+
+        return Response::json($response);
+    }
+
+    public function exportEmployeeDocsOnHand(Request $request){
+        $export = $this->employeeDocsOnHand($request, 'export');
+        $pdf = PDF::loadView('export.docs_on_hand_pdf', $export);
+
+        return $pdf->download('xxxx.pdf');
+    }
+
+    public function getClientsInDocsOnHand(Request $request){
+        $data = $this->employeeDocsOnHand($request, 'clients');
+
+        $response['status'] = 'success';
+        $response['data'] = $data;
+        $response['code'] = 200;
+
+        return Response::json($response);
+    }
+
+    public function employeeDocsOnHand($request, $action){
         $search = $request->input("search", "");
+        $ids = $request->ids;
 
         $user = auth()->user();
         $data = OnHandDocument::leftJoin('users as u', 'on_hand_documents.client_id', 'u.id')
-                ->where('employee_id', $user->id)->where('count', '>', 0)
-                ->when($search != '', function ($sql) use($search) {
-                    return $sql->where('first_name', 'LIKE', $search . "%")->orwhere('last_name', 'LIKE', $search . "%");
-                })
-                ->whereNotNull('employee_id')
-                ->groupBy('client_id')->get('on_hand_documents.*');
+            ->where('employee_id', $user->id)->where('count', '>', 0)
+            ->when($search != '', function ($sql) use($search) {
+                return $sql->where('first_name', 'LIKE', $search . "%")->orwhere('last_name', 'LIKE', $search . "%");
+            })
+            ->when($ids > 0, function ($sql) use($ids) {
+                return $sql->whereIn("client_id", $ids);
+            })
+            ->whereNotNull('employee_id')
+            ->groupBy('client_id')->get('on_hand_documents.*');
+        if($action == 'clients'){
+            foreach($data as $d) {
+                $d->client = User::where('id', $d->client_id)->select('first_name', 'last_name')->first();
+            }
+            return $data;
+        }
         foreach($data as $d) {
             $client = User::where('id', $d->client_id)->select('first_name', 'last_name')->first();
             $onHandDocs = OnHandDocument::where('client_id', $d->client_id)->where('employee_id', $user->id)
@@ -1621,13 +1660,17 @@ class LogController extends Controller
             $d->onHandDocuments = $onHandDocs;
         }
 
-        $response['status'] = 'success';
-        $response['data'] = $data;
-        $response['code'] = 200;
-
-        return Response::json($response);
+        if($action == 'get'){
+            return $data;
+        }else{
+            $data = $data->toArray();
+            return [
+                'result' => array_chunk($data, ceil(count($data) / 3)),
+                'watermark' => public_path()."/images/watermark.png",
+                'logo' => public_path()."/images/logo.png",
+                'font'=> public_path()."/assets/fonts/simhei.ttf"
+            ];
+        }
     }
-
-
 
 }
