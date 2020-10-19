@@ -3293,8 +3293,9 @@ class ClientController extends Controller
     }
 
     public function getReminders(Request $request, $perPage = 20) {
-	    $range = Carbon::now()->addDays(7)->format('Y-m-d');
+        $sort = $request->input('sort');
         $search = $request->input('search');
+        $range = Carbon::now()->addDays(7)->format('Y-m-d');
 
         $query = User::where('visa_type', '<>', null)
             ->where(function($query) use ($range) {
@@ -3305,8 +3306,10 @@ class ClientController extends Controller
                     ->orWhere('id','LIKE','%'.$search.'%')
                     ->orWhere('visa_type','LIKE','%'.$search.'%');
             })
-            ->orderBy('id', 'asc')
-            ->paginate($perPage);
+            ->when($sort != '', function ($q) use($sort){
+                $sort = explode('-' , $sort);
+                return $q->orderBy($sort[0], $sort[1]);
+            })->paginate($perPage);
 
       $response['status'] = 'Success';
       $response['data'] = $query;
