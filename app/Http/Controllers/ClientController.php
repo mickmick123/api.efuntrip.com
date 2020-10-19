@@ -3293,15 +3293,20 @@ class ClientController extends Controller
     }
 
     public function getReminders(Request $request, $perPage = 20) {
-      $range = Carbon::now()->addDays(7)->format('Y-m-d');
+	    $range = Carbon::now()->addDays(7)->format('Y-m-d');
+        $search = $request->input('search');
 
-
-      $query = User::where('visa_type', '<>', null)
-              ->where(function($query) use ($range) {
+        $query = User::where('visa_type', '<>', null)
+            ->where(function($query) use ($range) {
                 return $query->where('expiration_date', '<=', $range)->orWhere('first_expiration_date', '<=', $range);
-              })
-              ->orderBy('id', 'asc')
-              ->paginate($perPage);
+            })
+            ->where(function ($query) use($search) {
+                $query->orWhere(DB::raw("CONCAT(first_name,' ',last_name)"),'LIKE','%'.$search.'%')
+                    ->orWhere('id','LIKE','%'.$search.'%')
+                    ->orWhere('visa_type','LIKE','%'.$search.'%');
+            })
+            ->orderBy('id', 'asc')
+            ->paginate($perPage);
 
       $response['status'] = 'Success';
       $response['data'] = $query;
