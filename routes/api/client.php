@@ -28,7 +28,7 @@ Route::middleware('auth:api')->group(function() {
 	Route::get('search-com', 'ClientController@searchCom');
 
 
-  Route::get('get-reminders', 'ClientController@getReminders');
+  Route::get('get-reminders/{perPage?}', 'ClientController@getReminders');
 
 	Route::post('add-temporary-client', 'ClientController@addTemporaryClient');
 

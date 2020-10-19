@@ -3158,23 +3158,6 @@ class ClientController extends Controller
 
     // List of Today's Tasks
     public function getTodayTasks(Request $request, $perPage = 20) {
-//        $date = $request['data'];
-//
-//        $tasks = Tasks::with('client_service')
-//            ->with(array('client_service.client'))
-//            ->leftjoin('users as u', 'tasks.who_is_in_charge', '=', 'u.id')
-//            ->when($date != null, function ($q) use ($date) {
-//                return $q->where('tasks.date', '>=', $date);
-//            })
-//            ->select('tasks.*', 'u.first_name as in_charge_first_name', 'u.last_name as in_charge_last_name')
-//            ->orderBy('tasks.date', 'desc')
-//            ->get();
-//
-//        $response['status'] = 'Success';
-//        $response['data'] = $tasks;
-//        $response['code'] = 200;
-//        $response['test'] = $request['data'];
-//        return Response::json($response);
         $sort = $request->input('sort');
         $search = $request->input('search');
 
@@ -3186,9 +3169,10 @@ class ClientController extends Controller
             ->leftJoin('users','client_services.client_id','users.id')
             ->leftJoin('groups','client_services.group_id','groups.id')
             ->whereIn('client_services.id',$taskId)
+            ->where([['client_services.status','on process'],
+                ['client_services.active',1]])
             ->where(function ($query) use($search) {
-                $query->orWhere('client_services.updated_at','LIKE','%'.$search.'%')
-                    ->orWhere(DB::raw("CONCAT(users.first_name,' ',users.last_name)"),'LIKE','%'.$search.'%')
+                $query->orWhere(DB::raw("CONCAT(users.first_name,' ',users.last_name)"),'LIKE','%'.$search.'%')
                     ->orWhere('client_services.detail','LIKE','%'.$search.'%')
                     ->orWhere('groups.name','LIKE','%'.$search.'%');
             })
@@ -3206,8 +3190,8 @@ class ClientController extends Controller
     // List of Past's Tasks
     public function getPastTasks(Request $request, $perPage = 20){
         $sort = $request->input('sort');
-
         $user = auth()->user();
+
         $services = Tasks::select(['tasks.reason',
             'cse.id','cse.client_id','cse.detail','cse.remarks',
             'users.first_name','users.last_name','users.gender',
@@ -3215,7 +3199,10 @@ class ClientController extends Controller
             ->leftJoin('client_services as cse','tasks.client_service_id','cse.id')
             ->leftJoin('users','cse.client_id','users.id')
             ->leftJoin('groups','cse.group_id','groups.id')
-            ->where([['tasks.date','<',date("Y-m-d")],['tasks.who_is_in_charge',$user->id]])
+            ->where([['tasks.date','<',date("Y-m-d")],
+                ['tasks.who_is_in_charge',$user->id],
+                ['cse.status','on process'],
+                ['cse.active',1]])
             ->when($sort != '', function ($q) use($sort){
                 $sort = explode('-' , $sort);
                 return $q->orderBy($sort[0], $sort[1]);
@@ -3239,8 +3226,10 @@ class ClientController extends Controller
             ->leftJoin('users','client_services.client_id','users.id')
             ->leftJoin('groups','client_services.group_id','groups.id')
             ->whereNotIn('client_services.id',$taskId)
+            ->where([['client_services.status','on process'],
+                ['client_services.active',1]])
             ->where(function ($query) use($search) {
-                $query->orWhere('client_services.updated_at','LIKE','%'.$search.'%')
+                $query->orWhere(DB::raw("DATE_FORMAT(client_services.updated_at, '%m/%d/%Y')"),'LIKE','%'.$search.'%')
                     ->orWhere(DB::raw("CONCAT(users.first_name,' ',users.last_name)"),'LIKE','%'.$search.'%')
                     ->orWhere('client_services.detail','LIKE','%'.$search.'%')
                     ->orWhere('groups.name','LIKE','%'.$search.'%');
@@ -3258,6 +3247,7 @@ class ClientController extends Controller
 
     public function addTomorrowTasks(Request $request){
         $user = auth()->user();
+
 	    foreach(json_decode($request->tasks) as $k=>$v){
 	        $addTask = new Tasks;
 	        $addTask->client_service_id = $v->id;
@@ -3265,6 +3255,7 @@ class ClientController extends Controller
             $addTask->date = DateHelper::nextWeekDays();
 	        $addTask->save();
         }
+
         $response['status'] = 'Success';
         $response['data'] = 'Successfully Created!';
         $response['code'] = 200;
@@ -3273,6 +3264,7 @@ class ClientController extends Controller
 
     public function updatePastTasks(Request $request){
         $dt = Carbon::now();
+
 	    foreach(json_decode($request->reason) as $k=>$v){
             $addTask = Tasks::where('client_service_id',$v->id)->first();
             $addTask->update([
@@ -3280,6 +3272,7 @@ class ClientController extends Controller
                 'date'=>DateHelper::nextWeekDays()
             ]);
         }
+
         $response['status'] = 'Success';
         $response['data'] = $request->all();
         $response['code'] = 200;
@@ -3299,7 +3292,7 @@ class ClientController extends Controller
       return Response::json($response);
     }
 
-    public function getReminders(Request $request, $perPage = 5) {
+    public function getReminders(Request $request, $perPage = 20) {
       $range = Carbon::now()->addDays(7)->format('Y-m-d');
 
 
