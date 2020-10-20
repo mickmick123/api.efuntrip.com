@@ -6,6 +6,7 @@ use App\Company;
 use App\Helpers\ArrayHelper;
 use App\Inventory;
 use App\InventoryConsumables;
+use App\InventoryConsumablesSetting;
 use App\InventoryLogs;
 use App\InventoryLocation;
 use App\InventorySellingUnit;
@@ -239,6 +240,24 @@ class InventoryController extends Controller
                 $addPurchaseUnit->parent_id = 0;
                 $addPurchaseUnit->save();
             }elseif($request->type === 'Consumables'){
+                $setting = json_decode($request->setting);
+                $addConsumableSetting = new InventoryConsumablesSetting;
+                $addConsumableSetting->inv_id = $inv->inventory_id;
+                $addConsumableSetting->length = $setting->length_m;
+                $addConsumableSetting->width = $setting->width_m;
+                $addConsumableSetting->height = $setting->height_m;
+                $addConsumableSetting->imported_rmb_price = $setting->imported_rmb_price;
+                $addConsumableSetting->shipping_fee_per_cm = $setting->shipping_fee_per_cm;
+                $addConsumableSetting->rmb_rate = $setting->rmb_rate;
+                $addConsumableSetting->market_price_min = $setting->market_price_min;
+                $addConsumableSetting->market_price_max = $setting->market_price_max;
+                $addConsumableSetting->advised_sale_price = $setting->advised_sale_price;
+                $addConsumableSetting->actual_sale_price = $setting->actual_sale_price;
+                $addConsumableSetting->id = $setting->id;
+                $addConsumableSetting->expiration_date = $setting->expiration_date;
+                $addConsumableSetting->remarks = $setting->remarks;
+                $addConsumableSetting->save();
+
                 $purchase = self::checkUnit($request->purchase, true);
                 $last_unit = collect(json_decode($request->purchase));
                 foreach($purchase as $k=>$v){
@@ -249,7 +268,7 @@ class InventoryController extends Controller
                     if($k+1 === count($purchase)){
                         $unit = self::checkUnit($last_unit[count($last_unit)-1]->last_unit_id);
                         $addPurchaseUnit->last_unit_id = $unit[0]->unit_id;
-                        $addPurchaseUnit->parent_id = $purchase[$k-1]->unit_id;;
+                        $addPurchaseUnit->parent_id = $k === 0 ? $k : $purchase[$k-1]->unit_id;;
                     }elseif($k === 0){
                         $addPurchaseUnit->last_unit_id = 0;
                         $addPurchaseUnit->parent_id = 0;
