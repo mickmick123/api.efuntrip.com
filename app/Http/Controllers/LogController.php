@@ -1589,7 +1589,8 @@ class LogController extends Controller
                           'detail' => $l->detail,
                           'detail_cn' => $l->detail_cn,
                           'log_date' => $l->log_date,
-                          'created_at' => $l->created_at
+                          'created_at' => $l->created_at,
+                          'log_group' => $l->log_group
                         );
                 }
               }
