@@ -1314,6 +1314,7 @@ class ReportController extends Controller
 	}
 
 	public function store(Request $request) {
+		// \Log::info($request);
 		$reports = $request->reports;
         $processorId = Auth::user()->id;
 
@@ -1323,7 +1324,8 @@ class ReportController extends Controller
 
         	$clientServices = $report['client_services'];
 
-        	foreach($clientServices as $clientService) {
+        	foreach($clientServices as $clientService) { // jeff
+
 
         		$detail = $this->getDetail($clientService, $report);
 
@@ -1348,26 +1350,42 @@ class ReportController extends Controller
 	        		$report['extras']['conversion_of_status']
 	        	);
 
-            $this->handleUpdatedTheCost($clientService, $report['service_procedure'], $report['extras']['cost']);
 
-            $this->handleDiscountedService(
-              $clientService,
-              $report['service_procedure'],
-              $report['extras']['discount_amount'],
-              $report['extras']['discount_reason']
-            );
+	            $this->handleUpdatedTheCost($clientService, $report['service_procedure'], $report['extras']['cost']);
 
-						$this->handleNoteToService($clientService, $report['service_procedure'], $report['extras']['note']);
+	            $this->handleDiscountedService(
+	              $clientService,
+	              $report['service_procedure'],
+	              $report['extras']['discount_amount'],
+	              $report['extras']['discount_reason']
+	            );
 
+				$this->handleNoteToService($clientService, $report['service_procedure'], $report['extras']['note']);
+
+				$this->handleUpdateVisa($clientService);
         	}
         }
-
-
 
     $response['status'] = 'Success';
 		$response['code'] = 200;
 
 		return Response::json($response);
+	}
+
+	private function handleUpdateVisa($clientService) {
+		if($clientService['expiration_date'] != null && $clientService['visa_type'] != null){
+			$cs = ClientService::findOrFail($clientService['id']);
+			$usr = User::findOrfail($cs->client_id);
+			if($usr){
+				$usr->visa_type = $clientService['visa_type'];
+				$usr->expiration_date = $clientService['expiration_date'];
+
+				if( $clientService['visa_type'] == '9A' && $usr->first_expiration_date == null) {
+                	$usr->first_expiration_date = $clientService['expiration_date'];
+                } 
+                $usr->save();
+			}
+		}
 	}
 
 	private function handleStandAloneLogDocumentLog($action, $user, $documents) {
