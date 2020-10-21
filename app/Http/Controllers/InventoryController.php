@@ -1076,19 +1076,19 @@ class InventoryController extends Controller
                 $n->profit_max = $n->market_price_max - $n->import_cost;
 
                 $n->profit_rate_min = 0;
-                if($n->market_price_min>0){
+                if($n->market_price_min!=0){
                     $n->profit_rate_min = $n->profit_min / $n->market_price_min;
                 }
 
                 $n->profit_rate_max = 0;
-                if($n->market_price_max>0){
+                if($n->market_price_max!=0){
                     $n->profit_rate_max = $n->profit_max / $n->market_price_max;
                 }
 
                 $n->advised_profit = $n->advised_sale_price - $n->import_cost;
 
                 $n->adivsed_profit_rate = 0;
-                if($n->advised_sale_price>0){
+                if($n->advised_sale_price!=0){
                     $n->adivsed_profit_rate = $n->advised_profit / $n->advised_sale_price;
                 }
 
