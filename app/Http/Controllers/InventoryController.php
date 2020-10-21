@@ -1058,15 +1058,40 @@ class InventoryController extends Controller
 
                 $n->sUnit = implode(", ", $sell);
 
+                $n->length = $n->length?$n->length:0;
+                $n->width = $n->width?$n->width:0;
+                $n->height = $n->height?$n->height:0;
+                $n->imported_rmb_price = $n->imported_rmb_price?$n->imported_rmb_price:0;
+                $n->shipping_fee_per_cm = $n->shipping_fee_per_cm?$n->shipping_fee_per_cm:0;
+                $n->rmb_rate = $n->rmb_rate?$n->rmb_rate:0;
+                $n->market_price_min = $n->market_price_min?$n->market_price_min:0;
+                $n->market_price_max = $n->market_price_max?$n->market_price_max:0;
+                $n->advised_sale_price = $n->advised_sale_price?$n->advised_sale_price:0;
+                $n->actual_sale_price = $n->actual_sale_price?$n->actual_sale_price:0;
+
                 $n->expiration_date = Carbon::parse($n->expiration_date)->format('F j, Y');
                 $n->item_volume = $n->length*$n->width*$n->height;
                 $n->import_cost = $n->imported_rmb_price * $n->rmb_rate;
                 $n->profit_min = $n->market_price_min - $n->import_cost;
                 $n->profit_max = $n->market_price_max - $n->import_cost;
-                $n->profit_rate_min = $n->profit_min / $n->market_price_min;
-                $n->profit_rate_max = $n->profit_max / $n->market_price_max;
+
+                $n->profit_rate_min = 0;
+                if($n->market_price_min>0){
+                    $n->profit_rate_min = $n->profit_min / $n->market_price_min;
+                }
+
+                $n->profit_rate_max = 0;
+                if($n->market_price_max>0){
+                    $n->profit_rate_max = $n->profit_max / $n->market_price_max;
+                }
+
                 $n->advised_profit = $n->advised_sale_price - $n->import_cost;
-                $n->adivsed_profit_rate = $n->advised_profit / $n->advised_sale_price;
+
+                $n->adivsed_profit_rate = 0;
+                if($n->advised_sale_price>0){
+                    $n->adivsed_profit_rate = $n->advised_profit / $n->advised_sale_price;
+                }
+
                 $n->whole_sale_price = $n->import_cost / 0.88;
 
                 $this->getUnitAndSet($n, $unitList);
