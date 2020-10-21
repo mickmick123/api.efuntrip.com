@@ -1096,7 +1096,7 @@ class LogController extends Controller
                     }
                     $currentService = $cs->id;
 
-                    $body = DB::table('logs as l')->select(DB::raw('l.detail, l.log_date, pr.first_name, l.amount'))
+                    $body = DB::table('logs as l')->select(DB::raw('l.detail, l.log_date, l.created_at, pr.first_name, l.amount'))
                     ->where('client_service_id', $cs->id)->where('group_id',null)
                     ->where('l.id','!=', $t->id)
                     ->leftjoin(
@@ -1153,6 +1153,7 @@ class LogController extends Controller
                             'type' => $t->log_group,
                             'processor' => $usr[0]->first_name,
                             'date' => Carbon::parse($t->log_date)->format('F d,Y'),
+                            'date_time' => Carbon::parse($t->created_at)->format('F d,Y h:i:s'),
                             'title' => $csdetail,
                             'tracking' => $cstracking,
                             'status' => $csstatus,

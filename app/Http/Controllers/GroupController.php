@@ -529,7 +529,7 @@ class GroupController extends Controller
 
 
 
-            $group->total_members =	DB::table('group_user')->where('group_id', $id)->count();        
+            $group->total_members =	DB::table('group_user')->where('group_id', $id)->count();
 
 
             $group->total_complete_service_cost = $this->getGroupTotalCompleteServiceCost($id);
@@ -3838,6 +3838,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
    $bal = 0;
 
 
+   $totalServiceCost = 0;
    foreach($request->data as $data){
        $temp['id'] = $data['user_id'];
        $temp['name'] = $data['name'];
@@ -3848,8 +3849,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
        $temPackage = [];
        $j = 0;
 
-       $totalServiceCost = 0;
        $totalService = 0;
+       $memberSubTotal = 0;
        foreach($data['packages'] as $p){
 
          $datetime = new DateTime($p['created_at']);
@@ -3867,6 +3868,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
          //
          if($p['active'] !== 0){
              $totalServiceCost += (($totalService - $p['discount']) - $p['payment_amount']);
+             $memberSubTotal += (($totalService - $p['discount']) - $p['payment_amount']);
              //$totalServiceCost += ($p['package_cost'] - $p['discount'])
 
              //$totalBal = ((float) $totalBal) - ($p['service_cost'] - $p['payment_amount']);
@@ -3908,7 +3910,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
        }
 
        $temp['packages'] =  $temPackage;
-       $temp['total_service_cost'] = $totalServiceCost;
+       $temp['total_service_cost'] = $memberSubTotal;
        $response[$ctr] =  $temp;
        $ctr = $ctr + 1;
      }
