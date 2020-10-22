@@ -117,8 +117,10 @@ class GroupController extends Controller
         return $depo - ($withdraw + $payment);
     }
 
-    private function getGroupDeposit($id) {
-        return ClientTransaction::where('group_id', $id)->where('type', 'Deposit')->sum('amount');
+    private function getGroupDeposit($id){
+        $auto_distributed = ClientEWallet::where('group_id', $id)->where('type', 'Deposit')->where('reason','Generating DP')->sum('amount');
+        $deposit = ClientTransaction::where('group_id', $id)->where('type', 'Deposit')->sum('amount');
+        return $deposit - $auto_distributed;
     }
 
 
