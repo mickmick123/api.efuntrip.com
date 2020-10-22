@@ -7,6 +7,8 @@ Route::get('get-all-users', 'ClientController@getAllUsers');
 
 Route::get('get-contact-type', 'ClientController@getContactType');
 
+Route::post('rsa-sign', 'ClientController@rsaSign');
+
 Route::middleware('auth:api')->group(function() {
 
 	// Route::get('manage-clients', 'ClientController@manageClients');
