@@ -709,7 +709,7 @@ class InventoryController extends Controller
 
     public function getParents($where, $field, $inArray){
         $category = DB::table('inventory_parent_category AS pc')
-            ->select(DB::raw("pc.*,com.name as company,c.name"))
+            ->select(DB::raw("pc.*,com.name as company,c.name, c.name_chinese"))
             ->leftJoin('company AS com', 'pc.company_id', '=', 'com.company_id')
             ->leftJoin('inventory_category AS c', 'pc.category_id', '=', 'c.category_id')
             ->where($where);
