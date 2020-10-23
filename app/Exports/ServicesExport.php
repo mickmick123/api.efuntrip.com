@@ -110,6 +110,10 @@ class ServicesExport implements FromView, WithEvents, ShouldAutoSize
         if($s == 'pending'){
             $stat=  '待办';
         }
+        if($s == 'released'){
+            $stat = '已发行';
+        }
+
         return $stat;
   }
 
