@@ -4260,7 +4260,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
            $memberByDate[$ctr2]['name'] = $mem['first_name']. " " . $mem['last_name'];
            $memberByDate[$ctr2]['created_at'] = $m->created_at;
 
-           $chrg = ($m->active == 0 || strtolower($m->status) !== 'complete') ? 0 : ($m->charge + $m->cost + $m->tip  + $m->com_client + $m->com_client);
+           $chrg = ($m->active == 0 || (strtolower($m->status) !== 'complete' && strtolower($m->status) !== 'released')) ? 0 : ($m->charge + $m->cost + $m->tip  + $m->com_client + $m->com_client);
 
            $sub = $chrg;
 

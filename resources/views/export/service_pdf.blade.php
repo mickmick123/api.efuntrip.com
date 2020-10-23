@@ -81,16 +81,17 @@
            </tr>
 
             @foreach($bydate['members'] as $member)
+            <?php $hasValue = (strtolower($member['service']['status']) == 'released' || strtolower($member['service']['status']) == 'complete') ? true : false; ?>
              <tr>
                   <td colspan="13" style="text-align:left"  class="borderBottom"><b>{{ $member['name'] }}</b></td>
              </tr>
              <tr>
                   <td class="borderBottom" colspan="2" style="text-align:center; border-right: 1px solid #e0e0e0;">{{ $member['service']['tracking'] }}</td>
                   <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;" >{{ $member['service']['status']  }}</td>
-                  <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;" colspan="2">{{ $member['service_cost']  }}</td>
-                  <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;" colspan="2">{{ $member['discount']  }}</td>
-                  <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;" colspan="2">{{ $member['service']['payment_amount']  }}</td>
-                  <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;" colspan="2">{{ ($member['service']['is_full_payment']) ? 0 : (($member['service']['payment_amount'] > 0) ? "-". ($member['total_charge'] - $member['service']['payment_amount']) : (($member['total_charge'] > 0) ? "-". $member['total_charge'] : 0)) }}</td>
+                  <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;" colspan="2">{{ ($hasValue) ? $member['service_cost'] : 0  }}</td>
+                  <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;" colspan="2">{{ ($hasValue) ? $member['discount'] : 0  }}</td>
+                  <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;" colspan="2">{{ ($hasValue) ? $member['service']['payment_amount'] : 0  }}</td>
+                  <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;" colspan="2">{{ ($hasValue) ? ($member['service']['is_full_payment']) ? 0 : (($member['service']['payment_amount'] > 0) ? "-". ($member['total_charge'] - $member['service']['payment_amount']) : (($member['total_charge'] > 0) ? "-". $member['total_charge'] : 0)) : 0 }}</td>
                   <td class="borderBottom" style="text-align:center; " colspan="2">{{ $member['service']['total_service_cost'] }}</td>
              </tr>
            @endforeach
