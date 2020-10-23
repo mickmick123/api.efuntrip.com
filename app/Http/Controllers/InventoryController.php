@@ -1607,7 +1607,7 @@ class InventoryController extends Controller
                     if($k+1 === count($purchase)){
                         $unit = self::checkUnit($last_unit[count($last_unit)-1]->last_unit_id);
                         $addPurchaseUnit->last_unit_id = $unit[0]->unit_id;
-                        $addPurchaseUnit->parent_id = $purchase[$k-1]->unit_id;;
+                        $addPurchaseUnit->parent_id = $k === 0 ? $k : $purchase[$k-1]->unit_id;;
                     }elseif($k === 0){
                         $addPurchaseUnit->last_unit_id = 0;
                         $addPurchaseUnit->parent_id = 0;
