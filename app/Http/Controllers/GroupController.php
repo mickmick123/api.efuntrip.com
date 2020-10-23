@@ -2139,7 +2139,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $status = Status::PENDING;
     }
     //only complete and released
-    else if(((in_array(Status::COMPLETE, $data)) || (in_array(Status::RELEASED, $data))) && ((!in_array(Status::ON_PROCESS, $data)) && (!in_array(Status::CANCELLED, $data)) && (!in_array(Status::PENDING, $data)))){
+    else if(((in_array(Status::COMPLETE, $data)) || (in_array(Status::RELEASED, $data))) && ((!in_array(Status::ON_PROCESS, $data)) && (!in_array(Status::CANCELLED, $data)) || (in_array(Status::CANCELLED, $data) && count(array_unique($data)) > 1) && (!in_array(Status::PENDING, $data)))){
         $status = Status::COMPLETE;
     }
 
@@ -3455,6 +3455,9 @@ public function getClientPackagesByGroup($client_id, $group_id){
     private function statusChinese($status){
         $s = strtolower(trim($status," "));
         $stat = '';
+        if($s == 'released'){
+            $stat = '已发行';
+        }
         if($s == 'complete'){
             $stat = '已完成';
         }
@@ -4117,20 +4120,20 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
  public function getByService(Request $request, $id, $page = 20){
 
-   $from = $request->input('from_date');
-   $to = $request->input('to_date');
+   $from = $request->input('from_date'); // sept 1, 2020
+   $to = $request->input('to_date'); // sept 2, 2020
 
 
    if($from != '' || $to != ''){
 
      if($request->input('ids') != ''){
-       $services = explode(',', $request->input('ids'));
+       $services = explode(',', $request->input('ids')); //350
      }else{
        $services = [];
      }
 
      if($request->input('status') != ''){
-       $status = explode(',', $request->input('status'));
+       $status = explode(',', $request->input('status')); //released
      }else{
        $status = [];
      }
@@ -4138,7 +4141,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
      $clientServices = DB::table('client_services')
        ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, created_at'))
-       ->where('group_id',$id)->where('status','!=','cancelled')->where('active',1)
+       ->where('group_id',$id)
+       // ->where('status','!=','cancelled')->where('active',1)
 
        ->where(function($q) use($from, $to, $services, $status){
 
@@ -4149,8 +4153,6 @@ public function getClientPackagesByGroup($client_id, $group_id){
          //if(count($status) > 0){
            $q->whereIn('status', $status);
          //}
-
-
 
          if($to != '' && $from != ''){
              $q->whereBetween('created_at', [date($from), date($to)])->get();
@@ -4167,12 +4169,13 @@ public function getClientPackagesByGroup($client_id, $group_id){
    else{
      $clientServices = DB::table('client_services')
        ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, created_at'))
-       ->where('group_id',$id)
-       ->groupBy('service_id')->where('status','!=','cancelled')->where('active',1)
+       ->where('group_id',$id)->where('status','!=','cancelled')->where('active',1)
+       ->groupBy('service_id')
        ->orderBy('created_at','DESC')
        ->paginate($page);
    }
 
+   \Log::info($clientServices->items());
 
    $ctr = 0;
    $temp = [];
@@ -4183,16 +4186,27 @@ public function getClientPackagesByGroup($client_id, $group_id){
    $bal = 0;
 
      foreach($clientServices->items() as $s){
-
-       $query = ClientService::where('created_at', $s->created_at)->where('service_id',$s->service_id)->where('group_id', $id)->where('status','!=','cancelled')->where('active',1);
+       $query = ClientService::where('created_at', $s->created_at)->where('service_id',$s->service_id)->where('group_id', $id)->where('status','!=','cancelled')->where('active',1)
+            ->where(function($q) use($from, $to, $services, $status){
+                 $q->whereIn('status', $status);
+                 $q->whereBetween('created_at', [date($from), date($to)])->get();
+               });
 
        $servicesByDate = DB::table('client_services')
          ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, created_at, client_id'))
          ->where('group_id',$id)
-         ->where('service_id',$s->service_id)->where('status','!=','cancelled')->where('active',1)
+         ->where('service_id',$s->service_id)
+         // ->where('status','!=','cancelled')
+         ->where('active',1)
+         ->where(function($q) use($from, $to, $services, $status){
+             $q->whereIn('status', $status);
+             $q->whereBetween('created_at', [date($from), date($to)])->get();
+           })
          ->groupBy(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'))
          ->orderBy('created_at','DESC')
          ->get();
+         // \Log::info('servicesByDate');
+         // \Log::info($servicesByDate);
 
        $translated = Service::where('id',$s->service_id)->first();
 
@@ -4213,7 +4227,21 @@ public function getClientPackagesByGroup($client_id, $group_id){
        $totalServiceCost = 0;
        foreach($servicesByDate as $sd){
 
-         $queryClients = ClientService::where('service_id', $sd->service_id)->where('created_at', $sd->created_at)->where('group_id', $id)->where('status','!=','cancelled')->where('active',1)->orderBy('created_at','DESC')->orderBy('client_id')->groupBy('client_id')->get();
+         $queryClients = ClientService::where('service_id', $sd->service_id)
+                            ->whereDate('created_at', '=', Carbon::parse($sd->created_at)->format('Y-m-d'))
+                            // ->where('created_at', $sd->created_at)
+                            ->where('group_id', $id)
+                            // ->where('status','!=','cancelled')
+                            ->where('active',1)
+                            ->where(function($q) use($from, $to, $services, $status){
+                                 $q->whereIn('status', $status);
+                                 $q->whereBetween('created_at', [date($from), date($to)])->get();
+                               })
+                            ->orderBy('created_at','DESC')->orderBy('client_id')
+                            ->groupBy('client_id')->get();
+
+         // \Log::info('queryClients');
+         // \Log::info($queryClients);
 
          $memberByDate = [];
          $ctr2 = 0;
