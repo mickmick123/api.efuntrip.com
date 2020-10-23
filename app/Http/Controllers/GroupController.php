@@ -2135,11 +2135,11 @@ public function getClientPackagesByGroup($client_id, $group_id){
     //'pending','on process','complete','released','cancelled'
 
     //only pending
-    if(((!in_array(Status::COMPLETE, $data)) && (!in_array(Status::ON_PROCESS, $data)) && (!in_array(Status::RELEASED, $data)) && (!in_array(Status::CANCELLED, $data))) && in_array(Status::PENDING, $data)){
+    if(((!in_array(Status::COMPLETE, $data)) && (!in_array(Status::ON_PROCESS, $data)) && (!in_array(Status::RELEASED, $data)) && ((!in_array(Status::CANCELLED, $data)) || (in_array(Status::CANCELLED, $data) && count(array_unique($data)) > 1)) ) && in_array(Status::PENDING, $data)){
         $status = Status::PENDING;
     }
     //only complete and released
-    else if(((in_array(Status::COMPLETE, $data)) || (in_array(Status::RELEASED, $data))) && ((!in_array(Status::ON_PROCESS, $data)) && (!in_array(Status::CANCELLED, $data)) || (in_array(Status::CANCELLED, $data) && count(array_unique($data)) > 1) && (!in_array(Status::PENDING, $data)))){
+    else if(((in_array(Status::COMPLETE, $data)) || (in_array(Status::RELEASED, $data))) && ((!in_array(Status::ON_PROCESS, $data)) && ((!in_array(Status::CANCELLED, $data)) || (in_array(Status::CANCELLED, $data) && count(array_unique($data)) > 1)) && (!in_array(Status::PENDING, $data)))){
         $status = Status::COMPLETE;
     }
 
