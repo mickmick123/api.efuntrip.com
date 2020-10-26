@@ -899,7 +899,7 @@ public function members(Request $request, $id, $page = 20) {
 
         $queryx = ClientService::where('client_id',$g->id)->where('group_id', $id)->where('active', 1)->where('status','!=','cancelled')->orderBy('created_at','DESC');
         $csid = $queryx->pluck('id');
-        $queryStatus = $queryx->select(array('status','cost','charge', 'tip', 'com_client', 'com_agent', 'created_at'))->get();
+        $queryStatus = $queryx->select(array('status','cost','charge', 'tip', 'com_client', 'com_agent', 'created_at','active'))->get();
 
 
         $queryTotalDiscount = DB::table('client_services as cs')
@@ -926,7 +926,14 @@ public function members(Request $request, $id, $page = 20) {
         $totalServiceCount = 0;
 
         foreach($queryStatus as $q){
-          array_push($statusList,$q->status);
+
+          if($q->active == 0){
+            array_push($statusList, Status::DISABLED);
+          } else{
+            array_push($statusList,$q->status);
+          }
+
+
           $totalServiceCost += ($q->cost + $q->charge + $q->tip + $q->com_client + $q->com_agent);
           $totalServiceCount++;
         }
@@ -1673,7 +1680,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
     $search = $request->input('search');
 
     $clientServices = DB::table('client_services')
-      ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, created_at'))
+      ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, created_at, active'))
       ->where('group_id',$groupId)
       ->groupBy('service_id')
       ->orderBy('created_at','DESC')
@@ -1697,7 +1704,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $csid = $queryx->pluck('id');
         // \Log::info($csid);
 
-        $queryStatus = $queryx->select(array('status','cost','charge', 'tip', 'com_client', 'com_agent', 'created_at'))->get();
+        $queryStatus = $queryx->select(array('status','cost','charge', 'tip', 'com_client', 'com_agent', 'created_at', 'active'))->get();
 
         $queryTotalDiscount = DB::table('client_services as cs')
                       ->leftjoin(DB::raw('(select * from client_transactions) as ct'),'ct.client_service_id','=','cs.id')
@@ -1722,7 +1729,14 @@ public function getClientPackagesByGroup($client_id, $group_id){
         // \Log::info($queryStatus);
 
         foreach($queryStatus as $q){
-          array_push($statusList,$q->status);
+
+          if($q->active == 0){
+            array_push($statusList, Status::DISABLED);
+          } else{
+            array_push($statusList,$q->status);
+          }
+
+
           array_push($dateList,$q->created_at);
           $totalServiceCost += ($q->cost + $q->charge + $q->tip + $q->com_client + $q->com_agent);
           $totalServiceCount++;
@@ -2139,7 +2153,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $status = Status::PENDING;
     }
     //only complete and released
-    else if(((in_array(Status::COMPLETE, $data)) || (in_array(Status::RELEASED, $data))) && ((!in_array(Status::ON_PROCESS, $data)) && ((!in_array(Status::CANCELLED, $data)) || (in_array(Status::CANCELLED, $data) && count(array_unique($data)) > 1)) && (!in_array(Status::PENDING, $data)))){
+
+    else if(((in_array(Status::COMPLETE, $data)) || (in_array(Status::RELEASED, $data))) && ((!in_array(Status::ON_PROCESS, $data)) || (in_array(Status::CANCELLED, $data) && count(array_unique($data)) > 1) && (!in_array(Status::PENDING, $data)))){
         $status = Status::COMPLETE;
     }
 
@@ -2149,7 +2164,11 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $status = Status::ON_PROCESS;
     }
 
-    else{
+    else if(in_array(Status::DISABLED, $data) && count(array_unique($data)) === 1) {
+        $status = Status::DISABLED;
+    }
+
+    else {
         $status = Status::CANCELLED;
     }
 
@@ -2166,7 +2185,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
 
         $clientServices = DB::table('client_services')
-          ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, id, detail, created_at'))
+          ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, id, detail, created_at, active'))
           ->where('active',1)->where('group_id',$groupId)
 
           ->when($sort != '', function ($q) use($sort){
@@ -2194,7 +2213,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
           $queryMembers = ClientService::where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->groupBy('client_id')->get();
 
-          $queryStatus = DB::table('client_services')->select(DB::raw('status'))
+          $queryStatus = DB::table('client_services')->select(DB::raw('status, active'))
           ->where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->get();
 
           $queryTotal = DB::table('client_services')
@@ -2223,7 +2242,11 @@ public function getClientPackagesByGroup($client_id, $group_id){
           $statusList = [];
 
           foreach($queryStatus as $stat){
-            array_push($statusList,$stat->status);
+            if($stat->active == 0){
+              array_push($statusList, Status::DISABLED);
+            } else{
+              array_push($statusList,$stat->status);
+            }
           }
 
 
@@ -2234,7 +2257,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
           $temp['status_temp'] = $queryTotal - $queryTotalDiscount;
           $temp['status'] = $this->checkOverallStatus($statusList);
           $temp['total_members'] = $queryMembers->count();
-
+          $temp['active'] = $s->active;
           $response[$ctr] = $temp;
           $ctr++;
         }

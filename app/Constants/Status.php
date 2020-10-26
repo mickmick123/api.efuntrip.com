@@ -10,4 +10,5 @@ class Status {
    const COMPLETE = 'complete';
    const RELEASED = 'released';
    const CANCELLED = 'cancelled';
+   const DISABLED = 'disabled';
 }
