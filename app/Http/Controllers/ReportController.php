@@ -1378,11 +1378,17 @@ class ReportController extends Controller
 			$usr = User::findOrfail($cs->client_id);
 			if($usr){
 				$usr->visa_type = $clientService['visa_type'];
-				$usr->expiration_date = $clientService['expiration_date'];
 
-				if( $clientService['visa_type'] == '9A' && $usr->first_expiration_date == null) {
-                	$usr->first_expiration_date = $clientService['expiration_date'];
-                } 
+
+				if( $clientService['visa_type'] == '9A') {
+					if($usr->first_expiration_date == null){
+                		$usr->first_expiration_date = $clientService['expiration_date'];
+					}
+					$usr->extended_expiration_date = $clientService['expiration_date'];
+                }
+                else{
+					$usr->expiration_date = $clientService['expiration_date'];
+                }
                 $usr->save();
 			}
 		}
