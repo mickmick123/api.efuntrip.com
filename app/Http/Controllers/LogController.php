@@ -1157,8 +1157,7 @@ class LogController extends Controller
                             'title' => $csdetail,
                             'tracking' => $cstracking,
                             'status' => $csstatus,
-                            'active' => $csactive,
-
+                            'active' => $csactive
                         )
                     );
                 }
