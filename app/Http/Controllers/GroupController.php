@@ -30,6 +30,7 @@ use App\ServiceProfileCost;
 use App\ServiceBranchCost;
 use App\ServiceProfile;
 
+use Illuminate\Support\Facades\URL;
 
 use Auth, DB, Response, Validator;
 //Excel
@@ -4860,7 +4861,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
              $total_amount = $amount / 0.975;
              $total_fee = $total_amount - $amount;
              $response['data'] = [
-                 'qr_code'=>$qr->id,
+                 'qr_code'=> URL::to('/').'/api/v1/app/pay-qrcode/'.$qr->id,
                  'service'=>$request->payments,
                  'total_fee'=>number_format($total_fee, 2, '.', ','),
                  'total_amount'=>number_format($total_amount, 2, '.', ',')

@@ -8,8 +8,10 @@ use App\ContactNumber;
 
 use App\Device;
 
+use App\Client;
 use App\Group;
 use App\GroupUser;
+use App\QrCode;
 
 use Illuminate\Http\Request;
 
@@ -20,6 +22,10 @@ use Validator;
 use Hash, DB;
 
 use Carbon\Carbon;
+
+use GuzzleHttp\Client as ClientGuzzle;
+
+use phpseclib\Crypt\RSA;
 
 class AppController extends Controller
 {
@@ -343,6 +349,77 @@ class AppController extends Controller
         return 0;
         }
 
+    }
+
+    public function payQRCode($qr_id) {
+        $key = "-----BEGIN PRIVATE KEY-----
+        MIICdQIBADANBgkqhkiG9w0BAQEFAASCAl8wggJbAgEAAoGBAIgDKJpeEZSWgP4B
+        lkxnhoFKQ7K9jj9BrG41r4G1UzZQ0687wJtPckbUa/RZxveUS2H/32Uc7QskHZeB
+        EbILzfopppeNbWbXkFnLd9kf5m3TbeBoOjcsVkdBgPFiycbWOglP8ZuWnknXNxgM
+        rTOLph0AIX9auHTciwMV6tDygYhHAgMBAAECgYBmYAJC1wVikzo6dpVboxzR2kVE
+        l3snT9ZrCgu1lPcyTfpXzqD2BgGdIKy1OpIRrlRjSkYrBG/D0AZaEDNykYISbBD7
+        7xZa9aRluzs1LdCBaHUqDBZhlO/sQb/rYSLy5qSBCZr97rTr0zDk2TsNc1TUPjfM
+        hWo7KQKW3HwTNF+kEQJBANM0D5aQxqxeDZczAKl6PEevWlSTOkqeg4LTAa7uVo//
+        mdQF215yT26rM9JOTK3O/81G5u/ceDWeCv9tlEH8Hr8CQQCk3F5lFp/4twauMIf5
+        7LgZFiCk00CERpEsZzdkXElxPOmggfusblSH+0l7hvewfI1A0v5whcNfaJD8Gvpa
+        aQB5AkAfjMFfXpUvHoWtNoM8zfO/SaSWyb+FchR3MIop1ZS8whP6pj1U6IKRJ6YA
+        Ho450JhJ0/OflTGn4MoHyhjBmqYFAkA9Zto9ekzAnKJ/VBIA8rqqlUQ5P3kjCwlc
+        6WCHH5w28cHuBxuOYFVZhC0dNeqgr/MINs2PaTKYIWEGlKGz9LG5AkAkRhc9Mc0g
+        qoEckJEUTfxm9d4jbxvnAfRRpoUyfRztIqv6nbwGPzV/UFS6wePJcx2nEdDpVSkL
+        J00u3dHegsxq
+        -----END PRIVATE KEY-----";
+
+        $pubkey = "-----BEGIN PUBLIC KEY-----
+        MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCqQp5pVXe5Gk5xU5X6VQ/Dr+TN
+        GIOojTlg8Aon6SsFliZb20uGhcDfi4psQR+Tyir6Qdvnrsga6YQJS9E7g/DRspIW
+        s5n8yErWKdqOJDgF77IW5mzhlQyNioIhDsYSytD3ef9nlwcPmFVUI7lOEtMP9xAB
+        1WiWy2H5Ylass16/mwIDAQAB
+        -----END PUBLIC KEY-----";
+
+        $qr = QrCode::findorFail($qr_id);
+
+
+        $data = array (
+            "appId"  => "160152699158911",
+            "mchId" => "698",
+            "notifyUrl" => "ibet656.com",
+            "outTradeNo" => "1111111",
+            "timestamp" => "1570610861299",
+            "subject" => "test",
+            "amount" => "1",
+            "payment" => "qrcode",
+            "ip" => "127.0.0.1",
+            "timeOutMini" => "50"
+        );
+
+        $rsa = new RSA();
+
+        ksort($data);
+        $content = urldecode(http_build_query($data));
+        // return $content;
+        $rsa->loadKey($key);
+        $rsa->setSignatureMode(RSA::SIGNATURE_PKCS1);
+        $signature = $rsa->sign($content); // Sign Data
+        $ApiSignature = base64_encode($signature);
+
+        $data['sign'] = $ApiSignature;
+
+        try {
+            $client = new ClientGuzzle([
+                'Content-Type' => 'application/json'
+            ]);
+
+            $r = $client->request('POST', 
+                'https://openapi.gjob.ph/pay', 
+                [
+                    'json' => $data
+                ]
+            );
+            return $r;
+        }
+        catch (\Exception $ex) {
+
+        }
     }
 
 }
