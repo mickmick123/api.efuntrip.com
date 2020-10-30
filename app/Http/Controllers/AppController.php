@@ -8,6 +8,8 @@ use App\ContactNumber;
 
 use App\Device;
 
+use App\ClientService;
+use App\ClientTransaction;
 use App\Client;
 use App\Group;
 use App\GroupUser;
@@ -377,16 +379,28 @@ class AppController extends Controller
         -----END PUBLIC KEY-----";
 
         $qr = QrCode::findorFail($qr_id);
+        $service_ids = explode(',',$qr->service_ids);
+        $total_amount = 0;
+        foreach($service_ids as $id){
+            $amt = 0;
+            $cs = ClientService::findorFail($id);
+            $discount =  ClientTransaction::where('client_service_id', $id)->where('type', 'Discount')->sum('amount');
+            $amt = ($cs->charge + $cs->cost + $cs->tip + $cs->com_client + $cs->com_agent) - $discount;
+            if($cs->payment_amount != 0){
+                $amt -= $cs->payment_amount;
+            }
+            $total_amount += $amt;
 
-
+        }
+        $total_amount = $total_amount / 0.975;
         $data = array (
             "appId"  => "160152699158911",
             "mchId" => "698",
             "notifyUrl" => "ibet656.com",
-            "outTradeNo" => "1111111",
+            "outTradeNo" => $qr_id,
             "timestamp" => "1570610861299",
             "subject" => "test",
-            "amount" => "1",
+            "amount" => $total_amount,
             "payment" => "qrcode",
             "ip" => "127.0.0.1",
             "timeOutMini" => "50"
@@ -416,6 +430,7 @@ class AppController extends Controller
                 ]
             );
             $r = json_decode($r->getBody(), true);
+            return $r;
             return Redirect::to($r['data']['content']);
         }
         catch (\Exception $ex) {
