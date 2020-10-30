@@ -24,7 +24,7 @@ use Hash, DB;
 use Carbon\Carbon;
 
 use GuzzleHttp\Client as ClientGuzzle;
-
+use Illuminate\Support\Facades\Redirect;
 use phpseclib\Crypt\RSA;
 
 class AppController extends Controller
@@ -415,7 +415,8 @@ class AppController extends Controller
                     'json' => $data
                 ]
             );
-            return $r;
+            $r = json_decode($r->getBody(), true);
+            return Redirect::to($r['data']['content']);
         }
         catch (\Exception $ex) {
 
