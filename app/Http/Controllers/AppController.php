@@ -397,10 +397,10 @@ class AppController extends Controller
             "appId"  => "160152699158911",
             "mchId" => "698",
             "notifyUrl" => "ibet656.com",
-            "outTradeNo" => $qr_id,
+            "outTradeNo" => (string)$qr_id,
             "timestamp" => "1570610861299",
             "subject" => "test",
-            "amount" => $total_amount,
+            "amount" => (string)$total_amount,
             "payment" => "qrcode",
             "ip" => "127.0.0.1",
             "timeOutMini" => "50"
