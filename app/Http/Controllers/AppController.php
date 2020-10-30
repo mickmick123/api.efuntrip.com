@@ -392,7 +392,7 @@ class AppController extends Controller
             $total_amount += $amt;
 
         }
-        $total_amount = $total_amount / 0.975;
+        $total_amount = number_format($total_amount / 0.975,2);
         $data = array (
             "appId"  => "160152699158911",
             "mchId" => "698",
