@@ -18,15 +18,15 @@ use App\QrCode;
 use Illuminate\Http\Request;
 
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Redirect;
 
 use Response;
 use Validator;
 use Hash, DB;
-
 use Carbon\Carbon;
 
 use GuzzleHttp\Client as ClientGuzzle;
-use Illuminate\Support\Facades\Redirect;
 use phpseclib\Crypt\RSA;
 
 class AppController extends Controller
@@ -394,13 +394,15 @@ class AppController extends Controller
         }
         $total_amount = $total_amount / 0.975;
         $total_amount = round($total_amount, 2);
+        $notifyUrl = URL::to('/').'/api/v1/app/update-service-payment/'.$qr_id;
+        $timestamp = (time())*1000;
         $data = array (
             "appId"  => "160152699158911",
             "mchId" => "698",
-            "notifyUrl" => "ibet656.com",
+            "notifyUrl" => (string)$notifyUrl,
             "outTradeNo" => (string)$qr_id,
-            "timestamp" => "1570610861299",
-            "subject" => "test",
+            "timestamp" => (string)$timestamp,
+            "subject" => "Service Payment",
             "amount" => (string)$total_amount,
             "payment" => "qrcode",
             "ip" => "127.0.0.1",
@@ -437,6 +439,25 @@ class AppController extends Controller
         catch (\Exception $ex) {
 
         }
+    }
+
+    public function updateServicePayment($qr_id) {
+        $qr = QrCode::findorFail($qr_id);
+        $service_ids = explode(',',$qr->service_ids);
+        foreach($service_ids as $id){
+            $cs = ClientService::findorFail($id);
+            $discount =  ClientTransaction::where('client_service_id', $id)->where('type', 'Discount')->sum('amount');
+            $amt = ($cs->charge + $cs->cost + $cs->tip + $cs->com_client + $cs->com_agent) - $discount;
+            if($cs->payment_amount != 0){
+                $amt -= $cs->payment_amount;
+            }
+            $cs->payment_amount = $amt;
+            $cs->save();
+        }
+
+        $data['status'] = 'Success';
+        $data['code'] = 200;
+        return Response::json($data);
     }
 
 }
