@@ -394,20 +394,20 @@ class AppController extends Controller
         }
         $total_amount = $total_amount / 0.975;
         $total_amount = round($total_amount, 2);
-        $notifyUrl = URL::to('/').'/api/v1/app/update-service-payment/'.$qr_id;
         $timestamp = (time())*1000;
+        $notifyUrl = URL::to('/').'/api/v1/app/update-service-payment/'.$qr_id;
         $data = array (
             "appId"  => "160152699158911",
             "mchId" => "698",
             "notifyUrl" => (string)$notifyUrl,
-            //"returnUrl" => (string)$notifyUrl,
+            "returnUrl" => (string)$notifyUrl,
             "outTradeNo" => (string)$qr_id,
             "timestamp" => (string)$timestamp,
             "subject" => "Service Payment",
             "amount" => (string)$total_amount,
             "payment" => "qrcode",
             "ip" => "127.0.0.1",
-            "timeOutMini" => "50"
+            "timeOutMini" => "30"
         );
 
         $rsa = new RSA();
