@@ -434,8 +434,8 @@ class AppController extends Controller
                 ]
             );
             // return $r;
-            \Log::info($r);
             $r = json_decode($r->getBody(), true);
+            \Log::info($r);
             return Redirect::to($r['data']['content']);
         }
         catch (\Exception $ex) {
