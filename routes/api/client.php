@@ -9,6 +9,8 @@ Route::get('get-contact-type', 'ClientController@getContactType');
 
 Route::post('rsa-sign', 'ClientController@rsaSign');
 
+Route::post('get-qr-data', 'ClientController@getQRData');
+
 Route::middleware('auth:api')->group(function() {
 
 	// Route::get('manage-clients', 'ClientController@manageClients');
@@ -86,7 +88,5 @@ Route::middleware('auth:api')->group(function() {
     Route::get('get-clients-remarks/{client_id}', 'ClientController@getClientsRemarks');
 
     Route::get('get-pay-services/{id}', 'ClientController@getPayServices');
-
-    Route::post('get-qr-data', 'ClientController@getQRData');
 
 });
