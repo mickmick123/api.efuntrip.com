@@ -453,6 +453,7 @@ class AppController extends Controller
                 $amt -= $cs->payment_amount;
             }
             $cs->payment_amount = $amt;
+            $cs->is_full_payment = 1;
             $cs->save();
         }
 
