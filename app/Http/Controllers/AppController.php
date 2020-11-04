@@ -433,7 +433,7 @@ class AppController extends Controller
                     'json' => $data
                 ]
             );
-            return $r;
+            // return $r;
             $r = json_decode($r->getBody(), true);
             return Redirect::to($r['data']['content']);
         }
