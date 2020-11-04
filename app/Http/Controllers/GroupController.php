@@ -4875,6 +4875,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
              $total_amount = $amount / 0.975;
              $total_fee = $total_amount - $amount;
              $response['data'] = [
+                 'id'=> $qr->id,
                  'qr_code'=> URL::to('/').'/api/v1/app/pay-qrcode/'.$qr->id,
                  'service'=>$request->payments,
                  'total_fee'=>number_format($total_fee, 2, '.', ','),

@@ -52,6 +52,7 @@ use Illuminate\Http\Request;
 
 use App\Jobs\LogsPushNotification;
 
+use Illuminate\Support\Facades\URL;
 use phpseclib\Crypt\RSA;
 
 
@@ -2857,7 +2858,8 @@ class ClientController extends Controller
                  $total_amount = $amount / 0.975;
                  $total_fee = $total_amount - $amount;
                  $response['data'] = [
-                     'qr_code'=>$qr->id,
+                     'id'=>$qr->id,
+                     'qr_code'=>URL::to('/').'/api/v1/app/pay-qrcode/'.$qr->id,
                      'service'=>$request->payments,
                      'total_fee'=>number_format($total_fee, 2, '.', ','),
                      'total_amount'=>number_format($total_amount, 2, '.', ',')
@@ -3876,6 +3878,43 @@ s5n8yErWKdqOJDgF77IW5mzhlQyNioIhDsYSytD3ef9nlwcPmFVUI7lOEtMP9xAB
 
     // $rsa->loadKey($pubkey); // public key
     // return $rsa->verify($content, $signature) ? 'verified' : 'unverified'; // verify signature
+    }
+
+    public function getQRData(Request $request){
+        $qr_id = $request->id;
+        $qr = QrCode::where('id',$qr_id)->get();
+        if(count($qr) === 0){
+            $response['status'] = 'failed';
+            $response['errors'] = 'Invalid Id';
+            $response['code'] = 422;
+        }else{
+            $service_ids = explode(',',$qr[0]->service_ids);
+            $total_amount = 0;
+            $data = [];
+            foreach($service_ids as $index=>$id){
+                $amt = 0;
+                $cs = ClientService::findorFail($id);
+                $discount =  ClientTransaction::where('client_service_id', $id)->where('type', 'Discount')->sum('amount');
+                $amt = ($cs->charge + $cs->cost + $cs->tip + $cs->com_client + $cs->com_agent) - $discount;
+                if($cs->payment_amount != 0){
+                    $amt -= $cs->payment_amount;
+                }
+                $total_amount += $amt;
+                $data['service'][$index] = ['service'=>$cs->detail,'amount'=>$total_amount];
+            }
+            $client = User::where('id',$qr[0]->client_id)->get(DB::raw("CONCAT(first_name,' ',last_name) AS name"));
+            $group = Group::where('id',$qr[0]->group_id)->get(['name']);
+            $data['qr_code'] = URL::to('/').'/api/v1/app/pay-qrcode/'.$request->id;
+            $data['name'] = $client->count() !== 0 ? $client[0]->name : $group[0]->name;
+            $data['total_amount'] = $total_amount / 0.975;
+            $data['total_fee'] = $data['total_amount'] - $total_amount;
+
+            $response['status'] = 'success';
+            $response['code'] = 200;
+            $response['data'] = $data;
+        }
+
+        return Response::json($response);
     }
 
 }
