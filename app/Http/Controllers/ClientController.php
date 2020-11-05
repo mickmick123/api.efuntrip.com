@@ -1443,6 +1443,7 @@ class ClientController extends Controller
                 ->leftjoin(DB::raw('(select * from services) as s'),'s.id','=','cs.service_id')
                 ->leftjoin(DB::raw('(select * from users) as u'),'u.id','=','cs.client_id')
                 ->where('cs.client_id',$id)
+                ->where('cs.group_id',null)
                 ->orderBy('cs.id', 'desc')
                 ->get();
         }
@@ -1466,6 +1467,7 @@ class ClientController extends Controller
                 ->leftjoin(DB::raw('(select * from services) as s'),'s.id','=','cs.service_id')
                 ->leftjoin(DB::raw('(select * from users) as u'),'u.id','=','cs.client_id')
                 ->where('cs.client_id',$id)->where('cs.tracking',$tracking)
+                ->where('cs.group_id',null)
                 ->orderBy('cs.id', 'desc')
                 ->get();
         }
@@ -1480,6 +1482,7 @@ class ClientController extends Controller
     public function getClientPackages($id) {
         $packs = DB::table('packages as p')->select(DB::raw('p.*,g.name as group_name'))
             ->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','p.group_id')
+            ->where('group_id',null)
             ->where('client_id', $id)
             ->orderBy('id', 'desc')
             ->get();
