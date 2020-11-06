@@ -2659,6 +2659,17 @@ public function getClientPackagesByGroup($client_id, $group_id){
                  $disc->save();
              }
 
+             $servpay = ClientTransaction::where('client_service_id',$getServ->id)->where('type','Payment')->first();
+             if($servpay){
+                 $servpay->group_id = $newGroupId;
+                 $servpay->client_id = $request->member_id;
+                 if($newGroupId != null){
+                     $group_leader = Group::where('id', $newGroupId)->first()->leader_id;
+                     $servpay->client_id = $group_leader;
+                 }
+                 $servpay->save();
+             }
+
              $response['status'] = 'Success';
              $response['code'] = 200;
 
