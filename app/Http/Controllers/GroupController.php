@@ -5238,9 +5238,9 @@ public function getClientPackagesByGroup($client_id, $group_id){
     return Response::json($response);
   }
 
-  public function distributeClientOldPayment2($request){
-    $fromClient = $request->from;
-    $toClient = $request->to;
+  public function distributeClientOldPayment2(Request $request){
+    $from = $request->from;
+    $to = $request->to;
 
     for($i = $from; $i <= $to ; $i++){
 
@@ -5291,13 +5291,16 @@ public function getClientPackagesByGroup($client_id, $group_id){
     $totalAmount = ($totalPayment + $totalDepo + $queryTotalDiscount) - $totalRefund;
 
 
-    $queryClients = ClientService::where('group_id', null)->where('client_id', $client_id)->where('active', 1)                  ->where('is_full_payment', 0)
+    $queryClients = ClientService::where('group_id', null)->where('client_id', $client_id)
+                        ->where('active', 1)                  
+                        // ->where('is_full_payment', 0)
                           ->where(function($q) {
                             $q->orwhere('status', 'complete')
                                 ->orWhere('status', 'released');
                           })
                           ->orderBy('id')->get();
 
+    $records = [];
     $totalRemaining = 0;
     foreach($queryClients as $m){
 
@@ -5341,16 +5344,17 @@ public function getClientPackagesByGroup($client_id, $group_id){
        }
     }
 
+    // return $totalAmount ;
+
     ClientTransaction::insert($records);
     $totalRemaining = $totalAmount;
 
-      if($totalRemaining > 0){
+    if($totalRemaining > 0){
         $dp = new ClientEWallet;
-        $dp->client_id = 0;
+        $dp->client_id = $client_id;
         $dp->type = 'Deposit';
         $dp->amount = $totalRemaining;
         $dp->group_id = null;
-        $dp->client_id = $client_id;
         $dp->reason = "Generating DP";
         $dp->save();
 
@@ -5369,7 +5373,15 @@ public function getClientPackagesByGroup($client_id, $group_id){
         );
          LogController::save($log_data);
       }
-
+    else{
+        $dp = new ClientEWallet;
+        $dp->client_id = $client_id;
+        $dp->type = 'Deposit';
+        $dp->amount = 0;
+        $dp->group_id = null;
+        $dp->reason = "Generating DP";
+        $dp->save();
+    }
         $response['remaining'] = $totalRemaining;
         $response['total_payment_and_dp'] = ($totalPayment + $totalDepo);
         $response['total_depo'] = $totalDepo;
@@ -5377,17 +5389,9 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $response['total_payment'] = $totalPayment;
         $response['total_cost'] = $groupTotalCost;
         $response['total_discount'] = $queryTotalDiscount;
+
     }
-    else{
-        $dp = new ClientEWallet;
-        $dp->client_id = 0;
-        $dp->type = 'Deposit';
-        $dp->amount = 0;
-        $dp->group_id = null;
-        $dp->client_id = $client_id;
-        $dp->reason = "Generating DP";
-        $dp->save();
-    }
+
     }
 
 
