@@ -3763,7 +3763,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
                 }
               }
               if($s["active"] == 1){
-                  $totalPaid += ($totalPayment += $s['payment_amount']);
+                  $totalPayment += $s['payment_amount'];
               }
 
             $s["total_service_cost"] = $totalBal;
@@ -3786,6 +3786,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
           //$members['services']['total_service_paid'] = $totalPayment;
           $j++;
       }
+
+      $totalPaid += $totalPayment;
 
       $result2[$ctr]['members'] = $members;
       $result2[$ctr]['total_service_paid'] = $totalPayment;
@@ -3813,6 +3815,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $lang['_latest_date'] = 'Latest Date';
         $lang['_total_service_cost'] = 'Total Service Cost';
         $lang['_total_paid_service'] = 'Total Paid Service';
+        $lang['_total_payment_done'] = 'Total Payment Done';
         $lang['_payment'] = 'Payment';
 
         $lang['_transcation_history'] = 'Transactions History : ';
@@ -3851,6 +3854,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $lang['_latest_date'] = '最近的服务日期';
         $lang['_total_service_cost'] = '总服务费';
         $lang['_total_paid_service'] = '总付费服务';
+        $lang['_total_payment_done'] = '总已支付金额';
         $lang['_transcation_history'] = '交易记录 : ';
         $lang['_payment'] = '付款';
         $lang['_amount'] = '共计';
