@@ -3715,9 +3715,11 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
        if($request->lang === 'EN'){
            $temp['service_date'] = $getdate;
+          //
        }
        else{
            $temp['service_date'] = $this->DateChinese($getdate);
+           //$temp['detail_cn'] = $data['detail_cn']  . " " . ($s->month > 0) ? "#of months " . $s->month : "";;
        }
 
        $temPackage = [];
@@ -4464,7 +4466,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
                  if($translated){
                        if($request->input('lang') === 'CN'){
-                         $cs->detail = (($translated->detail_cn != '' && $translated->detail_cn != 'NULL') ? $translated->detail_cn : $cs->detail);
+                         $cs->detail = (($translated->detail_cn != '' && $translated->detail_cn != 'NULL') ? $translated->detail_cn . " " . (($cs->month > 0) ? "#月数 " .$cs->month : "")   : $cs->detail);
                        }
                  }
 
