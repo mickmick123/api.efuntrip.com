@@ -3697,6 +3697,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
        $temp['sdate'] = strtotime($data['sdate']);
        $temp['total_service_cost'] = $data['total_service_cost'];
+
        $temp['group_id'] = $data['group_id'];
        $temp['detail'] = $data['detail'];
        $temp['service_date'] = $data['service_date'];
@@ -3739,10 +3740,13 @@ public function getClientPackagesByGroup($client_id, $group_id){
     $ctr = 0;
     $totalBal = 0;
     $totalPre = 0;
+    $totalPaid = 0;
 
     foreach($result2 as $r){
       $members = [];
       $j = 0;
+
+      $totalPayment = 0;
 
       foreach($r['members'] as $member){
           $services = [];
@@ -3756,8 +3760,10 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
                 //$totalBal = ((float) $totalBal) - ((float) $s["total_charge"] - (float) $s["discount"]);
                   $totalBal = ((float) $totalBal) - ($s['service_cost'] - $s['payment_amount']);
-
                 }
+              }
+              if($s["active"] == 1){
+                  $totalPaid += ($totalPayment += $s['payment_amount']);
               }
 
             $s["total_service_cost"] = $totalBal;
@@ -3773,14 +3779,19 @@ public function getClientPackagesByGroup($client_id, $group_id){
             $services[$i] = $s;
             $i++;
           }
+
           $member['services'] = $services;
           $members[$j] = $member;
+
+          //$members['services']['total_service_paid'] = $totalPayment;
           $j++;
       }
 
       $result2[$ctr]['members'] = $members;
+      $result2[$ctr]['total_service_paid'] = $totalPayment;
       $ctr++;
     }
+
 
 
     $lang = [];
@@ -3801,6 +3812,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $lang['_servic_name'] = 'Service Name';
         $lang['_latest_date'] = 'Latest Date';
         $lang['_total_service_cost'] = 'Total Service Cost';
+        $lang['_total_paid_service'] = 'Total Paid Service';
         $lang['_payment'] = 'Payment';
 
         $lang['_transcation_history'] = 'Transactions History : ';
@@ -3838,6 +3850,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $lang['_servic_name'] = '服务明细';
         $lang['_latest_date'] = '最近的服务日期';
         $lang['_total_service_cost'] = '总服务费';
+        $lang['_total_paid_service'] = '总付费服务';
         $lang['_transcation_history'] = '交易记录 : ';
         $lang['_payment'] = '付款';
         $lang['_amount'] = '共计';
@@ -3860,6 +3873,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
     return [
         'services' => $result2,
+        "total_paid_servie_by_batch" => $totalPaid,
         'lang' => $lang,
         'watermark' => public_path()."/images/watermark.png",
         'logo' => public_path()."/images/logo.png",

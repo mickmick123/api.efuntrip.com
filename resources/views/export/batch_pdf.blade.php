@@ -61,8 +61,8 @@
         <tr><td colspan="9"/></tr>
         <tr >
             <td colspan="1" style="text-align:left; background-color:#d5d0b5"><b>{{ $service['service_date'] }}</b></td>
-            <td colspan="8" style="text-align:left; background-color:#d5d0b5"><b>{{ $lang['_total_service_cost'] }} : {{ $service['total_service_cost'] }}</b></td>
-
+            <td colspan="4" style="text-align:left; background-color:#d5d0b5"><b>{{ $lang['_total_service_cost'] }} : {{ $service['total_service_cost'] }}</b></td>
+            <td colspan="4" style="text-align:left; background-color:#d5d0b5"><b>{{ $lang['_total_paid_service'] }} : {{ $service['total_service_paid'] }}</b></td>
         </tr>
           @foreach($service['members'] as $member)
           <tr>
@@ -87,7 +87,10 @@
           </tr>
 
     @endforeach
+     <tr>
+        <td colspan="9" style="text-align:left; background-color:#63b8d5">{{ $lang['_total_paid_service'] }}: <b>{{ $total_paid_servie_by_batch }}</b></td>
 
+    </tr>
     </tbody>
 </table>
 
