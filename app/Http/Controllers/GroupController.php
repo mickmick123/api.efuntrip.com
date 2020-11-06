@@ -5312,7 +5312,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
        $fullpayment = $payment;
 
        if($totalAmount > 0){
-            if($totalAmount > $payment){
+            if($totalAmount >= $payment){
                 if($m->payment_amount != 0){
                     $totalAmount = $totalAmount - $m->payment_amount;
                 }
