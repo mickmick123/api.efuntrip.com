@@ -1482,7 +1482,11 @@ class ClientController extends Controller
     public function getClientPackages($id) {
         $packs = DB::table('packages')
             //->leftjoin(DB::raw('(select * from groups) as g'),'g.id','=','p.group_id')
-            ->where('group_id',0)
+            // ->where('group_id',0)
+            ->where(function($query) {
+                    return $query->orwhere('group_id', 0)
+                        ->orWhere('group_id', NULL);
+                })
             ->where('client_id', $id)
             ->orderBy('id', 'desc')
             ->get();
