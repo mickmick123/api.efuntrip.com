@@ -96,4 +96,6 @@ use Illuminate\Http\Request;
 
 	Route::post('get-fund-list', 'GroupController@getFundList');
 
+    Route::post('export-funds-summary', 'GroupController@exportFundsSummary');
+
 });

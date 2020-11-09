@@ -5447,7 +5447,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
       return Response::json($response);
   }
 
-    public function getFundList(Request $request){
+    public function getFundList(Request $request, $options=""){
         $data = [];
         $index = 0;
 
@@ -5459,7 +5459,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
             })->get();
         $oldAmount = 0;
         foreach($oldPayments as $k=>$v){
-            $data[$index] = ['type' => $v->type, 'amount' => $v->amount, 'created_at' => $v->created_at];
+            $data[$index] = ['type' => $v->type, 'amount' => $v->amount, 'created_at' => Carbon::parse($v->created_at)->format('M d Y h:i a')];
             $oldAmount += (float)$v->amount;
             $index++;
         }
@@ -5468,16 +5468,34 @@ public function getClientPackagesByGroup($client_id, $group_id){
             ['type','Deposit']])->get();
         $newAmount = 0;
         foreach($newPayments as $k=>$v){
-            $data[$index] = ['type' => $v->type, 'amount' => $v->amount, 'created_at' => $v->created_at];
+            $data[$index] = ['type' => $v->type, 'amount' => $v->amount, 'created_at' => Carbon::parse($v->created_at)->format('M d Y h:i a')];
             $newAmount += (float)$v->amount;
             $index++;
         }
 
+        $list = ['list' => $data,'total_payment' => $oldAmount + $newAmount, 'remainingEwallet' => $this->getGroupEwallet($request->group_id)];
+
+        if($options == "pdf"){
+            return [
+                'result' => $list,
+                'watermark' => public_path()."/images/watermark.png",
+                'logo' => public_path()."/images/logo.png",
+                'font'=> public_path()."/assets/fonts/simhei.ttf"
+            ];
+        }
+
         $response['status'] = 'Success';
         $response['code'] = 200;
-        $response['data'] = ['list'=>$data,'total_payment'=>$oldAmount + $newAmount];
+        $response['data'] = $list;
 
         return Response::json($response);
+    }
+
+    public function exportFundsSummary(Request $request){
+        $export = $this->getFundList($request, 'pdf');
+        $pdf = PDF::loadView('export.group_funds_pdf', $export);
+
+        return $pdf->download('xxxx.pdf');
     }
 
 }
