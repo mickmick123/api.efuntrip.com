@@ -5447,4 +5447,30 @@ public function getClientPackagesByGroup($client_id, $group_id){
       return Response::json($response);
   }
 
+  public function getTotalPayment(Request $request){
+    $oldPayments = ClientTransaction::where([['group_id',$request->group_id],
+        ['client_service_id',null]])
+        ->where(function ($q){
+            $q->where('type', 'Deposit');
+            $q->orwhere('type', 'Payment');
+        })->get();
+    $oldAmount = 0;
+    foreach($oldPayments as $k=>$v){
+        $oldAmount += (float)$v->amount;
+    }
+
+    $newPayments = ClientEWallet::where([['group_id',$request->group_id],
+        ['type','Deposit']])->get();
+    $newAmount = 0;
+    foreach($newPayments as $k=>$v){
+        $newAmount += (float)$v->amount;
+    }
+
+    $response['status'] = 'Success';
+    $response['code'] = 200;
+    $response['data'] = $oldAmount + $newAmount;
+
+    return Response::json($response);
+  }
+
 }
