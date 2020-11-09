@@ -5451,6 +5451,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $data = [];
         $index = 0;
 
+        $groupName = Group::where('id',$request->group_id)->pluck('name');
+
         $oldPayments = ClientTransaction::where([['group_id',$request->group_id],
             ['client_service_id',null],
             ['amount','!=',0]])
@@ -5475,7 +5477,12 @@ public function getClientPackagesByGroup($client_id, $group_id){
             $index++;
         }
 
-        $list = ['list' => $data,'total_payment' => $oldAmount + $newAmount, 'remainingEwallet' => $this->getGroupEwallet($request->group_id)];
+        $list = [
+            'name' => $groupName[0],
+            'list' => $data,
+            'total_payment' => $oldAmount + $newAmount,
+            'remainingEwallet' => $this->getGroupEwallet($request->group_id)
+        ];
 
         if($options == "pdf"){
             return [
