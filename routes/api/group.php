@@ -94,6 +94,6 @@ use Illuminate\Http\Request;
 
 	Route::post('get-group-history', 'GroupController@getGroupHistory');
 
-	Route::post('get-total-payment', 'GroupController@getTotalPayment');
+	Route::post('get-fund-list', 'GroupController@getFundList');
 
 });

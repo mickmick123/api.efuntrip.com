@@ -5447,30 +5447,37 @@ public function getClientPackagesByGroup($client_id, $group_id){
       return Response::json($response);
   }
 
-  public function getTotalPayment(Request $request){
-    $oldPayments = ClientTransaction::where([['group_id',$request->group_id],
-        ['client_service_id',null]])
-        ->where(function ($q){
-            $q->where('type', 'Deposit');
-            $q->orwhere('type', 'Payment');
-        })->get();
-    $oldAmount = 0;
-    foreach($oldPayments as $k=>$v){
-        $oldAmount += (float)$v->amount;
+    public function getFundList(Request $request){
+        $data = [];
+        $index = 0;
+
+        $oldPayments = ClientTransaction::where([['group_id',$request->group_id],
+            ['client_service_id',null]])
+            ->where(function ($q){
+                $q->where('type', 'Deposit');
+                $q->orwhere('type', 'Payment');
+            })->get();
+        $oldAmount = 0;
+        foreach($oldPayments as $k=>$v){
+            $data[$index] = ['type' => $v->type, 'amount' => $v->amount, 'created_at' => $v->created_at];
+            $oldAmount += (float)$v->amount;
+            $index++;
+        }
+
+        $newPayments = ClientEWallet::where([['group_id',$request->group_id],
+            ['type','Deposit']])->get();
+        $newAmount = 0;
+        foreach($newPayments as $k=>$v){
+            $data[$index] = ['type' => $v->type, 'amount' => $v->amount, 'created_at' => $v->created_at];
+            $newAmount += (float)$v->amount;
+            $index++;
+        }
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = ['list'=>$data,'total_payment'=>$oldAmount + $newAmount];
+
+        return Response::json($response);
     }
-
-    $newPayments = ClientEWallet::where([['group_id',$request->group_id],
-        ['type','Deposit']])->get();
-    $newAmount = 0;
-    foreach($newPayments as $k=>$v){
-        $newAmount += (float)$v->amount;
-    }
-
-    $response['status'] = 'Success';
-    $response['code'] = 200;
-    $response['data'] = $oldAmount + $newAmount;
-
-    return Response::json($response);
-  }
 
 }
