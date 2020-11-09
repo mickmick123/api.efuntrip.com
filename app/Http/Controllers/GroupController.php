@@ -5452,23 +5452,25 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $index = 0;
 
         $oldPayments = ClientTransaction::where([['group_id',$request->group_id],
-            ['client_service_id',null]])
+            ['client_service_id',null],
+            ['amount','!=',0]])
             ->where(function ($q){
                 $q->where('type', 'Deposit');
                 $q->orwhere('type', 'Payment');
             })->get();
         $oldAmount = 0;
         foreach($oldPayments as $k=>$v){
-            $data[$index] = ['type' => $v->type, 'amount' => $v->amount, 'created_at' => Carbon::parse($v->created_at)->format('M d Y h:i a')];
+            $data[$index] = ['type' => $v->type, 'amount' => $v->amount, 'created_at' => Carbon::parse($v->created_at)->format('M. d, Y h:i a')];
             $oldAmount += (float)$v->amount;
             $index++;
         }
 
         $newPayments = ClientEWallet::where([['group_id',$request->group_id],
-            ['type','Deposit']])->get();
+            ['type','Deposit'],
+            ['amount','!=',0]])->get();
         $newAmount = 0;
         foreach($newPayments as $k=>$v){
-            $data[$index] = ['type' => $v->type, 'amount' => $v->amount, 'created_at' => Carbon::parse($v->created_at)->format('M d Y h:i a')];
+            $data[$index] = ['type' => $v->type, 'amount' => $v->amount, 'created_at' => Carbon::parse($v->created_at)->format('M. d, Y h:i a')];
             $newAmount += (float)$v->amount;
             $index++;
         }
