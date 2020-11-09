@@ -185,6 +185,14 @@ class ClientController extends Controller
         $sort = $request->input('sort');
         $search = $request->input('search');
         $from = $request->input('from');
+        $colIds = [1047,2447,2692,3287,3908,3998,4395,4423,5001,5049,5337,5344,7020,7041,7102,7722,8627,8665,8666,8667,8668,8706,8723,8724,8726,8977,9344,9929,9937,10005,10129,10259,10470,10499,10504,10853,10854,11138,11241,11462,11561,11562,11566,11624,11750,12010,12384,12401,12566,12639,12642,12700,12701,12705,12721,12908,13101,13130,13301,13302,13343,13359,13403,13478,13638,13702,13910,13919,14121,14122,14123,14204,14912,14915,14937,14948,15046,15052,15055,15654,15710,15765,15799,15827,15830,15845,15846,15864,15871,15872,15876,15893,15902,15903,15906,15909,15940,16036,16038,16042,16081];
+
+        foreach ($colIds as $colid) {       
+            $total_balance =  $this->getClientTotalBalance($colid);
+            $col_balance =  $this->getClientTotalCollectables($colid);
+            User::where('id', $colid)
+                ->update(['balance' => $total_balance, 'collectable' => (($col_balance >= 0) ? 0 : $col_balance)]);
+        }
 
         $search_id = 0;
         $q1 = '';  $q2 = ''; $spaces = 0;
@@ -409,11 +417,12 @@ class ClientController extends Controller
             foreach ($c->remarks as $l){
                 $l->created_at = Carbon::parse($l->created_at)->format('M j, Y h:i');;
             }
-
-            // $total_balance =  $this->getClientTotalBalance($c->id);
-            // $col_balance =  $this->getClientTotalCollectables($c->id);
-            // User::where('id', $c->id)
-            //     ->update(['balance' => $total_balance, 'collectable' => (($col_balance >= 0) ? 0 : $col_balance)]);
+            // if (in_array($c->id, $colIds)){        
+            //     $total_balance =  $this->getClientTotalBalance($c->id);
+            //     $col_balance =  $this->getClientTotalCollectables($c->id);
+            //     User::where('id', $c->id)
+            //         ->update(['balance' => $total_balance, 'collectable' => (($col_balance >= 0) ? 0 : $col_balance)]);
+            // }
         }
 
 				$response = $clients;
