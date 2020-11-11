@@ -5489,7 +5489,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
             ->where(function ($q){
                 $q->where('type', 'Deposit');
                 $q->orwhere('type', 'Refund');
-            })->get();
+            })->where('reason','!=','Generating DP')->get();
         $newAmount = 0;
         foreach($newPayments as $k=>$v){
             $amount = $v->type === 'Refund' ? -(float)$v->amount : (float)$v->amount;
