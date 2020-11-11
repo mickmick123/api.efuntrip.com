@@ -5485,11 +5485,16 @@ public function getClientPackagesByGroup($client_id, $group_id){
             function($q) use($request){
                 return $q->where('group_id',$request->id);
             })
-            ->where([['type','Deposit'], ['amount','!=',0]])->get();
+            ->where('amount','!=',0)
+            ->where(function ($q){
+                $q->where('type', 'Deposit');
+                $q->orwhere('type', 'Refund');
+            })->get();
         $newAmount = 0;
         foreach($newPayments as $k=>$v){
-            $data[$index] = ['type' => $v->type, 'amount' => $v->amount, 'created_at' => Carbon::parse($v->created_at)->format('M. d, Y h:i a')];
-            $newAmount += (float)$v->amount;
+            $amount = $v->type === 'Refund' ? -(float)$v->amount : (float)$v->amount;
+            $data[$index] = ['type' => $v->type, 'amount' => $amount, 'created_at' => Carbon::parse($v->created_at)->format('M. d, Y h:i a')];
+            $newAmount += $amount;
             $index++;
         }
 
