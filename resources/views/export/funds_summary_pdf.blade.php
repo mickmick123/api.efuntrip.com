@@ -54,12 +54,11 @@
     </thead>
     <tbody>
     @foreach( $result["list"] as $row )
-        <tr>
-            <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;" colspan="8">{{ $row["type"] }}</td>
-            <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;" colspan="8">{{ number_format($row["amount"],2) }}</td><!--
-            <td class="borderBottom" style="text-align:right; border-right: 1px solid #e0e0e0;" colspan="8"><span style="margin-right: 40px">{{ number_format($row["amount"],2) }}</span></td>-->
-            <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;" colspan="8">{{ $row["created_at"] }}</td>
-        </tr>
+    <tr>
+        <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;" colspan="8">{{ $row["type"] }}</td>
+        <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;" colspan="8">{{ number_format($row["amount"],2) }}</td>
+        <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;" colspan="8">{{ $row["created_at"] }}</td>
+    </tr>
     @endforeach
     </tbody>
 </table>

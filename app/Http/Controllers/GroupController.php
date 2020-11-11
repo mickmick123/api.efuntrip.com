@@ -5518,7 +5518,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
     public function exportFundsSummary(Request $request){
         $export = $this->getFundList($request, 'pdf');
-        $pdf = PDF::loadView('export.group_funds_pdf', $export);
+        $pdf = PDF::loadView('export.funds_summary_pdf', $export);
 
         return $pdf->download('xxxx.pdf');
     }
