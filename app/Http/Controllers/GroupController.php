@@ -5451,11 +5451,22 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $data = [];
         $index = 0;
 
-        $groupName = Group::where('id',$request->group_id)->pluck('name');
+        if($request->type === 'clients'){
+            $name = User::where('id',$request->id)->get(DB::raw("CONCAT(first_name,' ',last_name) AS name"));
+            $remainingEwallet = app(ClientController::class)->getClientEwallet($request->id);
+        }else{
+            $name = Group::where('id',$request->id)->get('name');
+            $remainingEwallet = $this->getGroupEwallet($request->id);
+        }
 
-        $oldPayments = ClientTransaction::where([['group_id',$request->group_id],
-            ['client_service_id',null],
-            ['amount','!=',0]])
+        $oldPayments = ClientTransaction::when($request->type === 'clients',
+            function($q) use($request){
+                return $q->where('client_id',$request->id);
+            },
+            function($q) use($request){
+                return $q->where('group_id',$request->id);
+            })
+            ->where([['client_service_id',null], ['amount','!=',0]])
             ->where(function ($q){
                 $q->where('type', 'Deposit');
                 $q->orwhere('type', 'Payment');
@@ -5467,9 +5478,14 @@ public function getClientPackagesByGroup($client_id, $group_id){
             $index++;
         }
 
-        $newPayments = ClientEWallet::where([['group_id',$request->group_id],
-            ['type','Deposit'],
-            ['amount','!=',0]])->get();
+        $newPayments = ClientEWallet::when($request->type === 'clients',
+            function($q) use($request){
+                return $q->where('client_id',$request->id);
+            },
+            function($q) use($request){
+                return $q->where('group_id',$request->id);
+            })
+            ->where([['type','Deposit'], ['amount','!=',0]])->get();
         $newAmount = 0;
         foreach($newPayments as $k=>$v){
             $data[$index] = ['type' => $v->type, 'amount' => $v->amount, 'created_at' => Carbon::parse($v->created_at)->format('M. d, Y h:i a')];
@@ -5478,10 +5494,10 @@ public function getClientPackagesByGroup($client_id, $group_id){
         }
 
         $list = [
-            'name' => $groupName[0],
+            'name' => $name[0]->name,
             'list' => $data,
             'total_payment' => $oldAmount + $newAmount,
-            'remainingEwallet' => $this->getGroupEwallet($request->group_id)
+            'remainingEwallet' => $remainingEwallet
         ];
 
         if($options == "pdf"){
