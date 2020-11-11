@@ -5461,7 +5461,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
         $oldPayments = ClientTransaction::when($request->type === 'clients',
             function($q) use($request){
-                return $q->where('client_id',$request->id);
+                return $q->where([['group_id',null],['client_id',$request->id]]);
             },
             function($q) use($request){
                 return $q->where('group_id',$request->id);
@@ -5480,7 +5480,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
         $newPayments = ClientEWallet::when($request->type === 'clients',
             function($q) use($request){
-                return $q->where('client_id',$request->id);
+                return $q->where([['group_id',null],['client_id',$request->id]]);
             },
             function($q) use($request){
                 return $q->where('group_id',$request->id);
