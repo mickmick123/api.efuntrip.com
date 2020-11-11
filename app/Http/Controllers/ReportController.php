@@ -1693,8 +1693,10 @@ class ReportController extends Controller
                 DB::raw('count(document_log.document_id) AS TopSelected')])
             ->groupBy('document_log.document_id')->orderBy('TopSelected','DESC')->limit(15)->get();
 
+        $dd = $docs1->pluck('document_id');
+
 		$docs2 = Document::select(['id', 'title', 'shorthand_name', 'is_unique', 'is_company_document'])
-					->whereNotIn('id', $latestDocs)->get();
+					->whereNotIn('id', $dd)->get();
 
 	  $d1 = collect($docs1);
     $d2 = collect($docs2);
