@@ -38,11 +38,11 @@ class FinancialExport implements FromView, WithEvents, ShouldAutoSize
 
                 for($i=5;$i<count($this->data) + 6;$i++){
                     $sheet->mergeCells("B$i:C$i");
-                    $sheet->getColumnDimension("B")->setAutoSize(false);
-                    $sheet->getColumnDimension("B")->setWidth(25);
-                    $sheet->getColumnDimension("C")->setAutoSize(false);
-                    $sheet->getColumnDimension("C")->setWidth(25);
                 }
+                $sheet->getColumnDimension("B")->setAutoSize(false);
+                $sheet->getColumnDimension("B")->setWidth(25);
+                $sheet->getColumnDimension("C")->setAutoSize(false);
+                $sheet->getColumnDimension("C")->setWidth(25);
                 $sheet->getColumnDimension("D")->setAutoSize(false);
                 $sheet->getColumnDimension("D")->setWidth(15);
                 $sheet->getColumnDimension("E")->setAutoSize(false);
