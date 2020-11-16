@@ -16,9 +16,13 @@ use Carbon\Carbon;
 
 use DB, Auth;
 
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\FinancialExport;
+use PDF;
+
 class FinancingController extends Controller
 {
-    
+
     public function show($date, $branch_id) {
     	$date = str_replace("-", "/", $date);
     	$dateSelector = Carbon::parse($date.'/01')->toDateTimeString();
@@ -33,7 +37,7 @@ class FinancingController extends Controller
     						->orderBy('created_at', 'DESC')->count();
 
         $checkData = DB::table('financing')->where('branch_id',$branch_id)->count();
-          
+
         $month = Carbon::parse($dateSelector);
 
 		if(($checkInitial==0 && $checkData>0) && $now->month==$month->month){
@@ -46,13 +50,12 @@ class FinancingController extends Controller
             ->whereRaw('YEAR(created_at) = YEAR("'.$dateSelector.'")')
     				->where('branch_id',$branch_id)
     				->where('deleted_at',null)->orderBy('created_at', 'DESC')
-    				->paginate(5000);
-    	$ctr = 1;			
+            ->paginate(5000);
+    	$ctr = 1;
     	foreach($query as $q){
     		$q->index = $ctr;
     		$ctr++;
     	}
-
 
 		$response['status'] = 'Success';
 		$response['data'] = $query;
@@ -61,21 +64,39 @@ class FinancingController extends Controller
 		return Response::json($response);
 	}
 
+	public function export(Request $request){
+        if($request->options == "xls"){
+            $export = new FinancialExport($request->data, $request->data2, $request->lang);
+            return Excel::download($export, 'xxxx.xlsx');
+        }
+
+        $pdf = PDF::loadView('export.financial_monitor_pdf', array(
+            'lang' => FinancialExport::getLang($request->lang),
+            'data' => FinancialExport::formatData($request->data, $request->lang),
+            'data2' => $request->data2,
+            'watermark' => public_path()."/images/watermark.png",
+            'logo' => public_path()."/images/logo.png",
+            'font'=> public_path()."/assets/fonts/simhei.ttf"
+        ));
+        $pdf->setPaper('A4', 'landscape');
+        return $pdf->download('xxxx.pdf');
+    }
+
 
 	public function fixInitial($branch_id,$dd){
-     
+
       $now = Carbon::now();
       if($dd==0){
         $initial = DB::table('financing')->where('branch_id',$branch_id)->where('cat_type','initial')->orderBy('created_at', 'desc')->first();
       }else{
         $initial = DB::table('financing')->where('branch_id',$branch_id)->where('cat_type','initial')->orderBy('created_at', 'desc')->skip(1)->first();
       }
-   
+
       if($initial){
-        
+
         $month = Carbon::parse($initial->created_at);
         $y = $month->year;
-        
+
         $cash = $initial->cash_balance;
         $metrobank = $initial->metrobank;
         $securitybank = $initial->securitybank;
@@ -103,7 +124,7 @@ class FinancingController extends Controller
                             + ($q->cat_storage=='cash' ? $q->cash_admin_budget_return:0)
                             + ($q->cat_storage=='cash' ? $q->deposit_other:0)
                         )
-                        - 
+                        -
                         (
                         	($q->cat_storage=='cash' ? $q->cash_client_refund:0)
                             + ($q->cat_storage=='cash' ? $q->cash_process_cost:0)
@@ -134,7 +155,7 @@ class FinancingController extends Controller
             $ndate2 = explode('-',$ndate1[0]);
             $ndate3 = Carbon::parse($ndate2[0].'/'.($i+1).'/01')->toDateTimeString();
             //dd($cash);
-            
+
             if($dd==0){
               Financing::create([
                 'cat_type'=>'initial',
@@ -161,7 +182,7 @@ class FinancingController extends Controller
             $eastwest = $initial->eastwest;
             $chinabank = $initial->chinabank;
             $pnb = $initial->pnb;
-             
+
         }
       }
     }
@@ -194,14 +215,14 @@ class FinancingController extends Controller
     public function update(Request $request, $id) {
       $trans_type = $request->trans_type;
 
-      $update_field = ($trans_type == 'process_cost' ? 
-      						'cash_process_cost' : 
-      						($trans_type =='admin_budget_return' ? 
-  							   'cash_admin_budget_return' : 
-  							   ($trans_type == 'process_budget_return' ? 
-  							   		'cash_client_process_budget_return' : 
-  							   		($trans_type == 'admin_add_budget' || $trans_type == 'process_add_budget' ? 
-  							   			'additional_budget' : 
+      $update_field = ($trans_type == 'process_cost' ?
+      						'cash_process_cost' :
+      						($trans_type =='admin_budget_return' ?
+  							   'cash_admin_budget_return' :
+  							   ($trans_type == 'process_budget_return' ?
+  							   		'cash_client_process_budget_return' :
+  							   		($trans_type == 'admin_add_budget' || $trans_type == 'process_add_budget' ?
+  							   			'additional_budget' :
   							   			'cash_admin_cost'
   							   		)
   							   	)
@@ -212,7 +233,7 @@ class FinancingController extends Controller
       $timestamp = strtotime($finance->created_at);
       $oldMonth = date('m', $timestamp);
       $curMonth = date('m');
-      
+
       if($update_field == 'cash_admin_budget_return'){
         	$nAmount = Financing::select('cash_admin_cost')
         					->where('id', $request->borrowed_id)
@@ -224,10 +245,10 @@ class FinancingController extends Controller
       }
 
       if($trans_type != 'admin_add_budget' && $trans_type != 'process_add_budget'){
-        	$nAmount = $nAmount + 
-        			($finance->additional_budget != null && $finance->additional_budget != '' ? 
-        				$finance->additional_budget : 
-        				0 
+        	$nAmount = $nAmount +
+        			($finance->additional_budget != null && $finance->additional_budget != '' ?
+        				$finance->additional_budget :
+        				0
         			);
       }
 
@@ -242,10 +263,10 @@ class FinancingController extends Controller
 
 
           if($oldMonth!=$curMonth){
-        
+
             $this->fixInitial($finance->branch_id,1);
           }
-  
+
          return json_encode([
              'success' => 'Success',
              'code'	   => 200,
