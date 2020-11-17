@@ -1120,7 +1120,9 @@ class ReportController extends Controller
 
       $previousCost = $cs->cost;
 
-      $cs->update(['cost' => $cost]);
+      $cs->cost = $cost;
+      $cs->is_full_payment = 0;
+      $cs->save();
 
       $totalPrice = $cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent;
 
