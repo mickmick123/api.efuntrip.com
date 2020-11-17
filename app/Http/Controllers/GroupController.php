@@ -5467,14 +5467,12 @@ public function getClientPackagesByGroup($client_id, $group_id){
                 return $q->where('group_id',$request->id);
             })
             ->where([['client_service_id',null], ['amount','!=',0]])
-            ->where(function ($q){
-                $q->where('type', 'Deposit');
-                $q->orwhere('type', 'Payment');
-            })->get();
+            ->get();
         $oldAmount = 0;
         foreach($oldPayments as $k=>$v){
-            $data[$index] = ['type' => $v->type, 'amount' => $v->amount, 'created_at' => Carbon::parse($v->created_at)->format('M. d, Y h:i a')];
-            $oldAmount += (float)$v->amount;
+            $amount = $v->type === 'Refund' ? -(float)$v->amount : (float)$v->amount;
+            $data[$index] = ['type' => $v->type, 'amount' => $v->amount, 'reason' => $v->reason, 'created_at' => Carbon::parse($v->created_at)->format('M. d, Y h:i a')];
+            $oldAmount += $amount;
             $index++;
         }
 
@@ -5497,7 +5495,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $newAmount = 0;
         foreach($newPayments as $k=>$v){
             $amount = $v->type === 'Refund' ? -(float)$v->amount : (float)$v->amount;
-            $data[$index] = ['type' => $v->type, 'amount' => $amount, 'created_at' => Carbon::parse($v->created_at)->format('M. d, Y h:i a')];
+            $data[$index] = ['type' => $v->type, 'amount' => $amount, 'reason' => $v->reason, 'created_at' => Carbon::parse($v->created_at)->format('M. d, Y h:i a')];
             $newAmount += $amount;
             $index++;
         }
