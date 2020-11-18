@@ -499,10 +499,9 @@ class AppController extends Controller
                 $user->password = bcrypt($password);
                 $user->save();
 
-                $response['status'] = 'Success';
-                $response['code'] = 200;
+                $response['status'] = 200;
                 $response['data'] = $user;
-                $httpStatusCode = 200; 
+                $httpStatusCode = 200;
 
                 return Response::json($response, $httpStatusCode);
             } else {
