@@ -472,8 +472,13 @@ class AppController extends Controller
 
         $user = User::where('id',$client_id)->first();
 
+        $contact = ContactNumber::where('is_primary',1)->where('user_id',$client_id)->first();
+
+        
         if($user){
-            $cnum = $user->contact_number;
+
+            $cnum = $contact->number;
+
             if(Hash::check($cnum, $password)) {
                 $response['status'] = 'Failed';
                 $response['desc'] = 'Please don\'t use your mobile number as your password.';
