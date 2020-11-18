@@ -409,7 +409,7 @@ class ClientController extends Controller
             foreach ($c->remarks as $l){
                 $l->created_at = Carbon::parse($l->created_at)->format('M j, Y h:i');;
             }
-            // if (in_array($c->id, $colIds)){        
+            // if (in_array($c->id, $colIds)){
             //     $total_balance =  $this->getClientTotalBalance($c->id);
             //     $col_balance =  $this->getClientTotalCollectables($c->id);
             //     User::where('id', $c->id)
@@ -2996,8 +2996,6 @@ class ClientController extends Controller
                     'gender' => ($request->gender) ? $request->gender : null
                 ]);
 
-                $client->update(['email' => $client->id]);
-
                 //save action logs
                 $detail = "Created new client -> ".$client->first_name.' '.$client->last_name.'.';
                 $detail_cn = "Created new client -> ".$client->first_name.' '.$client->last_name.'.';
@@ -3015,6 +3013,10 @@ class ClientController extends Controller
                     'user_id' => $client->id,
                     'number' => $contactNumber
                 ]);
+
+                $email = User::find($client->id);
+                $email->email = $client->id;
+                $email->save();
 
                 $client->branches()->attach($request->branch);
                 $client->roles()->attach(2);

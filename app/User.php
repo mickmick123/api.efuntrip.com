@@ -48,6 +48,16 @@ class User extends Authenticatable
                 }
             }
         });
+        static::updated(function ($model) {
+            if ($model->password == '') {
+                $num = ContactNumber::where('user_id', $model->id)->first();
+                if ($num) {
+                    $num = $num->number;
+                    $model->password = bcrypt($num);
+                    $model->save();
+                }
+            }
+        });
         // }
 
     }
