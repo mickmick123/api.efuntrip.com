@@ -500,7 +500,7 @@ class AppController extends Controller
                 $user->save();
 
                 $response['status'] = 200;
-                $response['user'] = $user;
+                $response['client'] = $user;
                 $httpStatusCode = 200; // Success
 
                 return Response::json($response, $httpStatusCode);
