@@ -474,7 +474,7 @@ class AppController extends Controller
 
         $contact = ContactNumber::where('is_primary',1)->where('user_id',$client_id)->first();
 
-        
+
         if($user){
 
             $cnum = $contact->number;
@@ -498,7 +498,13 @@ class AppController extends Controller
             if(Hash::check($old_password, $user->password)) {
                 $user->password = bcrypt($password);
                 $user->save();
-                return $user;
+
+                $response['status'] = 'Success';
+                $response['code'] = 200;
+                $response['data'] = $user;
+                $httpStatusCode = 200; 
+
+                return Response::json($response, $httpStatusCode);
             } else {
                 $response['status'] = 'Failed';
                 $response['desc'] = 'Incorrect old password.';
