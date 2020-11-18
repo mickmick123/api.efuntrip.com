@@ -33,19 +33,21 @@ class User extends Authenticatable
         //     // if(!$checkRole){
         //     //     $user = User::where('id',$u->id)->first();
         //     //     $user->roles()->attach(2);
-        //     // }            
+        //     // }
         //     if(!$checkBranch && !$checkBranch2 && !$checkBranch3){
         //         $user = User::where('id',$u->id)->first();
         //         $user->branches()->attach(1);
         //     }
-        //     if($u->password == ''){            
-        //         $num = ContactNumber::where('user_id',$u->id)->first();
-        //         if($num){
-        //             $num = $num->number;
-        //         $u->password = bcrypt($num);
-        //         $u->save();
-        //         }
-        //     }
+        static::created(function ($model) {
+            if ($model->password == '') {
+                $num = ContactNumber::where('user_id', $model->id)->first();
+                if ($num) {
+                    $num = $num->number;
+                    $model->password = bcrypt($num);
+                    $model->save();
+                }
+            }
+        });
         // }
 
     }
@@ -166,5 +168,5 @@ class User extends Authenticatable
 
         return !! $permission->intersect($this->permissions)->count();
     }
-    
+
 }
