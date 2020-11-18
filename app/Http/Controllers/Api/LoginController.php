@@ -84,4 +84,5 @@ class LoginController extends Controller{
             return $this->jsonReturn('401','Insufficient permissions/权限不足','Insufficient permissions/权限不足');
         }
     }
+
 }

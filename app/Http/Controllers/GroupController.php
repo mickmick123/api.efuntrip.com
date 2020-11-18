@@ -2682,6 +2682,9 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
              $cost = ($getServ->cost + $getServ->charge + $getServ->tip + $getServ->com_client + $getServ->com_agent) - $discount;
 
+
+             $log_data = array();
+
              if($request->option == 'client-to-group') {
                  $details = 'Transfer service ' . $getServ->detail . ' to Group Package #' . $tracking .' with <strong>Total Service Cost of ' . $cost;
                  $details_cn = '转移了服务 ' . $cnserv . '到服务包(团体)#' . $tracking .'以及总服务费 Php' . $cost;
@@ -2696,22 +2699,25 @@ public function getClientPackagesByGroup($client_id, $group_id){
                  $_groupId = $groupId;
              }
 
-             // save transaction logs
              $log_data = array(
                  'client_service_id' => $getServ->id,
-                 'client_id' => $request->member_id,
-                 'group_id' => null,
+                 'client_id' => null,
+                 'group_id' => $_groupId,
                  'log_type' => 'Transaction',
                  'log_group' => 'service',
                  'detail'=> $details,
                  'detail_cn'=> $details_cn,
                  'amount'=> $cost,
              );
-             LogController::save($log_data);
 
-             // $log_data['group_id'] = $_groupId;
-             // $log_data['client_id'] = null;
-             // LogController::save($log_data);
+              $log_data['group_id'] = $_groupId;
+              $log_data['client_id'] = null;
+              LogController::save($log_data);
+
+
+              $log_data['group_id'] = null;
+              $log_data['client_id'] = $request->member_id;
+              LogController::save($log_data);
 
          }
 

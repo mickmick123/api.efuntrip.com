@@ -31,7 +31,7 @@ use phpseclib\Crypt\RSA;
 
 class AppController extends Controller
 {
-    
+
     public function login(Request $request) {
         $validator = Validator::make($request->all(), [
             'username' => 'required',
@@ -40,7 +40,7 @@ class AppController extends Controller
             'device_id' => 'required',
             'device_type' => 'required',
         ]);
-       
+
         $login = $request->username;
         $result = filter_var( $login, FILTER_VALIDATE_EMAIL);
 
@@ -52,13 +52,13 @@ class AppController extends Controller
             $login = ltrim($login,'63');
 
             if(is_numeric($login)){
-                
+
                 $ids = ContactNumber::where('number','like','%'.$login)->where('user_id','!=',null)->pluck('user_id');
                 $user = User::whereIn('id', $ids)->get();
             }else{
-                $user = NULL; 
+                $user = NULL;
             }
-            
+
         }
         else{
             $user = User::where('email', $login)->get();
@@ -127,11 +127,11 @@ class AppController extends Controller
                         $response['code'] = 200;
 
                         return Response::json($response);
-                    } 
+                    }
                 }
                     $response['status'] = 'Failed';
                     $response['desc'] = 'Client authentication failed';
-                    $response['code'] = 422;                
+                    $response['code'] = 422;
 
             } else {
                 $response['status'] = 'Failed';
@@ -144,33 +144,33 @@ class AppController extends Controller
     }
 
     public function verifyUsername(Request $request) {
-   
+
         $validator = Validator::make($request->all(), [
             'username' => 'required',
 
         ]);
         $login = $request->username;
         $result = filter_var( $login, FILTER_VALIDATE_EMAIL );
-       
+
         if(!$result){
-            
+
             preg_match_all('!\d+!', $login, $matches);
             $login = implode("", $matches[0]);
             $login = ltrim($login,"0");
             $login = ltrim($login,'+');
             $login = ltrim($login,'63');
-            
+
             if(is_numeric($login)){
                 $clients = ContactNumber::where('is_primary',1)->where('number','like', '%'.$login)->where('user_id','!=',null)->pluck('user_id');
-                $binded = User::where('password','!=','')->whereIn('id', $clients)->get(); 
+                $binded = User::where('password','!=','')->whereIn('id', $clients)->get();
             }else{
                 $binded = NULL;
-            }  
+            }
         }
         else{
             $binded = User::where('password','!=','')->where('email', $login)->get();
         }
-        
+
         $response = [];
 
         if( $validator->fails() ) {
@@ -198,7 +198,7 @@ class AppController extends Controller
             $response['code'] = 400;
             return Response::json($response);
         }
-        else{     
+        else{
             $fname = $request['first_name'];
             $lname = $request['last_name'];
             $gender = $request['gender'];
@@ -265,10 +265,10 @@ class AppController extends Controller
                     //getting of client info if bind
                     if($checkIfBind){
                         $userBind = User::where('id',$checkIfBind->id)->select('id','first_name','middle_name','last_name')->first();
-                        $data['user_bind'] = $userBind;         
+                        $data['user_bind'] = $userBind;
                     }
                     else{
-                        $data['user_bind'] = '';         
+                        $data['user_bind'] = '';
                     }
 
                     //check empty details
@@ -285,7 +285,7 @@ class AppController extends Controller
                     if($client->civil_status == null || $client->civil_status == '' || $client->civil_status == 'n/a' || $client->civil_status == 'N/A'){
                         $emp.="civil_status ";
                     }
-                   
+
                     if($client->address == NULL || $client->address == ''){
                         $emp.="local_address ";
                     }
@@ -327,7 +327,7 @@ class AppController extends Controller
             $response['code'] = 400; // Request Error
             return Response::json($response);
         }
-        else{     
+        else{
             $passport = $request['client_passport'];
             $clients = str_replace(array( '[', ']' ), '', $request['users_found']);
             $users_found = explode(',', $clients);
@@ -427,8 +427,8 @@ class AppController extends Controller
                 'Content-Type' => 'application/json'
             ]);
 
-            $r = $client->request('POST', 
-                'https://openapi.gjob.ph/pay', 
+            $r = $client->request('POST',
+                'https://openapi.gjob.ph/pay',
                 [
                     'json' => $data
                 ]
@@ -461,6 +461,48 @@ class AppController extends Controller
         $data['status'] = 'Success';
         $data['code'] = 200;
         return Response::json($data);
+    }
+
+
+    public function saveNewPassword(Request $request){
+
+        $client_id = $request['client_id'];
+        $password = $request['password'];
+        $old_password = $request['old_password'];
+
+        $user = User::where('id',$client_id)->first();
+
+        if($user){
+            $cnum = $user->contact_number;
+            if(Hash::check($cnum, $password)) {
+                $response['status'] = 'Failed';
+                $response['desc'] = 'Please don\'t use your mobile number as your password.';
+                $response['desc_cn'] = 'Please don\'t use your mobile number as your password.';
+                $httpStatusCode = 200; // Client Authentication failed
+                return Response::json($response, $httpStatusCode);
+            }
+
+            if(Hash::check($password, $user->password)) {
+                $response['status'] = 'Failed';
+                $response['desc'] = 'Please enter different password.';
+                $response['desc_cn'] = 'Please enter different password.';
+                $httpStatusCode = 200; // Client Authentication failed
+                return Response::json($response, $httpStatusCode);
+            }
+
+            if(Hash::check($old_password, $user->password)) {
+                $user->password = bcrypt($password);
+                $user->save();
+                return $user;
+            } else {
+                $response['status'] = 'Failed';
+                $response['desc'] = 'Incorrect old password.';
+                $response['desc_cn'] = 'Incorrect old password.';
+                $httpStatusCode = 200; // Client Authentication failed
+                return Response::json($response, $httpStatusCode);
+            }
+        }
+
     }
 
 }
