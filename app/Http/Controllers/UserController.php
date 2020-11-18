@@ -42,7 +42,6 @@ class UserController extends Controller
                 $login = ltrim($login,'63');
 
                 if(is_numeric($login)){
-                    
                     $ids = ContactNumber::where('number','like','%'.$login)->where('user_id','!=',null)->pluck('user_id');
                     $user = User::whereIn('id', $ids)->get();
                 }else{
@@ -57,7 +56,8 @@ class UserController extends Controller
             $count = 0;
         	if( $user ) {
                 foreach($user as $u){
-            		if( Hash::check($request->password, $u->password) ) {
+                    $client = User::findorFail($u->id);
+            		if( Hash::check($request->password, $u->password) && ($client->hasRole('cpanel-admin') || $client->hasRole('master') || $client->hasRole('employee'))) {
             			if( $request->source == 'mobile' ) {
             				Device::updateOrCreate(
             					['user_id' => $u->id, 'device_type' => $request->device_type, 'device_token' => $request->device_token],
@@ -89,6 +89,12 @@ class UserController extends Controller
             $response['errors'] = 'Invalid username/password.';
             $response['code'] = 401;
         }
+
+        // if($client->hasRole('cpanel-admin') || $client->hasRole('master') || $client->hasRole('employee')){
+        //     $response['status'] = 'Failed';
+        //     $response['errors'] = 'No Access';
+        //     $response['code'] = 200;
+        // }
 
         return Response::json($response);
 	}
