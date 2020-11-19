@@ -74,7 +74,18 @@ class AppController extends Controller
         else{
             if($user) {
                 foreach($user as $u){
-                    if (Hash::check($request->password, $u->password)) {
+                    $password = $request->password;
+                    preg_match_all('!\d+!', $password, $matches);
+                    $password = implode("", $matches[0]);
+                    $password = ltrim($password,"0");
+                    $password = ltrim($password,'+');
+                    $password = ltrim($password,'63');
+                    if($login === $password){
+                        $password = '+63'.$password;
+                    }else{
+                        $password = $request->password;
+                    }
+                    if (Hash::check($password, $u->password)) {
                         $client = User::findorFail($u->id)->makeVisible('access_token');
 
                         Device::updateOrCreate(
