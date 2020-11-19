@@ -88,12 +88,13 @@ class AppController extends Controller
                         $cnum = ContactNumber::where('user_id',$client->id)->where('is_primary',1)->first();
                         // $cnum = $user->contact_number;
                         if($cnum){
-                            preg_match_all('!\d+!', $cnum, $matches);
-                            $cnum = implode("", $matches[0]);
+                            //get contact number
+                            $cnum = $cnum->number;
+
                             $cnum = ltrim($cnum,"0");
                             $cnum = ltrim($cnum,'+');
                             $cnum = ltrim($cnum,'63');
-                            $cnum = "0".$cnum;
+                            $cnum = "+63".$cnum;
                             if (Hash::check($cnum,  $u->password)) {
                                 $is_new_user = 1;
                             }
