@@ -45,11 +45,11 @@ class AppController extends Controller
         $result = filter_var( $login, FILTER_VALIDATE_EMAIL);
 
         if(!$result){
-            preg_match_all('!\d+!', $login, $matches);
-            $login = implode("", $matches[0]);
-            $login = ltrim($login,"0");
-            $login = ltrim($login,'+');
-            $login = ltrim($login,'63');
+           preg_match_all('!\d+!', $login, $matches);
+           $login = implode("", $matches[0]);
+           $login = ltrim($login,"0");
+           $login = ltrim($login,'+');
+           $login = ltrim($login,'63');
 
             if(is_numeric($login)){
 
@@ -131,7 +131,7 @@ class AppController extends Controller
                     }
                 }
                     $response['status'] = 'Failed';
-                    $response['desc'] = 'Client authentication failed';
+                    $response['desc'] = 'Invalid Username and Password';
                     $response['code'] = 422;
 
             } else {
