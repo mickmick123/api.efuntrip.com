@@ -507,6 +507,7 @@ class AppController extends Controller
                 return Response::json($response, $httpStatusCode);
             }
 
+            preg_match_all('!\d+!', $old_password, $matches);
             $old_password = ltrim($old_password,"0");
             $old_password = ltrim($old_password,'+');
             $old_password = ltrim($old_password,'63');
