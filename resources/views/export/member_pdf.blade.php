@@ -72,7 +72,7 @@
                 <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">{{ $service['package_cost'] }}</td>
                 <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">{{ $service['discount']  }}</td>
                 <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">{{ $service['payment_amount'] }}</td>
-                <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">{{ ($service['is_full_payment']) ? 0 : (($service['payment_amount'] > 0) ? "-". ($service['package_cost'] - $service['payment_amount']) : (($service['package_cost'] > 0) ? "-". $service['package_cost'] : 0)) }}</td>
+                <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;">{{ ($service['is_full_payment']) ? 0 : (($service['payment_amount'] > 0) ? "-". (($service['package_cost'] - $service['discount']) - $service['payment_amount']) : (($service['package_cost'] > 0) ? "-". ($service['package_cost'] - $service['discount']) : 0)) }}</td>
                 <td class="borderBottom" style="text-align:center">{{ $service['total_service_cost'] }}</td>
           </tr>
 
