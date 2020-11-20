@@ -3966,13 +3966,19 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
          $tempTotal +=$sub;
 
-         //$totalBal = ((float) $totalBal) - ($p['service_cost'] - $p['payment_amount']);
-
-
-
          $p['total_service_cost'] = $totalServiceCost;
          $p['discount'] = ($p['active'] == 1) ? $p['discount'] : 0;
          $p['service_cost'] = ($p['active'] == 1) ? (($p['cost']) + ($p['charge']) + ($p['tip'])) : 0;
+
+         $translated = Service::where('id',$p['service_id'])->first();
+
+         $p['detail'] =  $p['detail'];
+
+         if($translated){
+               if($this->lang === 'CN'){
+                 $p['detail'] = (($translated->detail_cn != '' && $translated->detail_cn != 'NULL') ? $translated->detail_cn : $p['detail']);
+               }
+         }
 
 
 
@@ -4250,7 +4256,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
        ->paginate($page);
    }
 
-   \Log::info($clientServices->items());
+   //\Log::info($clientServices->items());
 
    $ctr = 0;
    $temp = [];
