@@ -507,6 +507,11 @@ class AppController extends Controller
                 return Response::json($response, $httpStatusCode);
             }
 
+            $old_password = ltrim($old_password,"0");
+            $old_password = ltrim($old_password,'+');
+            $old_password = ltrim($old_password,'63');
+            $old_password = "+63".$old_password;
+
             if(Hash::check($old_password, $user->password)) {
                 $user->password = bcrypt($password);
                 $user->save();
