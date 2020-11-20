@@ -3975,7 +3975,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
          $p['detail'] =  $p['detail'];
 
          if($translated){
-               if($this->lang === 'CN'){
+               if($request->lang === 'CN'){
                  $p['detail'] = (($translated->detail_cn != '' && $translated->detail_cn != 'NULL') ? $translated->detail_cn : $p['detail']);
                }
          }
