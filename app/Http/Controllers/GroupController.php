@@ -2609,7 +2609,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
      $gentracking = null;
      for($i=0; $i<count($request->services); $i++) {
 
-         if($request->packages[$i] == 0)   { //New package
+         if($request->packages[$i] === 0)   { //New package
              if($gentracking == null){
                  $type = ($request->option == 'client-to-group') ? 'group' : 'individual';
                  $tracking = $this->generateTracking($type);
