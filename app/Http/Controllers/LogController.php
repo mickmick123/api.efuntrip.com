@@ -1042,9 +1042,12 @@ class LogController extends Controller
         $year = null;
         $currentBalance = app(ClientController::class)->getClientEwallet($client_id);
         $currentService = null;
+        $collectService = [];
+
+        // \Log::info($translogs);
 
         foreach($translogs as $t){
-            if(($t->log_group == 'payment' && $t->client_service_id != $currentService) || $t->log_group != 'payment'){
+            if(($t->log_group == 'payment' && $t->client_service_id != $currentService && !in_array($t->client_service_id, $collectService)) || $t->log_group != 'payment'){
                 $body = "";
                 $usr =  User::where('id',$t->processor_id)->select('id','first_name','last_name')->get();
 
@@ -1053,7 +1056,7 @@ class LogController extends Controller
 
                 $t->balance = $currentBalance;
 
-                $currentBalance -= ($t->amount);
+                // $currentBalance -= ($t->amount);
 
                 $cdate = Carbon::parse($t->log_date)->format('M d Y');
                 $dt = explode(" ", $cdate);
@@ -1098,7 +1101,7 @@ class LogController extends Controller
 
                     $body = DB::table('logs as l')->select(DB::raw('l.detail, l.log_date, l.created_at, pr.first_name, l.amount'))
                     ->where('client_service_id', $cs->id)->where('group_id',null)
-                    ->where('l.id','!=', $t->id)
+                    // ->where('l.id','!=', $t->id)
                     ->leftjoin(
                         DB::raw('
                             (
@@ -1108,15 +1111,18 @@ class LogController extends Controller
                         '),
                         'pr.id', '=', 'l.processor_id'
                     )
-                    ->where('l.id','!=', $t->id)
+                    // ->where('l.id','!=', $t->id)
                     ->where('log_type','Ewallet')
                     ->orderBy('l.id', 'desc')
                     //->distinct('detail')
                     ->get();
 
+
                     $t->amount = DB::table('logs as l')
                                     ->where('client_service_id', $cs->id)->where('group_id',null)
                                     ->where('log_type','Ewallet')->sum('amount');
+
+                    $t->detail = 'Paid service with total amount of Php'.abs($t->amount);
 
                     $data = collect($body->toArray())->flatten()->all();
 
@@ -1125,7 +1131,7 @@ class LogController extends Controller
                     // if($cs->active == 0 || $cs->status == 'cancelled'){
                     //     $csshow = 0;
                     // }
-
+                    array_push($collectService  , $t->client_service_id);
                 }
                 else{
                     $csdetail = ucfirst($t->log_group);
@@ -1136,6 +1142,7 @@ class LogController extends Controller
                     $csshow = 1;
                     //$currentService = null;
                 }
+                $currentBalance -= ($t->amount);
 
                 if($csshow){
                     $arraylogs[] = array(
@@ -1387,11 +1394,12 @@ class LogController extends Controller
         $currentBalance = app(GroupController::class)->getGroupEwallet($group_id);
         $currentService = null;
         $currentLabel = null;
+        $collectService = [];
 
         foreach($translogs as $t){
 
             $t->services = [];
-            if(($t->log_group == 'payment' && $t->client_service_id != $currentService && $t->label != $currentLabel) || $t->log_group != 'payment'){
+            if(($t->log_group == 'payment' && $t->client_service_id != $currentService && $t->label != $currentLabel && !in_array($t->label, $collectService)) || $t->log_group != 'payment'){
                 $body = "";
                 $usr =  User::where('id',$t->processor_id)->select('id','first_name','last_name')->get();
 
@@ -1474,7 +1482,9 @@ class LogController extends Controller
                     else if($t->label != null && $currentLabel != $t->label){
                         // $csdetail = $t->label;
                         $csdetail = '';
-                        $translogs = DB::table('logs')->where('group_id',$group_id)->where('log_type','Ewallet')->where('label',$t->label)->orderBy('id','desc')->get();
+                        $translogs = DB::table('logs')->where('group_id',$group_id)->where('log_type','Ewallet')->where('label',$t->label)->orderBy('client_service_id','desc')
+                        // ->groupBy('client_service_id')
+                        ->get();
 
                         $cs_ids = $translogs->pluck('client_service_id');
 
@@ -1482,10 +1492,6 @@ class LogController extends Controller
                                         ->where('label', $t->label)->where('group_id',$group_id)
                                         ->sum('amount');
                         $t->detail = "Total payment Php".abs($t->amount);
-
-
-
-
 
                         $body = $translogs;
 
@@ -1504,6 +1510,7 @@ class LogController extends Controller
                     // if($cs->active == 0 || $cs->status == 'cancelled'){
                     //     $csshow = 0;
                     // }
+                    array_push($collectService  , $t->label);
 
                 }
                 else{
