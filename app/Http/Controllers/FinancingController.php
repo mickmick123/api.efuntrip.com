@@ -23,6 +23,11 @@ use PDF;
 class FinancingController extends Controller
 {
 
+    protected $financing;
+    public function __construct(Financing $financing){
+        $this->financing = $financing;
+    }
+
     public function show($date, $branch_id) {
     	$date = str_replace("-", "/", $date);
     	$dateSelector = Carbon::parse($date.'/01')->toDateTimeString();
@@ -205,11 +210,11 @@ class FinancingController extends Controller
     }
 
     public function store(Request $request){
-           Financing::create($request->all());
-           $response['status'] = 'Success';
-           $response['code'] = 200;
-           $response['data'] = $request->all();
-           return response()->json($response);
+        $data = $this->financing->create($request->all());
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $data;
+        return response()->json($response);
     }
 
     public function update(Request $request, $id) {
