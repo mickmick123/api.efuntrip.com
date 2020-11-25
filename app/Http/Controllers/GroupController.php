@@ -1161,7 +1161,7 @@ public function addFunds(Request $request) {
                     'detail'=> $detail,
                     'detail_cn'=> $detail_cn,
                     'amount'=> $amount,
-                    'created_at'=> Carbon::now()
+                    'created_at'=> Carbon::now('Asia/Manila')
                 );
                  LogController::save($log_data);
             }
