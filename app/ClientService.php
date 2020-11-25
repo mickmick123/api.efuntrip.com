@@ -29,11 +29,11 @@ class ClientService extends Model
             $original = $model->getOriginal();
             GroupController::createRefund($model,$original);
             GroupController::createOrDeleteCommission($model,$original);
-            static::updateBalanceAndCollectables($model->client_id, $model->group_id);
+            static::updateBalanceAndCollectables($model->client_id, $model->group_id, $original);
         });
     }
 
-    private static function updateBalanceAndCollectables($clientId, $groupId) {
+    private static function updateBalanceAndCollectables($clientId, $groupId, $original) {
         if($groupId == null){
             $collectable = app(ClientController::class)->getClientTotalCollectables($clientId);
             $balance = app(ClientController::class)->getClientTotalBalance($clientId);
@@ -43,6 +43,18 @@ class ClientService extends Model
                 'balance' => $balance,
                 'collectable' => $collectable
             ]);
+
+            if($groupId != $original['group_id']){   
+                $groupId = $original['group_id'];    
+                $collectable = app(GroupController::class)->getGroupTotalCollectables($groupId);
+                $balance = app(GroupController::class)->getGroupTotalBalance($groupId);
+
+                $collectable = ($collectable < 0 ? $collectable : 0);
+                Group::where('id', $groupId)->update([
+                    'balance' => $balance,
+                    'collectables' => $collectable
+                ]);
+            }
         }
         else{
             $collectable = app(GroupController::class)->getGroupTotalCollectables($groupId);
@@ -53,6 +65,31 @@ class ClientService extends Model
                 'balance' => $balance,
                 'collectables' => $collectable
             ]);
+
+            if($groupId != $original['group_id']){
+                if($original['group_id'] != null){
+                    $groupId = $original['group_id'];    
+                    $collectable = app(GroupController::class)->getGroupTotalCollectables($groupId);
+                    $balance = app(GroupController::class)->getGroupTotalBalance($groupId);
+
+                    $collectable = ($collectable < 0 ? $collectable : 0);
+                    Group::where('id', $groupId)->update([
+                        'balance' => $balance,
+                        'collectables' => $collectable
+                    ]);
+                }
+                else{
+                    $clientId = $original['client_id'];
+                    $collectable = app(ClientController::class)->getClientTotalCollectables($clientId);
+                    $balance = app(ClientController::class)->getClientTotalBalance($clientId);
+
+                    $collectable = ($collectable < 0 ? $collectable : 0);
+                    User::where('id', $clientId)->update([
+                        'balance' => $balance,
+                        'collectable' => $collectable
+                    ]);
+                }
+            }
         }
     }
 
