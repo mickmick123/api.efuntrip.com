@@ -1137,20 +1137,22 @@ public function addFunds(Request $request) {
                     $deptype = $bank;
                 }
 
-                $finance = new Financing;
-                $finance->user_sn = Auth::user()->id;
-                $finance->type = "deposit";
-                $finance->record_id = $depo->id;
-                $finance->cat_type = "process";
-                $finance->cat_storage = $storage;
-                $finance->branch_id = 1;
-                $finance->storage_type = $bank;
-                $finance->trans_desc = Auth::user()->first_name.' received deposit from group '.$gname;
-                if($storage=='Alipay'){
-                    $finance->trans_desc = Auth::user()->first_name.' received deposit from group '.$gname.' with Alipay reference: '.$alipay_reference;
+                if($storage !='Promo') {
+                    $finance = new Financing;
+                    $finance->user_sn = Auth::user()->id;
+                    $finance->type = "deposit";
+                    $finance->record_id = $depo->id;
+                    $finance->cat_type = "process";
+                    $finance->cat_storage = $storage;
+                    $finance->branch_id = 1;
+                    $finance->storage_type = $bank;
+                    $finance->trans_desc = Auth::user()->first_name . ' received deposit from group ' . $gname;
+                    if ($storage == 'Alipay') {
+                        $finance->trans_desc = Auth::user()->first_name . ' received deposit from group ' . $gname . ' with Alipay reference: ' . $alipay_reference;
+                    }
+                    ((strcasecmp($storage, 'Cash') == 0) ? $finance->cash_client_depo_payment = $amount : $finance->bank_client_depo_payment = $amount);
+                    $finance->save();
                 }
-                ((strcasecmp($storage,'Cash')==0) ? $finance->cash_client_depo_payment = $amount : $finance->bank_client_depo_payment = $amount);
-                $finance->save();
 
                 // save transaction logs
                 $detail = 'Receive '.$deptype.' deposit with an amount of Php'.$amount.'.';
