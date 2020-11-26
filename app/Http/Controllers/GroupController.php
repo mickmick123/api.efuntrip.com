@@ -271,6 +271,7 @@ class GroupController extends Controller
   public function manageGroupsPaginate(Request $request, $perPage = 20) {
         $sort = $request->input('sort');
         $search = $request->input('search');
+        $branch = $request->input('branch');
 
         $groups = DB::table('groups as g')
             ->select(DB::raw('g.id, g.name, CONCAT(u.first_name, " ", u.last_name) as leader, g.risk,
@@ -297,6 +298,8 @@ class GroupController extends Controller
                         where cs.active = 1 and cs.status != "cancelled"
                         group by cs.group_id) as srv'),
                     'srv.group_id', '=', 'g.id')
+            ->leftjoin('branch_group as bg','bg.group_id','g.id')
+            ->where('branch_id',$branch)
             ->when($search != '', function ($q) use($search){
                 return $q->where('g.id','LIKE', '%'.$search.'%')->orwhere('g.name','LIKE', '%'.$search.'%');
             })

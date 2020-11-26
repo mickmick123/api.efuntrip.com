@@ -185,6 +185,7 @@ class ClientController extends Controller
         $sort = $request->input('sort');
         $search = $request->input('search');
         $from = $request->input('from');
+        $branch = $request->input('branch');
 
         $search_id = 0;
         $q1 = '';  $q2 = ''; $spaces = 0;
@@ -359,7 +360,8 @@ class ClientController extends Controller
                         cs.client_id
                 ) as csrv'),
                 'csrv.client_id', '=', 'u.id')
-            ->where('role.role_id', '2');
+            ->leftjoin('branch_user as bu','bu.user_id','u.id')
+            ->where([['role.role_id', '2'],['branch_id',$branch]]);
 
         if( $request->withActiveServiceOnly ) {
             $clients = $clients->where('active_service_count', '>', 0);
