@@ -55,7 +55,7 @@
     <tbody>
     @foreach( $result["list"] as $row )
     <tr style="{{$row["type"]=='Refund'?'color: #d9534f;':''}}">
-        <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;" colspan="8">{{ $row["type"] }}</td>
+        <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;" colspan="8">{{ $row["is_promo"]?"Promo":$row["type"] }}</td>
         <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;" colspan="8">{{ number_format($row["amount"],2) }}</td>
         <td class="borderBottom" style="text-align:center; border-right: 1px solid #e0e0e0;" colspan="8">{{ $row["created_at"] }}</td>
     </tr>
