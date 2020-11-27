@@ -33,7 +33,7 @@ class ClientService extends Model
         });
     }
 
-    private static function updateBalanceAndCollectables($clientId, $groupId, $original) {
+    private static function updateBalanceAndCollectables($clientId, $groupId, $original = null) {
         if($groupId == null){
             $collectable = app(ClientController::class)->getClientTotalCollectables($clientId);
             $balance = app(ClientController::class)->getClientTotalBalance($clientId);
@@ -43,9 +43,8 @@ class ClientService extends Model
                 'balance' => $balance,
                 'collectable' => $collectable
             ]);
-
-            if($groupId != $original['group_id']){   
-                $groupId = $original['group_id'];    
+            if($original !== null && $groupId != $original['group_id']){
+                $groupId = $original['group_id'];
                 $collectable = app(GroupController::class)->getGroupTotalCollectables($groupId);
                 $balance = app(GroupController::class)->getGroupTotalBalance($groupId);
 
@@ -66,9 +65,9 @@ class ClientService extends Model
                 'collectables' => $collectable
             ]);
 
-            if($groupId != $original['group_id']){
+            if($original !== null && $groupId != $original['group_id']){
                 if($original['group_id'] != null){
-                    $groupId = $original['group_id'];    
+                    $groupId = $original['group_id'];
                     $collectable = app(GroupController::class)->getGroupTotalCollectables($groupId);
                     $balance = app(GroupController::class)->getGroupTotalBalance($groupId);
 
