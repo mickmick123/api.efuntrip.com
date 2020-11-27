@@ -2144,6 +2144,9 @@ class ClientController extends Controller
                 }
                 $ewallet_depo->amount = $amount;
                 $ewallet_depo->reason = $reason2;
+                if($storage=="Promo"){
+                    $depo->is_promo = true;
+                }
                 $ewallet_depo->save();
 
                 // save financing

@@ -1124,6 +1124,9 @@ public function addFunds(Request $request) {
                 }
                 $depo->amount = $amount;
                 $depo->reason = $reason2;
+                if($storage=="Promo"){
+                    $depo->is_promo = true;
+                }
                 $depo->save();
 
                 //save financing
@@ -5508,7 +5511,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $newAmount = 0;
         foreach($newPayments as $k=>$v){
             $amount = $v->type === 'Refund' ? -(float)$v->amount : (float)$v->amount;
-            $data[$index] = ['type' => $v->type, 'amount' => $amount, 'reason' => $v->reason, 'created_at' => Carbon::parse($v->created_at)->format('M. d, Y h:i a')];
+            $data[$index] = ['type' => $v->type, 'is_promo' => $v->is_promo, 'amount' => $amount, 'reason' => $v->reason, 'created_at' => Carbon::parse($v->created_at)->format('M. d, Y h:i a')];
             $newAmount += $amount;
             $index++;
         }

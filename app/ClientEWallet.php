@@ -14,12 +14,12 @@ use App\Group;
 
 class ClientEWallet extends Model
 {
-    
+
 	use SoftDeletes;
 
     protected $table = 'client_ewallet';
 
-    protected $fillable = ['type', 'client_id', 'group_id', 'client_service_id', 'amount', 'reason', 'storage_type', 'alipay_reference'];
+    protected $fillable = ['type', 'client_id', 'group_id', 'client_service_id', 'amount', 'reason', 'storage_type', 'alipay_reference', 'is_promo'];
 
     public static function boot(){
         parent::boot();
@@ -29,7 +29,7 @@ class ClientEWallet extends Model
         });
 
         static::updated(function ($model) {
-            
+
         });
     }
 
