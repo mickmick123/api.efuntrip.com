@@ -36,7 +36,6 @@ use Auth, DB, Response, Validator;
 //Excel
 use Illuminate\Http\Request;
 
-
 use Maatwebsite\Excel\Facades\Excel;
 
 //User Defined
@@ -48,12 +47,7 @@ use App\Exports\ServicesExport;
 
 use Status;
 use PDF;
-
-
 use DateTime;
-
-
-
 
 class GroupController extends Controller
 {
@@ -329,10 +323,11 @@ class GroupController extends Controller
             if($v->collectables == null){
                 $v->collectables = 0;
             }
-            // $total_balance =  $this->getGroupTotalBalance($v->id);
-            // $col_balance =  $this->getGroupTotalCollectables($v->id);
-            // Group::where('id', $v->id)
-            //     ->update(['balance' => $total_balance, 'collectables' => (($col_balance >= 0) ? 0 : $col_balance)]);
+            $total_balance =  $this->getGroupTotalBalance($v->id);
+            $col_balance =  $this->getGroupTotalCollectables($v->id);
+            Group::where('id', $v->id)
+                ->update(['balance' => $total_balance, 'collectables' => (($col_balance >= 0) ? 0 : $col_balance)]);
+            
         }
 
         $response = $groups;
