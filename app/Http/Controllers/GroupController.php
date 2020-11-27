@@ -327,7 +327,7 @@ class GroupController extends Controller
             // $col_balance =  $this->getGroupTotalCollectables($v->id);
             // Group::where('id', $v->id)
             //     ->update(['balance' => $total_balance, 'collectables' => (($col_balance >= 0) ? 0 : $col_balance)]);
-            
+
         }
 
         $response = $groups;
@@ -1149,8 +1149,12 @@ public function addFunds(Request $request) {
                     $finance->save();
                 }
 
+                $remarks = "";
+                if($reason2!=""){
+                    $remarks = " Remarks: ".$reason2." .";
+                }
                 // save transaction logs
-                $detail = 'Receive '.$deptype.' deposit with an amount of Php'.$amount.'.';
+                $detail = 'Receive '.$deptype.' deposit with an amount of Php'.$amount.'.'.$remarks;
                 $detail_cn = '预存了款项 Php'.$amount.'.';
                 $log_data = array(
                     'client_service_id' => null,

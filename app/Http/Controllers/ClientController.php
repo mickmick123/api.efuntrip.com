@@ -2169,8 +2169,12 @@ class ClientController extends Controller
                     $finance->save();
                 }
 
+                $remarks = "";
+                if($reason2!=""){
+                    $remarks = " Remarks: ".$reason2." .";
+                }
                 // save transaction logs
-                $detail = 'Receive '.$deptype.' deposit with an amount of Php'.$amount.'.';
+                $detail = 'Receive '.$deptype.' deposit with an amount of Php'.$amount.'.'.$remarks;
                 $detail_cn = '预存了款项 Php'.$amount.'.';
                 $log_data = array(
                     'client_service_id' => null,
