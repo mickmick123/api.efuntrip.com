@@ -2170,7 +2170,7 @@ class ClientController extends Controller
                 }
 
                 $remarks = "";
-                if($reason2!=""){
+                if($reason2!="" && ($storage == 'Cash' || $storage == 'Promo')){
                     $remarks = " Remarks: ".$reason2." .";
                 }
                 // save transaction logs
