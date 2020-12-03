@@ -1160,7 +1160,7 @@ class LogController extends Controller
                             'type' => $t->log_group,
                             'processor' => $usr[0]->first_name,
                             'date' => Carbon::parse($t->log_date)->format('F d,Y'),
-                            'date_time' => Carbon::parse($t->created_at)->format('F d,Y h:i:s'),
+                            'date_time' => Carbon::parse($t->created_at)->format('F d,Y H:i:s'),
                             'title' => $csdetail,
                             'tracking' => $cstracking,
                             'status' => $csstatus,
