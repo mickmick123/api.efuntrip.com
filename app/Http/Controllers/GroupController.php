@@ -1153,7 +1153,7 @@ public function addFunds(Request $request) {
                 }
 
                 $remarks = "";
-                if($reason2!="" && ($storage == 'Cash' || $storage == 'Promo')){
+                if($reason2!="" && ($storage == 'Cash' || $storage == 'Promo' || $storage == 'Bank')){
                     $remarks = " Remarks: ".$reason2." .";
                 }
                 // save transaction logs
