@@ -17,4 +17,15 @@ class BaseModel extends Model
         }
         return $this;
     }
+
+    public function updateById($id,$upData)
+    {
+        $data = $this->where($id)->update($upData);
+        if(!$data)
+        {
+            return false;
+        }
+        return true;
+    }
+
 }
