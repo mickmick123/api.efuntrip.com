@@ -10,7 +10,7 @@ class MessageHelper
 
         switch ($type) {
             case "E-wallet Deposit":
-                $msg =  "Your e-wallet deposit amounting to Php$option1 on $date has been added to your account. Your new balance is Php$option2";
+                $msg =  "Your e-wallet deposit amounting to $option1 on $date has been added to your account. Your new balance is $option2";
                 break;
 
             case "Documents Released":
@@ -30,15 +30,15 @@ class MessageHelper
                 break;
 
             case "Service Payment 2":
-                $msg =  "Your payment amounting to Php$option1 through $option2 has been successfully processed on $date.";
+                $msg =  "Your payment amounting to $option1 through $option2 has been successfully processed on $date.";
                 break;
 
             case "Service Payment 3":
-                $msg =  "$option1".PHP_EOL."Paid total amount of Php$option2 to service $option3".PHP_EOL.$option4;
+                $msg =  "$option1".PHP_EOL."Paid total amount of $option2 to service $option3".PHP_EOL.$option4;
                 break;
 
             case "Added Service":
-                $msg =  "$option1".PHP_EOL."$option2".PHP_EOL."Package $option3 with the Total Service Cost of Php$option4";
+                $msg =  "$option1".PHP_EOL."$option2".PHP_EOL."Package $option3 with the Total Service Cost of $option4";
                 break;
         }
 

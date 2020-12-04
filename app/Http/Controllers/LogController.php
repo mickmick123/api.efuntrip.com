@@ -73,7 +73,7 @@ class LogController extends Controller
             $data['message_cn'] = "";
         }else if ($type === 'Service Payment 1') {
             //Service Payment
-            $data['message'] = MessageHelper::MsgNotification("Service Payment", $date->toFormattedDateString(), $log['amount']);
+            $data['message'] = MessageHelper::MsgNotification("Service Payment 1", $date->toFormattedDateString(), $log['amount']);
             $data['message_cn'] = "";
         }else if ($type === 'Withdrawal') {
             //Withdrawal
