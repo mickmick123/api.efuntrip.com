@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+use App\LogsNotification;
 use App\Remark;
 use Carbon\Carbon;
 use App\ClientService;
@@ -51,6 +52,11 @@ use DateTime;
 
 class GroupController extends Controller
 {
+    protected $logsNotification;
+    public function __construct(LogsNotification $logsNotification)
+    {
+        $this->logsNotification = $logsNotification;
+    }
 
     private function generateGroupTracking() {
     	$numeric = '0123456789';
@@ -1159,17 +1165,31 @@ public function addFunds(Request $request) {
                 // save transaction logs
                 $detail = 'Receive '.$deptype.' deposit with an amount of Php'.$amount.'.'.$remarks;
                 $detail_cn = '预存了款项 Php'.$amount.'.';
-                $log_data = array(
-                    'client_service_id' => null,
-                    'client_id' => null,
-                    'group_id' => $group_id,
-                    'log_type' => 'Ewallet',
-                    'log_group' => 'deposit',
-                    'detail'=> $detail,
-                    'detail_cn'=> $detail_cn,
-                    'amount'=> $amount,
-                );
-                 LogController::save($log_data);
+//                $log_data = array(
+//                    'client_service_id' => null,
+//                    'client_id' => null,
+//                    'group_id' => $group_id,
+//                    'log_type' => 'Ewallet',
+//                    'log_group' => 'deposit',
+//                    'detail'=> $detail,
+//                    'detail_cn'=> $detail_cn,
+//                    'amount'=> $amount,
+//                );
+//                 LogController::save($log_data);
+                $addLog = new Log;
+                $addLog->client_service_id = null;
+                $addLog->client_id = null;
+                $addLog->group_id = $group_id;
+                $addLog->log_type = 'Ewallet';
+                $addLog->log_group = 'deposit';
+                $addLog->detail = $detail;
+                $addLog->detail_cn = $detail_cn;
+                $addLog->amount = $amount;
+                $addLog->processor_id = Auth::user()->id;
+                $addLog->log_date = Carbon::now()->toDateString();
+                $addLog->save();
+                $this->logsNotification->saveToDb(['log_id' => $addLog->id, 'job_id' => 0]);
+                app(LogController::class)->addNotif($addLog,'E-wallet Deposit');
             }
 
             else if($type == "Payment") {
@@ -1260,6 +1280,20 @@ public function addFunds(Request $request) {
                         'amount'=> '-'.$amount,
                     );
                     LogController::save($log_data);
+                    $addLog = new Log;
+                    $addLog->client_service_id = null;
+                    $addLog->client_id = null;
+                    $addLog->group_id = $group_id;
+                    $addLog->log_type = 'Ewallet';
+                    $addLog->log_group = 'refund';
+                    $addLog->detail = $detail;
+                    $addLog->detail_cn = $detail_cn;
+                    $addLog->amount = -$amount;
+                    $addLog->processor_id = Auth::user()->id;
+                    $addLog->log_date = Carbon::now()->toDateString();
+                    $addLog->save();
+                    $this->logsNotification->saveToDb(['log_id' => $addLog->id, 'job_id' => 0]);
+                    app(LogController::class)->addNotif($addLog,'Withdrawal');
             }
 
             else if($type == "Discount"){
@@ -4889,19 +4923,31 @@ public function getClientPackagesByGroup($client_id, $group_id){
                     $detail_cn = $detail;
                  }
 
-                 $log_data = array(
-                     'client_service_id' => $cs_id,
-                     'client_id' => null,
-                     'group_id' => $group_id,
-                     'log_type' => 'Ewallet',
-                     'log_group' => 'payment',
-                     'detail'=> $detail,
-                     'detail_cn'=> $detail_cn,
-                     'amount'=> '-'.$amount,
-                     'label'=> $label,
-                 );
-                 LogController::save($log_data);
-
+//                 $log_data = array(
+//                     'client_service_id' => $cs_id,
+//                     'client_id' => null,
+//                     'group_id' => $group_id,
+//                     'log_type' => 'Ewallet',
+//                     'log_group' => 'payment',
+//                     'detail'=> $detail,
+//                     'detail_cn'=> $detail_cn,
+//                     'amount'=> '-'.$amount,
+//                     'label'=> $label,
+//                 );
+//                 LogController::save($log_data);
+                  $addLog = new Log;
+                  $addLog->client_service_id = $cs_id;
+                  $addLog->client_id = null;
+                  $addLog->group_id = $group_id;
+                  $addLog->log_type = 'Ewallet';
+                  $addLog->log_group = 'payment';
+                  $addLog->detail = $detail;
+                  $addLog->detail_cn = $detail_cn;
+                  $addLog->amount = '-'.$amount;
+                  $addLog->label = $label;
+                  $addLog->save();
+                  $this->logsNotification->saveToDb(['log_id' => $addLog->id, 'job_id' => 0]);
+                  app(LogController::class)->addNotif($addLog,'Service Payment 1');
                }
           }
           else{

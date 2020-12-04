@@ -2,11 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\ArrayHelper;
+use App\Helpers\MessageHelper;
+use App\Http\Controllers\ClientController;
 use App\Log;
 
 use App\Group;
 use App\GroupUser;
 
+use App\LogsAppNotification;
+use App\LogsNotification;
 use App\User;
 use App\Document;
 use App\Service;
@@ -18,7 +23,6 @@ use App\OnHandDocument;
 use App\ClientReport;
 use App\ClientTransaction;
 
-use App\Http\Controllers\ClientController;
 
 use Auth, DB, Response, Validator;
 
@@ -30,6 +34,11 @@ use PDF;
 
 class LogController extends Controller
 {
+    protected $logsAppNotification;
+    public function __construct(LogsAppNotification $logsAppNotification)
+    {
+        $this->logsAppNotification = $logsAppNotification;
+    }
 
     public static function save($log_data) {
         if(Auth::check()) {
@@ -38,6 +47,46 @@ class LogController extends Controller
             $log_data['log_date'] = date('Y-m-d');
 
             Log::insert($log_data);
+        }
+    }
+
+    public function addNotif($log,$type)
+    {
+        $save = false;
+        $date = Carbon::now();
+        $data = [];
+        $data['client_id'] = $log['client_id'];
+        $data['group_id'] = $log['group_id'];
+        if ($type === 'E-wallet Deposit') {
+            //E-Wallet
+            $eWallet = app(ClientController::class)->getClientEwallet($log['client_id']);
+            $data['message'] = MessageHelper::MsgNotification('E-wallet Deposit', $date->toFormattedDateString(), $log['amount'], $eWallet);
+            $data['message_cn'] = "";
+            $save = true;
+        }else if ($type === 'Document Released') {
+            //Document Released
+            $data['message'] = MessageHelper::MsgNotification("Documents Released", $date->toFormattedDateString());
+            $data['message_cn'] = "";
+            $save = true;
+        }else if ($type === 'Document Received') {
+            //Document Received
+            $name = User::where('id',$data['client_id'])->get(DB::raw("CONCAT(first_name,' ',last_name) as name"));
+            $data['message'] = MessageHelper::MsgNotification("Documents Received", $date->toFormattedDateString(), $name[0]->name);
+            $data['message_cn'] = "";
+            $save = true;
+        }else if ($type === 'Service Payment 1') {
+            //Service Payment
+            $data['message'] = MessageHelper::MsgNotification("Service Payment", $date->toFormattedDateString(), $log['amount']);
+            $data['message_cn'] = "";
+            $save = true;
+        }else if ($type === 'Withdrawal') {
+            //Withdrawal
+            $data['message'] = MessageHelper::MsgNotification("Withdrawal", $date->toFormattedDateString(), $log['amount']);
+            $data['message_cn'] = "";
+            $save = true;
+        }
+        if($save === true){
+            $this->logsAppNotification->saveToDb($data);
         }
     }
 

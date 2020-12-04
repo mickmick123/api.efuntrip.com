@@ -20,6 +20,7 @@ use App\ContactAlternate;
 use App\Group;
 
 use App\Helpers\DateHelper;
+use App\LogsNotification;
 use App\Package;
 
 use App\QrCode;
@@ -58,6 +59,11 @@ use phpseclib\Crypt\RSA;
 
 class ClientController extends Controller
 {
+    protected $logsNotification;
+    public function __construct(LogsNotification $logsNotification)
+    {
+        $this->logsNotification = $logsNotification;
+    }
 
 	public function manageClients() {
 		$clients = DB::table('users as u')
@@ -2179,17 +2185,31 @@ class ClientController extends Controller
                 // save transaction logs
                 $detail = 'Receive '.$deptype.' deposit with an amount of Php'.$amount.'.'.$remarks;
                 $detail_cn = '预存了款项 Php'.$amount.'.';
-                $log_data = array(
-                    'client_service_id' => null,
-                    'client_id' => $client_id,
-                    'group_id' => null,
-                    'log_type' => 'Ewallet',
-                    'log_group' => 'deposit',
-                    'detail'=> $detail,
-                    'detail_cn'=> $detail_cn,
-                    'amount'=> $amount,
-                );
-                 LogController::save($log_data);
+//                $log_data = array(
+//                    'client_service_id' => null,
+//                    'client_id' => $client_id,
+//                    'group_id' => null,
+//                    'log_type' => 'Ewallet',
+//                    'log_group' => 'deposit',
+//                    'detail'=> $detail,
+//                    'detail_cn'=> $detail_cn,
+//                    'amount'=> $amount,
+//                );
+//                LogController::save($log_data);
+                $addLog = new Log;
+                $addLog->client_service_id = null;
+                $addLog->client_id = $client_id;
+                $addLog->group_id = null;
+                $addLog->log_type = 'Ewallet';
+                $addLog->log_group = 'deposit';
+                $addLog->detail = $detail;
+                $addLog->detail_cn = $detail_cn;
+                $addLog->amount = $amount;
+                $addLog->processor_id = Auth::user()->id;
+                $addLog->log_date = Carbon::now()->toDateString();
+                $addLog->save();
+                $this->logsNotification->saveToDb(['log_id' => $addLog->id, 'job_id' => 0]);
+                app(LogController::class)->addNotif($addLog,'E-wallet Deposit');
             }
 
             else if($type == "Payment") {
@@ -2313,17 +2333,31 @@ class ClientController extends Controller
                     // save transaction logs
                     $detail = 'Withdrew an amount of Php'.$amount.' with the reason of <i>"'.$reason.'"</i>.';
                     $detail_cn = '退款了 Php'.$amount.' 因为 "'.$reason.'".';
-                    $log_data = array(
-                        'client_service_id' => null,
-                        'client_id' => $client_id,
-                        'group_id' => null,
-                        'log_type' => 'Ewallet',
-                        'log_group' => 'refund',
-                        'detail'=> $detail,
-                        'detail_cn'=> $detail_cn,
-                        'amount'=> '-'.$amount,
-                    );
-                    LogController::save($log_data);
+//                    $log_data = array(
+//                        'client_service_id' => null,
+//                        'client_id' => $client_id,
+//                        'group_id' => null,
+//                        'log_type' => 'Ewallet',
+//                        'log_group' => 'refund',
+//                        'detail'=> $detail,
+//                        'detail_cn'=> $detail_cn,
+//                        'amount'=> '-'.$amount,
+//                    );
+//                    LogController::save($log_data);
+                    $addLog = new Log;
+                    $addLog->client_service_id = null;
+                    $addLog->client_id = $client_id;
+                    $addLog->group_id = null;
+                    $addLog->log_type = 'Ewallet';
+                    $addLog->log_group = 'refund';
+                    $addLog->detail = $detail;
+                    $addLog->detail_cn = $detail_cn;
+                    $addLog->amount = -$amount;
+                    $addLog->processor_id = Auth::user()->id;
+                    $addLog->log_date = Carbon::now()->toDateString();
+                    $addLog->save();
+                    $this->logsNotification->saveToDb(['log_id' => $addLog->id, 'job_id' => 0]);
+                    app(LogController::class)->addNotif($addLog,'Withdrawal');
             }
 
             else if($type == "Discount" || $type == "Promo"){
@@ -2845,18 +2879,29 @@ class ClientController extends Controller
 
                     $detail = 'Paid service with an amount of Php'.$amount.'.';
                     $detail_cn = '已支付 Php'.$amount.'.';
-                    $log_data = array(
-                        'client_service_id' => $cs_id,
-                        'client_id' => $client_id,
-                        'group_id' => null,
-                        'log_type' => 'Ewallet',
-                        'log_group' => 'payment',
-                        'detail'=> $detail,
-                        'detail_cn'=> $detail_cn,
-                        'amount'=> '-'.$amount,
-                    );
-                    LogController::save($log_data);
-
+//                    $log_data = array(
+//                        'client_service_id' => $cs_id,
+//                        'client_id' => $client_id,
+//                        'group_id' => null,
+//                        'log_type' => 'Ewallet',
+//                        'log_group' => 'payment',
+//                        'detail'=> $detail,
+//                        'detail_cn'=> $detail_cn,
+//                        'amount'=> '-'.$amount,
+//                    );
+//                    LogController::save($log_data);
+                      $addLog = new Log;
+                      $addLog->client_service_id = $cs_id;
+                      $addLog->client_id = $client_id;
+                      $addLog->group_id = null;
+                      $addLog->log_type = 'Ewallet';
+                      $addLog->log_group = 'payment';
+                      $addLog->detail = $detail;
+                      $addLog->detail_cn = $detail_cn;
+                      $addLog->amount = -$amount;
+                      $addLog->save();
+                      $this->logsNotification->saveToDb(['log_id' => $addLog->id, 'job_id' => 0]);
+                      app(LogController::class)->addNotif($addLog,'Service Payment 1');
                    }
               }
               else{

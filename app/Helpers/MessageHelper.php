@@ -4,7 +4,7 @@ namespace App\Helpers;
 
 class MessageHelper
 {
-    public static function MsgNotification($type, $date, $option1=null, $option2=null, $option3=null, $option4=null)
+    public static function MsgNotification($type, $date=null, $option1=null, $option2=null, $option3=null, $option4=null)
     {
         $msg = '';
 
@@ -30,7 +30,7 @@ class MessageHelper
                 break;
 
             case "Service Payment 2":
-                $msg =  "You payment amounting to $option1 through $option2 has been successfully processed on $date.";
+                $msg =  "Your payment amounting to $option1 through $option2 has been successfully processed on $date.";
                 break;
 
             case "Service Payment 3":

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\ClientController;
 
+use App\LogsNotification;
 use Edujugon\PushNotification\PushNotification;
 
 use Edujugon\PushNotification\Messages\PushMessage;
@@ -49,6 +50,11 @@ use App\Jobs\LogsPushNotification;
 
 class ReportController extends Controller
 {
+    protected $logsNotification;
+    public function __construct(LogsNotification $logsNotification)
+    {
+        $this->logsNotification = $logsNotification;
+    }
 
     public function index(Request $request, $perPage = 20) {
     	$search = $request->search;
@@ -1421,14 +1427,24 @@ class ReportController extends Controller
     if (strpos($action, 'Released documents') === false) {
     // if($action != 'Released documents') {
       // logs
-      $log = Log::create([
-        'client_id' => $user['id'],
-        'processor_id' => $processorId,
-        'log_type' => 'Document',
-        'detail' => $detail,
-        'label' => $action,
-        'log_date' => Carbon::now()->toDateString()
-      ]);
+//      $log = Log::create([
+//        'client_id' => $user['id'],
+//        'processor_id' => $processorId,
+//        'log_type' => 'Document',
+//        'detail' => $detail,
+//        'label' => $action,
+//        'log_date' => Carbon::now()->toDateString()
+//      ]);
+        $addLog = new Log;
+        $addLog->client_id = $user['id'];
+        $addLog->processor_id = $processorId;
+        $addLog->log_type = 'Document';
+        $addLog->detail = $detail;
+        $addLog->label = $action;
+        $addLog->log_date = Carbon::now()->toDateString();
+        $addLog->save();
+        $this->logsNotification->saveToDb(['log_id' => $addLog->id, 'job_id' => 0]);
+        app(LogController::class)->addNotif($addLog,'Document Received');
 
       $this->sendPushNotification($user['id'], $detail);
 
@@ -1444,7 +1460,7 @@ class ReportController extends Controller
             }
 
             if($document['count'] > 0) {
-              $log->documents()->attach($document['id'], [
+                $addLog->documents()->attach($document['id'], [
                 'count' => $document['count'],
                 'previous_on_hand' => $previousOnHand
               ]);
@@ -1580,15 +1596,26 @@ class ReportController extends Controller
 				$detail = $action . "\n" . $detail;
 			}
 
-			$saveLog = Log::create([
-				'client_id' => $getUser->id,
-				'group_id' => $groupID,
-				'processor_id' => Auth::user()->id,
-				'log_type' => 'Document',
-				'detail' => $detail,
-				'label' => $action,
-				'log_date' => Carbon::now()->toDateString()
-			]);
+//			$saveLog = Log::create([
+//				'client_id' => $getUser->id,
+//				'group_id' => $groupID,
+//				'processor_id' => Auth::user()->id,
+//				'log_type' => 'Document',
+//				'detail' => $detail,
+//				'label' => $action,
+//				'log_date' => Carbon::now()->toDateString()
+//			]);
+            $addLog = new Log;
+            $addLog->client_id = $getUser->id;
+            $addLog->group_id = $groupID;
+            $addLog->processor_id = Auth::user()->id;
+            $addLog->log_type = 'Document';
+            $addLog->detail = $detail;
+            $addLog->label = $action;
+            $addLog->log_date = Carbon::now()->toDateString();
+            $addLog->save();
+            $this->logsNotification->saveToDb(['log_id' => $addLog->id, 'job_id' => 0]);
+            app(LogController::class)->addNotif($addLog,'Document Released');
 
 			$this->sendPushNotification($getUser->id, $detail);
 
@@ -1608,7 +1635,7 @@ class ReportController extends Controller
 							if($document['count'] > 0) {
 								DB::table('document_log')->insert([
 									'document_id' => $document['id'],
-									'log_id' => $saveLog->id,
+									'log_id' => $addLog->id,
 									'count' => $document['count'],
 									'pending_count' => 0,
 									'previous_on_hand' => $onHandDocument->count,
