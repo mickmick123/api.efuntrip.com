@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Helpers\ArrayHelper;
 use App\Helpers\MessageHelper;
 use App\Http\Controllers\ClientController;
+use App\Jobs\LogsPushNotification;
 use App\Log;
 
 use App\Group;
@@ -52,7 +53,6 @@ class LogController extends Controller
 
     public function addNotif($log,$type)
     {
-        $save = false;
         $date = Carbon::now();
         $data = [];
         $data['client_id'] = $log['client_id'];
@@ -62,32 +62,29 @@ class LogController extends Controller
             $eWallet = app(ClientController::class)->getClientEwallet($log['client_id']);
             $data['message'] = MessageHelper::MsgNotification('E-wallet Deposit', $date->toFormattedDateString(), $log['amount'], $eWallet);
             $data['message_cn'] = "";
-            $save = true;
         }else if ($type === 'Document Released') {
             //Document Released
             $data['message'] = MessageHelper::MsgNotification("Documents Released", $date->toFormattedDateString());
             $data['message_cn'] = "";
-            $save = true;
         }else if ($type === 'Document Received') {
             //Document Received
             $name = User::where('id',$data['client_id'])->get(DB::raw("CONCAT(first_name,' ',last_name) as name"));
             $data['message'] = MessageHelper::MsgNotification("Documents Received", $date->toFormattedDateString(), $name[0]->name);
             $data['message_cn'] = "";
-            $save = true;
         }else if ($type === 'Service Payment 1') {
             //Service Payment
             $data['message'] = MessageHelper::MsgNotification("Service Payment", $date->toFormattedDateString(), $log['amount']);
             $data['message_cn'] = "";
-            $save = true;
         }else if ($type === 'Withdrawal') {
             //Withdrawal
             $data['message'] = MessageHelper::MsgNotification("Withdrawal", $date->toFormattedDateString(), $log['amount']);
             $data['message_cn'] = "";
-            $save = true;
         }
-        if($save === true){
-            $this->logsAppNotification->saveToDb($data);
+        if($data['client_id'] !== null){
+            $job = (new LogsPushNotification($data['client_id'], $data['message']));
+            $this->dispatch($job);
         }
+        $this->logsAppNotification->saveToDb($data);
     }
 
     public function getTransactionLogs($client_id, $group_id) {
