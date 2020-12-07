@@ -32,9 +32,9 @@ class MessageHelper
                         $temp['total_amount'] += $vv['amount'];
                     }
                 }
-                $temp['message'][$k] = ArrayHelper::CommaAnd($temp['clients']) . PHP_EOL . "Paid total amount of " . $temp['total_amount'] . " to service " . $v['service'] . PHP_EOL;
+                $temp['message'][$k] = ArrayHelper::CommaAnd($temp['clients']) . PHP_EOL . "Paid total amount of " . $temp['total_amount'] . " to service " . $v['service'];
             }
-            $msg = implode(PHP_EOL, $temp['message']);
+            $msg = implode(PHP_EOL . PHP_EOL, $temp['message']);
         } else if ($type == "Added Service") {
             $x = "";
             if ($data['clients'] && $data['clients'] != null) {
