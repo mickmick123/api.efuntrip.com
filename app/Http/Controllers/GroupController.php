@@ -3913,7 +3913,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $lang['_servic_name'] = '服务明细';
         $lang['_latest_date'] = '最近的服务日期';
         $lang['_total_service_cost'] = '总服务费';
-        $lang['_total_paid_service'] = '总付费服务';
+        $lang['_total_paid_service'] = '总已支付';
         $lang['_total_payment_done'] = '总已支付金额';
         $lang['_transcation_history'] = '交易记录 : ';
         $lang['_payment'] = '付款';
