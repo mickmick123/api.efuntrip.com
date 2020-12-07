@@ -66,6 +66,14 @@ class LogController extends Controller
             $name = User::where('id',$data['client_id'])->get(DB::raw("CONCAT(first_name,' ',last_name) as name"));
             $log['user'] = $name[0]->name;
         }
+        else if ($type === 'Service Payment 1') {
+            $opt = " 1";
+            $type = "Service Payment";
+        }
+        else if ($type === 'Service Payment 2') {
+            $opt = " 2";
+            $type = "Service Payment";
+        }
         else if ($type === 'Service Payment 3') {
             $opt = " 3";
             $type = "Service Payment";
