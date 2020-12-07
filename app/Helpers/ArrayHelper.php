@@ -53,4 +53,9 @@ class ArrayHelper{
         }
         return $array;
     }
+    // $array = [1,2,3,4,5];
+    // return 1, 2, 3, 4 and 5
+    public static function CommaAnd($array){
+        return join(' and ', array_filter(array_merge(array(join(', ', array_slice($array, 0, -1))), array_slice($array, -1)), 'strlen'));
+    }
 }

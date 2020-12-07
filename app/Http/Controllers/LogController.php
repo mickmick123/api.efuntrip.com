@@ -79,6 +79,12 @@ class LogController extends Controller
             //Withdrawal
             $data['message'] = MessageHelper::MsgNotification("Withdrawal", $date->toFormattedDateString(), $log['amount']);
             $data['message_cn'] = "";
+        }else if ($type === 'Service Payment 3') {
+            //Service Payment 3
+            $log['date'] = $date->toFormattedDateString();
+            $data['type'] = 'Service Payment';
+            $data['message'] = MessageHelper::MsgNotification("Service Payment 3",$log);
+            $data['message_cn'] = "";
         }
         if($data['client_id'] !== null){
             $job = (new LogsPushNotification($data['client_id'], $data['message']));

@@ -4853,6 +4853,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
                 LogController::save($log_data);
               }
 
+              $group_data = [];
+              $group_data['group'] = [];
               for($i=0; $i<count($request->payments); $i++) {
 
                  $client_id = $request->payments[$i]['client_id'];
@@ -4937,18 +4939,23 @@ public function getClientPackagesByGroup($client_id, $group_id){
 //                 LogController::save($log_data);
                   $addLog = new Log;
                   $addLog->client_service_id = $cs_id;
-                  $addLog->client_id = null;
+                  $addLog->client_id = $client_id;
                   $addLog->group_id = $group_id;
                   $addLog->log_type = 'Ewallet';
                   $addLog->log_group = 'payment';
                   $addLog->detail = $detail;
                   $addLog->detail_cn = $detail_cn;
-                  $addLog->amount = '-'.$amount;
+                  $addLog->amount = -$amount;
                   $addLog->label = $label;
                   $addLog->save();
                   $this->logsNotification->saveToDb(['log_id' => $addLog->id, 'job_id' => 0]);
                   app(LogController::class)->addNotif($addLog,'Service Payment 1');
+                  $group_data['group'][$i] = ['client_name' => $cl->first_name . ' ' . $cl->last_name, 'service' => $service->detail, 'amount' => -$amount];
                }
+              $leader_id = Group::where('id',$group_id)->get();
+              $group_data['client_id'] = $leader_id[0]['leader_id'];
+              $group_data['group_id'] = null;
+              app(LogController::class)->addNotif($group_data,'Service Payment 3');
           }
           else{
             //Generate QR CODE
