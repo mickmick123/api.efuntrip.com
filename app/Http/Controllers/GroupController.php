@@ -4982,7 +4982,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
                }
               $leader_id = Group::where('id',$group_id)->get();
               $group_data['client_id'] = $leader_id[0]['leader_id'];
-              $group_data['group_id'] = null;
+              $group_data['group_id'] = $group_id;
               app(LogController::class)->addNotif($group_data,'Service Payment 3');
           }
           else{

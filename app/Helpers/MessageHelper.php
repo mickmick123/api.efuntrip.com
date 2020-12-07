@@ -9,9 +9,9 @@ class MessageHelper
         $msg = "";
         if ($type == "E-wallet Deposit") {
             $msg = "Your e-wallet deposit amounting to " . $data['amount'] . " on " . $data['date'] . " has been added to your account. Your new balance is" . $data['balance'];
-        } else if ($type == "Documents Released") {
+        } else if ($type == "Document Released") {
             $msg = "Your documents have been released on " . $data['date'] . " You can now view it on your account.";
-        } else if ($type == "Documents Received") {
+        } else if ($type == "Document Received") {
             $msg = "Your documents have been received by " . $data['user'] . " on " . $data['date'] . " you can now view it on your account.";
         } else if ($type == "Withdrawal") {
             $msg = "Your withdrawal amounting to " . $data['amount'] . " has been successfully processed on " . $data['date'];
