@@ -50,6 +50,8 @@ use Status;
 use PDF;
 use DateTime;
 
+use App\Helpers\MessageHelper;
+
 class GroupController extends Controller
 {
     protected $logsNotification;
@@ -2326,162 +2328,169 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
 
 
-   public function addServices(Request $request) {
+    public function addServices(Request $request) {
+        $g = Group::findOrFail($request->group_id);
+        $level = $g->service_profile_id;
 
-      $g = Group::findOrFail($request->group_id);
-      $level = $g->service_profile_id;
+        $trackingArray = [];
+        $oldNewArray = [];
+        $oldNewArrayChinese = [];
+        $clientServicesIdArray = [];
 
-      $trackingArray = [];
-      $oldNewArray = [];
-      $oldNewArrayChinese = [];
-      $clientServicesIdArray = [];
+        $_clients = []; // for notification
 
-      for($i=0; $i<count($request->clients); $i++) {
+        for($i=0; $i<count($request->clients); $i++) {
 
-          $clientId = $request->clients[$i];
+            $clientId = $request->clients[$i];
+            $_user = User::select(DB::raw("CONCAT(first_name,' ',last_name) as name"))->where('id', $clientId)->first();
+            $_clients['name'][] = $_user->name;
 
-          if($request->packages[$i] === 0) { // Generate new package
-              $tracking = $this->generateServiceTracking();
+            if($request->packages[$i] === 0) { // Generate new package
+                $tracking = $this->generateServiceTracking();
 
-              Package::create([
-                  'client_id' => $clientId,
-                  'group_id' => $request->group_id,
-                  'tracking' => $tracking,
-                  'status' => 'pending'
-              ]);
+                Package::create([
+                    'client_id' => $clientId,
+                    'group_id' => $request->group_id,
+                    'tracking' => $tracking,
+                    'status' => 'pending'
+                ]);
 
-              $oldnew = "new";
-              $oldnew_cn = "新的";
-          } else {
-              $tracking = $request->packages[$i];
-              $oldnew = "old";
-              $oldnew_cn = "旧的";
+                $oldnew = "new";
+                $oldnew_cn = "新的";
+            } else {
+                $tracking = $request->packages[$i];
+                $oldnew = "old";
+                $oldnew_cn = "旧的";
 
-              //Update package status
-              $package = Package::find($tracking);
-              if( $package ) {
-                  $package->update(['status' => 'pending']);
-              }
-          }
+                //Update package status
+                $package = Package::find($tracking);
+                if( $package ) {
+                    $package->update(['status' => 'pending']);
+                }
+            }
 
-          $trackingArray[] = $tracking;
-          $oldNewArray[] = $oldnew;
-          $oldNewArrayChinese[] = $oldnew_cn;
-      }
+            $_clients['package'][] = $tracking;
+            $trackingArray[] = $tracking;
+            $oldNewArray[] = $oldnew;
+            $oldNewArrayChinese[] = $oldnew_cn;
+        }
 
-      $ctr = 0;
-      $msg = [];
-      $collect_services = '';
-      $collect_services_cn = '';
-      $service_status = 'on process';
+        $ctr = 0;
+        $msg = [];
+        $collect_services = '';
+        $collect_services_cn = '';
+        $service_status = 'on process';
 
-      for($j=0; $j<count($request->services); $j++) {
+        for($j=0; $j<count($request->services); $j++) {
 
-          $translated = Service::where('id',$request->services[$j])->first();
+            $translated = Service::where('id',$request->services[$j])->first();
 
-          $cnserv =$translated->detail;
+            $_clients['service'][] = $translated->detail;
+            $_clients['amount'][] = $request->charge + $request->cost + $request->tip;
 
-          if($translated){
-              $cnserv = ($translated->detail_cn!='' ? $translated->detail_cn : $translated->detail);
-          }
+            $cnserv =$translated->detail;
 
-          $collect_services .= $translated->detail.', ';
-          $collect_services_cn .= $cnserv.', ';
-          $cls = '';
+            if($translated){
+                $cnserv = ($translated->detail_cn!='' ? $translated->detail_cn : $translated->detail);
+            }
 
-          for($i=0; $i<count($request->clients); $i++) {
+            $collect_services .= $translated->detail.', ';
+            $collect_services_cn .= $cnserv.', ';
+            $cls = '';
 
-              $clientId = $request->clients[$i];
+            for($i=0; $i<count($request->clients); $i++) {
 
-              $service_status = 'pending';
+                $clientId = $request->clients[$i];
 
-
-              $serviceId =  $request->services[$j];
-              $service = Service::findOrFail($serviceId);
-
-            //  $dt = Carbon::now();
-            //  $dt = $dt->toDateString();
-
-              //$author = $request->note.' - '. Auth::user()->first_name.' <small>('.$dt.')</small>'; //to follow
-              $author = $request->note;
-              if($request->note==''){
-                  $author = '';
-              }
-
-              //service cost depends on cost level of group
-              $scharge = $request->charge;
-              $scost = $request->cost;
-              $stip = $request->tip;
-              $client_com_id = $request->client_com_id;
-              $agent_com_id = $request->agent_com_id;
+                $service_status = 'pending';
 
 
-              if($request->branch_id > 1){
-                  $bcost = ServiceBranchCost::where('branch_id',$request->branch_id)->where('service_id',$serviceId)->first();
-                  $scost = $bcost->cost;
-                  $stip = $bcost->tip;
-                  $scharge = $bcost->charge;
-                  $com_client = $bcost->com_client;
-                  $com_agent = $bcost->com_agent;
-              }
-              else{
-                  $scost = $service->cost;
-                  $stip = $service->tip;
-                  $scharge = $service->charge;
-                  $com_client = $service->com_client;
-                  $com_agent = $service->com_agent;
-              }
+                $serviceId =  $request->services[$j];
+                $service = Service::findOrFail($serviceId);
 
-              //has profile id
-              if($level > 0 && $level != null){
-                  $newcost = ServiceProfileCost::where('profile_id',$level)
-                                ->where('branch_id',$request->branch_id)
-                                ->where('service_id',$serviceId)
-                                ->first();
-                  if($newcost){
-                      $scharge = $newcost->charge;
-                      $scost = $newcost->cost;
-                      $stip = $newcost->tip;
-                      $com_client = $newcost->com_client;
-                      $com_agent = $newcost->com_agent;
-                  }
-              }
+                //  $dt = Carbon::now();
+                //  $dt = $dt->toDateString();
 
-              $scharge = ($scharge > 0 ? $scharge : $service->charge);
-              $scost = ($scost > 0 ? $scost : $service->cost);
-              $stip = ($stip > 0 ? $stip : $service->tip);
+                //$author = $request->note.' - '. Auth::user()->first_name.' <small>('.$dt.')</small>'; //to follow
+                $author = $request->note;
+                if($request->note==''){
+                    $author = '';
+                }
 
-              $month = 0;
-              $sdetail = $service->detail;
-              if($serviceId === 454){
-                  $month = $request->month[$i];
-                  $sdetail = $service->detail.' '.intval($month).' months.';
-              }
+                //service cost depends on cost level of group
+                $scharge = $request->charge;
+                $scost = $request->cost;
+                $stip = $request->tip;
+                $client_com_id = $request->client_com_id;
+                $agent_com_id = $request->agent_com_id;
 
-              $clientService = ClientService::create([
-                  'client_id' => $clientId,
-                  'service_id' => $serviceId,
-                  'detail' => $sdetail,
-                  'cost' => $scost,
-                  'charge' => $scharge,
-                  'month' => $month,
-                  'tip' => $stip,
-                  'status' => $service_status,
-                  'com_client' => $com_client,
-                  'com_agent' => $com_agent,
-                  'agent_com_id' => $agent_com_id,
-                  'client_com_id' => $client_com_id,
-                  'remarks' => $author,
-                  'group_id' => $request->group_id,
-                  'tracking' => $trackingArray[$i],
-                  'active' => 1,
-                  'extend' => null
-              ]);
+
+                if($request->branch_id > 1){
+                    $bcost = ServiceBranchCost::where('branch_id',$request->branch_id)->where('service_id',$serviceId)->first();
+                    $scost = $bcost->cost;
+                    $stip = $bcost->tip;
+                    $scharge = $bcost->charge;
+                    $com_client = $bcost->com_client;
+                    $com_agent = $bcost->com_agent;
+                }
+                else{
+                    $scost = $service->cost;
+                    $stip = $service->tip;
+                    $scharge = $service->charge;
+                    $com_client = $service->com_client;
+                    $com_agent = $service->com_agent;
+                }
+
+                //has profile id
+                if($level > 0 && $level != null){
+                    $newcost = ServiceProfileCost::where('profile_id',$level)
+                        ->where('branch_id',$request->branch_id)
+                        ->where('service_id',$serviceId)
+                        ->first();
+                    if($newcost){
+                        $scharge = $newcost->charge;
+                        $scost = $newcost->cost;
+                        $stip = $newcost->tip;
+                        $com_client = $newcost->com_client;
+                        $com_agent = $newcost->com_agent;
+                    }
+                }
+
+                $scharge = ($scharge > 0 ? $scharge : $service->charge);
+                $scost = ($scost > 0 ? $scost : $service->cost);
+                $stip = ($stip > 0 ? $stip : $service->tip);
+
+                $month = 0;
+                $sdetail = $service->detail;
+                if($serviceId === 454){
+                    $month = $request->month[$i];
+                    $sdetail = $service->detail.' '.intval($month).' months.';
+                }
+
+                $clientService = ClientService::create([
+                    'client_id' => $clientId,
+                    'service_id' => $serviceId,
+                    'detail' => $sdetail,
+                    'cost' => $scost,
+                    'charge' => $scharge,
+                    'month' => $month,
+                    'tip' => $stip,
+                    'status' => $service_status,
+                    'com_client' => $com_client,
+                    'com_agent' => $com_agent,
+                    'agent_com_id' => $agent_com_id,
+                    'client_com_id' => $client_com_id,
+                    'remarks' => $author,
+                    'group_id' => $request->group_id,
+                    'tracking' => $trackingArray[$i],
+                    'active' => 1,
+                    'extend' => null
+                ]);
 
                 // save transaction logs for group
                 $detail = 'Added a service. Service status is pending.';
                 $detail_cn = '已添加服务. 服务状态为 待办。';
-               $log_data = array(
+                $log_data = array(
                     'client_service_id' => $clientService->id,
                     'client_id' => $clientId,
                     'group_id' => $request->group_id,
@@ -2491,21 +2500,40 @@ public function getClientPackagesByGroup($client_id, $group_id){
                     'detail_cn'=> $detail_cn,
                     'amount'=> 0,
                 );
-                 LogController::save($log_data);
+                LogController::save($log_data);
 
-              $clientServicesIdArray[] = $clientService;
-              $ctr++;
-          }
+                $clientServicesIdArray[] = $clientService;
+                $ctr++;
+            }
 
-      }
+        }
 
-      return Response::json(['success' => true,
-        'message' => 'Service/s successfully added to group',
-        'clientsId' => $request->clients,
-        'clientServicesId' => $clientServicesIdArray,
-        'trackings' => $trackingArray]);
+        for($i=0; $i<count($request->clients); $i++) {
+            $clientId = $request->clients[$i];
+            if($g->leader_id != $clientId) {
+                app(LogController::class)->addNotif([
+                    'client_id' => $clientId,
+                    'group_id' => $request->group_id,
+                    'clients' => $_clients,
+                    'is_leader' => false
+                ], 'Added Service');
+            }
+        }
 
-   }
+         app(LogController::class)->addNotif([
+             'client_id' => $g->leader_id,
+             'group_id' => $request->group_id,
+             'clients' => $_clients,
+             'is_leader' => true
+         ], 'Added Service');
+
+        return Response::json(['success' => true,
+            'message' => 'Service/s successfully added to group',
+            'clientsId' => $request->clients,
+            'clientServicesId' => $clientServicesIdArray,
+            'trackings' => $trackingArray]);
+
+    }
 
    //
    public function getClientServices(Request $request) {

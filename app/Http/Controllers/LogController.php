@@ -57,37 +57,24 @@ class LogController extends Controller
         $data = [];
         $data['client_id'] = $log['client_id'];
         $data['group_id'] = $log['group_id'];
+        $log['date'] = $date->toFormattedDateString();
+        $opt = "";
         if ($type === 'E-wallet Deposit') {
-            //E-Wallet
-            $eWallet = app(ClientController::class)->getClientEwallet($log['client_id']);
-            $data['message'] = MessageHelper::MsgNotification('E-wallet Deposit', $date->toFormattedDateString(), $log['amount'], $eWallet);
-            $data['message_cn'] = "";
-        }else if ($type === 'Document Released') {
-            //Document Released
-            $data['message'] = MessageHelper::MsgNotification("Documents Released", $date->toFormattedDateString());
-            $data['message_cn'] = "";
-        }else if ($type === 'Document Received') {
-            //Document Received
-            $name = User::where('id',$data['client_id'])->get(DB::raw("CONCAT(first_name,' ',last_name) as name"));
-            $data['message'] = MessageHelper::MsgNotification("Documents Received", $date->toFormattedDateString(), $name[0]->name);
-            $data['message_cn'] = "";
-        }else if ($type === 'Service Payment 1') {
-            //Service Payment
-            $data['message'] = MessageHelper::MsgNotification("Service Payment 1", $date->toFormattedDateString(), $log['amount']);
-            $data['message_cn'] = "";
-        }else if ($type === 'Withdrawal') {
-            //Withdrawal
-            $data['message'] = MessageHelper::MsgNotification("Withdrawal", $date->toFormattedDateString(), $log['amount']);
-            $data['message_cn'] = "";
-        }else if ($type === 'Service Payment 3') {
-            //Service Payment 3
-            $log['date'] = $date->toFormattedDateString();
-            $data['type'] = 'Service Payment';
-            $data['message'] = MessageHelper::MsgNotification("Service Payment 3",$log);
-            $data['message_cn'] = "";
+            $log['balance'] = app(ClientController::class)->getClientEwallet($log['client_id']);
         }
+        else if ($type === 'Document Received') {
+            $name = User::where('id',$data['client_id'])->get(DB::raw("CONCAT(first_name,' ',last_name) as name"));
+            $log['user'] = $name[0]->name;
+        }
+        else if ($type === 'Service Payment 3') {
+            $opt = " 3";
+            $type = "Service Payment";
+        }
+        $data['type'] = $type;
+        $data['message'] = MessageHelper::MsgNotification($type . $opt, $log);
+        $data['message_cn'] = "";
         if($data['client_id'] !== null){
-            $job = (new LogsPushNotification($data['client_id'], $data['message']));
+            $job = (new LogsPushNotification($data['client_id'], $type . PHP_EOL . PHP_EOL . $data['message']));
             $this->dispatch($job);
         }
         $this->logsAppNotification->saveToDb($data);

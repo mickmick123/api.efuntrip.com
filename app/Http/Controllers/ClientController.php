@@ -1673,6 +1673,8 @@ class ClientController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
+            $_service = array();
+            $_amount = 0;
             $c = User::findOrFail($request->client_id);
             $level = $c->service_profile_id;
             $service_ids = [];
@@ -1759,7 +1761,7 @@ class ClientController extends Controller
                 $detail = 'Added service "'.$sdetail.'", Service status is pending.';
                 $detail_cn = '已添加服务 "'.$detail_cn.'" 服务状态为 待办。';
 
-								$log2 = Log::create([
+                Log::create([
                     'client_service_id' => $cs->id,
                     'client_id' => $cs->client_id,
                     'group_id' => $cs->group_id,
@@ -1768,22 +1770,29 @@ class ClientController extends Controller
                     'detail'=> $sdetail,
                     'detail_cn'=> $detail_cn,
                     'amount'=> 0,
-									  'processor_id' => Auth::user()->id,
-									  'log_date' => Carbon::now()->toDateString()
-								]);
+                    'processor_id' => Auth::user()->id,
+                    'log_date' => Carbon::now()->toDateString()
+                ]);
 
-
-                $job = (new LogsPushNotification($request->client_id, $detail));
-                $this->dispatch($job);
-
-								DB::table('logs_notification')->insert([
-									'log_id' => $log2->id,
-									'job_id' => 0
-								]);
-
-
+                $_service[] = $service->detail;
+                $_amount += $totalAmount;
+//                $job = (new LogsPushNotification($request->client_id, $detail));
+//                $this->dispatch($job);
+//
+//                DB::table('logs_notification')->insert([
+//                    'log_id' => $log2->id,
+//                    'job_id' => 0
+//                ]);
             }
 
+            $_data = [
+                'client_id' => $request->client_id,
+                'group_id' => null,
+                'service' => implode("\n", $_service),
+                'amount' => $_amount,
+                'package' => $request->tracking
+            ];
+            app(LogController::class)->addNotif($_data, 'Added Service');
 
             $response['status'] = 'Success';
             $response['service_ids'] = $service_ids;

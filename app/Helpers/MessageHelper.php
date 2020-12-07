@@ -18,7 +18,7 @@ class MessageHelper
         } else if ($type == "Service Payment 1") {
             $msg = "Your payment amounting to " . $data['amount'] . " has been successfully processed on " . $data['date'];
         } else if ($type == "Service Payment 2") {
-            $msg = "Your payment amounting to " . $data['amount'] . " through " . $data['$data->bank'] . " has been successfully processed on " . $data['date'] . ".";
+            $msg = "Your payment amounting to " . $data['amount'] . " through " . $data['bank'] . " has been successfully processed on " . $data['date'] . ".";
         } else if ($type == "Service Payment 3") {
             $temp = [];
             $group = collect($data['group'])->sortBy('service');
@@ -35,12 +35,25 @@ class MessageHelper
                 $temp['message'][$k] = ArrayHelper::CommaAnd($temp['clients']) . PHP_EOL . "Paid total amount of " . $temp['total_amount'] . " to service " . $v['service'];
             }
             $msg = implode(PHP_EOL . PHP_EOL, $temp['message']);
-        } else if ($type == "Added Service") {
-            $x = "";
-            if ($data['clients'] && $data['clients'] != null) {
-                $x = $data['client'] . PHP_EOL;
+        } elseif ($type == "Added Service") {
+            if (array_key_exists("clients", $data)) {
+                if($data['is_leader']) {
+                    $msg .= ArrayHelper::CommaAnd($data['clients']['name']) . PHP_EOL;
+                }
+                $services = $data['clients']['service'];
+                $i=0;
+                foreach ($services as $k => $v){
+                    $msg .= $v . PHP_EOL;
+                    $msg .= "Package #" . $data['clients']['package'][$k] . " with the Total Service Cost of " . $data['clients']['amount'][$k] . PHP_EOL;
+                    if(count($services)-1 != $i) {
+                        $msg .= PHP_EOL;
+                    }
+                    $i++;
+                }
+            }else{
+                $msg = $data['service'] . PHP_EOL . "Package #" . $data['package'] . " with the Total Service Cost of " . $data['amount'];
             }
-            $msg = $x . $data['service'] . PHP_EOL . "Package " . $data['package'] . " with the Total Service Cost of " . $data['amount'];
+
         }
 
         return $msg;
