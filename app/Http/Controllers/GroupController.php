@@ -2386,7 +2386,6 @@ public function getClientPackagesByGroup($client_id, $group_id){
             $translated = Service::where('id',$request->services[$j])->first();
 
             $_clients['service'][] = $translated->detail;
-            $_clients['amount'][] = $request->charge + $request->cost + $request->tip;
 
             $cnserv =$translated->detail;
 
@@ -2501,6 +2500,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
                     'amount'=> 0,
                 );
                 LogController::save($log_data);
+
+                $_clients['amount'][$j] = $scharge + $scost + $stip;
 
                 $clientServicesIdArray[] = $clientService;
                 $ctr++;
