@@ -61,9 +61,14 @@ class LogController extends Controller
         $opt = "";
         if ($type === 'E-wallet Deposit') {
             if ($data['group_id'] !== null) {
+                $log['group_name'] = Group::where('id',$data['group_id'])->get()[0]['name'];
                 $log['balance'] = app(GroupController::class)->getGroupEwallet($log['group_id']);
             } else {
                 $log['balance'] = app(ClientController::class)->getClientEwallet($log['client_id']);
+            }
+        } else if ($type === 'Withdrawal') {
+            if ($data['group_id'] !== null) {
+                $log['group_name'] = Group::where('id', $data['group_id'])->get()[0]['name'];
             }
         } else if ($type === 'Document Received') {
             $name = User::where('id', $data['client_id'])->get(DB::raw("CONCAT(first_name,' ',last_name) as name"));

@@ -1272,20 +1272,21 @@ public function addFunds(Request $request) {
                     // save transaction logs
                     $detail = 'Refunded an amount of Php'.$amount.' with the reason of <i>"'.$reason.'"</i>.';
                     $detail_cn = '退款了 Php'.$amount.' 因为 "'.$reason.'".';
-                    $log_data = array(
-                        'client_service_id' => null,
-                        'client_id' => null,
-                        'group_id' => $group_id,
-                        'log_type' => 'Ewallet',
-                        'log_group' => 'refund',
-                        'detail'=> $detail,
-                        'detail_cn'=> $detail_cn,
-                        'amount'=> '-'.$amount,
-                    );
-                    LogController::save($log_data);
+//                    $log_data = array(
+//                        'client_service_id' => null,
+//                        'client_id' => null,
+//                        'group_id' => $group_id,
+//                        'log_type' => 'Ewallet',
+//                        'log_group' => 'refund',
+//                        'detail'=> $detail,
+//                        'detail_cn'=> $detail_cn,
+//                        'amount'=> '-'.$amount,
+//                    );
+//                    LogController::save($log_data);
+                    $leader_id = Group::where('id',$group_id)->get();
                     $addLog = new Log;
                     $addLog->client_service_id = null;
-                    $addLog->client_id = null;
+                    $addLog->client_id = $leader_id[0]['leader_id'];
                     $addLog->group_id = $group_id;
                     $addLog->log_type = 'Ewallet';
                     $addLog->log_group = 'refund';
