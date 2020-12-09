@@ -51,8 +51,7 @@ class MessageHelper
                 $services = $data['clients']['service'];
                 //$i=0;
                 foreach ($services as $k => $v){
-                    $msg .= $v;
-                    //$msg .= $v . PHP_EOL;
+                    $msg .= $v . PHP_EOL;
                     //$msg .= "Package #" . $data['clients']['package'][$k] . " with the Total Service Cost of " . $data['clients']['amount'][$k] . PHP_EOL;
                     //if(count($services)-1 != $i) {
                     //    $msg .= PHP_EOL;
