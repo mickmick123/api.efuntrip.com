@@ -4977,6 +4977,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
                   $addLog->detail_cn = $detail_cn;
                   $addLog->amount = -$amount;
                   $addLog->label = $label;
+                  $addLog->processor_id = Auth::user()->id;
+                  $addLog->log_date = Carbon::now()->toDateString();
                   $addLog->save();
                   $this->logsNotification->saveToDb(['log_id' => $addLog->id, 'job_id' => 0]);
                   app(LogController::class)->addNotif($addLog,'Service Payment 1');
