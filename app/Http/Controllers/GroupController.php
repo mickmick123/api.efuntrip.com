@@ -1178,9 +1178,10 @@ public function addFunds(Request $request) {
 //                    'amount'=> $amount,
 //                );
 //                 LogController::save($log_data);
+                $leader_id = Group::where('id',$group_id)->get();
                 $addLog = new Log;
                 $addLog->client_service_id = null;
-                $addLog->client_id = null;
+                $addLog->client_id = $leader_id[0]['leader_id'];
                 $addLog->group_id = $group_id;
                 $addLog->log_type = 'Ewallet';
                 $addLog->log_group = 'deposit';

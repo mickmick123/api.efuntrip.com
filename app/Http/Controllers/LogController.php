@@ -51,7 +51,7 @@ class LogController extends Controller
         }
     }
 
-    public function addNotif($log,$type)
+    public function addNotif($log, $type)
     {
         $date = Carbon::now();
         $data = [];
@@ -60,28 +60,28 @@ class LogController extends Controller
         $log['date'] = $date->toFormattedDateString();
         $opt = "";
         if ($type === 'E-wallet Deposit') {
-            $log['balance'] = app(ClientController::class)->getClientEwallet($log['client_id']);
-        }
-        else if ($type === 'Document Received') {
-            $name = User::where('id',$data['client_id'])->get(DB::raw("CONCAT(first_name,' ',last_name) as name"));
+            if ($data['group_id'] !== null) {
+                $log['balance'] = app(GroupController::class)->getGroupEwallet($log['group_id']);
+            } else {
+                $log['balance'] = app(ClientController::class)->getClientEwallet($log['client_id']);
+            }
+        } else if ($type === 'Document Received') {
+            $name = User::where('id', $data['client_id'])->get(DB::raw("CONCAT(first_name,' ',last_name) as name"));
             $log['user'] = $name[0]->name;
-        }
-        else if ($type === 'Service Payment 1') {
+        } else if ($type === 'Service Payment 1') {
             $opt = " 1";
             $type = "Service Payment";
-        }
-        else if ($type === 'Service Payment 2') {
+        } else if ($type === 'Service Payment 2') {
             $opt = " 2";
             $type = "Service Payment";
-        }
-        else if ($type === 'Service Payment 3') {
+        } else if ($type === 'Service Payment 3') {
             $opt = " 3";
             $type = "Service Payment";
         }
         $data['type'] = $type;
         $data['message'] = MessageHelper::MsgNotification($type . $opt, $log);
         $data['message_cn'] = "";
-        if($data['client_id'] !== null){
+        if ($data['client_id'] !== null) {
             $job = (new LogsPushNotification($data['client_id'], $type . PHP_EOL . PHP_EOL . $data['message']));
             $this->dispatch($job);
         }
