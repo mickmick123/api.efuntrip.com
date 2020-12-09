@@ -19,7 +19,7 @@ class MessageHelper
             $msg = "Your documents have been received by " . $data['user'] . " on " . $data['date'] . " you can now view it on your account.";
         } else if ($type == "Withdrawal") {
             if ($data['group_id'] !== null) {
-                $msg = "Your withdrawal amounting to " . $data['amount'] . " has been successfully processed to your group ". $data['group_name'] .". on " . $data['date'];
+                $msg = "Your withdrawal amounting to " . $data['amount'] . " has been successfully processed to your group " . $data['group_name'] . ". on " . $data['date'];
             } else {
                 $msg = "Your withdrawal amounting to " . $data['amount'] . " has been successfully processed on " . $data['date'];
             }
@@ -40,7 +40,7 @@ class MessageHelper
                         $temp['total_amount'] += $vv['amount'];
                     }
                 }
-                $temp['message'][$k] = ArrayHelper::CommaAnd($temp['clients']) . PHP_EOL . "Paid total amount of " . $temp['total_amount'] . " to service " . $v['service'];
+                $temp['message'][$k] = ArrayHelper::CommaAnd(array_unique($temp['clients'])) . PHP_EOL . "Paid total amount of " . $temp['total_amount'] . " to service " . $v['service'];
             }
             $msg = implode(PHP_EOL . PHP_EOL, $temp['message']);
         } elseif ($type == "Added Service") {
