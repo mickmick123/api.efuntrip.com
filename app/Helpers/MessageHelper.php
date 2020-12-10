@@ -61,7 +61,7 @@ class MessageHelper
                 }
                 $msg .= ArrayHelper::CommaAnd($message, ',' . PHP_EOL, ' and' . PHP_EOL);
             }else{
-                $msg = $data['service'] . PHP_EOL;
+                $msg = $data['service'];
                 //$msg = $data['service'] . PHP_EOL . "Package #" . $data['package'] . " with the Total Service Cost of " . number_format($data['amount']);
             }
 
