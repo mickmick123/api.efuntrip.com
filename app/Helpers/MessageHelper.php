@@ -40,24 +40,26 @@ class MessageHelper
                         $temp['total_amount'] += $vv['amount'];
                     }
                 }
-                $temp['message'][$k] = ArrayHelper::CommaAnd(array_unique($temp['clients'])) . PHP_EOL . "Paid total amount of " . $temp['total_amount'] . " to service " . $v['service'];
+                $temp['message'][$k] = ArrayHelper::CommaAnd(array_unique($temp['clients']), ', ', ' and ') . PHP_EOL . "Paid total amount of " . $temp['total_amount'] . " to service " . $v['service'];
             }
             $msg = implode(PHP_EOL . PHP_EOL, $temp['message']);
         } elseif ($type == "Added Service") {
             if (array_key_exists("clients", $data)) {
                 if($data['is_leader']) {
-                    $msg .= ArrayHelper::CommaAnd($data['clients']['name']) . PHP_EOL;
+                    $msg .= ArrayHelper::CommaAnd($data['clients']['name'], ', ', ' and ') . PHP_EOL;
                 }
                 $services = $data['clients']['service'];
                 //$i=0;
+                $message = [];
                 foreach ($services as $k => $v){
-                    $msg .= $v . PHP_EOL;
+                    array_push($message, $v);
                     //$msg .= "Package #" . $data['clients']['package'][$k] . " with the Total Service Cost of " . $data['clients']['amount'][$k] . PHP_EOL;
                     //if(count($services)-1 != $i) {
                     //    $msg .= PHP_EOL;
                     //}
                     //$i++;
                 }
+                $msg .= ArrayHelper::CommaAnd($message, ',' . PHP_EOL, ' and' . PHP_EOL);
             }else{
                 $msg = $data['service'] . PHP_EOL . "Package #" . $data['package'] . " with the Total Service Cost of " . $data['amount'];
             }
