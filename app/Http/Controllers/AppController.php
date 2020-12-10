@@ -415,7 +415,7 @@ class AppController extends Controller
         $data = array (
             "appId"  => "160152699158911",
             "mchId" => "698",
-            "notifyUrl" => (string)$notifyUrl,
+            // "notifyUrl" => (string)$notifyUrl,
             "returnUrl" => (string)$notifyUrl,
             "outTradeNo" => (string)$qr_id,
             "timestamp" => (string)$timestamp,
@@ -483,10 +483,19 @@ class AppController extends Controller
         foreach($service_ids as $id){
             $cs = ClientService::findorFail($id);
             $discount =  ClientTransaction::where('client_service_id', $id)->where('type', 'Discount')->sum('amount');
-            $amt = ($cs->charge + $cs->cost + $cs->tip + $cs->com_client + $cs->com_agent - ($cs->is_full_payment != 1 ? $cs->payment_amount : 0)) - $discount;
+            $amt = ($cs->charge + $cs->cost + $cs->tip + $cs->com_client + $cs->com_agent) - $discount;
+            if($cs->is_full_payment == 1){
+                if($amt == $cs->payment_amount){
+                    $amt = 0;
+                }
+                else{
+                    $amt -= $cs->payment_amount;
+                }
+            }
             $amount+=$amt;
         }
 
+    if($amount > 0){
         $dp = new ClientEWallet;
         $dp->client_id = ($client_id == null ? 0 : $client_id);
         $dp->type = 'Deposit';
@@ -624,6 +633,7 @@ class AppController extends Controller
 
             $total += $amt;
         }
+    }
 
         $data['status'] = 'Success';
         $data['code'] = 200;
