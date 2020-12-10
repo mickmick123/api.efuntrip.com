@@ -1639,29 +1639,29 @@ class LogController extends Controller
 
     public function getAllNotification($client_id) {
 
-              $logs = DB::table('logs')->where('client_id',$client_id)->orderBy('id','desc')->get();
+              $logs = DB::table('logs_app_notification')->where('client_id',$client_id)->orderBy('id','desc')->get();
               $data = [];
 
-              foreach($logs as $l){
-
-                $translogs = DB::table('logs_notification')
-                ->where('status',1)
-                ->where('log_id',$l->id)->get();
-
-                if(count($translogs) > 0){
-                        $data[] = array(
-                          'log_type' => $l->log_type,
-                          'detail' => $l->detail,
-                          'detail_cn' => $l->detail_cn,
-                          'log_date' => $l->log_date,
-                          'created_at' => $l->created_at,
-                          'log_group' => $l->log_group
-                        );
-                }
-              }
+              // foreach($logs as $l){
+              //
+              //   $translogs = DB::table('logs_notification')
+              //   ->where('status',1)
+              //   ->where('log_id',$l->id)->get();
+              //
+              //   if(count($translogs) > 0){
+              //           $data[] = array(
+              //             'log_type' => $l->log_type,
+              //             'detail' => $l->detail,
+              //             'detail_cn' => $l->detail_cn,
+              //             'log_date' => $l->log_date,
+              //             'created_at' => $l->created_at,
+              //             'log_group' => $l->log_group
+              //           );
+              //   }
+              // }
 
               $response['status'] = 'Success';
-              $response['data'] = $data;
+              $response['data'] = $logs;
               $response['code'] = 200;
 
               return Response::json($response);
