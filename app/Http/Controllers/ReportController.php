@@ -1446,7 +1446,7 @@ class ReportController extends Controller
         $this->logsNotification->saveToDb(['log_id' => $addLog->id, 'job_id' => 0]);
         app(LogController::class)->addNotif($addLog,'Document Received');
 
-      $this->sendPushNotification($user['id'], $detail);
+//      $this->sendPushNotification($user['id'], $detail);
 
       // document_log
       foreach( $documents as $document ) {
@@ -1617,7 +1617,7 @@ class ReportController extends Controller
             $this->logsNotification->saveToDb(['log_id' => $addLog->id, 'job_id' => 0]);
             app(LogController::class)->addNotif($addLog,'Document Released');
 
-			$this->sendPushNotification($getUser->id, $detail);
+//			$this->sendPushNotification($getUser->id, $detail);
 
 			// End Logs
 

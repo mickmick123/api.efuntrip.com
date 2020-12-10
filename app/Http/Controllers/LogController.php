@@ -99,6 +99,28 @@ class LogController extends Controller
         $this->logsAppNotification->saveToDb($data);
     }
 
+    public function readNotif(Request $request){
+        $validator = Validator::make($request->all(), [
+            'id' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+            $read = LogsAppNotification::find($request->id);
+            $read->is_read = true;
+            $read->save();
+
+            $response['status'] = 'Success';
+            $response['data'] = 'Successfully Read';
+            $response['code'] = 200;
+        }
+
+        return Response::json($response);
+    }
+
     public function getTransactionLogs($client_id, $group_id) {
         if($group_id == 0){
             $group_id = null;
