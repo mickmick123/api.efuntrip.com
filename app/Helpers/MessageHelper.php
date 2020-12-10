@@ -11,7 +11,7 @@ class MessageHelper
             if ($data['group_id'] !== null) {
                 $msg = "Your e-wallet deposit amounting to " . $data['amount'] . " on " . $data['date'] . " has been added to your group " . $data['group_name'] . ". Your new group balance is " . $data['balance'];
             } else {
-                $msg = "Your e-wallet deposit amounting to " . $data['amount'] . " on " . $data['date'] . " has been added to your account. Your new balance is" . $data['balance'];
+                $msg = "Your e-wallet deposit amounting to " . $data['amount'] . " on " . $data['date'] . " has been added to your account. Your new balance is " . $data['balance'];
             }
         } else if ($type == "Document Released") {
             $msg = "Your documents have been released on " . $data['date'] . " You can now view it on your account.";
