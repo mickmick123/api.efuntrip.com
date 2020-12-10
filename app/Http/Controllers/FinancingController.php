@@ -32,7 +32,7 @@ class FinancingController extends Controller
     	$date = str_replace("-", "/", $date);
     	$dateSelector = Carbon::parse($date.'/01')->toDateTimeString();
       // \Log::info($dateSelector);
-    	$now = Carbon::now();
+    	$now = Carbon::now(); 
 
     	$checkInitial = DB::table('financing')->where('cat_type','initial')
     						->where('branch_id',$branch_id)
@@ -210,7 +210,7 @@ class FinancingController extends Controller
     }
 
     public function store(Request $request){
-        $data = $this->financing->create($request->all());
+        $data = $this->financing->createNew($request->all());
         $response['status'] = 'Success';
         $response['code'] = 200;
         $response['data'] = $data;

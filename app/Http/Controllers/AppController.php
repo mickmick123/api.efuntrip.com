@@ -8,16 +8,19 @@ use App\ContactNumber;
 
 use App\Device;
 
+use App\ClientEWallet;
+use App\Financing;
 use App\ClientService;
 use App\ClientTransaction;
 use App\Client;
 use App\Group;
 use App\GroupUser;
 use App\QrCode;
+use App\Log;
+use App\Http\Controllers\LogController;
 
 use Illuminate\Http\Request;
 
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Redirect;
 
@@ -28,6 +31,7 @@ use Carbon\Carbon;
 
 use GuzzleHttp\Client as ClientGuzzle;
 use phpseclib\Crypt\RSA;
+use Illuminate\Support\Facades\Auth;
 
 class AppController extends Controller
 {
@@ -440,14 +444,14 @@ class AppController extends Controller
             ]);
 
             $r = $client->request('POST',
-                'https://openapi.gjob.ph/pay',
+                'https://openapi.juancash.com/pay',
                 [
                     'json' => $data
                 ]
             );
             // return $r;
             $r = json_decode($r->getBody(), true);
-            \Log::info($r);
+            // \Log::info($r);
             return Redirect::to($r['data']['content']);
         }
         catch (\Exception $ex) {
@@ -458,16 +462,167 @@ class AppController extends Controller
     public function updateServicePayment($qr_id) {
         $qr = QrCode::findorFail($qr_id);
         $service_ids = explode(',',$qr->service_ids);
+
+        $amount = 0;
+        $name = '';
+        $group_id = null;
+        $client_id = null;
+        $type = '';
+        if($qr->group_id != null){
+            $name = Group::where('id',$qr->group_id)->first()->name;
+            $group_id = $qr->group_id;
+            $type = 'Group';
+        }
+        else{
+            $name = User::where('id',$qr->client_id)->first();
+            $name = $name->first_name.' '.$name->last_name;
+            $client_id = $qr->client_id;
+            $type = 'Client';
+        }
+        //collect total amount
         foreach($service_ids as $id){
             $cs = ClientService::findorFail($id);
+            $discount =  ClientTransaction::where('client_service_id', $id)->where('type', 'Discount')->sum('amount');
+            $amt = ($cs->charge + $cs->cost + $cs->tip + $cs->com_client + $cs->com_agent - ($cs->is_full_payment != 1 ? $cs->payment_amount : 0)) - $discount;
+            $amount+=$amt;
+        }
+
+        $dp = new ClientEWallet;
+        $dp->client_id = ($client_id == null ? 0 : $client_id);
+        $dp->type = 'Deposit';
+        $dp->amount = $amount;
+        $dp->group_id = $group_id;
+        // $dp->reason = "Generating DP";
+        $dp->save();
+
+        $total_amount = $amount / 0.975;
+        $total_amount = round($total_amount, 2);
+
+        $finance = new Financing;
+        $finance->user_sn = 0;
+        $finance->type = "deposit";
+        $finance->record_id = $dp->id;
+        $finance->cat_type = "other";
+        $finance->cat_storage = 'bank';
+        $finance->branch_id = 1;
+        $finance->storage_type = 'juancash';
+        $finance->trans_desc = 'Received juancash payment Php'.$total_amount.' from '.$type.' '.$name;
+        $finance->bank_client_depo_payment = $amount;
+        $finance->deposit_other = $total_amount - $amount;
+        $finance->save();
+
+        $detail = 'Receive juancash payment with an amount of Php'.$total_amount.'.';
+        $detail_cn = '预存了款项 Php'.$total_amount.'.';
+        $log_data = array(
+            'client_service_id' => null,
+            'client_id' => $client_id,
+            'group_id' => $group_id,
+            'log_type' => 'Ewallet',
+            'log_group' => 'deposit',
+            'detail'=> $detail,
+            'detail_cn'=> $detail_cn,
+            'amount'=> $total_amount,
+        );
+
+        LogController::save($log_data);
+
+        $total = 0;
+        foreach($service_ids as $id){
+            $cs = ClientService::findorFail($id);
+            $cs_client_id = $cs->client_id;
             $discount =  ClientTransaction::where('client_service_id', $id)->where('type', 'Discount')->sum('amount');
             $amt = ($cs->charge + $cs->cost + $cs->tip + $cs->com_client + $cs->com_agent) - $discount;
             if($cs->payment_amount != 0){
                 $amt -= $cs->payment_amount;
             }
+
+            $payment = ClientTransaction::where('type','Payment')->where('client_service_id',$id)->first();
+             $rson = 'Paid Php'.$amount.' via Juancash ('.date('Y-m-d H:i:s').')<br><br>';
+             if($payment){
+                 $payment->amount += $amt;
+                 $payment->reason = $rson.$payment->reason;
+                 $payment->save();
+             }
+             else{
+                 $payment = new ClientTransaction;
+                 $payment->client_id = $client_id;
+                 $payment->client_service_id = $id;
+                 $payment->type = 'Payment';
+                 $payment->group_id = $group_id;
+                 $payment->amount = $amt;
+                 $payment->reason = $rson;
+                 $payment->save();
+             }
+
             $cs->payment_amount = $amt;
             $cs->is_full_payment = 1;
             $cs->save();
+
+            // save transaction logs
+             $detail = 'Paid an amount of Php '.$amt.'.';
+             $detail_cn = '已支付 Php'.$amt.'.';
+             $log_data = array(
+                 'client_service_id' => null,
+                 'client_id' => $client_id,
+                 'group_id' => $group_id,
+                 'log_type' => 'Transaction',
+                 'log_group' => 'payment',
+                 'detail'=> $detail,
+                 'detail_cn'=> $detail_cn,
+                 'amount'=> $amt,
+             );
+             LogController::save($log_data);
+
+             if($client_id != null){            
+                $detail = 'Paid service with an amount of Php'.$amt.'.';
+                $detail_cn = '已支付 Php'.$amt.'.';
+                $log_data = array(
+                    'client_service_id' => $id,
+                    'client_id' => $client_id,
+                    'group_id' => null,
+                    'log_type' => 'Ewallet',
+                    'log_group' => 'payment',
+                    'detail'=> $detail,
+                    'detail_cn'=> $detail_cn,
+                    'amount'=> '-'.$amt,
+                );
+                LogController::save($log_data);
+             }
+             else{
+                $label = null;
+                $cl = User::findOrFail($cs_client_id);
+                $datenow = (Carbon::now())->format('M d, Y H:i:s');
+
+                $label = 'Payment Date : '.$datenow;
+                $detail = '<br><div class="el-col el-col-11" style="padding-left: 10px; padding-right: 10px;"><b>'.$cs->detail.'</b></div>
+                               <div class="el-col el-col-8" style="padding-left: 10px; padding-right: 10px;"><b>['.$cs_client_id.']'.$cl->first_name.' '.$cl->last_name.' : </b> Paid service Php'.$amt.'. </div>';
+                $detail_cn = $detail;
+
+                $checkLog = Log::where('log_type','Ewallet')->where('log_group','payment')
+                        ->where('client_service_id',$id)->first();
+
+                 if($checkLog){
+                    $label = $checkLog->label;
+                    $detail = '<div class="el-col el-col-11" style="padding-left: 10px; padding-right: 10px;"><b>'.'&nbsp;'.'</b></div>
+                               <div class="el-col el-col-8" style="padding-left: 10px; padding-right: 10px;"><b>['.$cs_client_id.']'.$cl->first_name.' '.$cl->last_name.' : </b> Paid service Php'.$amt.'. </div>';
+                    $detail_cn = $detail;
+                 }
+
+                 $log_data = array(
+                     'client_service_id' => $id,
+                     'client_id' => null,
+                     'group_id' => $group_id,
+                     'log_type' => 'Ewallet',
+                     'log_group' => 'payment',
+                     'detail'=> $detail,
+                     'detail_cn'=> $detail_cn,
+                     'amount'=> '-'.$amt,
+                     'label'=> $label,
+                 );
+                 LogController::save($log_data);
+             }
+
+            $total += $amt;
         }
 
         $data['status'] = 'Success';

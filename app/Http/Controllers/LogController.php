@@ -49,6 +49,12 @@ class LogController extends Controller
 
             Log::insert($log_data);
         }
+        else{
+            $log_data['processor_id'] = 1;
+            $log_data['log_date'] = date('Y-m-d');
+
+            Log::insert($log_data);
+        }
     }
 
     public function addNotif($log, $type)
