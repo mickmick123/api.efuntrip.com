@@ -9,9 +9,9 @@ class MessageHelper
         $msg = "";
         if ($type == "E-wallet Deposit") {
             if ($data['group_id'] !== null) {
-                $msg = "Your e-wallet deposit amounting to " . $data['amount'] . " on " . $data['date'] . " has been added to your group " . $data['group_name'] . ". Your new group balance is " . $data['balance'];
+                $msg = "Your e-wallet deposit amounting to " . number_format($data['amount']) . " on " . $data['date'] . " has been added to your group " . $data['group_name'] . ". Your new group balance is " . number_format($data['balance']);
             } else {
-                $msg = "Your e-wallet deposit amounting to " . $data['amount'] . " on " . $data['date'] . " has been added to your account. Your new balance is " . $data['balance'];
+                $msg = "Your e-wallet deposit amounting to " . number_format($data['amount']) . " on " . $data['date'] . " has been added to your account. Your new balance is " . number_format($data['balance']);
             }
         } else if ($type == "Document Released") {
             $msg = "Your documents have been released on " . $data['date'] . " You can now view it on your account.";
@@ -19,14 +19,14 @@ class MessageHelper
             $msg = "Your documents have been received by " . $data['user'] . " on " . $data['date'] . " you can now view it on your account.";
         } else if ($type == "Withdrawal") {
             if ($data['group_id'] !== null) {
-                $msg = "Your withdrawal amounting to " . $data['amount'] . " has been successfully processed to your group " . $data['group_name'] . ". on " . $data['date'];
+                $msg = "Your withdrawal amounting to " . number_format($data['amount']) . " has been successfully processed to your group " . $data['group_name'] . ". on " . $data['date'];
             } else {
-                $msg = "Your withdrawal amounting to " . $data['amount'] . " has been successfully processed on " . $data['date'];
+                $msg = "Your withdrawal amounting to " . number_format($data['amount']) . " has been successfully processed on " . $data['date'];
             }
         } else if ($type == "Service Payment 1") {
-            $msg = "Your payment amounting to " . $data['amount'] . " has been successfully processed on " . $data['date'];
+            $msg = "Your payment amounting to " . number_format($data['amount']) . " has been successfully processed on " . $data['date'];
         } else if ($type == "Service Payment 2") {
-            $msg = "Your payment amounting to " . $data['amount'] . " through " . $data['bank'] . " has been successfully processed on " . $data['date'] . ".";
+            $msg = "Your payment amounting to " . number_format($data['amount']) . " through " . $data['bank'] . " has been successfully processed on " . $data['date'] . ".";
         } else if ($type == "Service Payment 3") {
             $temp = [];
             $group = collect($data['group'])->sortBy('service');
@@ -40,7 +40,7 @@ class MessageHelper
                         $temp['total_amount'] += $vv['amount'];
                     }
                 }
-                $temp['message'][$k] = ArrayHelper::CommaAnd(array_unique($temp['clients']), ', ', ' and ') . PHP_EOL . "Paid total amount of " . $temp['total_amount'] . " to service " . $v['service'];
+                $temp['message'][$k] = ArrayHelper::CommaAnd(array_unique($temp['clients']), ', ', ' and ') . PHP_EOL . "Paid total amount of " . number_format($temp['total_amount']) . " to service " . $v['service'];
             }
             $msg = implode(PHP_EOL . PHP_EOL, $temp['message']);
         } elseif ($type == "Added Service") {
@@ -61,7 +61,7 @@ class MessageHelper
                 }
                 $msg .= ArrayHelper::CommaAnd($message, ',' . PHP_EOL, ' and' . PHP_EOL);
             }else{
-                $msg = $data['service'] . PHP_EOL . "Package #" . $data['package'] . " with the Total Service Cost of " . $data['amount'];
+                $msg = $data['service'] . PHP_EOL . "Package #" . $data['package'] . " with the Total Service Cost of " . number_format($data['amount']);
             }
 
         }

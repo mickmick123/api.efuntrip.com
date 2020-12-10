@@ -1165,8 +1165,8 @@ public function addFunds(Request $request) {
                     $remarks = " Remarks: ".$reason2." .";
                 }
                 // save transaction logs
-                $detail = 'Receive '.$deptype.' deposit with an amount of Php'.$amount.'.'.$remarks;
-                $detail_cn = '预存了款项 Php'.$amount.'.';
+                $detail = 'Receive '.$deptype.' deposit with an amount of Php'.number_format($amount).'.'.$remarks;
+                $detail_cn = '预存了款项 Php'.number_format($amount).'.';
 //                $log_data = array(
 //                    'client_service_id' => null,
 //                    'client_id' => null,
@@ -1270,8 +1270,8 @@ public function addFunds(Request $request) {
                     $finance->save();
 
                     // save transaction logs
-                    $detail = 'Refunded an amount of Php'.$amount.' with the reason of <i>"'.$reason.'"</i>.';
-                    $detail_cn = '退款了 Php'.$amount.' 因为 "'.$reason.'".';
+                    $detail = 'Refunded an amount of Php'.number_format($amount).' with the reason of <i>"'.$reason.'"</i>.';
+                    $detail_cn = '退款了 Php'.number_format($amount).' 因为 "'.$reason.'".';
 //                    $log_data = array(
 //                        'client_service_id' => null,
 //                        'client_id' => null,
@@ -4923,8 +4923,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
                  $service->save();
 
                  // save transaction logs
-                 $detail = 'Paid an amount of Php '.$amount.'.';
-                 $detail_cn = '已支付 Php'.$amount.'.';
+                 $detail = 'Paid an amount of Php '.number_format($amount).'.';
+                 $detail_cn = '已支付 Php'.number_format($amount).'.';
                  $log_data = array(
                      'client_service_id' => null,
                      'client_id' => null,
@@ -4943,7 +4943,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
                 $label = 'Payment Date : '.$datenow;
                 $detail = '<br><div class="el-col el-col-11" style="padding-left: 10px; padding-right: 10px;"><b>'.$service->detail.'</b></div>
-                               <div class="el-col el-col-8" style="padding-left: 10px; padding-right: 10px;"><b>['.$client_id.']'.$cl->first_name.' '.$cl->last_name.' : </b> Paid service Php'.$amount.'. </div>';
+                               <div class="el-col el-col-8" style="padding-left: 10px; padding-right: 10px;"><b>['.$client_id.']'.$cl->first_name.' '.$cl->last_name.' : </b> Paid service Php'.number_format($amount).'. </div>';
                 $detail_cn = $detail;
 
                 $checkLog = Log::where('log_type','Ewallet')->where('log_group','payment')
@@ -4952,7 +4952,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
                  if($checkLog){
                     $label = $checkLog->label;
                     $detail = '<div class="el-col el-col-11" style="padding-left: 10px; padding-right: 10px;"><b>'.'&nbsp;'.'</b></div>
-                               <div class="el-col el-col-8" style="padding-left: 10px; padding-right: 10px;"><b>['.$client_id.']'.$cl->first_name.' '.$cl->last_name.' : </b> Paid service Php'.$amount.'. </div>';
+                               <div class="el-col el-col-8" style="padding-left: 10px; padding-right: 10px;"><b>['.$client_id.']'.$cl->first_name.' '.$cl->last_name.' : </b> Paid service Php'.number_format($amount).'. </div>';
                     $detail_cn = $detail;
                  }
 

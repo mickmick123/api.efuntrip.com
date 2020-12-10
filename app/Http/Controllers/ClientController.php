@@ -2192,8 +2192,8 @@ class ClientController extends Controller
                     $remarks = " Remarks: ".$reason2." .";
                 }
                 // save transaction logs
-                $detail = 'Receive '.$deptype.' deposit with an amount of Php'.$amount.'.'.$remarks;
-                $detail_cn = '预存了款项 Php'.$amount.'.';
+                $detail = 'Receive '.$deptype.' deposit with an amount of Php'.number_format($amount).'.'.$remarks;
+                $detail_cn = '预存了款项 Php'.number_format($amount).'.';
 //                $log_data = array(
 //                    'client_service_id' => null,
 //                    'client_id' => $client_id,
@@ -2340,8 +2340,8 @@ class ClientController extends Controller
                     $finance->save();
 
                     // save transaction logs
-                    $detail = 'Withdrew an amount of Php'.$amount.' with the reason of <i>"'.$reason.'"</i>.';
-                    $detail_cn = '退款了 Php'.$amount.' 因为 "'.$reason.'".';
+                    $detail = 'Withdrew an amount of Php'.number_format($amount).' with the reason of <i>"'.$reason.'"</i>.';
+                    $detail_cn = '退款了 Php'.number_format($amount).' 因为 "'.$reason.'".';
 //                    $log_data = array(
 //                        'client_service_id' => null,
 //                        'client_id' => $client_id,
@@ -2886,8 +2886,8 @@ class ClientController extends Controller
                      );
                      LogController::save($log_data);
 
-                    $detail = 'Paid service with an amount of Php'.$amount.'.';
-                    $detail_cn = '已支付 Php'.$amount.'.';
+                    $detail = 'Paid service with an amount of Php'.number_format($amount).'.';
+                    $detail_cn = '已支付 Php'.number_format($amount).'.';
 //                    $log_data = array(
 //                        'client_service_id' => $cs_id,
 //                        'client_id' => $client_id,
