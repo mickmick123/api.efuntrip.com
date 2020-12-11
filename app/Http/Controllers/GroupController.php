@@ -4985,9 +4985,20 @@ public function getClientPackagesByGroup($client_id, $group_id){
                   app(LogController::class)->addNotif($addLog,'Service Payment 1');
                   $group_data['group'][$i] = ['client_name' => $cl->first_name . ' ' . $cl->last_name, 'service' => $service->detail, 'amount' => -$amount];
                }
+
               $leader_id = Group::where('id',$group_id)->get();
-              $group_data['client_id'] = $leader_id[0]['leader_id'];
-              $group_data['group_id'] = $group_id;
+              $addLog = new Log;
+              $addLog->client_id = $leader_id[0]['leader_id'];
+              $addLog->group_id = $group_id;
+              $addLog->log_type = 'Ewallet';
+              $addLog->log_group = 'payment';
+              $addLog->processor_id = Auth::user()->id;
+              $addLog->log_date = Carbon::now()->toDateString();
+              $addLog->save();
+              $group_data['id'] = $addLog->id;
+              $group_data['client_id'] = $addLog->client_id;
+              $group_data['group_id'] = $addLog->group_id;
+              $this->logsNotification->saveToDb(['log_id' => $addLog->id, 'job_id' => 0]);
               app(LogController::class)->addNotif($group_data,'Service Payment 3');
           }
           else{
