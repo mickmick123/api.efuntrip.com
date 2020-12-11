@@ -1665,26 +1665,38 @@ class LogController extends Controller
               $logs = DB::table('logs_app_notification')->where('client_id',$client_id)->orderBy('id','desc')->get();
               $data = [];
 
-              // foreach($logs as $l){
-              //
-              //   $translogs = DB::table('logs_notification')
-              //   ->where('status',1)
-              //   ->where('log_id',$l->id)->get();
-              //
-              //   if(count($translogs) > 0){
-              //           $data[] = array(
-              //             'log_type' => $l->log_type,
-              //             'detail' => $l->detail,
-              //             'detail_cn' => $l->detail_cn,
-              //             'log_date' => $l->log_date,
-              //             'created_at' => $l->created_at,
-              //             'log_group' => $l->log_group
-              //           );
-              //   }
-              // }
+              foreach($logs as $l){
+
+              $log = '';
+              if($l->log_id != null && $l->log_id != ""){
+                    $ids = unserialize($l->log_id);
+
+                  $log = DB::table('logs')
+                      ->where('id',$ids[0])->first();
+
+                  $user = DB::table('users')
+                          ->where('id',$log->processor_id)->first();
+
+              }
+
+                        $data[] = array(
+                          'id' => $l->id,
+                          'message' => $l->message,
+                          'message_cn' => $l->message_cn,
+                          'is_read' => $l->is_read,
+                          'created_at' => $l->created_at,
+                          'log_id' => $l->log_id,
+                          'group_id' => $l->group_id,
+                          'type'  => $l->type,
+                          'user' => $user
+                        );
+                }
+
+
+
 
               $response['status'] = 'Success';
-              $response['data'] = $logs;
+              $response['data'] = $data;
               $response['code'] = 200;
 
               return Response::json($response);
