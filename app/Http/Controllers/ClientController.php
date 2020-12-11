@@ -20,7 +20,6 @@ use App\ContactAlternate;
 use App\Group;
 
 use App\Helpers\DateHelper;
-use App\LogsNotification;
 use App\Package;
 
 use App\QrCode;
@@ -59,11 +58,6 @@ use phpseclib\Crypt\RSA;
 
 class ClientController extends Controller
 {
-    protected $logsNotification;
-    public function __construct(LogsNotification $logsNotification)
-    {
-        $this->logsNotification = $logsNotification;
-    }
 
 	public function manageClients() {
 		$clients = DB::table('users as u')
@@ -2220,7 +2214,7 @@ class ClientController extends Controller
                 $addLog->processor_id = Auth::user()->id;
                 $addLog->log_date = Carbon::now()->toDateString();
                 $addLog->save();
-                $this->logsNotification->saveToDb(['log_id' => $addLog->id, 'job_id' => 0]);
+                DB::table('logs_notification')->insert(['log_id' => $addLog->id, 'job_id' => 0]);
                 app(LogController::class)->addNotif($addLog,'E-wallet Deposit');
             }
 
@@ -2368,7 +2362,7 @@ class ClientController extends Controller
                     $addLog->processor_id = Auth::user()->id;
                     $addLog->log_date = Carbon::now()->toDateString();
                     $addLog->save();
-                    $this->logsNotification->saveToDb(['log_id' => $addLog->id, 'job_id' => 0]);
+                    DB::table('logs_notification')->insert(['log_id' => $addLog->id, 'job_id' => 0]);
                     app(LogController::class)->addNotif($addLog,'Withdrawal');
             }
 
@@ -2914,7 +2908,7 @@ class ClientController extends Controller
                       $addLog->processor_id = Auth::user()->id;
                       $addLog->log_date = Carbon::now()->toDateString();
                       $addLog->save();
-                      $this->logsNotification->saveToDb(['log_id' => $addLog->id, 'job_id' => 0]);
+                      DB::table('logs_notification')->insert(['log_id' => $addLog->id, 'job_id' => 0]);
                       app(LogController::class)->addNotif($addLog,'Service Payment 1');
                    }
               }

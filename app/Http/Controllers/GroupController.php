@@ -1,7 +1,6 @@
 <?php
 
 namespace App\Http\Controllers;
-use App\LogsNotification;
 use App\Remark;
 use Carbon\Carbon;
 use App\ClientService;
@@ -54,11 +53,6 @@ use App\Helpers\MessageHelper;
 
 class GroupController extends Controller
 {
-    protected $logsNotification;
-    public function __construct(LogsNotification $logsNotification)
-    {
-        $this->logsNotification = $logsNotification;
-    }
 
     private function generateGroupTracking() {
     	$numeric = '0123456789';
@@ -1191,7 +1185,7 @@ public function addFunds(Request $request) {
                 $addLog->processor_id = Auth::user()->id;
                 $addLog->log_date = Carbon::now()->toDateString();
                 $addLog->save();
-                $this->logsNotification->saveToDb(['log_id' => $addLog->id, 'job_id' => 0]);
+                DB::table('logs_notification')->insert(['log_id' => $addLog->id, 'job_id' => 0]);
                 app(LogController::class)->addNotif($addLog,'E-wallet Deposit');
             }
 
@@ -1296,7 +1290,7 @@ public function addFunds(Request $request) {
                     $addLog->processor_id = Auth::user()->id;
                     $addLog->log_date = Carbon::now()->toDateString();
                     $addLog->save();
-                    $this->logsNotification->saveToDb(['log_id' => $addLog->id, 'job_id' => 0]);
+                    DB::table('logs_notification')->insert(['log_id' => $addLog->id, 'job_id' => 0]);
                     app(LogController::class)->addNotif($addLog,'Withdrawal');
             }
 
@@ -4986,7 +4980,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
                   $addLog->processor_id = Auth::user()->id;
                   $addLog->log_date = Carbon::now()->toDateString();
                   $addLog->save();
-                  $this->logsNotification->saveToDb(['log_id' => $addLog->id, 'job_id' => 0]);
+                  DB::table('logs_notification')->insert(['log_id' => $addLog->id, 'job_id' => 0]);
                   app(LogController::class)->addNotif($addLog,'Service Payment 1');
                   $group_data['group'][$i] = ['client_name' => $cl->first_name . ' ' . $cl->last_name, 'service' => $service->detail, 'amount' => -$amount];
                }
@@ -5003,7 +4997,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
               $group_data['id'] = $addLog->id;
               $group_data['client_id'] = $addLog->client_id;
               $group_data['group_id'] = $addLog->group_id;
-              $this->logsNotification->saveToDb(['log_id' => $addLog->id, 'job_id' => 0]);
+              DB::table('logs_notification')->insert(['log_id' => $addLog->id, 'job_id' => 0]);
               app(LogController::class)->addNotif($group_data,'Service Payment 3');
           }
           else{

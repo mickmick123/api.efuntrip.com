@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\ClientController;
 
-use App\LogsNotification;
 use Edujugon\PushNotification\PushNotification;
 
 use Edujugon\PushNotification\Messages\PushMessage;
@@ -50,11 +49,6 @@ use App\Jobs\LogsPushNotification;
 
 class ReportController extends Controller
 {
-    protected $logsNotification;
-    public function __construct(LogsNotification $logsNotification)
-    {
-        $this->logsNotification = $logsNotification;
-    }
 
     public function index(Request $request, $perPage = 20) {
     	$search = $request->search;
@@ -1443,7 +1437,7 @@ class ReportController extends Controller
         $addLog->label = $action;
         $addLog->log_date = Carbon::now()->toDateString();
         $addLog->save();
-        $this->logsNotification->saveToDb(['log_id' => $addLog->id, 'job_id' => 0]);
+        DB::table('logs_notification')->insert(['log_id' => $addLog->id, 'job_id' => 0]);
         app(LogController::class)->addNotif($addLog,'Document Received');
 
 //      $this->sendPushNotification($user['id'], $detail);
@@ -1614,7 +1608,7 @@ class ReportController extends Controller
             $addLog->label = $action;
             $addLog->log_date = Carbon::now()->toDateString();
             $addLog->save();
-            $this->logsNotification->saveToDb(['log_id' => $addLog->id, 'job_id' => 0]);
+            DB::table('logs_notification')->insert(['log_id' => $addLog->id, 'job_id' => 0]);
             app(LogController::class)->addNotif($addLog,'Document Released');
 
 //			$this->sendPushNotification($getUser->id, $detail);
