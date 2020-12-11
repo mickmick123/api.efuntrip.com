@@ -1761,7 +1761,7 @@ class ClientController extends Controller
                 $detail = 'Added service "'.$sdetail.'", Service status is pending.';
                 $detail_cn = '已添加服务 "'.$detail_cn.'" 服务状态为 待办。';
 
-                Log::create([
+                $log = Log::create([
                     'client_service_id' => $cs->id,
                     'client_id' => $cs->client_id,
                     'group_id' => $cs->group_id,
@@ -1773,6 +1773,7 @@ class ClientController extends Controller
                     'processor_id' => Auth::user()->id,
                     'log_date' => Carbon::now()->toDateString()
                 ]);
+                $_log[] = $log->id;
 
                 $_service[] = $service->detail;
                 $_amount += $totalAmount;
@@ -1786,6 +1787,7 @@ class ClientController extends Controller
             }
 
             $_data = [
+                'id' => serialize($_log),
                 'client_id' => $request->client_id,
                 'group_id' => null,
                 'service' => implode("\n", $_service),
@@ -1796,6 +1798,7 @@ class ClientController extends Controller
 
             $response['status'] = 'Success';
             $response['service_ids'] = $service_ids;
+            $response['log'] = $_data;
             $response['code'] = 200;
         }
 

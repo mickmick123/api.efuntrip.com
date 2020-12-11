@@ -2500,8 +2500,11 @@ public function getClientPackagesByGroup($client_id, $group_id){
                     'detail'=> $detail,
                     'detail_cn'=> $detail_cn,
                     'amount'=> 0,
+                    'processor_id' => Auth::user()->id,
+                    'log_date' => Carbon::now()->toDateString()
                 );
-                LogController::save($log_data);
+                $log = Log::create($log_data);
+                $_log[$clientId][$j] = $log->id;
 
                 $_clients['amount'][$j] = $scharge + $scost + $stip;
 
@@ -2515,6 +2518,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
             $clientId = $request->clients[$i];
             if($g->leader_id != $clientId) {
                 app(LogController::class)->addNotif([
+                    'id' => serialize($_log[$clientId]),
                     'client_id' => $clientId,
                     'group_id' => $request->group_id,
                     'clients' => $_clients,
@@ -2524,6 +2528,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
         }
 
          app(LogController::class)->addNotif([
+             'id' => serialize($_log[$g->leader_id]),
              'client_id' => $g->leader_id,
              'group_id' => $request->group_id,
              'clients' => $_clients,
