@@ -520,7 +520,7 @@ class AppController extends Controller
         $finance->deposit_other = $total_amount - $amount;
         $finance->save();
 
-        $detail = 'Receive juancash payment with an amount of Php'.$total_amount.'.';
+        $detail = 'Receive juancash payment with an amount of Php'.$amount.'.';
         $detail_cn = '预存了款项 Php'.$total_amount.'.';
         $log_data = array(
             'client_service_id' => null,
@@ -530,7 +530,7 @@ class AppController extends Controller
             'log_group' => 'deposit',
             'detail'=> $detail,
             'detail_cn'=> $detail_cn,
-            'amount'=> $total_amount,
+            'amount'=> $amount,
         );
 
         LogController::save($log_data);
