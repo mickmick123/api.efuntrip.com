@@ -3974,7 +3974,7 @@ s5n8yErWKdqOJDgF77IW5mzhlQyNioIhDsYSytD3ef9nlwcPmFVUI7lOEtMP9xAB
                     $amt -= $cs->payment_amount;
                 }
                 $total_amount += $amt;
-                $data['service'][$index] = ['service'=>$cs->detail,'amount'=>$total_amount];
+                $data['service'][$index] = ['service'=>$cs->detail,'amount'=>$amt];
             }
             $client = User::where('id',$qr[0]->client_id)->get(DB::raw("CONCAT(first_name,' ',last_name) AS name"));
             $group = Group::where('id',$qr[0]->group_id)->get(['name']);
