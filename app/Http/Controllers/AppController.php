@@ -415,7 +415,7 @@ class AppController extends Controller
         $data = array (
             "appId"  => "160152699158911",
             "mchId" => "698",
-            // "notifyUrl" => (string)$notifyUrl,
+            "notifyUrl" => (string)$notifyUrl,
             "returnUrl" => (string)$notifyUrl,
             "outTradeNo" => (string)$qr_id,
             "timestamp" => (string)$timestamp,
