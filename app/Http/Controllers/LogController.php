@@ -61,6 +61,7 @@ class LogController extends Controller
     {
         $date = Carbon::now();
         $data = [];
+        $data['log_id'] = $log['id'];
         $data['client_id'] = $log['client_id'];
         $data['group_id'] = $log['group_id'];
         $log['date'] = $date->toFormattedDateString();
