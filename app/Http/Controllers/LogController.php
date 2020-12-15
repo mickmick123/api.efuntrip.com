@@ -1667,30 +1667,36 @@ class LogController extends Controller
 
               foreach($logs as $l){
 
-              $log = '';
-              if($l->log_id != null && $l->log_id != ""){
-                    $ids = unserialize($l->log_id);
+              //$log = '';
+              $user = null;
 
-                  $log = DB::table('logs')
-                      ->where('id',$ids[0])->first();
+                if($l->log_id !== null){
+
+                  if($l->type != 'Added Service'){
+                    $log = DB::table('logs')->where('id',$l->log_id)->first();
+                  }else{
+                    $ids = unserialize($l->log_id);
+                    $log = DB::table('logs')
+                         ->where('id',$ids[0])->first();
+                  }
 
                   $user = DB::table('users')
-                          ->where('id',$log->processor_id)->first();
+                      ->where('id',$log->processor_id)->first();
+
+                  $data[] = array(
+                    'id' => $l->id,
+                    'message' => $l->message,
+                    'message_cn' => $l->message_cn,
+                    'is_read' => $l->is_read,
+                    'created_at' => $l->created_at,
+                    'log_id' => $l->log_id,
+                    'group_id' => $l->group_id,
+                    'type'  => $l->type,
+                    'user' => $user
+                  );
+                }
 
               }
-
-                        $data[] = array(
-                          'id' => $l->id,
-                          'message' => $l->message,
-                          'message_cn' => $l->message_cn,
-                          'is_read' => $l->is_read,
-                          'created_at' => $l->created_at,
-                          'log_id' => $l->log_id,
-                          'group_id' => $l->group_id,
-                          'type'  => $l->type,
-                          'user' => $user
-                        );
-                }
 
 
 
