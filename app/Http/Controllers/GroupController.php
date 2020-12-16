@@ -2519,15 +2519,17 @@ public function getClientPackagesByGroup($client_id, $group_id){
                     'is_leader' => false
                 ], 'Added Service');
             }
+
         }
 
-         // app(LogController::class)->addNotif([
-         //     'id' => serialize($_log[$g->leader_id]),
-         //     'client_id' => $g->leader_id,
-         //     'group_id' => $request->group_id,
-         //     'clients' => $_clients,
-         //     'is_leader' => true
-         // ], 'Added Service');
+        $_log2 = in_array($g->leader_id, $request->clients) ? $_log[$g->leader_id] : $_log[$request->clients[count($request->clients)-1]];
+        app(LogController::class)->addNotif([
+              'id' => serialize($_log2),
+              'client_id' => $g->leader_id,
+              'group_id' => $request->group_id,
+              'clients' => $_clients,
+              'is_leader' => true
+        ], 'Added Service');
 
         return Response::json(['success' => true,
             'message' => 'Service/s successfully added to group',
