@@ -2908,6 +2908,7 @@ class ClientController extends Controller
                       $addLog->processor_id = Auth::user()->id;
                       $addLog->log_date = Carbon::now()->toDateString();
                       $addLog->save();
+                      $addLog->service_name = $service->detail;
                       DB::table('logs_notification')->insert(['log_id' => $addLog->id, 'job_id' => 0]);
                       app(LogController::class)->addNotif($addLog,'Service Payment 1');
                    }

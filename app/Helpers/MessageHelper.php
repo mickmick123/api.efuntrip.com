@@ -24,7 +24,7 @@ class MessageHelper
                 $msg = "Your withdrawal amounting to " . number_format($data['amount']) . " has been successfully processed on " . $data['date'];
             }
         } else if ($type == "Service Payment 1") {
-            $msg = "Your payment amounting to " . number_format($data['amount']) . " has been successfully processed on " . $data['date'];
+            $msg = "Your payment for " . $data['service_name'] . ", amounting to " . number_format($data['amount']) . " has been successfully processed on " . $data['date'];
         } else if ($type == "Service Payment 2") {
             $msg = "Your payment amounting to " . number_format($data['amount']) . " through " . $data['bank'] . " has been successfully processed on " . $data['date'] . ".";
         } else if ($type == "Service Payment 3") {
