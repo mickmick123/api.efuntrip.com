@@ -102,7 +102,7 @@ class LogController extends Controller
 
     public function readNotif(Request $request){
         $validator = Validator::make($request->all(), [
-            'id' => 'required',
+            'id' => 'required|exists:logs_app_notification',
         ]);
 
         if ($validator->fails()) {
@@ -116,6 +116,48 @@ class LogController extends Controller
 
             $response['status'] = 'Success';
             $response['data'] = 'Successfully Read';
+            $response['code'] = 200;
+        }
+
+        return Response::json($response);
+    }
+
+    public function getNotifDetail(Request $request){
+        $validator = Validator::make($request->all(), [
+            'id' => 'required|exists:logs_app_notification',
+        ]);
+
+        if ($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+            $read = LogsAppNotification::find($request->id);
+            $getLogs = Log::find($read->log_id);
+            $logs = Log::where([
+                ['log_type','ewallet'],
+                ['client_service_id',$getLogs['client_service_id']]])
+                ->orderBy('created_at','desc')
+                ->get(['id','detail','detail_cn','amount','created_at','processor_id']);
+            $service = ClientService::find($getLogs['client_service_id']);
+            $discount =  ClientTransaction::where('client_service_id', $getLogs['client_service_id'])->where('type', 'Discount')->sum('amount');
+            $amt = ($service->charge + $service->cost + $service->tip + $service->com_client + $service->com_agent) - $discount;
+            $title = $service->detail . ' Price : Php' . $amt . ' , Balance : Php' . ($amt - $service->payment_amount) . PHP_EOL . PHP_EOL;
+            $body = '';
+            $extra = '';
+            foreach($logs as $k=>$v){
+                $name = User::find($v->processor_id);
+                $body .= PHP_EOL . $v->detail . ' ' . $name['first_name'] . ' | ' . date_format(date_create($v->created_at),"M d, yy , h:i A");
+                if($k === 0){
+                    $extra = $name['first_name'] . ' | ' . date_format(date_create($v->created_at),"M d, yy , h:i A");
+                }
+            }
+            $header = 'Paid service with total amount of Php'. ($service->payment_amount + 0) .' ' . $extra . PHP_EOL;
+
+            $result = $title . $header . $body;
+
+            $response['status'] = 'Success';
+            $response['data'] = $result;
             $response['code'] = 200;
         }
 
