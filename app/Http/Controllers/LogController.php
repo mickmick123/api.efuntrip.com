@@ -66,7 +66,6 @@ class LogController extends Controller
         $data['client_id'] = $log['client_id'];
         $data['group_id'] = $log['group_id'];
         $log['date'] = $date->toFormattedDateString();
-        $opt = "";
         if ($type === 'E-wallet Deposit') {
             if ($data['group_id'] !== null) {
                 $log['group_name'] = Group::where('id',$data['group_id'])->get()[0]['name'];
@@ -81,21 +80,14 @@ class LogController extends Controller
         } else if ($type === 'Document Received') {
             $name = User::where('id', $data['client_id'])->get(DB::raw("CONCAT(first_name,' ',last_name) as name"));
             $log['user'] = $name[0]->name;
-        } else if ($type === 'Service Payment 1') {
-            $opt = " 1";
-            $type = "Service Payment";
-        } else if ($type === 'Service Payment 2') {
-            $opt = " 2";
-            $type = "Service Payment";
-        } else if ($type === 'Service Payment 3') {
-            $opt = " 3";
-            $type = "Service Payment";
         }
-        $data['type'] = $type;
-        $data['message'] = MessageHelper::MsgNotification($type . $opt, $log);
+
+        $data['type'] = strpos($type, 'Service Payment') !== false ? 'Service Payment' : $type;
+        $data['message'] = MessageHelper::MsgNotification($type, $log);
         $data['message_cn'] = "";
+
         if ($data['client_id'] !== null) {
-            $job = (new LogsPushNotification($data['client_id'], $type . PHP_EOL . PHP_EOL . $data['message']));
+            $job = (new LogsPushNotification($data['client_id'], $data['message']));
             $this->dispatch($job);
         }
         $this->logsAppNotification->saveToDb($data);
