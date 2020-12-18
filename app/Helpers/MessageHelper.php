@@ -9,9 +9,9 @@ class MessageHelper
         $msg = "";
         if ($type == "E-wallet Deposit") {
             if ($data['group_id'] !== null) {
-                $msg = "Your e-wallet deposit amounting to " . number_format($data['amount']) . " on " . $data['date'] . " has been added to your group " . $data['group_name'] . ". Your new group balance is " . number_format($data['balance']);
+                $msg = "Your e-wallet deposit amounting to " . NumberHelper::nnnf($data['amount']) . " on " . $data['date'] . " has been added to your group " . $data['group_name'] . ". Your new group balance is " . NumberHelper::nnnf($data['balance']);
             } else {
-                $msg = "Your e-wallet deposit amounting to " . number_format($data['amount']) . " on " . $data['date'] . " has been added to your account. Your new balance is " . number_format($data['balance']);
+                $msg = "Your e-wallet deposit amounting to " . NumberHelper::nnnf($data['amount']) . " on " . $data['date'] . " has been added to your account. Your new balance is " . NumberHelper::nnnf($data['balance']);
             }
         } else if ($type == "Document Released") {
             $msg = "Your documents have been released on " . $data['date'] . " You can now view it on your account.";
@@ -19,14 +19,14 @@ class MessageHelper
             $msg = "Your documents have been received by " . $data['user'] . " on " . $data['date'] . " you can now view it on your account.";
         } else if ($type == "Withdrawal") {
             if ($data['group_id'] !== null) {
-                $msg = "Your withdrawal amounting to " . number_format($data['amount']) . " has been successfully processed to your group " . $data['group_name'] . ". on " . $data['date'];
+                $msg = "Your withdrawal amounting to " . NumberHelper::nnnf($data['amount']) . " has been successfully processed to your group " . $data['group_name'] . ". on " . $data['date'];
             } else {
-                $msg = "Your withdrawal amounting to " . number_format($data['amount']) . " has been successfully processed on " . $data['date'];
+                $msg = "Your withdrawal amounting to " . NumberHelper::nnnf($data['amount']) . " has been successfully processed on " . $data['date'];
             }
         } else if ($type == "Service Payment 1") {
-            $msg = "Your payment for " . $data['service_name'] . ", amounting to " . number_format($data['amount']) . " has been successfully processed on " . $data['date'];
+            $msg = "Your payment for " . $data['service_name'] . ", amounting to " . NumberHelper::nnnf($data['amount']) . " has been successfully processed on " . $data['date'];
         } else if ($type == "Service Payment 2") {
-            $msg = "Your payment amounting to " . number_format($data['amount']) . " through " . $data['bank'] . " has been successfully processed on " . $data['date'] . ".";
+            $msg = "Your payment amounting to " . NumberHelper::nnnf($data['amount']) . " through " . $data['bank'] . " has been successfully processed on " . $data['date'] . ".";
         } else if ($type == "Service Payment 3") {
             $temp = [];
             $group = collect($data['group'])->sortBy('service');

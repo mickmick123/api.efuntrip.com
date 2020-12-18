@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Helpers\ArrayHelper;
 use App\Helpers\MessageHelper;
+use App\Helpers\NumberHelper;
 use App\Http\Controllers\ClientController;
 use App\Jobs\LogsPushNotification;
 use App\Log;
@@ -142,17 +143,14 @@ class LogController extends Controller
             $service = ClientService::find($getLogs['client_service_id']);
             $discount =  ClientTransaction::where('client_service_id', $getLogs['client_service_id'])->where('type', 'Discount')->sum('amount');
             $amt = ($service->charge + $service->cost + $service->tip + $service->com_client + $service->com_agent) - $discount;
-            $title = $service->detail . ' Price : Php' . $amt . ' , Balance : Php' . ($amt - $service->payment_amount) . PHP_EOL . PHP_EOL;
             $body = '';
-            $extra = [];
             foreach($logs as $k=>$v){
                 $name = User::find($v->processor_id);
-                $body .= PHP_EOL . 'Paid service with an amount of Php' . abs($v->amount) . '. ' . $name['first_name'] . ' | ' . date_format(date_create($v->created_at), "M d, yy , h:i A");
-                $extra[$k] = $name['first_name'] . ' | ' . date_format(date_create($v->created_at),"M d, yy , h:i A");
+                $body .= PHP_EOL . 'Paid service with an amount of Php' . NumberHelper::nnnf($v->amount)  . '. ' . $name['first_name'] . ' | ' . date_format(date_create($v->created_at), "M d, yy , h:i A");
             }
-            $header = 'Paid service with total amount of Php'. ($service->payment_amount + 0) .' ' . $extra[0] . PHP_EOL;
+            $header = 'Service Name: ' . $service->detail . PHP_EOL . 'Total Payment: Php' . number_format($service->payment_amount) . PHP_EOL . 'Total Price : Php' . number_format($amt) . PHP_EOL . 'Balance : Php' . number_format($amt - $service->payment_amount) . PHP_EOL;
 
-            $result = $title . $header . $body;
+            $result = $header . $body;
 
             $response['status'] = 'Success';
             $response['data'] = $result;
