@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Helpers\ArrayHelper;
 use App\Helpers\MessageHelper;
-use App\Helpers\NumberHelper;
 use App\Http\Controllers\ClientController;
 use App\Jobs\LogsPushNotification;
 use App\Log;
@@ -14,6 +13,7 @@ use App\GroupUser;
 
 use App\LogsAppNotification;
 use App\LogsNotification;
+use App\Traits\FilterTrait;
 use App\User;
 use App\Document;
 use App\Service;
@@ -36,6 +36,8 @@ use PDF;
 
 class LogController extends Controller
 {
+    use FilterTrait;
+
     protected $logsAppNotification;
     public function __construct(LogsAppNotification $logsAppNotification)
     {
@@ -138,7 +140,7 @@ class LogController extends Controller
             $body = '';
             foreach($logs as $k=>$v){
                 $name = User::find($v->processor_id);
-                $body .= PHP_EOL . 'Paid service with an amount of Php' . NumberHelper::nnnf($v->amount)  . '. ' . $name['first_name'] . ' | ' . date_format(date_create($v->created_at), "M d, yy , h:i A");
+                $body .= PHP_EOL . 'Paid service with an amount of Php' . $this->absNumber($v->amount)  . '. ' . $name['first_name'] . ' | ' . date_format(date_create($v->created_at), "M d, yy , h:i A");
             }
             $header = 'Service Name: ' . $service->detail . PHP_EOL . 'Total Payment: Php' . number_format($service->payment_amount) . PHP_EOL . 'Total Price : Php' . number_format($amt) . PHP_EOL . 'Balance : Php' . number_format($amt - $service->payment_amount) . PHP_EOL;
 
