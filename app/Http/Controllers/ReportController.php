@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\ClientController;
 
+use App\LogsAppNotification;
 use Edujugon\PushNotification\PushNotification;
 
 use Edujugon\PushNotification\Messages\PushMessage;
@@ -49,6 +50,11 @@ use App\Jobs\LogsPushNotification;
 
 class ReportController extends Controller
 {
+    protected $logsAppNotification;
+    public function __construct(LogsAppNotification $logsAppNotification)
+    {
+        $this->logsAppNotification = $logsAppNotification;
+    }
 
     public function index(Request $request, $perPage = 20) {
     	$search = $request->search;
@@ -560,6 +566,14 @@ class ReportController extends Controller
           ]);
 
           $this->sendPushNotification($cs->client_id, $detail);
+
+          // save to logs_app_notification
+          $_data['log_id'] = $log->id;
+          $_data['client_id'] = $cs->client_id;
+          $_data['type'] = $serviceProcedure->name;
+          $_data['message'] = $detail;
+          $_data['message_cn'] = "";
+          $this->logsAppNotification->saveToDb($_data);
 
 	        // Document log
 	        if( $actionName == 'Filed' || $actionName == 'Released' ) {
