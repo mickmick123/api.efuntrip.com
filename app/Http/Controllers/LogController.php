@@ -144,15 +144,13 @@ class LogController extends Controller
             $amt = ($service->charge + $service->cost + $service->tip + $service->com_client + $service->com_agent) - $discount;
             $title = $service->detail . ' Price : Php' . $amt . ' , Balance : Php' . ($amt - $service->payment_amount) . PHP_EOL . PHP_EOL;
             $body = '';
-            $extra = '';
+            $extra = [];
             foreach($logs as $k=>$v){
                 $name = User::find($v->processor_id);
-                $body .= PHP_EOL . $v->detail . ' ' . $name['first_name'] . ' | ' . date_format(date_create($v->created_at),"M d, yy , h:i A");
-                if($k === 0){
-                    $extra = $name['first_name'] . ' | ' . date_format(date_create($v->created_at),"M d, yy , h:i A");
-                }
+                $body .= PHP_EOL . 'Paid service with an amount of Php' . abs($v->amount) . '. ' . $name['first_name'] . ' | ' . date_format(date_create($v->created_at), "M d, yy , h:i A");
+                $extra[$k] = $name['first_name'] . ' | ' . date_format(date_create($v->created_at),"M d, yy , h:i A");
             }
-            $header = 'Paid service with total amount of Php'. ($service->payment_amount + 0) .' ' . $extra . PHP_EOL;
+            $header = 'Paid service with total amount of Php'. ($service->payment_amount + 0) .' ' . $extra[0] . PHP_EOL;
 
             $result = $title . $header . $body;
 
