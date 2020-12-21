@@ -52,12 +52,12 @@ class LogsPushNotification implements ShouldQueue
         $push->setUrl('https://fcm.googleapis.com/fcm/send')
         ->setMessage([
         'notification' => [
-          //  'title'=>'',
+            //'title'=>'',
             'body' => $this->message,
             'sound' => 'default'
         ],
          'data' => [
-              'id' => $this->id
+              'id' => $this->log_id
             ]
         ])
         ->setConfig(['dry_run' => false,'priority' => 'high'])
