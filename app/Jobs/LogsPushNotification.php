@@ -65,11 +65,11 @@ class LogsPushNotification implements ShouldQueue
         ->setDevicesToken($deviceToken)
         ->send();
 
-        DB::table('logs_notification')
-            ->where('log_id', $this->log_id)
-            ->where('job_id', $this->job->getJobId())
-            ->update([
-                'status' => 0
-            ]);
+//        DB::table('logs_notification')
+//            ->where('log_id', $this->log_id)
+//            ->where('job_id', $this->job->getJobId())
+//            ->update([
+//                'status' => 0
+//            ]);
     }
 }

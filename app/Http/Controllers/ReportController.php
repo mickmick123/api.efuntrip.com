@@ -2785,31 +2785,31 @@ class ReportController extends Controller
               $job = (new LogsPushNotification($user_id, $message, $data->id));
           }
 
-          $jobID = $this->dispatch($job);
+          $this->dispatch($job);
 
-          if ($label !== null && $log_id !== null) {
-              $checkLogNotif = DB::table('logs_notification as ln')
-                  ->leftJoin('jobs', 'ln.job_id', '=', 'jobs.id')
-                  ->where('ln.log_id', $log_id)
-                  ->where('status', 1)
-                  ->first();
-
-              if ($checkLogNotif) {
-                  DB::table('jobs')->where('id', $checkLogNotif->job_id)->delete();
-                  DB::table('logs_notification')
-                      ->where('log_id', $log_id)
-                      ->where('job_id', $checkLogNotif->job_id)
-                      ->update([
-                          'status' => 0
-                      ]);
-              }
-
-              DB::table('logs_notification')->insert([
-                  'log_id' => $log_id,
-                  'job_id' => $jobID,
-                  'status' => 1
-              ]);
-          }
+//          if ($label !== null && $log_id !== null) {
+//              $checkLogNotif = DB::table('logs_notification as ln')
+//                  ->leftJoin('jobs', 'ln.job_id', '=', 'jobs.id')
+//                  ->where('ln.log_id', $log_id)
+//                  ->where('status', 1)
+//                  ->first();
+//
+//              if ($checkLogNotif) {
+//                  DB::table('jobs')->where('id', $checkLogNotif->job_id)->delete();
+//                  DB::table('logs_notification')
+//                      ->where('log_id', $log_id)
+//                      ->where('job_id', $checkLogNotif->job_id)
+//                      ->update([
+//                          'status' => 0
+//                      ]);
+//              }
+//
+//              DB::table('logs_notification')->insert([
+//                  'log_id' => $log_id,
+//                  'job_id' => $jobID,
+//                  'status' => 1
+//              ]);
+//          }
       }
 	}
 
