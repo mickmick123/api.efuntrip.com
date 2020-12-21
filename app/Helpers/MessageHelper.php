@@ -23,12 +23,11 @@ class MessageHelper
         } else if ($type == "Document Received") {
             if (strpos($data['detail'], "client's representative ")) {
                 $receiver = explode("client's representative ", $data['label'])[1];
-                $detail = explode('.', explode($receiver, $data['detail'])[1])[0];
-                $msg = "Your documents" . $detail . " have been received by " . $receiver;
+                $detail = explode('.', explode($receiver . ' ', $data['detail'])[1])[0];
             } else {
                 $detail = explode('.', explode("client ", $data['detail'])[1])[0];
-                $msg = "Your documents " . $detail . " have been received.";
             }
+            $msg = "Your documents " . $detail . " have been received.";
         } else if ($type == "Withdrawal") {
             if ($data['group_id'] !== null) {
                 $msg = "Your withdrawal amounting to " . $self->absNumber($data['amount']) . " has been successfully processed to your group " . $data['group_name']; //. ". on " . $data['date'];
