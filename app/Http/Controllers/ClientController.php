@@ -2096,15 +2096,15 @@ class ClientController extends Controller
 										$log_data['processor_id'] = Auth::user()->id;
 										$log_data['log_date'] = Carbon::now()->toDateString();
 
-										$log2 = Log::create($log_data);
+										Log::create($log_data);
 
-                                        $job = (new LogsPushNotification($cs->client_id, $log_data['detail']));
-                                        $this->dispatch($job);
+                                        // $job = (new LogsPushNotification($cs->client_id, $log_data['detail']));
+                                        // $this->dispatch($job);
 
-										DB::table('logs_notification')->insert([
-											'log_id' => $log2->id,
-											'job_id' => 0
-										]);
+										// DB::table('logs_notification')->insert([
+										// 	'log_id' => $log2->id,
+										// 	'job_id' => 0
+										// ]);
 
 										//LogController::save($log_data);
                 }
