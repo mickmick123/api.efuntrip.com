@@ -88,11 +88,12 @@ class LogController extends Controller
         $data['message'] = MessageHelper::MsgNotification($type, $log);
         $data['message_cn'] = "";
 
+        $_data = $this->logsAppNotification->saveToDb($data);
+
         if ($data['client_id'] !== null) {
-            $job = (new LogsPushNotification($data['client_id'], $data['message']));
+            $job = (new LogsPushNotification($data['client_id'], $data['message'], $_data->id));
             $this->dispatch($job);
         }
-        $this->logsAppNotification->saveToDb($data);
     }
 
     public function readNotif(Request $request){

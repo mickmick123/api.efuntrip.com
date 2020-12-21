@@ -2768,23 +2768,23 @@ class ReportController extends Controller
 
 
   public function sendPushNotification($user_id, $message = null, $_data=[], $label = null, $log_id = null) {
+      // save to logs_app_notification
+      $data = 0;
+      if(!empty($_data)){
+          $_data['client_id'] = $user_id;
+          $_data['message'] = $message;
+          $_data['message_cn'] = "";
+
+          $data = $this->logsAppNotification->saveToDb($_data);
+      }
 
 		if($label !== null) {
-			$job = (new LogsPushNotification($user_id, $message, $log_id))->delay(now()->addMinutes(120));
+			$job = (new LogsPushNotification($user_id, $message, $data->id))->delay(now()->addMinutes(120));
 		} else {
-			$job = (new LogsPushNotification($user_id, $message, $log_id));
+			$job = (new LogsPushNotification($user_id, $message, $data->id));
 		}
 
 		$jobID = $this->dispatch($job);
-
-        // save to logs_app_notification
-        if(!empty($_data)){
-            $_data['client_id'] = $user_id;
-            $_data['message'] = $message;
-            $_data['message_cn'] = "";
-
-            $this->logsAppNotification->saveToDb($_data);
-        }
 
 		if($label !== null && $log_id !== null) {
 			$checkLogNotif = DB::table('logs_notification as ln')
