@@ -2778,7 +2778,7 @@ class ReportController extends Controller
           $data = $this->logsAppNotification->saveToDb($_data);
       }
 
-      if(!$data) {
+      if($data) {
           if ($label !== null) {
               $job = (new LogsPushNotification($user_id, $message, $data->id))->delay(now()->addMinutes(120));
           } else {

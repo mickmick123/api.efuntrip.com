@@ -90,7 +90,7 @@ class LogController extends Controller
 
         $_data = $this->logsAppNotification->saveToDb($data);
 
-        if (!$_data) {
+        if ($_data) {
             $job = (new LogsPushNotification($data['client_id'], $data['message'], $_data->id));
             $this->dispatch($job);
         }
