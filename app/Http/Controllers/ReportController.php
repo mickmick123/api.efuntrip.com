@@ -2769,7 +2769,7 @@ class ReportController extends Controller
 
   public function sendPushNotification($user_id, $message = null, $_data=[], $label = null, $log_id = null) {
       // save to logs_app_notification
-      $data = 0;
+      $data = [];
       if(!empty($_data)){
           $_data['client_id'] = $user_id;
           $_data['message'] = $message;
@@ -2778,38 +2778,39 @@ class ReportController extends Controller
           $data = $this->logsAppNotification->saveToDb($_data);
       }
 
-		if($label !== null) {
-			$job = (new LogsPushNotification($user_id, $message, $data->id))->delay(now()->addMinutes(120));
-		} else {
-			$job = (new LogsPushNotification($user_id, $message, $data->id));
-		}
+      if(!$data) {
+          if ($label !== null) {
+              $job = (new LogsPushNotification($user_id, $message, $data->id))->delay(now()->addMinutes(120));
+          } else {
+              $job = (new LogsPushNotification($user_id, $message, $data->id));
+          }
 
-		$jobID = $this->dispatch($job);
+          $jobID = $this->dispatch($job);
 
-		if($label !== null && $log_id !== null) {
-			$checkLogNotif = DB::table('logs_notification as ln')
-											->leftJoin('jobs', 'ln.job_id', '=', 'jobs.id')
-											->where('ln.log_id', $log_id)
-											->where('status', 1)
-											->first();
+          if ($label !== null && $log_id !== null) {
+              $checkLogNotif = DB::table('logs_notification as ln')
+                  ->leftJoin('jobs', 'ln.job_id', '=', 'jobs.id')
+                  ->where('ln.log_id', $log_id)
+                  ->where('status', 1)
+                  ->first();
 
-			if($checkLogNotif) {
-				DB::table('jobs')->where('id', $checkLogNotif->job_id)->delete();
-				DB::table('logs_notification')
-					->where('log_id', $log_id)
-					->where('job_id', $checkLogNotif->job_id)
-					->update([
-						'status' => 0
-					]);
-			}
+              if ($checkLogNotif) {
+                  DB::table('jobs')->where('id', $checkLogNotif->job_id)->delete();
+                  DB::table('logs_notification')
+                      ->where('log_id', $log_id)
+                      ->where('job_id', $checkLogNotif->job_id)
+                      ->update([
+                          'status' => 0
+                      ]);
+              }
 
-			DB::table('logs_notification')->insert([
-				'log_id' => $log_id,
-				'job_id' => $jobID,
-				'status' => 1
-			]);
-		}
-
+              DB::table('logs_notification')->insert([
+                  'log_id' => $log_id,
+                  'job_id' => $jobID,
+                  'status' => 1
+              ]);
+          }
+      }
 	}
 
 
