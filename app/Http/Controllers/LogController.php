@@ -155,6 +155,57 @@ class LogController extends Controller
         return Response::json($response);
     }
 
+    public function getNotificationById(Request $request) {
+
+      $validator = Validator::make($request->all(), [
+          'id' => 'required|exists:logs_app_notification',
+      ]);
+
+      if ($validator->fails()) {
+          $response['status'] = 'Failed';
+          $response['errors'] = $validator->errors();
+          $response['code'] = 422;
+      } else {
+
+              $l = DB::table('logs_app_notification')->where('id',$request->id)->first();
+              $data = [];
+
+              $user = null;
+
+                if($l->log_id !== null){
+
+                  if($l->type != 'Added Service'){
+                    $log = DB::table('logs')->where('id',$l->log_id)->first();
+                  }else{
+                    $ids = unserialize($l->log_id);
+                    $log = DB::table('logs')
+                         ->where('id',$ids[0])->first();
+                  }
+
+                  $user = DB::table('users')
+                      ->where('id',$log->processor_id)->first();
+
+                  $data = array(
+                    'id' => $l->id,
+                    'message' => $l->message,
+                    'message_cn' => $l->message_cn,
+                    'is_read' => $l->is_read,
+                    'created_at' => $l->created_at,
+                    'log_id' => $l->log_id,
+                    'group_id' => $l->group_id,
+                    'type'  => $l->type,
+                    'user' => $user
+                  );
+                }
+
+              $response['status'] = 'Success';
+              $response['data'] = $data;
+              $response['code'] = 200;
+        }
+
+        return Response::json($response);
+    }
+
     public function getTransactionLogs($client_id, $group_id) {
         if($group_id == 0){
             $group_id = null;

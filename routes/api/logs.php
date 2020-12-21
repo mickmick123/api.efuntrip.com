@@ -23,6 +23,7 @@ Route::middleware('auth:api')->group(function() {
     Route::post('/export-employee-documents-onhand', 'LogController@exportEmployeeDocsOnHand');
     Route::post('/read-notif', 'LogController@readNotif');
     Route::post('/get-notif-detail', 'LogController@getNotifDetail');
+		Route::post('/get-notif-by-id', 'LogController@getNotificationById');
 
     // OLD LOGS //
 	Route::get('/get-old-transaction-logs/{client_id}/{group_id}/{last_balance}', 'LogController@getOldTransactionLogs');

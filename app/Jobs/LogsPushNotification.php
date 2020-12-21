@@ -52,10 +52,13 @@ class LogsPushNotification implements ShouldQueue
         $push->setUrl('https://fcm.googleapis.com/fcm/send')
         ->setMessage([
         'notification' => [
-            // 'title'=>'Title',
+          //  'title'=>'',
             'body' => $this->message,
             'sound' => 'default'
-        ]
+        ],
+         'data' => [
+              'id' => $this->id
+            ]
         ])
         ->setConfig(['dry_run' => false,'priority' => 'high'])
         ->setApiKey('AAAAIynhqO8:APA91bH5P-SGimP4b0jazCrC8ya7bV9LoR57wWB9zLqatXfRyxSIdKs2_q4-e01Ofce6oxW-7YQOGlk4Sov4WwiUAE7qojRu-3xb9429ve0Ufkh4JDMaod7cKBAxbypFUPJNKX0yoe98')
