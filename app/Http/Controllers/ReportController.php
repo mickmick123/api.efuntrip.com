@@ -565,15 +565,11 @@ class ReportController extends Controller
 	        	'log_date' => Carbon::now()->toDateString()
           ]);
 
-          $this->sendPushNotification($cs->client_id, $detail);
-
-          // save to logs_app_notification
-          $_data['log_id'] = $log->id;
-          $_data['client_id'] = $cs->client_id;
-          $_data['type'] = $serviceProcedure->name;
-          $_data['message'] = $detail;
-          $_data['message_cn'] = "";
-          $this->logsAppNotification->saveToDb($_data);
+		  $_data = [
+		      'log_id' => $log->id,
+		      'type' => $serviceProcedure->name
+          ];
+          $this->sendPushNotification($cs->client_id, $detail, $_data);
 
 	        // Document log
 	        if( $actionName == 'Filed' || $actionName == 'Released' ) {
@@ -1040,11 +1036,14 @@ class ReportController extends Controller
 				        	'label' => $label,
 				        	'log_date' => Carbon::now()->toDateString()
                 ]);
-
+                        $_data = [
+                            'log_id' => $logs->id,
+                            'type' => $serviceProcedure->name
+                        ];
 						if($statusUponCompletion == 'complete') {
-							$this->sendPushNotification($cs->client_id, $detail, $label, $logs->id);
+							$this->sendPushNotification($cs->client_id, $detail, $_data, $label, $logs->id);
 						} else {
-							$this->sendPushNotification($cs->client_id, $detail);
+							$this->sendPushNotification($cs->client_id, $detail, $_data);
 						}
 
 					}
@@ -1098,7 +1097,7 @@ class ReportController extends Controller
 					$detail = 'Service[' . $cs->detail . '] is now ' . $statusUponCompletion . '.';
 					$label = 'Service is now ' . $statusUponCompletion . '.';
 
-					Log::create([
+					$_log = Log::create([
 			        	'client_service_id' => $cs->id,
 			        	'client_id' => $cs->client_id,
 			        	'group_id' => $cs->group_id,
@@ -1110,7 +1109,11 @@ class ReportController extends Controller
 			        	'log_date' => Carbon::now()->toDateString()
               ]);
 
-              $this->sendPushNotification($cs->client_id, $detail);
+              $_data = [
+                'log_id' => $_log->id,
+                'type' => $serviceProcedure->name
+              ];
+              $this->sendPushNotification($cs->client_id, $detail, $_data);
 
 			        // $cs->update(['status' => $statusUponCompletion]);
               		$cs->status = $statusUponCompletion;
@@ -1208,8 +1211,12 @@ class ReportController extends Controller
 						'label' => $labelSearch,
 						'log_date' => Carbon::now()->toDateString()
 					]);
+                    $_data = [
+                        'log_id' => $newServiceLog->id,
+                        'type' => $serviceProcedure->name
+                    ];
 
-					$this->sendPushNotification($cs->client_id, $prevLogDetail, $labelSearch, $newServiceLog->id);
+					$this->sendPushNotification($cs->client_id, $prevLogDetail, $_data, $labelSearch, $newServiceLog->id);
 			}
 
       // End
@@ -2055,6 +2062,7 @@ class ReportController extends Controller
 
                 if($cs->status === 'pending') {
 
+
                   $docLogQuery = Log::create([
                       'client_service_id' => $cs->id,
                       'client_id' => $cs->client_id,
@@ -2067,7 +2075,14 @@ class ReportController extends Controller
                       'log_date' => Carbon::now()->toDateString()
                   ]);
 
-                  $this->sendPushNotification($cs->client_id, $docsDetail);
+                  $serviceProcedure = ServiceProcedure::where('id', $serviceProcedID)->first();
+
+                  $_data = [
+                    'log_id' => $docLogQuery->id,
+                    'type' => $serviceProcedure->name
+                  ];
+
+                  $this->sendPushNotification($cs->client_id, $docsDetail, $_data);
 
                   foreach($docLogData as $dlc) {
 
@@ -2203,7 +2218,7 @@ class ReportController extends Controller
             }
             // End of Add service procedure
 
-						Log::create([
+						$_log = Log::create([
 								'client_service_id' => $cs->id,
 								'client_id' => $cs->client_id,
                 'group_id' => $cs->group_id,
@@ -2215,7 +2230,12 @@ class ReportController extends Controller
 								'log_date' => Carbon::now()->toDateString()
             ]);
 
-            $this->sendPushNotification($cs->client_id, $detail);
+            $serviceProcedure = ServiceProcedure::where('id', $serviceProcedID)->first();
+            $_data = [
+                'log_id' => $_log->id,
+                'type' => $serviceProcedure->name
+            ];
+            $this->sendPushNotification($cs->client_id, $detail, $_data);
           }
 
 				}
@@ -2747,7 +2767,7 @@ class ReportController extends Controller
   }
 
 
-  public function sendPushNotification($user_id, $message = null, $label = null, $log_id = null) {
+  public function sendPushNotification($user_id, $message = null, $_data=[], $label = null, $log_id = null) {
 
 		if($label !== null) {
 			$job = (new LogsPushNotification($user_id, $message, $log_id))->delay(now()->addMinutes(120));
@@ -2756,6 +2776,15 @@ class ReportController extends Controller
 		}
 
 		$jobID = $this->dispatch($job);
+
+        // save to logs_app_notification
+        if(!empty($_data)){
+            $_data['client_id'] = $user_id;
+            $_data['message'] = $message;
+            $_data['message_cn'] = "";
+
+            $this->logsAppNotification->saveToDb($_data);
+        }
 
 		if($label !== null && $log_id !== null) {
 			$checkLogNotif = DB::table('logs_notification as ln')
