@@ -1764,20 +1764,22 @@ class LogController extends Controller
                          ->where('id',$ids[0])->first();
                   }
 
-                  $user = DB::table('users')
-                      ->where('id',$log->processor_id)->first();
+                  if($log){
+                      $user = DB::table('users')
+                          ->where('id',$log->processor_id)->first();
 
-                  $data[] = array(
-                    'id' => $l->id,
-                    'message' => $l->message,
-                    'message_cn' => $l->message_cn,
-                    'is_read' => $l->is_read,
-                    'created_at' => $l->created_at,
-                    'log_id' => $l->log_id,
-                    'group_id' => $l->group_id,
-                    'type'  => $l->type,
-                    'user' => $user
-                  );
+                      $data[] = array(
+                        'id' => $l->id,
+                        'message' => $l->message,
+                        'message_cn' => $l->message_cn,
+                        'is_read' => $l->is_read,
+                        'created_at' => $l->created_at,
+                        'log_id' => $l->log_id,
+                        'group_id' => $l->group_id,
+                        'type'  => $l->type,
+                        'user' => $user
+                      );
+                 }
                 }
 
               }
