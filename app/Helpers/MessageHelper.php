@@ -51,7 +51,7 @@ class MessageHelper
                         $temp['total_amount'] += $vv['amount'];
                     }
                 }
-                $temp['message'][$k] = ArrayHelper::CommaAnd(array_unique($temp['clients']), ', ', ' and ') . PHP_EOL . "Paid total amount of " . number_format($temp['total_amount']) . " to service " . $v['service'];
+                $temp['message'][$k] = ArrayHelper::CommaAnd(array_unique($temp['clients']), ', ', ' and ') . PHP_EOL . "Paid total amount of " . $self->absNumber($temp['total_amount']) . " to service " . $v['service'];
             }
             $msg = implode(PHP_EOL . PHP_EOL, $temp['message']);
         } elseif ($type == "Added Service") {
