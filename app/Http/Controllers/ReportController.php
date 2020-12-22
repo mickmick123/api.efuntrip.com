@@ -1211,12 +1211,12 @@ class ReportController extends Controller
 						'label' => $labelSearch,
 						'log_date' => Carbon::now()->toDateString()
 					]);
-                    $_data = [
-                        'log_id' => $newServiceLog->id,
-                        'type' => $serviceProcedure->name
-                    ];
+                    // $_data = [
+                    //    'log_id' => $newServiceLog->id,
+                    //    'type' => $serviceProcedure->name
+                    // ];
 
-					$this->sendPushNotification($cs->client_id, $prevLogDetail, $_data, $labelSearch, $newServiceLog->id);
+					// $this->sendPushNotification($cs->client_id, $prevLogDetail, $_data, $labelSearch, $newServiceLog->id);
 			}
 
       // End
