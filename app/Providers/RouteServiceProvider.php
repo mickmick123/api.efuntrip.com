@@ -101,6 +101,8 @@ class RouteServiceProvider extends ServiceProvider
             $this->mapCompanyRoutes();
 
             $this->mapLocationRoutes();
+
+            $this->mapRiderEvaluationRoutes();
     }
 
     /**
@@ -376,5 +378,13 @@ class RouteServiceProvider extends ServiceProvider
                 ->middleware('api')
                 ->namespace($this->namespace)
                 ->group(base_path('routes/api/location.php'));
+        }
+
+        protected function mapRiderEvaluationRoutes()
+        {
+            Route::prefix('api/v1/rider-evaluation')
+                ->middleware('api')
+                ->namespace($this->namespace)
+                ->group(base_path('routes/api/rider-evaluation.php'));
         }
 }
