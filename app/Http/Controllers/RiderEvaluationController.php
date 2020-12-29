@@ -23,6 +23,7 @@ class RiderEvaluationController extends Controller
             'rider_id' => 'required',
             'answer' => 'required',
             'result' => 'required',
+            'delivery_fee' => 'required',
             'date' => 'required',
         ]);
 
@@ -34,10 +35,13 @@ class RiderEvaluationController extends Controller
             $data = new RiderEvaluation;
             $data->order_id = $request->order_id;
             $data->rider_id = $request->rider_id;
-            $data->answer = $request->answer;
+            foreach (json_decode($request->answer) as $k => $v) {
+                $data['q' . ($k + 1)] = $v;
+            }
             $data->result = $request->result;
+            $data->delivery_fee = $request->delivery_fee;
             $data->date = $request->date;
-            // $this->logsAppNotification->saveToDb($data);
+            $this->riderEvaluation->saveToDb($data->toArray());
 
             $response['status'] = 'Success';
             $response['data'] = $data;
@@ -49,7 +53,8 @@ class RiderEvaluationController extends Controller
     public function getEvaluationDay(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'id' => 'required|exists:rider_evaluation',
+            'rider_id' => 'required|exists:rider_evaluation',
+            'date' => 'required'
         ]);
 
         if ($validator->fails()) {
@@ -57,8 +62,7 @@ class RiderEvaluationController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
-            $data = RiderEvaluation::find($request->id);
-            $data->save();
+            $data = RiderEvaluation::where([['rider_id', $request->rider_id], ['date', $request->date]])->get();
 
             $response['status'] = 'Success';
             $response['data'] = $data;
@@ -66,7 +70,14 @@ class RiderEvaluationController extends Controller
         }
         return Response::json($response);
     }
-    public function getEvaluationMonth(Request $request)
+    public function getEvaluationMonth()
     {
+        $data = RiderEvaluation::all();
+
+        $response['status'] = 'Success';
+        $response['data'] = $data;
+        $response['code'] = 200;
+
+        return Response::json($response);
     }
 }
