@@ -187,9 +187,10 @@ class GroupController extends Controller
 
         $clids = $g->pluck('id');
         $gCost = $g->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
-
+        // \Log::info('test :'.$gCost);
         $discount =  ClientTransaction::where('group_id', $id)->where('type', 'Discount')
                     ->where('client_service_id','!=',null)->whereIn('client_service_id', $clids)->sum('amount');
+        \Log::info('test :'.$discount);
 
         $discount = ($discount) ? $discount : 0;
 
@@ -334,8 +335,10 @@ class GroupController extends Controller
 
         $response = $groups;
 
-        $col = Group::sum('collectables');
-        $bal = Group::sum('balance');
+        $br_grps = BranchGroup::where('branch_id', $branch)->pluck('group_id');
+
+        $col = Group::whereIn('id',$br_grps)->sum('collectables');
+        $bal = Group::whereIn('id',$br_grps)->sum('balance');
 
         $custom = collect(['collectables' => $col]);
         $response = $custom->merge($response);
@@ -533,12 +536,7 @@ class GroupController extends Controller
 
             $group->contact = DB::table('contact_numbers')->where('user_id', $group->leader_id)
                     ->select(array('number'))->first(); //here
-
-
-
             $group->total_members =	DB::table('group_user')->where('group_id', $id)->count();
-
-
             $group->total_complete_service_cost = $this->getGroupTotalCompleteServiceCost($id);
             $group->total_cost = $this->getGroupTotalCost($id);
             //$group->total_payment = $this->getGroupDeposit($id) + $this->getGroupPayment($id);
@@ -556,6 +554,10 @@ class GroupController extends Controller
                 ->orderBy('remarks.id','DESC')
                 ->limit(3)
                 ->get();
+            $g = Group::findOrFail($id);
+            $g->balance = $group->total_balance;
+            $g->collectables = $group->total_collectables;
+            $g->save();
 
             $response['status'] = 'Success';
             $response['data'] = [
@@ -5004,6 +5006,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
               $group_data['id'] = null;
               $group_data['client_id'] = $leader_id[0]['leader_id'];
               $group_data['group_id'] = $group_id;
+              // DB::table('logs_notification')->insert(['log_id' => $addLog->id, 'job_id' => 0]);
               app(LogController::class)->addNotif($group_data,'Service Payment 3');
           }
           else{

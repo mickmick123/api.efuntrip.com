@@ -509,6 +509,11 @@ class ClientController extends Controller
             $client->total_balance = $this->getClientTotalBalance($id);
             $client->total_collectables = $this->getClientTotalCollectables($id);
 
+            $g = User::findOrFail($id);
+            $g->balance = $client->total_balance;
+            $g->collectable = $client->total_collectables;
+            $g->save();
+
             $client->remarks = $this->getClientsRemarks($id, true);
 
             $response['status'] = 'Success';
