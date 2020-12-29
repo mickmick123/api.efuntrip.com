@@ -19,7 +19,6 @@ class RiderEvaluationController extends Controller
     public function addEvaluation(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'order_id' => 'required',
             'rider_id' => 'required',
             'answer' => 'required',
             'result' => 'required',
@@ -33,7 +32,6 @@ class RiderEvaluationController extends Controller
             $response['code'] = 422;
         } else {
             $data = new RiderEvaluation;
-            $data->order_id = $request->order_id;
             $data->rider_id = $request->rider_id;
             foreach (json_decode($request->answer) as $k => $v) {
                 $data['q' . ($k + 1)] = $v;
@@ -44,13 +42,81 @@ class RiderEvaluationController extends Controller
             $this->riderEvaluation->saveToDb($data->toArray());
 
             $response['status'] = 'Success';
-            $response['data'] = $data;
             $response['code'] = 200;
+            $response['data'] = "Evaluation succesfully created!";
         }
         return Response::json($response);
     }
 
-    public function getEvaluationDay(Request $request)
+    public function updateEvaluation(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'id' => 'required|exists:rider_evaluation',
+            'answer' => 'required',
+            'result' => 'required',
+            'delivery_fee' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+            foreach (json_decode($request->answer) as $k => $v) {
+                $data['q' . ($k + 1)] = $v;
+            }
+            $data['result'] = $request->result;
+            $data['delivery_fee'] = $request->delivery_fee;
+            $this->riderEvaluation->updateById(['id' => $request->id], $data);
+
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+            $response['data'] = "Evaluation succesfully updated!";
+        }
+        return Response::json($response);
+    }
+
+    public function deleteEvaluation(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'id' => 'required|exists:rider_evaluation',
+        ]);
+
+        if ($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+            $this->riderEvaluation->deleteById(['id' => $request->id]);
+
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+            $response['data'] = "Evaluation succesfully deleted!";
+        }
+        return Response::json($response);
+    }
+
+    public function getEvaluation(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'id' => 'required|exists:rider_evaluation',
+        ]);
+
+        if ($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+            $data = RiderEvaluation::find($request->id);
+
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+            $response['data'] = $data;
+        }
+        return Response::json($response);
+    }
+
+    public function getEvaluationDay(Request $request, $perPage = 10)
     {
         $validator = Validator::make($request->all(), [
             'rider_id' => 'required|exists:rider_evaluation',
@@ -62,21 +128,30 @@ class RiderEvaluationController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
-            $data = RiderEvaluation::where([['rider_id', $request->rider_id], ['date', $request->date]])->get();
+            $sort = $request->sort;
+            $data = RiderEvaluation::where([
+                ['rider_id', $request->rider_id],
+                ['date', $request->date]
+            ])
+                ->when($sort != '', function ($q) use ($sort) {
+                    $sort = explode('-', $sort);
+                    return $q->orderBy($sort[0], $sort[1]);
+                })->paginate($perPage);
 
             $response['status'] = 'Success';
-            $response['data'] = $data;
             $response['code'] = 200;
+            $response['data'] = $data;
         }
         return Response::json($response);
     }
+
     public function getEvaluationMonth()
     {
         $data = RiderEvaluation::all();
 
         $response['status'] = 'Success';
-        $response['data'] = $data;
         $response['code'] = 200;
+        $response['data'] = $data;
 
         return Response::json($response);
     }

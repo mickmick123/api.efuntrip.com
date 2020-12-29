@@ -28,4 +28,14 @@ class BaseModel extends Model
         return true;
     }
 
+    public function deleteById($id)
+    {
+        $data = $this->where($id)->delete();
+        if(!$data)
+        {
+            return false;
+        }
+        return true;
+    }
+
 }
