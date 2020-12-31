@@ -6,6 +6,7 @@ use App\RiderEvaluation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 class RiderEvaluationController extends Controller
 {
@@ -129,10 +130,11 @@ class RiderEvaluationController extends Controller
             $response['code'] = 422;
         } else {
             $sort = $request->sort;
-            $data = RiderEvaluation::where([
-                ['rider_id', $request->rider_id],
-                ['date', $request->date]
-            ])
+            $data = RiderEvaluation::select(DB::raw('*,ROW_NUMBER() OVER(ORDER BY ID DESC) AS row'))
+                ->where([
+                    ['rider_id', $request->rider_id],
+                    ['date', $request->date]
+                ])
                 ->when($sort != '', function ($q) use ($sort) {
                     $sort = explode('-', $sort);
                     return $q->orderBy($sort[0], $sort[1]);
