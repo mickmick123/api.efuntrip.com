@@ -120,7 +120,7 @@ class RiderEvaluationController extends Controller
     public function getEvaluationDay(Request $request, $perPage = 10)
     {
         $validator = Validator::make($request->all(), [
-            'rider_id' => 'required|exists:rider_evaluation',
+            // 'rider_id' => 'required|exists:rider_evaluation',
             'date' => 'required'
         ]);
 
