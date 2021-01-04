@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\ArrayHelper;
 use App\RiderEvaluation;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Validator;
@@ -155,6 +157,72 @@ class RiderEvaluationController extends Controller
         $response['code'] = 200;
         $response['data'] = $data;
 
+        return Response::json($response);
+    }
+
+    public function getSummaryEvaluationHalfMonth(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'rider_id' => 'required|exists:rider_evaluation',
+            'month' => 'required',
+            'year' => 'required',
+            'half_month' => 'required'
+        ]);
+
+        if ($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+            $data = [];
+            $tempData = [];
+            $index = 1;
+            for ($i = 1; $i <= 15; $i++) {
+                $year = $request->year;
+                $month = str_pad($request->month, 2, '0', STR_PAD_LEFT);
+                $day = str_pad($i, 2, '0', STR_PAD_LEFT);
+                $tempDate = $year . '-' . $month . '-' . $day;
+                $total = RiderEvaluation::where([
+                    ['rider_id', $request->rider_id],
+                    ['date', 'like', '%' . $tempDate . '%']
+                ])->get();
+                $orders = 0;
+                $delivery_fee = 0;
+                $percentage = 0;
+                for ($ii = 1; $ii <= 3; $ii++) {
+                    foreach ($total as $v) {
+                        if ($ii === 1) {
+                            $orders += 1;
+                            $tempData[$index] = [
+                                "date" => Carbon::parse($tempDate)->format('F d, Y'),
+                                "detail" => 'Total # of Orders:',
+                                "value" => $orders
+                            ];
+                        } else if ($ii === 2) {
+                            $delivery_fee += $v->delivery_fee;
+                            $tempData[$index] = [
+                                "date" => Carbon::parse($tempDate)->format('F d, Y'),
+                                "detail" => 'Total Delivery Fee:',
+                                "value" => $delivery_fee
+                            ];
+                        } else if ($ii === 3) {
+                            $percentage = 100;
+                            $tempData[$index] = [
+                                "date" => Carbon::parse($tempDate)->format('F d, Y'),
+                                "detail" => 'Total Percentage:',
+                                "value" => $percentage
+                            ];
+                        }
+                    }
+                    $index++;
+                }
+                $data = ArrayHelper::ArrayIndexFixed($tempData);
+            }
+
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+            $response['data'] = $data;
+        }
         return Response::json($response);
     }
 }

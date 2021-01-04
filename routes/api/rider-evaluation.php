@@ -11,6 +11,7 @@ Route::post('get-evaluation', 'RiderEvaluationController@getEvaluation');
 Route::get('get-evaluation-day/{perPage?}', 'RiderEvaluationController@getEvaluationDay');
 Route::post('get-evaluation-month', 'RiderEvaluationController@getEvaluationMonth');
 
+Route::post('get-summary-evaluation-half-month', 'RiderEvaluationController@getSummaryEvaluationHalfMonth');
 
 Route::middleware('auth:api')->group(function () {
 });
