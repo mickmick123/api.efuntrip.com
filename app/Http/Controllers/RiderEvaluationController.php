@@ -25,7 +25,9 @@ class RiderEvaluationController extends Controller
             'rider_id' => 'required',
             'answer' => 'required',
             'result' => 'required',
+            'rider_income' => 'required',
             'delivery_fee' => 'required',
+            'evaluation' => 'required',
             'date' => 'required',
         ]);
 
@@ -40,7 +42,9 @@ class RiderEvaluationController extends Controller
                 $data['q' . ($k + 1)] = $v;
             }
             $data->result = $request->result;
+            $data->rider_income = $request->rider_income;
             $data->delivery_fee = $request->delivery_fee;
+            $data->evaluation = $request->evaluation;
             $data->date = $request->date;
             $this->riderEvaluation->saveToDb($data->toArray());
 
@@ -188,8 +192,9 @@ class RiderEvaluationController extends Controller
                 ])->get();
                 $orders = 0;
                 $delivery_fee = 0;
-                $percentage = 0;
-                for ($ii = 1; $ii <= 3; $ii++) {
+                $evaluation = ['orders' => 0, 'delivery_fee' => 0, 'extra' => 0, 'result' => 0];
+                $average = 0;
+                for ($ii = 1; $ii <= 4; $ii++) {
                     foreach ($total as $v) {
                         if ($ii === 1) {
                             $orders += 1;
@@ -206,11 +211,35 @@ class RiderEvaluationController extends Controller
                                 "value" => $delivery_fee
                             ];
                         } else if ($ii === 3) {
-                            $percentage = 100;
+                            if ($evaluation['orders'] >= 10 || $evaluation['delivery_fee'] >= 800) {
+                                $evaluation['extra'] += 1 * 3;
+                                $evaluation['result'] = 100 + $evaluation['extra'];
+                                if ($evaluation['result'] > 105) {
+                                    $evaluation['result'] = 105;
+                                }
+                            } else if ($orders < 10 && $delivery_fee < 800) {
+                                $evaluation['extra'] = (10 - $orders) * -9.5;
+                                $evaluation['result'] = 100 + $evaluation['extra'];
+                                if ($evaluation['result'] < 80) {
+                                    $evaluation['result'] = 80;
+                                }
+                            } else {
+                                $evaluation['result'] = 100;
+                            }
+                            $evaluation['orders'] += 1;
+                            $evaluation['delivery_fee'] += $v->delivery_fee;
+
                             $tempData[$index] = [
                                 "date" => Carbon::parse($tempDate)->format('F d, Y'),
-                                "detail" => 'Total Percentage:',
-                                "value" => $percentage
+                                "detail" => 'Daily Evaluation:',
+                                "value" => $evaluation['result'] . '%'
+                            ];
+                        } else if ($ii === 4) {
+                            $average += $v->evaluation;
+                            $tempData[$index] = [
+                                "date" => Carbon::parse($tempDate)->format('F d, Y'),
+                                "detail" => 'Average/Order Evaluation:',
+                                "value" => $average / $orders . '%'
                             ];
                         }
                     }
