@@ -61,20 +61,7 @@ class ClientController extends Controller
 
 	public function manageClients() {
 		$clients = DB::table('users as u')
-			->select(DB::raw('u.id, u.first_name, u.last_name,
-                (
-                    (IFNULL(transactions.total_deposit, 0) + IFNULL(transactions.total_payment, 0) + IFNULL(transactions.total_discount,0))
-                    -
-                    (IFNULL(transactions.total_refund, 0) + IFNULL(totalCost.amount, 0))
-                ) as balance,
-
-                (
-                    (IFNULL(transactions.total_deposit, 0) + IFNULL(transactions.total_payment, 0) + IFNULL(transactions.total_discount,0))
-                    -
-                    (IFNULL(transactions.total_refund, 0) + IFNULL(totalCompleteServiceCost.amount, 0))
-                ) as collectables,
-
-                p.latest_package, srv.latest_service as latest_service
+			->select(DB::raw('u.id, u.first_name, u.last_name, u.balance, u.collectables, p.latest_package, srv.latest_service as latest_service
                 '))
             ->leftjoin(
             	DB::raw('
@@ -218,18 +205,18 @@ class ClientController extends Controller
         }
 
         $clients = DB::table('users as u')
-            ->select(DB::raw('u.id, u.first_name, u.last_name, concat(u.first_name, " ", u.last_name) as full_name, u.risk,
+            ->select(DB::raw('u.id, u.first_name, u.last_name, concat(u.first_name, " ", u.last_name) as full_name, u.risk, u.balance, u.collectable,
                 (
                     (IFNULL(transactions.total_deposit, 0) + IFNULL(transactions.total_payment, 0) + IFNULL(transactions.total_discount,0))
                     -
                     (IFNULL(transactions.total_refund, 0) + IFNULL(totalCost.amount, 0))
-                ) as balance,
+                ) as balance2,
 
                 (
                     (IFNULL(transactions.total_deposit, 0) + IFNULL(transactions.total_payment, 0) + IFNULL(transactions.total_discount,0))
                     -
                     (IFNULL(transactions.total_refund, 0) + IFNULL(totalCompleteServiceCost.amount, 0))
-                ) as collectable,
+                ) as collectable2,
 
                 p.latest_package,
 								csrv.updated_at,
