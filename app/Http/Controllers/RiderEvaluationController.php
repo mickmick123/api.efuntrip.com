@@ -136,8 +136,8 @@ class RiderEvaluationController extends Controller
             $response['code'] = 422;
         } else {
             $sort = $request->sort;
-            $data = RiderEvaluation::select(DB::raw('*,ROW_NUMBER() OVER(ORDER BY ID DESC) AS row'))
-                ->where([
+            $data = RiderEvaluation::
+                where([
                     ['rider_id', $request->rider_id],
                     ['date', $request->date]
                 ])
