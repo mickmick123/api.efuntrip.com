@@ -178,7 +178,7 @@ class RiderEvaluationController extends Controller
                     $tempData[$index] = self::getSummary($request)['summary'];
                     foreach ($tempData[$index] as $k => $v) {
                         if ($k === 'result') {
-                            $stringJson .= '"result' . $i . $ii . '":' . $v . ',';
+                            $stringJson .= '"result' . $i . $ii . '":' . '"' . $v . '%",';
                         }
                     }
                     $index++;
