@@ -225,7 +225,7 @@ class RiderEvaluationController extends Controller
         $month = str_pad($request['month'], 2, '0', STR_PAD_LEFT);
         $endMonthDay = Carbon::parse($year . '-' . $month . '-01')->endOfMonth()->format('d');
         $index = 1;
-        if ($request['half_month'] === 1) {
+        if ($request['half_month'] == 1) {
             $start = 1;
             $end = 15;
         } else {
