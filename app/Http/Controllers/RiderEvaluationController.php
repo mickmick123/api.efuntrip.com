@@ -153,13 +153,42 @@ class RiderEvaluationController extends Controller
         return Response::json($response);
     }
 
-    public function getEvaluationMonth()
+    public function getEvaluationMonth(Request $request)
     {
-        $data = RiderEvaluation::all();
-
-        $response['status'] = 'Success';
-        $response['code'] = 200;
-        $response['data'] = $data;
+        $validator = Validator::make($request->all(), [
+            'year' => 'required',
+        ]);
+        if ($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+            $data = [];
+            $stringJson = '"id":1,"rider_id":1,"name":"Tom",';
+            $tempData = [];
+            $index = 1;
+            for ($i = 1; $i <= 12; $i++) {
+                for ($ii = 1; $ii <= 2; $ii++) {
+                    $request = [
+                        'rider_id' => 1,
+                        'month' => str_pad($i, 2, '0', STR_PAD_LEFT),
+                        'year' => $request['year'],
+                        'half_month' => $ii
+                    ];
+                    $tempData[$index] = self::getSummary($request)['summary'];
+                    foreach ($tempData[$index] as $k => $v) {
+                        if ($k === 'result') {
+                            $stringJson .= '"result' . $i . $ii . '":' . $v . ',';
+                        }
+                    }
+                    $index++;
+                }
+            }
+            $data = [json_decode('{' . substr($stringJson, 0, -1) . '}', true)];
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+            $response['data'] = $data;
+        }
 
         return Response::json($response);
     }
@@ -178,80 +207,103 @@ class RiderEvaluationController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
-            $data = [];
-            $tempData = [];
-            $index = 1;
-            for ($i = 1; $i <= 15; $i++) {
-                $year = $request->year;
-                $month = str_pad($request->month, 2, '0', STR_PAD_LEFT);
-                $day = str_pad($i, 2, '0', STR_PAD_LEFT);
-                $tempDate = $year . '-' . $month . '-' . $day;
-                $total = RiderEvaluation::where([
-                    ['rider_id', $request->rider_id],
-                    ['date', 'like', '%' . $tempDate . '%']
-                ])->get();
-                $orders = 0;
-                $delivery_fee = 0;
-                $evaluation = ['orders' => 0, 'delivery_fee' => 0, 'extra' => 0, 'result' => 0];
-                $average = 0;
-                for ($ii = 1; $ii <= 4; $ii++) {
-                    foreach ($total as $v) {
-                        if ($ii === 1) {
-                            $orders += 1;
-                            $tempData[$index] = [
-                                "date" => Carbon::parse($tempDate)->format('F d, Y'),
-                                "detail" => 'Total # of Orders:',
-                                "value" => $orders
-                            ];
-                        } else if ($ii === 2) {
-                            $delivery_fee += $v->delivery_fee;
-                            $tempData[$index] = [
-                                "date" => Carbon::parse($tempDate)->format('F d, Y'),
-                                "detail" => 'Total Delivery Fee:',
-                                "value" => $delivery_fee
-                            ];
-                        } else if ($ii === 3) {
-                            if ($evaluation['orders'] >= 10 || $evaluation['delivery_fee'] >= 800) {
-                                $evaluation['extra'] += 1 * 3;
-                                $evaluation['result'] = 100 + $evaluation['extra'];
-                                if ($evaluation['result'] > 105) {
-                                    $evaluation['result'] = 105;
-                                }
-                            } else if ($orders < 10 && $delivery_fee < 800) {
-                                $evaluation['extra'] = (10 - $orders) * -9.5;
-                                $evaluation['result'] = 100 + $evaluation['extra'];
-                                if ($evaluation['result'] < 80) {
-                                    $evaluation['result'] = 80;
-                                }
-                            } else {
-                                $evaluation['result'] = 100;
-                            }
-                            $evaluation['orders'] += 1;
-                            $evaluation['delivery_fee'] += $v->delivery_fee;
-
-                            $tempData[$index] = [
-                                "date" => Carbon::parse($tempDate)->format('F d, Y'),
-                                "detail" => 'Daily Evaluation:',
-                                "value" => $evaluation['result'] . '%'
-                            ];
-                        } else if ($ii === 4) {
-                            $average += $v->evaluation;
-                            $tempData[$index] = [
-                                "date" => Carbon::parse($tempDate)->format('F d, Y'),
-                                "detail" => 'Average/Order Evaluation:',
-                                "value" => $average / $orders . '%'
-                            ];
-                        }
-                    }
-                    $index++;
-                }
-                $data = ArrayHelper::ArrayIndexFixed($tempData);
-            }
-
             $response['status'] = 'Success';
             $response['code'] = 200;
-            $response['data'] = $data;
+            $response['summary'] = self::getSummary($request)['summary'];
+            $response['data'] = self::getSummary($request)['data'];
         }
         return Response::json($response);
+    }
+
+    protected static function getSummary($request)
+    {
+        $data = [];
+        $tempData = [];
+        $summary = ['evaluation' => 0, 'average' => 0, 'days' => 0, 'result' => 0];
+        $tempSummary = ['evaluation' => [], 'average' => [], 'days' => []];
+        $year = $request['year'];
+        $month = str_pad($request['month'], 2, '0', STR_PAD_LEFT);
+        $endMonthDay = Carbon::parse($year . '-' . $month . '-01')->endOfMonth()->format('d');
+        $index = 1;
+        if ($request['half_month'] === 1) {
+            $start = 1;
+            $end = 15;
+        } else {
+            $start = 16;
+            $end = $endMonthDay;
+        }
+        for ($i = $start; $i <= $end; $i++) {
+            $day = str_pad($i, 2, '0', STR_PAD_LEFT);
+            $tempDate = $year . '-' . $month . '-' . $day;
+            $total = RiderEvaluation::where([
+                ['rider_id', $request['rider_id']],
+                ['date', 'like', '%' . $tempDate . '%']
+            ])->get();
+            $orders = 0;
+            $delivery_fee = 0;
+            $evaluation = ['orders' => 0, 'delivery_fee' => 0, 'extra' => 0, 'result' => 0];
+            $average = 0;
+            for ($ii = 1; $ii <= 4; $ii++) {
+                foreach ($total as $v) {
+                    if ($ii === 1) {
+                        $tempSummary['days'][$i] = 1;
+                        $orders += 1;
+                        $tempData[$index] = [
+                            "date" => Carbon::parse($tempDate)->format('F d, Y'),
+                            "detail" => 'Total # of Orders:',
+                            "value" => $orders
+                        ];
+                    } else if ($ii === 2) {
+                        $delivery_fee += $v->delivery_fee;
+                        $tempData[$index] = [
+                            "date" => Carbon::parse($tempDate)->format('F d, Y'),
+                            "detail" => 'Total Delivery Fee:',
+                            "value" => $delivery_fee
+                        ];
+                    } else if ($ii === 3) {
+                        if ($evaluation['orders'] >= 10 || $evaluation['delivery_fee'] >= 800) {
+                            $evaluation['extra'] += 1 * 3;
+                            $evaluation['result'] = 100 + $evaluation['extra'];
+                            if ($evaluation['result'] > 105) {
+                                $evaluation['result'] = 105;
+                            }
+                        } else if ($orders < 10 && $delivery_fee < 800) {
+                            $evaluation['extra'] = (10 - $orders) * -9.5;
+                            $evaluation['result'] = 100 + $evaluation['extra'];
+                            if ($evaluation['result'] < 80) {
+                                $evaluation['result'] = 80;
+                            }
+                        } else {
+                            $evaluation['result'] = 100;
+                        }
+                        $evaluation['orders'] += 1;
+                        $evaluation['delivery_fee'] += $v->delivery_fee;
+
+                        $tempData[$index] = [
+                            "date" => Carbon::parse($tempDate)->format('F d, Y'),
+                            "detail" => 'Daily Evaluation:',
+                            "value" => $evaluation['result'] . '%'
+                        ];
+                        $tempSummary['evaluation'][$i] = $evaluation['result'];
+                    } else if ($ii === 4) {
+                        $average += $v->evaluation;
+                        $tempData[$index] = [
+                            "date" => Carbon::parse($tempDate)->format('F d, Y'),
+                            "detail" => 'Average/Order Evaluation:',
+                            "value" => $average / $orders . '%'
+                        ];
+                        $tempSummary['average'][$i] = $average / $orders;
+                    }
+                }
+                $index++;
+            }
+            $data = ArrayHelper::ArrayIndexFixed($tempData);
+        }
+        $summary['evaluation'] = array_sum(ArrayHelper::ArrayIndexFixed($tempSummary['evaluation']));
+        $summary['average'] = array_sum(ArrayHelper::ArrayIndexFixed($tempSummary['average']));
+        $summary['days'] = array_sum(ArrayHelper::ArrayIndexFixed($tempSummary['days']));
+        $summary['result'] = round((($summary['evaluation'] + $summary['average']) / ($summary['days'] === 0 ? 1 : $summary['days'])) / 2, 2);
+
+        return ['summary' => $summary, 'data' => $data];
     }
 }
