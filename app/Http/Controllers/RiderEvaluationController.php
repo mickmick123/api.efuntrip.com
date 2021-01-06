@@ -61,7 +61,7 @@ class RiderEvaluationController extends Controller
             'id' => 'required|exists:rider_evaluation',
             'answer' => 'required',
             'result' => 'required',
-            'delivery_fee' => 'required',
+            'rider_income' => 'required',
         ]);
 
         if ($validator->fails()) {
@@ -73,7 +73,7 @@ class RiderEvaluationController extends Controller
                 $data['q' . ($k + 1)] = $v;
             }
             $data['result'] = $request->result;
-            $data['delivery_fee'] = $request->delivery_fee;
+            $data['rider_income'] = $request->rider_income;
             $this->riderEvaluation->updateById(['id' => $request->id], $data);
 
             $response['status'] = 'Success';
