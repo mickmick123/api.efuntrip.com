@@ -62,6 +62,7 @@ class RiderEvaluationController extends Controller
             'answer' => 'required',
             'result' => 'required',
             'rider_income' => 'required',
+            'evaluation' => 'required',
         ]);
 
         if ($validator->fails()) {
@@ -74,6 +75,7 @@ class RiderEvaluationController extends Controller
             }
             $data['result'] = $request->result;
             $data['rider_income'] = $request->rider_income;
+            $data['evaluation'] = $request->evaluation;
             $this->riderEvaluation->updateById(['id' => $request->id], $data);
 
             $response['status'] = 'Success';
