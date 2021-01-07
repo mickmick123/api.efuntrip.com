@@ -1776,7 +1776,7 @@ class ClientController extends Controller
                 'id' => serialize($_log),
                 'client_id' => $request->client_id,
                 'group_id' => null,
-                'service' => implode("\n", $_service),
+                'service' => $_service,
                 'amount' => $_amount,
                 'package' => $request->tracking
             ];

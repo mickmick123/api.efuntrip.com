@@ -68,6 +68,7 @@ class LogController extends Controller
         $data['client_id'] = $log['client_id'];
         $data['group_id'] = $log['group_id'];
         $log['date'] = $date->toFormattedDateString();
+        $optional = "";
         if ($type === 'E-wallet Deposit') {
             if ($data['group_id'] !== null) {
                 $log['group_name'] = Group::where('id',$data['group_id'])->get()[0]['name'];
@@ -82,6 +83,8 @@ class LogController extends Controller
         } else if ($type === 'Document Received') {
             $name = User::where('id', $data['client_id'])->get(DB::raw("CONCAT(first_name,' ',last_name) as name"));
             $log['user'] = $name[0]->name;
+        } else if ($type == "Added Service") {
+            $optional = "Service Added: ";
         }
 
         $data['type'] = strpos($type, 'Service Payment') !== false ? 'Service Payment' : $type;
@@ -91,7 +94,7 @@ class LogController extends Controller
         $_data = $this->logsAppNotification->saveToDb($data);
 
         if ($_data) {
-            $job = (new LogsPushNotification($data['client_id'], $data['message'], $_data->id));
+            $job = (new LogsPushNotification($data['client_id'], $optional.$data['message'], $_data->id));
             $this->dispatch($job);
         }
     }

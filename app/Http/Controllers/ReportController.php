@@ -357,16 +357,26 @@ class ReportController extends Controller
 				return $item['count'] > 0;
 			})->values()->toArray();
 
+			if($serviceProcedure->name == "Documents Needed") {
+                $detail = "";
+            }else if($serviceProcedure->name == "Filed at Immigration"){
+                $detail .= PHP_EOL;
+            }
+			$i=1;
 			foreach( $selectedDocumentsWithCount as $index => $document ) {
 				$documentTitle = Document::findOrFail($document['id'])->title;
 
-				$detail .= ' (' . $document['count'] . ')' . $documentTitle;
+				$detail .= $i.'. (' . $document['count'] . ')' . $documentTitle;
 
-				if( $index == count($selectedDocumentsWithCount) - 1 ) {
-					$detail .= '.';
-				} else {
-					$detail .= ', ';
-				}
+				if(count($selectedDocumentsWithCount) != $i){
+				    $detail .= PHP_EOL;
+                }
+				$i++;
+				//if( $index == count($selectedDocumentsWithCount) - 1 ) {
+				//	$detail .= '.';
+				//} else {
+				//	$detail .= ', ';
+				//}
 			}
 		}
 
@@ -569,6 +579,14 @@ class ReportController extends Controller
 		      'log_id' => $log->id,
 		      'type' => $serviceProcedure->name
           ];
+
+            if( $report['extensions']['estimated_releasing_date'] && $serviceProcedure->name == "Filed at Immigration" ) {
+                $estimatedReleasingDate = $report['extensions']['estimated_releasing_date'];
+                $estimatedReleasingDate = Carbon::parse($estimatedReleasingDate)->format('F d, Y');
+
+                $detail .= PHP_EOL . 'For the service ['.$cs->detail.']. Estimated releasing date is ' . $estimatedReleasingDate . '.';
+            }
+
           $this->sendPushNotification($cs->client_id, $detail, $_data);
 
 	        // Document log
@@ -1009,7 +1027,10 @@ class ReportController extends Controller
 
 					// Additional Log
 					if( $cs->status != $statusUponCompletion ) {
-						$detail = 'Documents complete, service[' . $cs->detail . '] is now ' . $statusUponCompletion . '.';
+
+					    $detail = $this->getDocumentDetail($clientService);
+
+						$detail .= 'Documents complete, service[' . $cs->detail . '] is now ' . $statusUponCompletion . '.';
 						$label = 'Documents complete, service is now ' . $statusUponCompletion . '.';
 
 						if( $statusUponCompletion == 'complete' ) {
@@ -1085,10 +1106,12 @@ class ReportController extends Controller
 						$statusUponCompletion = 'pending';
 					}
 				} elseif( $action == 'Prepared' && $category == 'Documents' ) {
+                    $detail = $this->getDocumentDetail($clientService);
+
 					if( $cs->status == 'pending' ) {
-						$this->handleUpdateStatus($cs->client_id, 1, $clientServiceId);
+						$this->handleUpdateStatus($cs->client_id, 1, $clientServiceId, null, null, $detail);
 					} elseif( $cs->status == 'on process' ) {
-						$this->handleUpdateStatus($cs->client_id, 2, $clientServiceId);
+						$this->handleUpdateStatus($cs->client_id, 2, $clientServiceId, null, null, $detail);
 					}
 				}
 
@@ -1124,6 +1147,23 @@ class ReportController extends Controller
 			}
 		}
 	}
+
+	private function getDocumentDetail($clientService){
+        $detail = "";
+        $selectedDocumentsWithCount = collect($clientService['documents'])->filter(function($item) {
+            return $item['count'] > 0;
+        })->values()->toArray();
+
+        $i=1;
+        foreach( $selectedDocumentsWithCount as $document ) {
+            $documentTitle = Document::findOrFail($document['id'])->title;
+
+            $detail .= $i. '. (' . $document['count'] . ')' . $documentTitle . PHP_EOL;
+
+            $i++;
+        }
+        return $detail;
+    }
 
 	private function handleUpdatedTheCost($clientService, $serviceProcedureId, $cost) {
 		$serviceProcedure = ServiceProcedure::with('action', 'category')->findOrFail($serviceProcedureId);
@@ -1341,6 +1381,7 @@ class ReportController extends Controller
 		$reports = $request->reports;
         $processorId = Auth::user()->id;
 
+
         foreach($reports as $report) {
         	// reports table
         	$r = $this->handleReports($processorId);
@@ -1426,63 +1467,60 @@ class ReportController extends Controller
 			return $item['count'] > 0;
 		})->values()->toArray();
 
+		$i=1; $_detail = "";
 		foreach( $documents as $index => $document ) {
 			$documentTitle = Document::findOrFail($document['id'])->title;
 
 			$detail .= ' (' . $document['count'] . ')' . $documentTitle;
-
+			$_detail .= $i.'. (' . $document['count'] . ')' . $documentTitle;
+            if(count($documents) != $i){
+                $_detail .= PHP_EOL;
+            }
 			if( $index == count($documents) - 1 ) {
 				$detail .= '.';
 			} else {
 				$detail .= ', ';
 			}
+			$i++;
     	}
 
+        if (strpos($action, 'Released documents') === false) {
+          // if($action != 'Released documents') {
+          // logs
+          $log = Log::create([
+            'client_id' => $user['id'],
+            'processor_id' => $processorId,
+            'log_type' => 'Document',
+            'detail' => $detail,
+            'label' => $action,
+            'log_date' => Carbon::now()->toDateString()
+          ]);
 
-    if (strpos($action, 'Released documents') === false) {
-    // if($action != 'Released documents') {
-      // logs
-//      $log = Log::create([
-//        'client_id' => $user['id'],
-//        'processor_id' => $processorId,
-//        'log_type' => 'Document',
-//        'detail' => $detail,
-//        'label' => $action,
-//        'log_date' => Carbon::now()->toDateString()
-//      ]);
-        $addLog = new Log;
-        $addLog->client_id = $user['id'];
-        $addLog->processor_id = $processorId;
-        $addLog->log_type = 'Document';
-        $addLog->detail = $detail;
-        $addLog->label = $action;
-        $addLog->log_date = Carbon::now()->toDateString();
-        $addLog->save();
-        DB::table('logs_notification')->insert(['log_id' => $addLog->id, 'job_id' => 0]);
-        app(LogController::class)->addNotif($addLog,'Document Received');
+            //DB::table('logs_notification')->insert(['log_id' => $addLog->id, 'job_id' => 0]);
 
-//      $this->sendPushNotification($user['id'], $detail);
+            $_data = [
+                'log_id' => $log->id,
+                'type' => "Documents Received"
+            ];
 
-      // document_log
-      foreach( $documents as $document ) {
-            $previousOnHand = 0;
+            $this->sendPushNotification($user['id'], $_detail, $_data);
 
-            $onHandDocument = OnHandDocument::where('client_id', $user['id'])
-              ->where('document_id', $document['id'])->first();
-
-            if( $onHandDocument ) {
-              $previousOnHand = $onHandDocument->count;
-            }
-
-            if($document['count'] > 0) {
-                $addLog->documents()->attach($document['id'], [
-                'count' => $document['count'],
-                'previous_on_hand' => $previousOnHand
-              ]);
+            // document_log
+            foreach( $documents as $document ) {
+                $previousOnHand = 0;
+                $onHandDocument = OnHandDocument::where('client_id', $user['id'])
+                    ->where('document_id', $document['id'])->first();
+                if( $onHandDocument ) {
+                    $previousOnHand = $onHandDocument->count;
+                }
+                if($document['count'] > 0) {
+                    $log->documents()->attach($document['id'], [
+                        'count' => $document['count'],
+                        'previous_on_hand' => $previousOnHand
+                    ]);
+                }
             }
         }
-    }
-
 	}
 
 	private function handleStandAloneOnHandDocuments($action, $user) {
@@ -1552,6 +1590,7 @@ class ReportController extends Controller
 	    }
 	}
 
+
 	public function receivedDocuments(Request $request) {
 		foreach( $request->users as $user ) {
 			$action = 'Received documents';
@@ -1562,12 +1601,13 @@ class ReportController extends Controller
 				$action .= ' from client';
 			}
 
+			// Documents Received w/ push notification execution
 	        $this->handleStandAloneLogDocumentLog($action, $user, $user['documents']);
 
 	        $this->handleStandAloneOnHandDocuments($action, $user);
 
-          $this->handleUpdateStatus($user['id'], 1, null, 'received');
-
+	        // Documents Needed w/ push notification execution
+            $this->handleUpdateStatus($user['id'], 1, null, 'received');
 		}
 
 		$response['status'] = 'Success';
@@ -1796,7 +1836,7 @@ class ReportController extends Controller
 		return Response::json($response);
 	}
 
-	private function handleUpdateStatus($clientId, $type, $_clientServiceId = null, $docLogType = null, $dcs = null) {
+	private function handleUpdateStatus($clientId, $type, $_clientServiceId = null, $docLogType = null, $dcs = null, $_detail = null) {
 		if( $type == 1 ) {
 			$status = 'pending';
 		} elseif( $type == 2 ) {
@@ -1811,11 +1851,11 @@ class ReportController extends Controller
 		// 		->where('active', 1)->where('status', $status)->pluck('id')->toArray();
 		// }
 		$clientServicesId = ClientService::where('client_id', $clientId)
-				->where('active', 1)
-				->where(function ($query)  {
-                        $query->orwhere('status','pending')
-                              ->orwhere('status', 'on process');
-                    })->pluck('id')->toArray();
+			->where('active', 1)
+			->where(function ($query)  {
+                $query->orwhere('status','pending')
+                    ->orwhere('status', 'on process');
+            })->pluck('id')->toArray();
 
 		$clientReports = ClientReport::with('clientReportDocuments')
 			->whereIn('client_service_id', $clientServicesId)
@@ -1826,421 +1866,407 @@ class ReportController extends Controller
 			->get();
 
 		if( count($clientReports) > 0 ) {
-			$onHandDocuments = OnHandDocument::where('client_id', $clientId)->join('documents', 'on_hand_documents.document_id', '=', 'documents.id')->get();
+            $onHandDocuments = OnHandDocument::where('client_id', $clientId)->join('documents', 'on_hand_documents.document_id', '=', 'documents.id')->get();
 
+            $clientDocsArr = [];
+            $clientArray = [];
+            $allRcvdDocs = [];
 
+            foreach( $clientReports as $clientReport ) {
+                if( !in_array($clientReport->client_service_id, $clientDocsArr) ) {
+                    array_push($clientDocsArr, $clientReport->client_service_id);
+                    $clientArray[] = $clientReport;
+                }
+            }
+            $temp = [];
 
-			$clientDocsArr = [];
-			$clientArray = [];
-			$allRcvdDocs = [];
+            $clientArray = collect($clientArray)->sortBy('client_service_id')->toArray();
 
-			foreach( $clientReports as $clientReport ) {
-				if( !in_array($clientReport->client_service_id, $clientDocsArr) ) {
+            foreach( $clientArray as $clientReport ) {
 
-					array_push($clientDocsArr, $clientReport->client_service_id);
+                $field1 = $clientReport['client_service_id'];
+                $field2 = $clientReport['service_procedure_id'];
 
-					$clientArray[] = $clientReport;
+                $found = collect($temp)->filter(function($item) use($field1, $field2) {
+                    return $item['client_service_id'] == $field1 && $item['service_procedure_id'] == $field2;
+                });
 
-				}
-			}
-			$temp = [];
-
-			$clientArray = collect($clientArray)->sortBy('client_service_id')->toArray();
-
-			foreach( $clientArray as $clientReport ) {
-
-				$field1 = $clientReport['client_service_id'];
-				$field2 = $clientReport['service_procedure_id'];
-
-				$found = collect($temp)->filter(function($item) use($field1, $field2) {
-					return $item['client_service_id'] == $field1 && $item['service_procedure_id'] == $field2;
-				});
-
-				if( count($found) == 0 ) {
-					$temp[] = [
-						'client_service_id' => $field1,
-						'service_procedure_id' => $field2
-					];
-
-          $counter = 0;
-          $docsDetail = '';
-
-          $docLogData = [];
-
-					foreach( $clientReport['client_report_documents'] as $cli => $clientReportDocument ) {
-						$index = -1;
-
-						foreach( $onHandDocuments as $i => $onHandDocument ) {
-							if( $clientReportDocument['document_id'] == $onHandDocument->document_id ) {
-								$index = $i;
-							}
-						}
-
-						if( $index == -1 ) {
-              // $docLogData[] = [
-              //   'document_id' => $clientReportDocument['document_id'],
-              //   'log_id' => 0,
-              //   'count' => 0,
-              //   'pending_count' => $clientReportDocument['count'],
-              //   // 'previous_on_hand' => $onHandDocuments[$index]->count - $allRcvdDocs[$docIndex]['count'],
-              //   'previous_on_hand' => 0,
-              //   'created_at' => Carbon::now(),
-              //   'updated_at' => Carbon::now()
-              // ];
-							$counter++;
-						} else {
-							if( $clientReportDocument['count'] > $onHandDocuments[$index]->count ) {
-								$counter++;
-							} else {
-								if( str_contains($onHandDocuments[$index]->title, 'Photocopy') ) {
-
-									if(!$this->ifDocsExist($allRcvdDocs, $onHandDocuments[$index]->id)) {
-										$allRcvdDocs[] = [
-											'id' => $onHandDocuments[$index]->id,
-											'count' => 0
-										];
-									}
-
-                  $docIndex = $this->getDocIndex($allRcvdDocs, $onHandDocuments[$index]->id);
-
-
-									if( $allRcvdDocs[$docIndex]['count'] < $onHandDocuments[$index]->count ) {
-                    $allRcvdDocs[$docIndex]['count'] += $clientReportDocument['count'];
-										$docsDetail .= "\n" . '('.$clientReportDocument['count'].')' . ' '. $onHandDocuments[$index]->title;
-
-										$pendingCount = 0;
-										if( ($allRcvdDocs[$docIndex]['count'] - $clientReportDocument['count']) > $onHandDocuments[$index]->count ) {
-											$pendingCount = $clientReportDocument['count'];
-										}
-
-                    $docLogData[] = [
-                      'document_id' => $onHandDocuments[$index]->id,
-                      'log_id' => 0,
-                      'count' => $clientReportDocument['count'],
-                      'pending_count' => $pendingCount,
-                      // 'previous_on_hand' => $onHandDocuments[$index]->count - $allRcvdDocs[$docIndex]['count'],
-                      'previous_on_hand' => $onHandDocuments[$index]->count - $clientReportDocument['count'],
-                      'created_at' => Carbon::now(),
-                      'updated_at' => Carbon::now()
+                if( count($found) == 0 ) {
+                    $temp[] = [
+                        'client_service_id' => $field1,
+                        'service_procedure_id' => $field2
                     ];
 
-									} else {
-										$allRcvdDocs[$docIndex]['count'] += $clientReportDocument['count'];
+                    $counter = 0;
+                    $docsDetail = '';
 
-										// $docsDetail .= "\n" . '('.$clientReportDocument['count'].')' . ' '. $onHandDocuments[$index]->title;
+                    $docLogData = [];
 
-                    // $docLogData[] = [
-                    //   'document_id' => $onHandDocuments[$index]->id,
-                    //   'log_id' => 0,
-                    //   'count' => $clientReportDocument['count'],
-                    //   'pending_count' => $clientReportDocument['count'],
-                    //   // 'previous_on_hand' => $onHandDocuments[$index]->count - $allRcvdDocs[$docIndex]['count'],
-                    //   'previous_on_hand' => $onHandDocuments[$index]->count - $clientReportDocument['count'],
-                    //   'created_at' => Carbon::now(),
-                    //   'updated_at' => Carbon::now()
-                    // ];
-										$counter++;
-                  }
+                    foreach( $clientReport['client_report_documents'] as $cli => $clientReportDocument ) {
+                        $index = -1;
+
+                        foreach( $onHandDocuments as $i => $onHandDocument ) {
+                            if( $clientReportDocument['document_id'] == $onHandDocument->document_id ) {
+                                $index = $i;
+                            }
+                        }
+
+                        if( $index == -1 ) {
+                            // $docLogData[] = [
+                            //   'document_id' => $clientReportDocument['document_id'],
+                            //   'log_id' => 0,
+                            //   'count' => 0,
+                            //   'pending_count' => $clientReportDocument['count'],
+                            //   // 'previous_on_hand' => $onHandDocuments[$index]->count - $allRcvdDocs[$docIndex]['count'],
+                            //   'previous_on_hand' => 0,
+                            //   'created_at' => Carbon::now(),
+                            //   'updated_at' => Carbon::now()
+                            // ];
+                            $counter++;
+                        } else {
+                            if( $clientReportDocument['count'] > $onHandDocuments[$index]->count ) {
+                                $counter++;
+                            } else {
+                                if( str_contains($onHandDocuments[$index]->title, 'Photocopy') ) {
+
+                                    if(!$this->ifDocsExist($allRcvdDocs, $onHandDocuments[$index]->id)) {
+                                        $allRcvdDocs[] = [
+                                            'id' => $onHandDocuments[$index]->id,
+                                            'count' => 0
+                                        ];
+                                    }
+
+                                    $docIndex = $this->getDocIndex($allRcvdDocs, $onHandDocuments[$index]->id);
+
+                                    if( $allRcvdDocs[$docIndex]['count'] < $onHandDocuments[$index]->count ) {
+                                        $allRcvdDocs[$docIndex]['count'] += $clientReportDocument['count'];
+                                        $docsDetail .= "\n" . '('.$clientReportDocument['count'].')' . ' '. $onHandDocuments[$index]->title;
+
+                                        $pendingCount = 0;
+                                        if( ($allRcvdDocs[$docIndex]['count'] - $clientReportDocument['count']) > $onHandDocuments[$index]->count ) {
+                                            $pendingCount = $clientReportDocument['count'];
+                                        }
+
+                                        $docLogData[] = [
+                                            'document_id' => $onHandDocuments[$index]->id,
+                                            'log_id' => 0,
+                                            'count' => $clientReportDocument['count'],
+                                            'pending_count' => $pendingCount,
+                                            // 'previous_on_hand' => $onHandDocuments[$index]->count - $allRcvdDocs[$docIndex]['count'],
+                                            'previous_on_hand' => $onHandDocuments[$index]->count - $clientReportDocument['count'],
+                                            'created_at' => Carbon::now(),
+                                            'updated_at' => Carbon::now()
+                                        ];
+
+                                        } else {
+                                            $allRcvdDocs[$docIndex]['count'] += $clientReportDocument['count'];
+
+                                            // $docsDetail .= "\n" . '('.$clientReportDocument['count'].')' . ' '. $onHandDocuments[$index]->title;
+
+                                            // $docLogData[] = [
+                                            //   'document_id' => $onHandDocuments[$index]->id,
+                                            //   'log_id' => 0,
+                                            //   'count' => $clientReportDocument['count'],
+                                            //   'pending_count' => $clientReportDocument['count'],
+                                            //   // 'previous_on_hand' => $onHandDocuments[$index]->count - $allRcvdDocs[$docIndex]['count'],
+                                            //   'previous_on_hand' => $onHandDocuments[$index]->count - $clientReportDocument['count'],
+                                            //   'created_at' => Carbon::now(),
+                                            //   'updated_at' => Carbon::now()
+                                            // ];
+                                            $counter++;
+                                        }
+                                } else {
+                                    if($docLogType === 'received') {
+                                        $hasPending = 0;
+
+                                        if( ($onHandDocuments[$index]->count - $clientReportDocument['count']) >= $onHandDocuments[$index]->count  ) {
+                                            $hasPending = 1;
+                                        }
+
+                                        $docsDetail .= "\n" . '('.$clientReportDocument['count'].')' . ' '. $onHandDocuments[$index]->title;
+
+                                        $docLogData[] = [
+                                            'document_id' => $onHandDocuments[$index]->id,
+                                            'log_id' => 0,
+                                            'count' => $clientReportDocument['count'],
+                                            // 'pending_count' => ($hasPending === 0) ? 0 : $clientReportDocument['count'],
+                                            'pending_count' => 0,
+                                            'previous_on_hand' => $onHandDocuments[$index]->count - $clientReportDocument['count'],
+                                            'created_at' => Carbon::now(),
+                                            'updated_at' => Carbon::now()
+                                        ];
+
+                                    }
+                                }
+
+                            }
+                        }
+                    }
+
+                    $newStatus = 'pending';
+                    $label = 'Documents incomplete, service is now ' . $newStatus . '.';
+
+                    if($docLogType !== 'Prepare required documents, the following documents are needed') {
+                        if( $counter == 0 ) {
+                            $newStatus = 'on process';
+
+                            $label = 'Documents complete, service is now ' . $newStatus . '.';
+                        } elseif( $counter != 0 ) {
+                            $newStatus = 'pending';
+
+                            $label = 'Documents incomplete, service is now ' . $newStatus . '.';
+                        }
+                    }
 
 
+                    $cs = ClientService::findOrfail($clientReport['client_service_id']);
 
-								} else {
-                  if($docLogType === 'received') {
-										$hasPending = 0;
-										if( ($onHandDocuments[$index]->count - $clientReportDocument['count']) >= $onHandDocuments[$index]->count  ) {
-											$hasPending = 1;
-										}
-											$docsDetail .= "\n" . '('.$clientReportDocument['count'].')' . ' '. $onHandDocuments[$index]->title;
+                    if($docLogType !== null) {
+                        $docLogCounter = 0;
 
-											$docLogData[] = [
-												'document_id' => $onHandDocuments[$index]->id,
-												'log_id' => 0,
-												'count' => $clientReportDocument['count'],
-												// 'pending_count' => ($hasPending === 0) ? 0 : $clientReportDocument['count'],
-												'pending_count' => 0,
-												'previous_on_hand' => $onHandDocuments[$index]->count - $clientReportDocument['count'],
-												'created_at' => Carbon::now(),
-												'updated_at' => Carbon::now()
-											];
+                        if($docLogType === 'received') {
+                            if($docsDetail !== '') {
+                                $docLabel = 'Received documents from Client';
+                                $docsDetail = 'Received documents from Client:' . "\n" . $docsDetail;
+                                $docLogCounter++;
+                            }
+                        } else if($docLogType === 'generate_photocopy') {
+                            if($docsDetail !== '') {
+                                $docLabel = 'Generate photocopies of Documents';
+                                $docsDetail = 'Generate photocopies of Documents:' . "\n" . $docsDetail;
+                                $docLogCounter++;
+                            }
+                        } else if($docLogType === 'Prepare required documents, the following documents are needed') {
+                            $docLabel = $docLogType;
+                            $docLogCounter++;
+                        }
 
+                        $docLogID = 0;
 
-                  }
-                }
+                        if($docLogCounter > 0) {
 
-							}
-						}
-          }
+                            if($docLogType !== 'Prepare required documents, the following documents are needed') {
+                                // Add service procedure
+                                $actionData = DB::table('actions')->where('name', 'Prepared')->first();
+                                $categoryData = DB::table('categories')->where('name', 'Documents')->first();
 
-          $newStatus = 'pending';
-          $label = 'Documents incomplete, service is now ' . $newStatus . '.';
+                                $storeActionCategory = DB::table('action_category')
+                                                      ->insert([
+                                                        'action_id' => $actionData->id,
+                                                        'category_id' => $categoryData->id
+                                                      ]);
 
-          if($docLogType !== 'Prepare required documents, the following documents are needed') {
-            if( $counter == 0 ) {
-              $newStatus = 'on process';
+                                $checkServiceProcedure = ServiceProcedure::where('service_id', $cs->service_id)
+                                                        // ->where('name', 'Prepared Documents')
+                                                        ->where('name', 'Documents Needed')
+                                                        ->where('step', 1)
+                                                        ->where('action_id', $actionData->id)
+                                                        ->where('category_id', $categoryData->id)
+                                                        ->first();
 
-              $label = 'Documents complete, service is now ' . $newStatus . '.';
-            } elseif( $counter != 0 ) {
-              $newStatus = 'pending';
+                                if(!$checkServiceProcedure) {
 
-              $label = 'Documents incomplete, service is now ' . $newStatus . '.';
-            }
-          }
-
-
-          $cs = ClientService::findOrfail($clientReport['client_service_id']);
-
-          if($docLogType !== null) {
-            $docLogCounter = 0;
-
-            if($docLogType === 'received') {
-              if($docsDetail !== '') {
-                $docLabel = 'Received documents from Client';
-                $docsDetail = 'Received documents from Client:' . "\n" . $docsDetail;
-                $docLogCounter++;
-              }
-            } else if($docLogType === 'generate_photocopy') {
-              if($docsDetail !== '') {
-                $docLabel = 'Generate photocopies of Documents';
-                $docsDetail = 'Generate photocopies of Documents:' . "\n" . $docsDetail;
-                $docLogCounter++;
-              }
-            } else if($docLogType === 'Prepare required documents, the following documents are needed') {
-              $docLabel = $docLogType;
-              $docLogCounter++;
-            }
-
-
-
-            $docLogID = 0;
-
-            if($docLogCounter > 0) {
-
-              if($docLogType !== 'Prepare required documents, the following documents are needed') {
-                // Add service procedure
-                $actionData = DB::table('actions')->where('name', 'Prepared')->first();
-                $categoryData = DB::table('categories')->where('name', 'Documents')->first();
-
-                $storeActionCategory = DB::table('action_category')
-                                      ->insert([
+                                    $storeServiceProcedure = ServiceProcedure::create([
+                                        'service_id' => $cs->service_id,
+                                        // 'name' => 'Prepared Documents',
+                                        'name' => 'Documents Needed',
+                                        'step' => 1,
                                         'action_id' => $actionData->id,
-                                        'category_id' => $categoryData->id
-                                      ]);
+                                        'category_id' => $categoryData->id,
+                                        'is_required' => 1,
+                                        'status_upon_completion' => 'on process',
+                                        'documents_to_display' => 'suggested',
+                                        'is_suggested_count' => 1
 
-                $checkServiceProcedure = ServiceProcedure::where('service_id', $cs->service_id)
-                                        // ->where('name', 'Prepared Documents')
-                                        ->where('name', 'Documents Needed')
-                                        ->where('step', 1)
-                                        ->where('action_id', $actionData->id)
-                                        ->where('category_id', $categoryData->id)
-                                        ->first();
-
-                if(!$checkServiceProcedure) {
-
-                  $storeServiceProcedure = ServiceProcedure::create([
-                        'service_id' => $cs->service_id,
-                        // 'name' => 'Prepared Documents',
-                        'name' => 'Documents Needed',
-                        'step' => 1,
-                        'action_id' => $actionData->id,
-                        'category_id' => $categoryData->id,
-                        'is_required' => 1,
-                        'status_upon_completion' => 'on process',
-                        'documents_to_display' => 'suggested',
-                        'is_suggested_count' => 1
-
-                  ]);
-
-                  $serviceProcedID = $storeServiceProcedure->id;
-                } else {
-                  $serviceProcedID = $checkServiceProcedure['id'];
-                }
-
-
-
-                // End of Add service procedure
-
-
-                if($cs->status === 'pending') {
-
-
-                  $docLogQuery = Log::create([
-                      'client_service_id' => $cs->id,
-                      'client_id' => $cs->client_id,
-                      'group_id' => $cs->group_id,
-                      'service_procedure_id' => $serviceProcedID,
-                      'processor_id' => Auth::user()->id,
-                      'log_type' => 'Document',
-                      'detail' => $docsDetail,
-                      'label' => $docLabel,
-                      'log_date' => Carbon::now()->toDateString()
-                  ]);
-
-                  $serviceProcedure = ServiceProcedure::where('id', $serviceProcedID)->first();
-
-                  $_data = [
-                    'log_id' => $docLogQuery->id,
-                    'type' => $serviceProcedure->name
-                  ];
-
-                  $this->sendPushNotification($cs->client_id, $docsDetail, $_data);
-
-                  foreach($docLogData as $dlc) {
-
-										if($dcs !== null) {
-											$dcscounter = 0;
-
-											foreach($dcs as $dc) {
-												if($dc['id'] === $dlc['document_id']) {
-													$dlc['log_id'] = $docLogQuery->id;
-
-                    			DB::table('document_log')->insert($dlc);
-												}
-											}
-										} else {
-											$dlc['log_id'] = $docLogQuery->id;
-
-                    	DB::table('document_log')->insert($dlc);
-										}
-
-
-
-                  }
-
-                } else {
-
-                  $getLog = Log::where('client_service_id', $cs->id)
-                            ->where('client_id', $cs->client_id)
-                            ->where('group_id', $cs->group_id)
-                            ->where('processor_id', Auth::user()->id)
-                            ->where('log_type', 'Document')
-                            ->where('label', $docLabel)->latest()->first();
-
-                  if($getLog) {
-                    foreach($docLogData as $dlc) {
-
-                      $getDocLog = DocumentLog::where('document_id', $dlc['document_id'])
-                                  ->where('log_id', $getLog['id'])
-                                  ->latest()->first();
-
-                      if($getDocLog) {
-                        $updateDocLog = DocumentLog::where('id', $getDocLog->id)
-                                    ->update([
-                                      'count' => $dlc['count'],
-                                      'previous_on_hand' => $dlc['previous_on_hand']
                                     ]);
-                      }
+
+                                    $serviceProcedID = $storeServiceProcedure->id;
+                                } else {
+                                    $serviceProcedID = $checkServiceProcedure['id'];
+                                }
+
+                                // End of Add service procedure
+
+                                if($cs->status === 'pending') {
+                                    $docLogQuery = Log::create([
+                                        'client_service_id' => $cs->id,
+                                        'client_id' => $cs->client_id,
+                                        'group_id' => $cs->group_id,
+                                        'service_procedure_id' => $serviceProcedID,
+                                        'processor_id' => Auth::user()->id,
+                                        'log_type' => 'Document',
+                                        'detail' => $docsDetail,
+                                        'label' => $docLabel,
+                                        'log_date' => Carbon::now()->toDateString()
+                                    ]);
+
+                                    $serviceProcedure = ServiceProcedure::where('id', $serviceProcedID)->first();
+
+                                    $_data = [
+                                        'log_id' => $docLogQuery->id,
+                                        'type' => $serviceProcedure->name
+                                    ];
+
+                                    $this->sendPushNotification($cs->client_id, $docsDetail, $_data);
+
+                                    foreach($docLogData as $dlc) {
+
+                                        if($dcs !== null) {
+                                            $dcscounter = 0;
+
+                                            foreach($dcs as $dc) {
+                                                if($dc['id'] === $dlc['document_id']) {
+                                                    $dlc['log_id'] = $docLogQuery->id;
+
+                                                    DB::table('document_log')->insert($dlc);
+                                                }
+                                            }
+                                        } else {
+                                            $dlc['log_id'] = $docLogQuery->id;
+
+                                            DB::table('document_log')->insert($dlc);
+                                        }
+
+                                    }
+
+                                } else {
+
+                                    $getLog = Log::where('client_service_id', $cs->id)
+                                        ->where('client_id', $cs->client_id)
+                                        ->where('group_id', $cs->group_id)
+                                        ->where('processor_id', Auth::user()->id)
+                                        ->where('log_type', 'Document')
+                                        ->where('label', $docLabel)->latest()->first();
+
+                                    if($getLog) {
+                                        foreach($docLogData as $dlc) {
+
+                                            $getDocLog = DocumentLog::where('document_id', $dlc['document_id'])
+                                                ->where('log_id', $getLog['id'])
+                                                ->latest()->first();
+
+                                            if($getDocLog) {
+                                                $updateDocLog = DocumentLog::where('id', $getDocLog->id)
+                                                    ->update([
+                                                        'count' => $dlc['count'],
+                                                        'previous_on_hand' => $dlc['previous_on_hand']
+                                                    ]);
+                                            }
+
+                                        }
+                                    }
+
+                                }
+                            } else {
+
+                                $getLog = Log::where('client_service_id', $cs->id)
+                                    ->where('client_id', $cs->client_id)
+                                    ->where('group_id', $cs->group_id)
+                                    ->where('processor_id', Auth::user()->id)
+                                    ->where('log_type', 'Document')
+                                    ->where('label', $docLabel)->latest()->first();
+
+                                if($getLog) {
+                                    foreach($docLogData as $dlc) {
+
+                                        $getDocLog = DocumentLog::where('document_id', $dlc['document_id'])
+                                            ->where('log_id', $getLog['id'])
+                                            ->latest()->first();
+
+                                        if($getDocLog) {
+                                            $updateDocLog = DocumentLog::where('id', $getDocLog->id)
+                                                ->update([
+                                                    'count' => $dlc['count'],
+                                                    'previous_on_hand' => $dlc['previous_on_hand']
+                                                ]);
+                                        }
+
+                                    }
+                                }
+
+                            }
+
+                        }
 
                     }
-                  }
 
-                }
-              } else {
+                    if( $cs->status != $newStatus ) {
+                        // $cs->update(['status' => $newStatus]);
+                        $cs->status = $newStatus;
+                        $cs->save();
 
-                $getLog = Log::where('client_service_id', $cs->id)
-                          ->where('client_id', $cs->client_id)
-                          ->where('group_id', $cs->group_id)
-                          ->where('processor_id', Auth::user()->id)
-                          ->where('log_type', 'Document')
-                          ->where('label', $docLabel)->latest()->first();
+                        ClientController::updatePackageStatus($cs->tracking);
 
-                if($getLog) {
-                  foreach($docLogData as $dlc) {
+                        $detail = 'Service[' . $cs->detail . '] is now ' . $newStatus . '.';
 
-                    $getDocLog = DocumentLog::where('document_id', $dlc['document_id'])
-                                ->where('log_id', $getLog['id'])
-                                ->latest()->first();
+                        // Add service procedure
+                        $actionData = DB::table('actions')->where('name', 'Prepared')->first();
+                        $categoryData = DB::table('categories')->where('name', 'Documents')->first();
 
-                    if($getDocLog) {
-                      $updateDocLog = DocumentLog::where('id', $getDocLog->id)
-                                  ->update([
-                                    'count' => $dlc['count'],
-                                    'previous_on_hand' => $dlc['previous_on_hand']
-                                  ]);
+                        $storeActionCategory = DB::table('action_category')
+                            ->insert([
+                                'action_id' => $actionData->id,
+                                'category_id' => $categoryData->id
+                            ]);
+
+                            $checkServiceProcedure = ServiceProcedure::where('service_id', $cs->service_id)
+                                ->where('name', 'Documents Needed')
+                                ->where('step', 1)
+                                ->where('action_id', $actionData->id)
+                                ->where('category_id', $categoryData->id)
+                                ->first();
+
+                        if(!$checkServiceProcedure) {
+
+                            $storeServiceProcedure = ServiceProcedure::create([
+                                'service_id' => $cs->service_id,
+                                // 'name' => 'Prepared Documents',
+                                'name' => 'Documents Needed',
+                                'step' => 1,
+                                'action_id' => $actionData->id,
+                                'category_id' => $categoryData->id,
+                                'is_required' => 1,
+                                'status_upon_completion' => 'on process',
+                                'documents_to_display' => 'suggested',
+                                'is_suggested_count' => 1
+
+                            ]);
+
+                            $serviceProcedID = $storeServiceProcedure->id;
+                        } else {
+                            $serviceProcedID = $checkServiceProcedure['id'];
+                        }
+                        // End of Add service procedure
+
+                        $_log = Log::create([
+                            'client_service_id' => $cs->id,
+                            'client_id' => $cs->client_id,
+                            'group_id' => $cs->group_id,
+                            'service_procedure_id' => $serviceProcedID,
+                            'processor_id' => Auth::user()->id,
+                            'log_type' => 'Status',
+                            'detail' => $detail,
+                            'label' => $label,
+                            'log_date' => Carbon::now()->toDateString()
+                        ]);
+
+                        $serviceProcedure = ServiceProcedure::where('id', $serviceProcedID)->first();
+                        $_data = [
+                            'log_id' => $_log->id,
+                            'type' => $serviceProcedure->name
+                        ];
+                        $msgDetail = "";
+                        if($_detail != null){
+                            $msgDetail .= $_detail;
+                        }
+                        $msgDetail .= "Document Received Completed. ".$detail;
+
+                        $this->sendPushNotification($cs->client_id, $msgDetail, $_data);
                     }
 
-                  }
                 }
 
-              }
-
             }
-
-          }
-
-
-
-
-					if( $cs->status != $newStatus ) {
-						// $cs->update(['status' => $newStatus]);
-						$cs->status = $newStatus;
-						$cs->save();
-
-						ClientController::updatePackageStatus($cs->tracking);
-
-            $detail = 'Service[' . $cs->detail . '] is now ' . $newStatus . '.';
-
-            // Add service procedure
-            $actionData = DB::table('actions')->where('name', 'Prepared')->first();
-            $categoryData = DB::table('categories')->where('name', 'Documents')->first();
-
-            $storeActionCategory = DB::table('action_category')
-                                  ->insert([
-                                    'action_id' => $actionData->id,
-                                    'category_id' => $categoryData->id
-                                  ]);
-
-            $checkServiceProcedure = ServiceProcedure::where('service_id', $cs->service_id)
-                                  ->where('name', 'Documents Needed')
-                                  ->where('step', 1)
-                                  ->where('action_id', $actionData->id)
-                                  ->where('category_id', $categoryData->id)
-                                  ->first();
-
-            if(!$checkServiceProcedure) {
-
-              $storeServiceProcedure = ServiceProcedure::create([
-                    'service_id' => $cs->service_id,
-                    // 'name' => 'Prepared Documents',
-                    'name' => 'Documents Needed',
-                    'step' => 1,
-                    'action_id' => $actionData->id,
-                    'category_id' => $categoryData->id,
-                    'is_required' => 1,
-                    'status_upon_completion' => 'on process',
-                    'documents_to_display' => 'suggested',
-                    'is_suggested_count' => 1
-
-              ]);
-
-              $serviceProcedID = $storeServiceProcedure->id;
-            } else {
-              $serviceProcedID = $checkServiceProcedure['id'];
-            }
-            // End of Add service procedure
-
-						$_log = Log::create([
-								'client_service_id' => $cs->id,
-								'client_id' => $cs->client_id,
-                'group_id' => $cs->group_id,
-                'service_procedure_id' => $serviceProcedID,
-								'processor_id' => Auth::user()->id,
-								'log_type' => 'Status',
-								'detail' => $detail,
-								'label' => $label,
-								'log_date' => Carbon::now()->toDateString()
-            ]);
-
-            $serviceProcedure = ServiceProcedure::where('id', $serviceProcedID)->first();
-            $_data = [
-                'log_id' => $_log->id,
-                'type' => $serviceProcedure->name
-            ];
-            $this->sendPushNotification($cs->client_id, $detail, $_data);
-          }
-
-				}
-
-			}
 		}
 	}
 
@@ -2778,11 +2804,16 @@ class ReportController extends Controller
           $data = $this->logsAppNotification->saveToDb($_data);
       }
 
+      $title = "";
+      if($_data['type'] == "Documents Received" || $_data['type'] == "Documents Needed"){
+          $title = $_data['type']. ":". PHP_EOL;
+      }
+
       if($data) {
           if ($label !== null) {
-              $job = (new LogsPushNotification($user_id, $message, $data->id))->delay(now()->addMinutes(120));
+              $job = (new LogsPushNotification($user_id, $title.$message, $data->id))->delay(now()->addMinutes(120));
           } else {
-              $job = (new LogsPushNotification($user_id, $message, $data->id));
+              $job = (new LogsPushNotification($user_id, $title.$message, $data->id));
           }
 
           $this->dispatch($job);

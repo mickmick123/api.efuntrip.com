@@ -3,6 +3,7 @@
 namespace App\Helpers;
 
 use App\Traits\FilterTrait;
+use SebastianBergmann\CodeCoverage\Report\PHP;
 
 class MessageHelper
 {
@@ -26,15 +27,17 @@ class MessageHelper
                 $detail = explode('.', explode("client\n ", $data['detail'])[1])[0];
             }
             $msg = "Your documents " . $detail . " have been released.";
-        } else if ($type == "Document Received") {
-            if (strpos($data['detail'], "client's representative ")) {
-                $receiver = explode("client's representative ", $data['label'])[1];
-                $detail = explode('.', explode($receiver . ' ', $data['detail'])[1])[0];
-            } else {
-                $detail = explode('.', explode("client ", $data['detail'])[1])[0];
-            }
-            $msg = "Your documents " . $detail . " have been received.";
-        } else if ($type == "Withdrawal") {
+        }
+        //else if ($type == "Document Received") {
+        //    if (strpos($data['detail'], "client's representative ")) {
+        //        $receiver = explode("client's representative ", $data['label'])[1];
+        //        $detail = explode('.', explode($receiver . ' ', $data['detail'])[1])[0];
+        //    } else {
+        //       $detail = explode('.', explode("client ", $data['detail'])[1])[0];
+        //    }
+        //    $msg = "Your documents " . $detail . " have been received.";
+        //}
+        else if ($type == "Withdrawal") {
             if ($data['group_id'] !== null) {
                 $msg = "Your withdrawal amounting to " . $self->absNumber($data['amount']) . " has been successfully processed to your group " . $data['group_name']; //. ". on " . $data['date'];
             } else {
@@ -62,24 +65,32 @@ class MessageHelper
             $msg = implode(PHP_EOL . PHP_EOL, $temp['message']);
         } elseif ($type == "Added Service") {
             if (array_key_exists("clients", $data)) {
+                $msg .= PHP_EOL;
                 if($data['is_leader']) {
                     $msg .= ArrayHelper::CommaAnd($data['clients']['name'], ', ', ' and ') . PHP_EOL;
                 }
                 $services = $data['clients']['service'];
-                //$i=0;
-                $message = [];
+                $i=1;
                 foreach ($services as $k => $v){
-                    array_push($message, $v);
                     //$msg .= "Package #" . $data['clients']['package'][$k] . " with the Total Service Cost of " . $data['clients']['amount'][$k] . PHP_EOL;
-                    //if(count($services)-1 != $i) {
-                    //    $msg .= PHP_EOL;
-                    //}
-                    //$i++;
+
+                    $msg .= "$i. $v";
+                    $msg .= count($services) != $i?PHP_EOL:"";
+                    $i++;
                 }
-                $msg .= ArrayHelper::CommaAnd($message, ',' . PHP_EOL, ' and' . PHP_EOL);
             }else{
-                $msg = $data['service'];
-                //$msg = $data['service'] . PHP_EOL . "Package #" . $data['package'] . " with the Total Service Cost of " . number_format($data['amount']);
+                $i=1;
+                foreach ($data['service'] as $v) {
+                    if(count($data['service']) == 1){
+                        $msg .= $v;
+                    }else{
+                        $msg .= $i == 1?PHP_EOL:"";
+                        $msg .= "$i. $v";
+                        $msg .= count($data['service']) != $i?PHP_EOL:"";
+                    }
+                    $i++;
+                }
+
             }
 
         }
