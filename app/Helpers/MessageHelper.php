@@ -3,7 +3,6 @@
 namespace App\Helpers;
 
 use App\Traits\FilterTrait;
-use SebastianBergmann\CodeCoverage\Report\PHP;
 
 class MessageHelper
 {
