@@ -1219,17 +1219,17 @@ class ReportController extends Controller
                                         ->first();
                 $type = "";
                 if($checkLogNotif) {
-                    $logs_app_notification = DB::table('logs_app_notification')
-                        ->where('log_id', $getLog['id'])
-                        ->where('job_id', $checkLogNotif->job_id)->first();
+                    $type = DB::table('logs_app_notification')
+                        ->where('log_id', $getLog['id'])->first()->type;
 
                     DB::table('jobs')->where('id', $checkLogNotif->job_id)->delete();
                     DB::table('logs_notification')
                         ->where('log_id', $getLog['id'])
                         ->where('job_id', $checkLogNotif->job_id)
                         ->delete();
-                    $type = $logs_app_notification->type;
-                    $logs_app_notification->delete();
+
+                    DB::table('logs_app_notification')
+                        ->where('log_id', $getLog['id'])->delete();
                 }
 
                 $prevLogDetail = explode('PHP', $getLog['detail']);

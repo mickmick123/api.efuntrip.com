@@ -38,4 +38,13 @@ class BaseModel extends Model
         return true;
     }
 
+    public function count($where,$infield='',$inarray=[]){
+        if($infield && $inarray){
+            return $this->where($where)->wherein($infield,$inarray)->count();
+        }else{
+            return $this->where($where)->count();
+        }
+
+    }
+
 }
