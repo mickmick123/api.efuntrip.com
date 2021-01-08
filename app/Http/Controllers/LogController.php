@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Helpers\ArrayHelper;
 use App\Helpers\MessageHelper;
 use App\Http\Controllers\ClientController;
 use App\Jobs\LogsPushNotification;
@@ -12,7 +11,6 @@ use App\Group;
 use App\GroupUser;
 
 use App\LogsAppNotification;
-use App\LogsNotification;
 use App\Traits\FilterTrait;
 use App\User;
 use App\Document;
@@ -97,6 +95,7 @@ class LogController extends Controller
             $job = (new LogsPushNotification($data['client_id'], $optional.$data['message'], $_data->id));
             $this->dispatch($job);
         }
+
     }
 
     public function readNotif(Request $request){

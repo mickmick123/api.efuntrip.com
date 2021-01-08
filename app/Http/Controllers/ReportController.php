@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\ClientController;
 
 use App\LogsAppNotification;
+use App\LogsNotification;
 use Edujugon\PushNotification\PushNotification;
 
 use Edujugon\PushNotification\Messages\PushMessage;
@@ -51,9 +52,11 @@ use App\Jobs\LogsPushNotification;
 class ReportController extends Controller
 {
     protected $logsAppNotification;
-    public function __construct(LogsAppNotification $logsAppNotification)
+    protected $cModel;
+    public function __construct(LogsAppNotification $logsAppNotification, LogsNotification $logsNotification)
     {
         $this->logsAppNotification = $logsAppNotification;
+        $this->cModel = $logsNotification;
     }
 
     public function index(Request $request, $perPage = 20) {
@@ -1175,88 +1178,98 @@ class ReportController extends Controller
 
 			$cs = ClientService::findOrFail($clientServiceId);
 
-      $previousCost = $cs->cost;
+            $previousCost = $cs->cost;
 
-      $cs->cost = $cost;
-      $cs->is_full_payment = 0;
-      $cs->save();
+            $cs->cost = $cost;
+            $cs->is_full_payment = 0;
+            $cs->save();
 
-      $totalPrice = $cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent;
+            $totalPrice = $cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent;
 
-      $ct = DB::table('client_transactions')->where('client_service_id', $cs->id)->first();
+            $ct = DB::table('client_transactions')->where('client_service_id', $cs->id)->first();
 
-      if($ct) {
-        $totalPrice -= $ct->amount;
-      }
+            if($ct) {
+                $totalPrice -= $ct->amount;
+            }
 
-      $label = 'Updated Cost';
-      $detail = 'Updated service cost from PHP'.number_format($previousCost,2).' to PHP'.number_format($cost,2).'.';
+            $label = 'Updated Cost';
+            $detail = 'Updated service cost from PHP'.number_format($previousCost,2).' to PHP'.number_format($cost,2).'.';
 
-      // Update Logs
-      $totalCharge = $cs->cost + $cs->charge + $cs->tip;
+            // Update Logs
+            $totalCharge = $cs->cost + $cs->charge + $cs->tip;
 
-      $labelSearch = 'Documents complete, service is now complete. Total charge is PHP' . number_format($totalCharge, 2) . '.';
+            $labelSearch = 'Documents complete, service is now complete. Total charge is PHP' . number_format($totalCharge, 2) . '.';
 
-      $getLog = Log::where('client_service_id', $cs->id)
-          ->where('client_id', $cs->client_id)
-          ->where('group_id', $cs->group_id)
-          ->where('processor_id', Auth::user()->id)
-          ->where('log_type', 'Status')
+            $getLog = Log::where('client_service_id', $cs->id)
+                ->where('client_id', $cs->client_id)
+                ->where('group_id', $cs->group_id)
+                ->where('processor_id', Auth::user()->id)
+                ->where('log_type', 'Status')
 					->where('label', 'LIKE', '%Documents complete, service is now complete.%')
 					->first();
 
 			if($getLog) {
-					// $updatedLog = Log::where('id', $getLog['id'])
-					// 		->update([
-					// 			'label' => $labelSearch
-					// 		]);
-					$checkLogNotif = DB::table('logs_notification as ln')
-											->leftJoin('jobs', 'ln.job_id', '=', 'jobs.id')
-											->where('ln.log_id', $getLog['id'])
-											->first();
+                // $updatedLog = Log::where('id', $getLog['id'])
+                // 		->update([
+                // 			'label' => $labelSearch
+                // 		]);
+                $checkLogNotif = DB::table('logs_notification as ln')
+                                        ->leftJoin('jobs', 'ln.job_id', '=', 'jobs.id')
+                                        ->where('ln.log_id', $getLog['id'])
+                                        ->first();
+                $type = "";
+                if($checkLogNotif) {
+                    $logs_app_notification = DB::table('logs_app_notification')
+                        ->where('log_id', $getLog['id'])
+                        ->where('job_id', $checkLogNotif->job_id)->first();
 
-					if($checkLogNotif) {
-						DB::table('jobs')->where('id', $checkLogNotif->job_id)->delete();
-						DB::table('logs_notification')
-							->where('log_id', $getLog['id'])
-							->where('job_id', $checkLogNotif->job_id)
-							->delete();
-					}
+                    DB::table('jobs')->where('id', $checkLogNotif->job_id)->delete();
+                    DB::table('logs_notification')
+                        ->where('log_id', $getLog['id'])
+                        ->where('job_id', $checkLogNotif->job_id)
+                        ->delete();
+                    $type = $logs_app_notification->type;
+                    $logs_app_notification->delete();
+                }
 
-					$prevLogDetail = explode('PHP', $getLog['detail']);
-					$prevLogDetail = $prevLogDetail[0] . 'PHP'. number_format($totalCharge, 2) . '.';
+                $prevLogDetail = explode('PHP', $getLog['detail']);
+                $prevLogDetail = $prevLogDetail[0] . 'PHP'. number_format($totalCharge, 2) . '.';
 
-					$getLog->delete();
+                $getLog->delete();
 
-					$newUpdateCostLog = Log::create([
-						'client_service_id' => $cs->id,
-						'client_id' => $cs->client_id,
-						'group_id' => $cs->group_id,
-						'service_procedure_id' => $serviceProcedureId,
-						'processor_id' => Auth::user()->id,
-						'log_type' => 'Action',
-						'detail' => $detail,
-						'label' => $label,
-						'log_date' => Carbon::now()->toDateString()
-					]);
+                $newUpdateCostLog = Log::create([
+                    'client_service_id' => $cs->id,
+                    'client_id' => $cs->client_id,
+                    'group_id' => $cs->group_id,
+                    'service_procedure_id' => $serviceProcedureId,
+                    'processor_id' => Auth::user()->id,
+                    'log_type' => 'Action',
+                    'detail' => $detail,
+                    'label' => $label,
+                    'log_date' => Carbon::now()->toDateString()
+                ]);
 
-					$newServiceLog = Log::create([
-						'client_service_id' => $cs->id,
-						'client_id' => $cs->client_id,
-						'group_id' => $cs->group_id,
-						'service_procedure_id' => $serviceProcedureId,
-						'processor_id' => Auth::user()->id,
-						'log_type' => 'Status',
-						'detail' => $prevLogDetail,
-						'label' => $labelSearch,
-						'log_date' => Carbon::now()->toDateString()
-					]);
-                    // $_data = [
-                    //    'log_id' => $newServiceLog->id,
-                    //    'type' => $serviceProcedure->name
-                    // ];
+                $newServiceLog = Log::create([
+                    'client_service_id' => $cs->id,
+                    'client_id' => $cs->client_id,
+                    'group_id' => $cs->group_id,
+                    'service_procedure_id' => $serviceProcedureId,
+                    'processor_id' => Auth::user()->id,
+                    'log_type' => 'Status',
+                    'detail' => $prevLogDetail,
+                    'label' => $labelSearch,
+                    'log_date' => Carbon::now()->toDateString()
+                ]);
 
-					// $this->sendPushNotification($cs->client_id, $prevLogDetail, $_data, $labelSearch, $newServiceLog->id);
+                 $_data = [
+                    'log_id' => $newServiceLog->id,
+                    'type' => "Released from Immigration"
+                 ];
+
+                 if($type == "Released from Immigration") {
+                     $this->sendPushNotification($cs->client_id, $prevLogDetail, $_data, $labelSearch, $newServiceLog->id);
+                 }
+
 			}
 
       // End
@@ -2817,7 +2830,20 @@ class ReportController extends Controller
               $job = (new LogsPushNotification($user_id, $title.$message, $data->id));
           }
 
-          $this->dispatch($job);
+          $jobId = $this->dispatch($job);
+
+          if($this->cModel->count(["log_id"=>$data->log_id])<0){
+              $this->cModel->saveToDb(
+                  [
+                      "log_id" => $data->log_id,
+                      "job_id" => $jobId
+                  ]
+              );
+          }
+
+//          if($_data['type'] == "Updated Cost"){
+//
+//          }
 
 //          if ($label !== null && $log_id !== null) {
 //              $checkLogNotif = DB::table('logs_notification as ln')
