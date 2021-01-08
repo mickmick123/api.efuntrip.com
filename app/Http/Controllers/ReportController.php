@@ -2836,7 +2836,7 @@ class ReportController extends Controller
           if ($label !== null && $log_id !== null) {
               $this->cModel->saveToDb(
                   [
-                      "log_id" => $data->log_id,
+                      "log_id" => $log_id,
                       "job_id" => $jobId
                   ]
               );
