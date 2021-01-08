@@ -197,7 +197,9 @@ class LogController extends Controller
                     'log_id' => $l->log_id,
                     'group_id' => $l->group_id,
                     'type'  => $l->type,
-                    'user' => $user
+                    'user' => $user,
+                    'logs' => $log,
+                    'remarks' => ''
                   );
                 }
 
