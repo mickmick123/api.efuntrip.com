@@ -68,7 +68,6 @@ class LogController extends Controller
         $data['client_id'] = $log['client_id'];
         $data['group_id'] = $log['group_id'];
         $log['date'] = $date->toFormattedDateString();
-        $optional = "";
         if ($type === 'E-wallet Deposit') {
             if ($data['group_id'] !== null) {
                 $log['group_name'] = Group::where('id',$data['group_id'])->get()[0]['name'];
@@ -83,8 +82,6 @@ class LogController extends Controller
         } else if ($type === 'Document Received') {
             $name = User::where('id', $data['client_id'])->get(DB::raw("CONCAT(first_name,' ',last_name) as name"));
             $log['user'] = $name[0]->name;
-        } else if ($type == "Added Service") {
-            $optional = "Service Added: ";
         }
 
         $data['type'] = strpos($type, 'Service Payment') !== false ? 'Service Payment' : $type;
@@ -94,7 +91,7 @@ class LogController extends Controller
         $_data = $this->logsAppNotification->saveToDb($data);
 
         if ($_data) {
-            $job = (new LogsPushNotification($data['client_id'], $optional.$data['message'], $_data->id));
+            $job = (new LogsPushNotification($data['client_id'], $data['message'], $_data->id));
             $this->dispatch($job);
         }
     }
@@ -159,49 +156,41 @@ class LogController extends Controller
     }
 
     public function getNotificationById(Request $request) {
-
-      $validator = Validator::make($request->all(), [
-          'id' => 'required|exists:logs_app_notification',
-      ]);
-
-      if ($validator->fails()) {
-          $response['status'] = 'Failed';
-          $response['errors'] = $validator->errors();
-          $response['code'] = 422;
-      } else {
-
+        $validator = Validator::make($request->all(), [
+            'id' => 'required|exists:logs_app_notification',
+        ]);
+        if ($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
               $l = DB::table('logs_app_notification')->where('id',$request->id)->first();
               $data = [];
-
               $user = null;
-
-                if($l->log_id !== null){
-
-                  if($l->type != 'Added Service'){
-                    $log = DB::table('logs')->where('id',$l->log_id)->first();
-                  }else{
-                    $ids = unserialize($l->log_id);
-                    $log = DB::table('logs')
-                         ->where('id',$ids[0])->first();
-                  }
-
-                  $user = DB::table('users')
-                      ->where('id',$log->processor_id)->first();
-
-                  $data = array(
-                    'id' => $l->id,
-                    'message' => $l->message,
-                    'message_cn' => $l->message_cn,
-                    'is_read' => $l->is_read,
-                    'created_at' => $l->created_at,
-                    'log_id' => $l->log_id,
-                    'group_id' => $l->group_id,
-                    'type'  => $l->type,
-                    'user' => $user,
-                    'logs' => $log,
-                    'remarks' => ''
-                  );
-                }
+              if($l->log_id !== null){
+                    if($l->type != 'Added Service' && $l->type != 'Service Payment'){
+                        $log = DB::table('logs')->where('id',$l->log_id)->first();
+                    }else{
+                        $ids = unserialize($l->log_id);
+                        $log = DB::table('logs')
+                            ->where('id',$ids[0])->first();
+                    }
+                    $user = DB::table('users')
+                        ->where('id',$log->processor_id)->first();
+                    $data = array(
+                        'id' => $l->id,
+                        'message' => $l->message,
+                        'message_cn' => $l->message_cn,
+                        'is_read' => $l->is_read,
+                        'created_at' => $l->created_at,
+                        'log_id' => $l->log_id,
+                        'group_id' => $l->group_id,
+                        'type'  => $l->type,
+                        'user' => $user,
+                        'logs' => $log,
+                        'remarks' => ''
+                    );
+              }
 
               $response['status'] = 'Success';
               $response['data'] = $data;
@@ -1748,32 +1737,25 @@ class LogController extends Controller
         return Response::json($response);
     }
 
-
     public function getAllNotification($client_id) {
+        $logs = DB::table('logs_app_notification')->where('client_id',$client_id)->orderBy('id','desc')->get();
+        $data = [];
+        foreach($logs as $l){
+            //$log = '';
+            $user = null;
+            if($l->log_id !== null){
 
-              $logs = DB::table('logs_app_notification')->where('client_id',$client_id)->orderBy('id','desc')->get();
-              $data = [];
-
-              foreach($logs as $l){
-
-              //$log = '';
-              $user = null;
-
-                if($l->log_id !== null){
-
-                  if($l->type != 'Added Service'){
+                if($l->type != 'Added Service' && $l->type != 'Service Payment'){
                     $log = DB::table('logs')->where('id',$l->log_id)->first();
-                  }else{
+                }else{
                     $ids = unserialize($l->log_id);
                     $log = DB::table('logs')
-                         ->where('id',$ids[0])->first();
-                  }
-
-                  if($log){
-                      $user = DB::table('users')
-                          ->where('id',$log->processor_id)->first();
-
-                      $data[] = array(
+                        ->where('id',$ids[0])->first();
+                }
+                if($log){
+                    $user = DB::table('users')
+                      ->where('id',$log->processor_id)->first();
+                    $data[] = array(
                         'id' => $l->id,
                         'message' => $l->message,
                         'message_cn' => $l->message_cn,
@@ -1782,21 +1764,19 @@ class LogController extends Controller
                         'log_id' => $l->log_id,
                         'group_id' => $l->group_id,
                         'type'  => $l->type,
-                        'user' => $user
-                      );
-                 }
+                        'user' => $user,
+                        'logs' => $log,
+                        'remarks' => ''
+                    );
                 }
+            }
+      }
 
-              }
+      $response['status'] = 'Success';
+      $response['data'] = $data;
+      $response['code'] = 200;
 
-
-
-
-              $response['status'] = 'Success';
-              $response['data'] = $data;
-              $response['code'] = 200;
-
-              return Response::json($response);
+      return Response::json($response);
     }
 
     public function getEmployeeDocsOnHand(Request $request){

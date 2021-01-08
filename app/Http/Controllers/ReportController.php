@@ -1056,7 +1056,7 @@ class ReportController extends Controller
 				        	'detail' => $detail,
 				        	'label' => $label,
 				        	'log_date' => Carbon::now()->toDateString()
-                ]);
+                        ]);
                         $_data = [
                             'log_id' => $logs->id,
                             'type' => $serviceProcedure->name

@@ -64,7 +64,7 @@ class MessageHelper
             $msg = implode(PHP_EOL . PHP_EOL, $temp['message']);
         } elseif ($type == "Added Service") {
             if (array_key_exists("clients", $data)) {
-                $msg .= PHP_EOL;
+                $msg .= "Service Added:".PHP_EOL;
                 if($data['is_leader']) {
                     $msg .= ArrayHelper::CommaAnd($data['clients']['name'], ', ', ' and ') . PHP_EOL;
                 }
@@ -79,6 +79,7 @@ class MessageHelper
                 }
             }else{
                 $i=1;
+                $msg .= "Service Added: ";
                 foreach ($data['service'] as $v) {
                     if(count($data['service']) == 1){
                         $msg .= $v;
