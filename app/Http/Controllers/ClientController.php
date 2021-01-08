@@ -3236,16 +3236,23 @@ class ClientController extends Controller
 
     // List of Today's Tasks
     public function getTodayTasks(Request $request, $perPage = 20) {
-        $sort = $request->input('sort');
-        $search = $request->input('search');
+        $sort = $request->sort;
+        $viewAll = $request->viewAll;
+        $search = $request->search;
 
         $user = auth()->user();
-        $taskId = Tasks::where([['date',date("Y-m-d")],['who_is_in_charge',$user->id]])->pluck('client_service_id');
+        $taskId = Tasks::where('date',date("Y-m-d"))
+            ->when($viewAll == 0, function ($q) use($user){
+                return $q->where('who_is_in_charge',$user->id);
+            })->pluck('client_service_id');
         $services = ClientService::select(['client_services.id','client_services.client_id','client_services.detail','client_services.remarks',
             'users.first_name','users.last_name','users.gender',
+            'userx.first_name as in_charge_name',
             'groups.name as group'])
             ->leftJoin('users','client_services.client_id','users.id')
             ->leftJoin('groups','client_services.group_id','groups.id')
+            ->leftJoin('tasks','client_services.id','tasks.client_service_id')
+            ->leftJoin('users as userx','tasks.who_is_in_charge','userx.id')
             ->whereIn('client_services.id',$taskId)
             ->where([['client_services.status','on process'],
                 ['client_services.active',1]])
