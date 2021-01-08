@@ -1745,7 +1745,7 @@ class LogController extends Controller
             $user = null;
             if($l->log_id !== null){
 
-                if($l->type != 'Added Service' && $l->type != 'Service Payment'){
+                if($l->type != 'Added Service' || $l->type != 'Service Payment'){
                     $log = DB::table('logs')->where('id',$l->log_id)->first();
                 }else{
                     $ids = unserialize($l->log_id);
