@@ -89,4 +89,5 @@ Route::middleware('auth:api')->group(function() {
 
     Route::get('get-pay-services/{id}', 'ClientController@getPayServices');
 
+    Route::post('update-passport-monitor', 'ClientController@updatePassportMonitor');
 });

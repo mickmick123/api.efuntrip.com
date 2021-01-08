@@ -3383,7 +3383,7 @@ class ClientController extends Controller
         $today = Carbon::now()->format('Y-m-d');
         $range = Carbon::now()->addDays(15)->format('Y-m-d');
 
-        $query = User::where([['visa_type','!=',null], ['visa_type','!=','']])
+        $query = User::where([['visa_type','!=',null], ['visa_type','!=',''],['passport_monitor',1]])
             ->when([['expiration_date' != null],['expiration_date' != '']], function($query) use ($today,$range) {
                 return $query->whereBetween('expiration_date',[$today,$range]);
             }, function($query) use ($today,$range) {
@@ -3995,6 +3995,30 @@ s5n8yErWKdqOJDgF77IW5mzhlQyNioIhDsYSytD3ef9nlwcPmFVUI7lOEtMP9xAB
             $response['data'] = $data;
         }
 
+        return Response::json($response);
+    }
+
+    public function updatePassportMonitor(Request $request){
+        $validator = Validator::make($request->all(), [
+            'id' => 'required|exists:users',
+        ]);
+
+        if ($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+            $update = user::find($request->id);
+            if($update->passport_monitor === 0){
+                $update->passport_monitor = 1;
+            }else{
+                $update->passport_monitor = 0;
+            }
+            $update->save();
+            $response['status'] = 'success';
+            $response['code'] = 200;
+            $response['data'] = $update->passport_monitor;
+        }
         return Response::json($response);
     }
 
