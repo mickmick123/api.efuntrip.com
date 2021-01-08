@@ -2832,20 +2832,15 @@ class ReportController extends Controller
 
           $jobId = $this->dispatch($job);
 
-          if($this->cModel->count(["log_id"=>$data->log_id])<0){
+
+          if ($label !== null && $log_id !== null) {
               $this->cModel->saveToDb(
                   [
                       "log_id" => $data->log_id,
                       "job_id" => $jobId
                   ]
               );
-          }
 
-//          if($_data['type'] == "Updated Cost"){
-//
-//          }
-
-//          if ($label !== null && $log_id !== null) {
 //              $checkLogNotif = DB::table('logs_notification as ln')
 //                  ->leftJoin('jobs', 'ln.job_id', '=', 'jobs.id')
 //                  ->where('ln.log_id', $log_id)
@@ -2867,7 +2862,7 @@ class ReportController extends Controller
 //                  'job_id' => $jobID,
 //                  'status' => 1
 //              ]);
-//          }
+          }
       }
 	}
 
