@@ -2820,17 +2820,17 @@ class ReportController extends Controller
           $data = $this->logsAppNotification->saveToDb($_data);
       }
 
-      $title = "";
-      if($_data['type'] == "Documents Received" || $_data['type'] == "Documents Needed"){
-          $title = $_data['type']. ":". PHP_EOL;
-      }
+//      $title = "";
+//      if($_data['type'] == "Documents Received" || $_data['type'] == "Documents Needed"){
+//          $title = $_data['type']. ":". PHP_EOL;
+//      }
 
       if($data) {
           if ($label !== null) {
-              //$job = (new LogsPushNotification($user_id, $title.$message, $data->id))->delay(now()->addMinutes(120));
-              $job = (new LogsPushNotification($user_id, $title.$message, $data->id))->delay(now()->addMinutes(2));
+              //$job = (new LogsPushNotification($user_id, $message, $data->id))->delay(now()->addMinutes(120));
+              $job = (new LogsPushNotification($user_id, $message, $data->id))->delay(now()->addMinutes(2));
           } else {
-              $job = (new LogsPushNotification($user_id, $title.$message, $data->id));
+              $job = (new LogsPushNotification($user_id, $message, $data->id));
           }
 
           $jobId = $this->dispatch($job);
