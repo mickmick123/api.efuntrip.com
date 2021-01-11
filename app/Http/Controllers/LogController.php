@@ -120,42 +120,46 @@ class LogController extends Controller
         return Response::json($response);
     }
 
-    public function getNotifDetail(Request $request){
-        $validator = Validator::make($request->all(), [
-            'id' => 'required|exists:logs_app_notification',
-        ]);
-
-        if ($validator->fails()) {
-            $response['status'] = 'Failed';
-            $response['errors'] = $validator->errors();
-            $response['code'] = 422;
-        } else {
-            $read = LogsAppNotification::find($request->id);
-            $getLogs = Log::find($read->log_id);
-            $logs = Log::where([
-                ['log_type','ewallet'],
-                ['client_service_id',$getLogs['client_service_id']]])
-                ->orderBy('created_at','desc')
-                ->get(['id','detail','detail_cn','amount','created_at','processor_id']);
-            $service = ClientService::find($getLogs['client_service_id']);
-            $discount =  ClientTransaction::where('client_service_id', $getLogs['client_service_id'])->where('type', 'Discount')->sum('amount');
-            $amt = ($service->charge + $service->cost + $service->tip + $service->com_client + $service->com_agent) - $discount;
-            $body = '';
-            foreach($logs as $k=>$v){
-                $name = User::find($v->processor_id);
-                $body .= PHP_EOL . 'Paid service with an amount of Php' . $this->absNumber($v->amount)  . '. ' . $name['first_name'] . ' | ' . date_format(date_create($v->created_at), "M d, yy , h:i A");
-            }
-            $header = 'Service Name: ' . $service->detail . PHP_EOL . 'Total Payment: Php' . number_format($service->payment_amount) . PHP_EOL . 'Total Price : Php' . number_format($amt) . PHP_EOL . 'Balance : Php' . number_format($amt - $service->payment_amount) . PHP_EOL;
-
-            $result = $header . $body;
-
-            $response['status'] = 'Success';
-            $response['data'] = $result;
-            $response['code'] = 200;
-        }
-
-        return Response::json($response);
-    }
+//    public function getNotifDetail(Request $request){
+//        $validator = Validator::make($request->all(), [
+//            'id' => 'required|exists:logs_app_notification',
+//        ]);
+//
+//        if ($validator->fails()) {
+//            $response['status'] = 'Failed';
+//            $response['errors'] = $validator->errors();
+//            $response['code'] = 422;
+//        } else {
+//            $read = LogsAppNotification::find($request->id);
+//            $getLogs = Log::find($read->log_id);
+//
+//
+//            $logs = Log::where([
+//                ['log_type','ewallet'],
+//                ['client_service_id',$getLogs['client_service_id']]])
+//                ->orderBy('created_at','desc')
+//                ->get(['id','detail','detail_cn','amount','created_at','processor_id']);
+//
+//            $service = ClientService::find($getLogs['client_service_id']);
+//            $discount =  ClientTransaction::where('client_service_id', $getLogs['client_service_id'])->where('type', 'Discount')->sum('amount');
+//
+//            $amt = ($service->charge + $service->cost + $service->tip + $service->com_client + $service->com_agent) - $discount;
+//            $body = '';
+//            foreach($logs as $k=>$v){
+//                $name = User::find($v->processor_id);
+//                $body .= PHP_EOL . 'Paid service with an amount of Php' . $this->absNumber($v->amount)  . '. ' . $name['first_name'] . ' | ' . date_format(date_create($v->created_at), "M d, yy , h:i A");
+//            }
+//            $header = 'Service Name: ' . $service->detail . PHP_EOL . 'Total Payment: Php' . number_format($service->payment_amount) . PHP_EOL . 'Total Price : Php' . number_format($amt) . PHP_EOL . 'Balance : Php' . number_format($amt - $service->payment_amount) . PHP_EOL;
+//
+//            $result = $header . $body;
+//
+//            $response['status'] = 'Success';
+//            $response['data'] = $result;
+//            $response['code'] = 200;
+//        }
+//
+//        return Response::json($response);
+//    }
 
     public function getNotificationById(Request $request) {
         $validator = Validator::make($request->all(), [
@@ -166,42 +170,12 @@ class LogController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
-              $l = DB::table('logs_app_notification')->where('id',$request->id)->first();
-              $data = [];
-              $user = null;
-              if($l->log_id !== null){
-                    if($l->type === "Added Service" || $l->type === "Service Payment"){
-                        $logId = unserialize($l->log_id)[0];
-                    }
-                    else{
-                        $logId = $l->log_id;
-                    }
+            $data = DB::table('logs_app_notification')->where('id',$request->id)->first();
 
-                    $log = DB::table('logs')
-                      ->where('id',$logId)->first();
-                    $user = DB::table('users')
-                        ->where('id',$log->processor_id)->first();
-
-                    $data = array(
-                        'id' => $l->id,
-                        'message' => $l->message,
-                        'message_cn' => $l->message_cn,
-                        'is_read' => $l->is_read,
-                        'created_at' => $l->created_at,
-                        'log_id' => $l->log_id,
-                        'group_id' => $l->group_id,
-                        'type'  => $l->type,
-                        'user' => $user,
-                        'logs' => $log,
-                        'remarks' => ''
-                    );
-              }
-
-              $response['status'] = 'Success';
-              $response['data'] = $data;
-              $response['code'] = 200;
+            $response['status'] = 'Success';
+            $response['data'] = $this->formatOneData($data, true);
+            $response['code'] = 200;
         }
-
         return Response::json($response);
     }
 
@@ -1758,7 +1732,7 @@ class LogController extends Controller
         return Response::json($response);
     }
 
-    private function formatOneData($item)
+    private function formatOneData($item, $opt = false)
     {
         if (!$item) {
             return array();
@@ -1769,11 +1743,27 @@ class LogController extends Controller
         else{
             $logID = $item->log_id;
         }
-        $log = DB::table('logs')
-                    ->where('id',$logID)->first();
+        $hist = DB::table('logs')->where('id',$logID);
+
+        $log = $hist->first();
         if($log){
             $user = DB::table('users')
               ->where('id',$log->processor_id)->first();
+
+            if($opt && $item->type == "Service Payment"){
+                $logs = $hist->get();
+                $service = ClientService::find($log->client_service_id);
+                $discount =  ClientTransaction::where('client_service_id', $log->client_service_id)->where('type', 'Discount')->sum('amount');
+                $amt = ($service->charge + $service->cost + $service->tip + $service->com_client + $service->com_agent) - $discount;
+                $body = '';
+                foreach($logs as $l){
+                    $name = User::find($l->processor_id);
+                    $body .= PHP_EOL . 'Paid service with an amount of Php' . $this->absNumber($l->amount)  . '. ' . $name['first_name'] . ' | ' . date_format(date_create($l->created_at), "M d, yy , h:i A");
+                }
+                $header = 'Service Name: ' . $service->detail . PHP_EOL . 'Total Payment: Php' . number_format($service->payment_amount) . PHP_EOL . 'Total Price : Php' . number_format($amt) . PHP_EOL . 'Balance : Php' . number_format($amt - $service->payment_amount) . PHP_EOL;
+                $item->message = $header . $body;
+            }
+
             $item->user = $user;
             $item->logs = $log;
             $item->remarks = '';
