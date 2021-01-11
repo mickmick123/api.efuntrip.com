@@ -133,7 +133,6 @@ class LogController extends Controller
 //            $read = LogsAppNotification::find($request->id);
 //            $getLogs = Log::find($read->log_id);
 //
-//
 //            $logs = Log::where([
 //                ['log_type','ewallet'],
 //                ['client_service_id',$getLogs['client_service_id']]])
@@ -173,7 +172,7 @@ class LogController extends Controller
             $data = DB::table('logs_app_notification')->where('id',$request->id)->first();
 
             $response['status'] = 'Success';
-            $response['data'] = $this->formatOneData($data, true);
+            $response['data'] = $this->formatOneData($data, $request->id);
             $response['code'] = 200;
         }
         return Response::json($response);
@@ -1732,7 +1731,7 @@ class LogController extends Controller
         return Response::json($response);
     }
 
-    private function formatOneData($item, $opt = false)
+    private function formatOneData($item, $log_id = null)
     {
         if (!$item) {
             return array();
@@ -1750,8 +1749,14 @@ class LogController extends Controller
             $user = DB::table('users')
               ->where('id',$log->processor_id)->first();
 
-            if($opt && $item->type == "Service Payment"){
-                $logs = $hist->get();
+            if($log_id != null && $item->type == "Service Payment"){
+                $read = LogsAppNotification::find($log_id);
+                $getLogs = Log::find(unserialize($read->log_id)[0]);
+                $logs = Log::where([
+                    ['log_type','ewallet'],
+                    ['client_service_id',$getLogs['client_service_id']]])
+                    ->orderBy('created_at','desc')
+                    ->get(['id','detail','detail_cn','amount','created_at','processor_id']);
                 $service = ClientService::find($log->client_service_id);
                 $discount =  ClientTransaction::where('client_service_id', $log->client_service_id)->where('type', 'Discount')->sum('amount');
                 $amt = ($service->charge + $service->cost + $service->tip + $service->com_client + $service->com_agent) - $discount;
@@ -1759,6 +1764,7 @@ class LogController extends Controller
                 foreach($logs as $l){
                     $name = User::find($l->processor_id);
                     $body .= PHP_EOL . 'Paid service with an amount of Php' . $this->absNumber($l->amount)  . '. ' . $name['first_name'] . ' | ' . date_format(date_create($l->created_at), "M d, yy , h:i A");
+
                 }
                 $header = 'Service Name: ' . $service->detail . PHP_EOL . 'Total Payment: Php' . number_format($service->payment_amount) . PHP_EOL . 'Total Price : Php' . number_format($amt) . PHP_EOL . 'Balance : Php' . number_format($amt - $service->payment_amount) . PHP_EOL;
                 $item->message = $header . $body;
