@@ -2116,11 +2116,11 @@ class ReportController extends Controller
                                         'log_date' => Carbon::now()->toDateString()
                                     ]);
 
-                                    $serviceProcedure = ServiceProcedure::where('id', $serviceProcedID)->first();
+                                    //$serviceProcedure = ServiceProcedure::where('id', $serviceProcedID)->first();
 
                                     $_data = [
                                         'log_id' => $docLogQuery->id,
-                                        'type' => $serviceProcedure->name
+                                        'type' => "Documents Received"
                                     ];
 
                                     $this->sendPushNotification($cs->client_id, $docsDetail, $_data);
