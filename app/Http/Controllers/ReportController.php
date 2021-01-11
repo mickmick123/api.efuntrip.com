@@ -1261,14 +1261,17 @@ class ReportController extends Controller
                     'log_date' => Carbon::now()->toDateString()
                 ]);
 
-                 $_data = [
-                    'log_id' => $newServiceLog->id,
-                    'type' => "Released from Immigration"
-                 ];
+                if($cs->status == "complete" || $cs->status == "released") {
+                    if ($type != "Released from Immigration") {
+                        $type = $serviceProcedure->name;
+                    }
+                    $_data = [
+                        'log_id' => $newServiceLog->id,
+                        'type' => $type
+                    ];
 
-                 if($type == "Released from Immigration") {
-                     $this->sendPushNotification($cs->client_id, $prevLogDetail, $_data, $labelSearch, $newServiceLog->id);
-                 }
+                    $this->sendPushNotification($cs->client_id, $prevLogDetail, $_data, $labelSearch, $newServiceLog->id);
+                }
 
 			}
 
