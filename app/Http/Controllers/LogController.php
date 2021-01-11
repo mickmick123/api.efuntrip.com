@@ -170,15 +170,18 @@ class LogController extends Controller
               $data = [];
               $user = null;
               if($l->log_id !== null){
-                    if($l->type != 'Added Service' && $l->type != 'Service Payment'){
-                        $log = DB::table('logs')->where('id',$l->log_id)->first();
-                    }else{
-                        $ids = unserialize($l->log_id);
-                        $log = DB::table('logs')
-                            ->where('id',$ids[0])->first();
+                    if($l->type === "Added Service" || $l->type === "Service Payment"){
+                        $logId = unserialize($l->log_id)[0];
                     }
+                    else{
+                        $logId = $l->log_id;
+                    }
+
+                    $log = DB::table('logs')
+                      ->where('id',$logId)->first();
                     $user = DB::table('users')
                         ->where('id',$log->processor_id)->first();
+
                     $data = array(
                         'id' => $l->id,
                         'message' => $l->message,
@@ -1741,44 +1744,42 @@ class LogController extends Controller
 
     public function getAllNotification($client_id) {
         $logs = DB::table('logs_app_notification')->where('client_id',$client_id)->orderBy('id','desc')->get();
-        $data = [];
-        foreach($logs as $l){
-            //$log = '';
-            $user = null;
-            if($l->log_id !== null){
 
-                if($l->type != 'Added Service' || $l->type != 'Service Payment'){
-                    $log = DB::table('logs')->where('id',$l->log_id)->first();
-                }else{
-                    $ids = unserialize($l->log_id);
-                    $log = DB::table('logs')
-                        ->where('id',$ids[0])->first();
-                }
-                if($log){
-                    $user = DB::table('users')
-                      ->where('id',$log->processor_id)->first();
-                    $data[] = array(
-                        'id' => $l->id,
-                        'message' => $l->message,
-                        'message_cn' => $l->message_cn,
-                        'is_read' => $l->is_read,
-                        'created_at' => $l->created_at,
-                        'log_id' => $l->log_id,
-                        'group_id' => $l->group_id,
-                        'type'  => $l->type,
-                        'user' => $user,
-                        'logs' => $log,
-                        'remarks' => ''
-                    );
-                }
-            }
-      }
+        $data = array();
+        foreach ($logs as $k => $v) {
+            $v = $this->formatOneData($v);
+            $data[$k] = $v;
+        }
 
-      $response['status'] = 'Success';
-      $response['data'] = $data;
-      $response['code'] = 200;
+        $response['status'] = 'Success';
+        $response['data'] = $data;
+        $response['code'] = 200;
 
-      return Response::json($response);
+        return Response::json($response);
+    }
+
+    private function formatOneData($item)
+    {
+        if (!$item) {
+            return array();
+        }
+        if($item->type === "Added Service" || $item->type === "Service Payment"){
+            $logID = unserialize($item->log_id)[0];
+        }
+        else{
+            $logID = $item->log_id;
+        }
+        $log = DB::table('logs')
+                    ->where('id',$logID)->first();
+        if($log){
+            $user = DB::table('users')
+              ->where('id',$log->processor_id)->first();
+            $item->user = $user;
+            $item->logs = $log;
+            $item->remarks = '';
+        }
+
+        return $item;
     }
 
     public function getEmployeeDocsOnHand(Request $request){
