@@ -2905,7 +2905,7 @@ class ClientController extends Controller
                           "id" => serialize(array($addLog->id)),
                           "client_id" => $client_id,
                           "group_id" => null,
-                          "amount" => $addLog->id,
+                          "amount" => -$amount,
                           "service_name" => $service->detail
                       ];
                       //DB::table('logs_notification')->insert(['log_id' => $addLog->id, 'job_id' => 0]);

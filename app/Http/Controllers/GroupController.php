@@ -4991,7 +4991,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
                       "id" => serialize(array($addLog->id)),
                       "client_id" => $client_id,
                       "group_id" => $group_id,
-                      "amount" => $addLog->id,
+                      "amount" => -$amount,
                       "service_name" => $service->detail
                   ];
 
