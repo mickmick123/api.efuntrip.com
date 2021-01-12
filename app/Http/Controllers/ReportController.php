@@ -94,7 +94,7 @@ class ReportController extends Controller
     				$query->select(['id', 'detail', 'client_service_id', 'report_id']);
     			},
     			'clientReports.clientService' => function($query) {
-    				$query->select(['id', 'client_id', 'service_id']);
+    				$query->select(['id', 'client_id', 'service_id','group_id']);
     			},
     			'clientReports.clientService.service' => function($query) {
     				$query->select(['id', 'detail']);
