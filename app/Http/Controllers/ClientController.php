@@ -61,7 +61,7 @@ class ClientController extends Controller
 
 	public function manageClients() {
 		$clients = DB::table('users as u')
-			->select(DB::raw('u.id, u.first_name, u.last_name, u.balance, u.collectables, p.latest_package, srv.latest_service as latest_service
+			->select(DB::raw('u.id, u.first_name, u.last_name, u.balance, u.collectable, p.latest_package, srv.latest_service as latest_service
                 '))
             ->leftjoin(
             	DB::raw('
