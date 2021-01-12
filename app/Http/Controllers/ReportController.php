@@ -1623,7 +1623,7 @@ class ReportController extends Controller
 	        $this->handleStandAloneOnHandDocuments($action, $user);
 
 	        // Documents Needed w/ push notification execution
-            $this->handleUpdateStatus($user['id'], 1, null, 'received');
+            $this->handleUpdateStatus($user['id'], 1, null, 'received', null, null, $user['documents']);
 		}
 
 		$response['status'] = 'Success';
@@ -1852,7 +1852,7 @@ class ReportController extends Controller
 		return Response::json($response);
 	}
 
-	private function handleUpdateStatus($clientId, $type, $_clientServiceId = null, $docLogType = null, $dcs = null, $_detail = null) {
+	private function handleUpdateStatus($clientId, $type, $_clientServiceId = null, $docLogType = null, $dcs = null, $_detail = null, $docX = null) {
 		if( $type == 1 ) {
 			$status = 'pending';
 		} elseif( $type == 2 ) {
@@ -1883,7 +1883,7 @@ class ReportController extends Controller
 
 		if( count($clientReports) > 0 ) {
             $onHandDocuments = OnHandDocument::where('client_id', $clientId)->join('documents', 'on_hand_documents.document_id', '=', 'documents.id')->get();
-
+            //dd($onHandDocuments);
             $clientDocsArr = [];
             $clientArray = [];
             $allRcvdDocs = [];
@@ -2041,7 +2041,13 @@ class ReportController extends Controller
                         $docLogCounter = 0;
 
                         if($docLogType === 'received') {
-                            if($docsDetail !== '') {
+                            if($docX !== null) {
+                                $docsDetail = ""; $i=1;
+                                foreach ($docX as $d){
+                                    $docsDetail .= $i. ". (" . $d['count'] . ") " . $d['title'] . PHP_EOL;
+
+                                    $i++;
+                                }
                                 $docLabel = 'Received documents from Client';
                                 $docsDetail = 'Received documents from Client:' . "\n" . $docsDetail;
                                 $docLogCounter++;
