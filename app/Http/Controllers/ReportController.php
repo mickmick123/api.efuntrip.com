@@ -2057,8 +2057,8 @@ class ReportController extends Controller
                         } else if($docLogType === 'generate_photocopy') {
                             if($docsDetail !== '') {
                                 $docLabel = 'Generate photocopies of Documents';
-                                $docsDetail = 'Generate photocopies of Documents:' . "\n" . $docsDetail;
                                 $_docsDetail = 'Generate photocopies of Documents:' . "\n" . $docsDetail;
+                                $docsDetail = 'Generate photocopies of Documents:' . "\n" . $docsDetail;
                                 $docLogCounter++;
                             }
                         } else if($docLogType === 'Prepare required documents, the following documents are needed') {
