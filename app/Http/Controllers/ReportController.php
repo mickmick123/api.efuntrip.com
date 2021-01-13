@@ -2043,15 +2043,15 @@ class ReportController extends Controller
 
                         if($docLogType === 'received') {
                             if($docX !== null) {
-                                $docsDetail = ""; $i=1;
+                                $detail = ""; $i=1;
                                 foreach ($docX as $d){
-                                    $docsDetail .= $i. ". (" . $d['count'] . ") " . $d['title'] . PHP_EOL;
+                                    $detail .= $i. ". (" . $d['count'] . ") " . $d['title'] . PHP_EOL;
 
                                     $i++;
                                 }
                                 $docLabel = 'Received documents from Client';
-                                $docsDetail = 'Received documents from Client:' . "\n" . $docsDetail;
-                                $_docsDetail = "\n" . $docsDetail;
+                                $docsDetail = 'Received documents from Client:' . "\n" . $detail;
+                                $_docsDetail = "\n" . $detail;
                                 $docLogCounter++;
                             }
                         } else if($docLogType === 'generate_photocopy') {
