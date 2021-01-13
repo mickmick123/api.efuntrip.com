@@ -1915,6 +1915,7 @@ class ReportController extends Controller
 
                     $counter = 0;
                     $docsDetail = '';
+                    $_docsDetail = '';
 
                     $docLogData = [];
 
@@ -2050,12 +2051,14 @@ class ReportController extends Controller
                                 }
                                 $docLabel = 'Received documents from Client';
                                 $docsDetail = 'Received documents from Client:' . "\n" . $docsDetail;
+                                $_docsDetail = "\n" . $docsDetail;
                                 $docLogCounter++;
                             }
                         } else if($docLogType === 'generate_photocopy') {
                             if($docsDetail !== '') {
                                 $docLabel = 'Generate photocopies of Documents';
                                 $docsDetail = 'Generate photocopies of Documents:' . "\n" . $docsDetail;
+                                $_docsDetail = 'Generate photocopies of Documents:' . "\n" . $docsDetail;
                                 $docLogCounter++;
                             }
                         } else if($docLogType === 'Prepare required documents, the following documents are needed') {
@@ -2129,7 +2132,7 @@ class ReportController extends Controller
                                         'type' => $docLogType === 'received'?"Documents Received":$serviceProcedure->name
                                     ];
 
-                                    $this->sendPushNotification($cs->client_id, $docsDetail, $_data);
+                                    $this->sendPushNotification($cs->client_id, $_docsDetail, $_data);
 
                                     foreach($docLogData as $dlc) {
 
