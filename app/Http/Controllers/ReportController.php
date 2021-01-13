@@ -2043,22 +2043,21 @@ class ReportController extends Controller
 
                         if($docLogType === 'received') {
                             if($docX !== null) {
-                                $detail = ""; $i=1;
+                                $_docsDetail = ""; $i=1;
                                 foreach ($docX as $d){
-                                    $detail .= $i. ". (" . $d['count'] . ") " . $d['title'] . PHP_EOL;
+                                    $_docsDetail .= $i. ". (" . $d['count'] . ") " . $d['title'] . PHP_EOL;
 
                                     $i++;
                                 }
                                 $docLabel = 'Received documents from Client';
-                                $docsDetail = 'Received documents from Client:' . "\n" . $detail;
-                                $_docsDetail = "\n" . $detail;
+                                $docsDetail = 'Received documents from Client:' . "\n" . $_docsDetail;
                                 $docLogCounter++;
                             }
                         } else if($docLogType === 'generate_photocopy') {
                             if($docsDetail !== '') {
                                 $docLabel = 'Generate photocopies of Documents';
-                                $_docsDetail = 'Generate photocopies of Documents:' . "\n" . $docsDetail;
                                 $docsDetail = 'Generate photocopies of Documents:' . "\n" . $docsDetail;
+                                $_docsDetail = $docsDetail;
                                 $docLogCounter++;
                             }
                         } else if($docLogType === 'Prepare required documents, the following documents are needed') {
