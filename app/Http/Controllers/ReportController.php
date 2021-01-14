@@ -1608,7 +1608,7 @@ class ReportController extends Controller
 
 
 	public function receivedDocuments(Request $request) {
-		foreach( $request->users as $user ) {
+        foreach( $request->users as $user ) {
 			$action = 'Received documents';
 
 			if( strlen(trim($user['receive_from'])) > 0 ) {
@@ -1622,8 +1622,9 @@ class ReportController extends Controller
 
 	        $this->handleStandAloneOnHandDocuments($action, $user);
 
+	        $detail = $this->getDocumentDetail($user);
 	        // Documents Needed w/ push notification execution
-            $this->handleUpdateStatus($user['id'], 1, null, 'received', null, null, $user['documents']);
+            $this->handleUpdateStatus($user['id'], 1, null, 'received', null, $detail);
 		}
 
 		$response['status'] = 'Success';
@@ -1852,7 +1853,7 @@ class ReportController extends Controller
 		return Response::json($response);
 	}
 
-	private function handleUpdateStatus($clientId, $type, $_clientServiceId = null, $docLogType = null, $dcs = null, $_detail = null, $docX = null) {
+	private function handleUpdateStatus($clientId, $type, $_clientServiceId = null, $docLogType = null, $dcs = null, $_detail = null) {
 		if( $type == 1 ) {
 			$status = 'pending';
 		} elseif( $type == 2 ) {
@@ -2042,13 +2043,9 @@ class ReportController extends Controller
                         $docLogCounter = 0;
 
                         if($docLogType === 'received') {
-                            if($docX !== null) {
-                                $_docsDetail = ""; $i=1;
-                                foreach ($docX as $d){
-                                    $_docsDetail .= $i. ". (" . $d['count'] . ") " . $d['title'] . PHP_EOL;
+                            if($_detail !== null) {
+                                $_docsDetail = $_detail;
 
-                                    $i++;
-                                }
                                 $docLabel = 'Received documents from Client';
                                 $docsDetail = 'Received documents from Client:' . "\n" . $_docsDetail;
                                 $docLogCounter++;
