@@ -1228,6 +1228,7 @@ class LogController extends Controller
                     }
 
                     $csdetail = $cs->detail.' <b style="color: red; margin-left: 25px;">Price : Php'.$cst.' , Balance : Php'.($cst - $cs->payment_amount).'</b>';
+                    $serviceName = $cs->detail;
                     $cstracking =  $cs->tracking;
                     $csstatus =  $cs->status;
                     $csactive =  $cs->active;
@@ -1272,6 +1273,7 @@ class LogController extends Controller
                 }
                 else{
                     $csdetail = ucfirst($t->log_group);
+                    $serviceName = "";
                     $cstracking = '';
                     $csstatus = '';
                     $csactive = 'none';
@@ -1301,7 +1303,8 @@ class LogController extends Controller
                             'title' => $csdetail,
                             'tracking' => $cstracking,
                             'status' => $csstatus,
-                            'active' => $csactive
+                            'active' => $csactive,
+                            'service_name' => $serviceName
                         )
                     );
                 }
