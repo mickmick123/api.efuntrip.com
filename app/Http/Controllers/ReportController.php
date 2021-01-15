@@ -1064,7 +1064,7 @@ class ReportController extends Controller
                             'log_id' => $logs->id,
                             'type' => $serviceProcedure->name
                         ];
-						if($statusUponCompletion == 'complete') {
+						if($statusUponCompletion == 'complete' || $statusUponCompletion == 'released') {
 							$this->sendPushNotification($cs->client_id, $detail, $_data, $label, $logs->id);
 						} else {
 							$this->sendPushNotification($cs->client_id, $detail, $_data);
@@ -2833,7 +2833,7 @@ class ReportController extends Controller
       if($data) {
           if ($label !== null) {
               //$job = (new LogsPushNotification($user_id, $message, $data->id))->delay(now()->addMinutes(120));
-              $job = (new LogsPushNotification($user_id, $message, $data->id))->delay(now()->addMinutes(2));
+              $job = (new LogsPushNotification($user_id, $message, $data->id))->delay(now()->addMinutes(5));
           } else {
               $job = (new LogsPushNotification($user_id, $message, $data->id));
           }
