@@ -15,8 +15,8 @@ return [
         'apiKey' => 'AIzaSyDPF-KM8WG3bIyj0t9Ybf-SU41e3XPy--o',
     ],
     'apn' => [
-        'certificate' => __DIR__ . '/iosCertificates/4Ways.pem',
-        'passPhrase' => 'qwerty123', //Optional
+        'certificate' => __DIR__ . '/iosCertificates/fourways_app_cert.pem',
+        'passPhrase' => '123admin', //Optional
         'passFile' => '', //Optional
         'dry_run' => true,
     ],

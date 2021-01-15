@@ -40,30 +40,51 @@ class LogsPushNotification implements ShouldQueue
     {
         $devices = DB::table('devices')->where('user_id', $this->user_id)->groupBy('device_token')->get();
 
-        $deviceToken = [];
-
+        $iosToken = [];
+        $androidToken = [];
         if(count($devices)) {
-        foreach($devices as $device) {
-            array_push($deviceToken, $device->device_token);
-        }
+            foreach($devices as $device) {
+                if($device->device_type === "IOS"){
+                    array_push($iosToken, $device->device_token);
+                }else{
+                    array_push($androidToken, $device->device_token);
+                }
+            }
         }
 
-        $push = new PushNotification('fcm');
-        $push->setUrl('https://fcm.googleapis.com/fcm/send')
-        ->setMessage([
-        'notification' => [
-            //'title'=>'',
-            'body' => $this->message,
-            'sound' => 'default'
-        ],
-         'data' => [
-              'id' => $this->log_id
-            ]
-        ])
-        ->setConfig(['dry_run' => false,'priority' => 'high'])
-        ->setApiKey('AAAAIynhqO8:APA91bH5P-SGimP4b0jazCrC8ya7bV9LoR57wWB9zLqatXfRyxSIdKs2_q4-e01Ofce6oxW-7YQOGlk4Sov4WwiUAE7qojRu-3xb9429ve0Ufkh4JDMaod7cKBAxbypFUPJNKX0yoe98')
-        ->setDevicesToken($deviceToken)
-        ->send();
+        if(count($iosToken) > 0) {
+            $ios = new PushNotification('apn');
+            $ios->setMessage([
+                    'notification' => [
+                        'body' => $this->message,
+                        'sound' => 'default'
+                    ],
+                    'data' => [
+                        'id' => $this->log_id
+                    ]
+                ])
+                ->setDevicesToken($iosToken)
+                ->send();
+        }
+
+        if(count($androidToken) > 0) {
+            $push = new PushNotification('fcm');
+            $push->setUrl('https://fcm.googleapis.com/fcm/send')
+                ->setMessage([
+                    'notification' => [
+                        //'title'=>'',
+                        'body' => $this->message,
+                        'sound' => 'default'
+                    ],
+                    'data' => [
+                        'id' => $this->log_id
+                    ]
+                ])
+                ->setConfig(['dry_run' => false,'priority' => 'high'])
+                ->setApiKey('AAAAIynhqO8:APA91bH5P-SGimP4b0jazCrC8ya7bV9LoR57wWB9zLqatXfRyxSIdKs2_q4-e01Ofce6oxW-7YQOGlk4Sov4WwiUAE7qojRu-3xb9429ve0Ufkh4JDMaod7cKBAxbypFUPJNKX0yoe98')
+                ->setDevicesToken($androidToken)
+                ->send();
+        }
 
 //        DB::table('logs_notification')
 //            ->where('log_id', $this->log_id)
