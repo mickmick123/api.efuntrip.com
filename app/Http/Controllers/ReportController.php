@@ -1064,10 +1064,10 @@ class ReportController extends Controller
                             'log_id' => $logs->id,
                             'type' => $serviceProcedure->name
                         ];
-						if($statusUponCompletion == 'complete' || $statusUponCompletion == 'released') {
-							$this->sendPushNotification($cs->client_id, $detail, $_data, $label, $logs->id);
+						if($statusUponCompletion == 'complete') {
+							$this->sendPushNotification($cs->client_id, 'complete'.$detail, $_data, $label, $logs->id);
 						} else {
-							$this->sendPushNotification($cs->client_id, $detail, $_data);
+							$this->sendPushNotification($cs->client_id, 'incomplete',$detail, $_data);
 						}
 
 					}
