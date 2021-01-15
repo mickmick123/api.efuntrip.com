@@ -36,6 +36,9 @@ use Illuminate\Http\Request;
 	Route::get('packages-bybatch/{group_id}/{page?}', 'GroupController@getClientPackagesByBatch');
 	Route::get('packages-byservice/{group_id}/{page?}', 'GroupController@getClientPackagesByService');
 
+	Route::get('current-batch-page/{group_id?}', 'GroupController@getCurrentBatchPage');
+
+
  //
 	Route::post('by-batch-members', 'GroupController@getMembersByBatch');
 	Route::post('by-members-service', 'GroupController@getMemberByService');

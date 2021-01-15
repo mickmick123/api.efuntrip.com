@@ -1920,26 +1920,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
                 $logType = Log::where('client_service_id', $cs->id)->where('group_id', $request->group_id)->where('log_type', 'Transaction')->where('log_group', 'payment')->select('amount','log_date')->get();
 
                 $paymentLog = '';
-                // $cs->payment_details = '';
-                //
-                // if(count($logType) > 0){
-                //   foreach($logType as $log){
-                //     $paymentLog =  $paymentLog."\r\n Php". $log->amount ."(".$log->log_date.")";
-                //   }
-                //   $cs->payment_details = $paymentLog;
-                // }else{
-                //    if($cs->payment_amount > 0){
-                //      $cs->payment_details = "Php" . $cs->payment_amount . " (". $cs->created_at .")";
-                //    }
-                // }
 
                  $cs->payment_details = ClientTransaction::where('client_service_id', $cs->id)->where('type', 'Payment')->select('amount','reason','created_at')->first();
-
-                // if($cs->active !== 0 && $cs->status != 'cancelled'){
-                //   $discountCtr += $cs->discount;
-                //   $totalCost += (($cs->cost + $cs->charge + $cs->tip + $cs->com_client + $cs->com_agent)) - $cs->discount;
-                //   $totalSub +=  ($cs->discount + $cs->payment_amount) - (($cs->cost + $cs->charge) + ($cs->tip + $cs->com_client + $cs->com_agent));
-                // }
 
                 $clientServices[$tmpCtr] = $cs;
                 $tmpCtr++;
@@ -2229,13 +2211,50 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
   }
 
+  public function getCurrentBatchPage(Request $request, $groupId){
+
+    $clientId = $request->input('client_id');
+    $clientServiceId = $request->input('client_service_id');
+    $services = [];
+
+    if($clientId != 'undefined'){
+      $services = DB::table('client_services')
+                ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, id, detail, created_at, active'))
+                ->where('active',1)->where('group_id',$groupId)
+                ->groupBy(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'))
+                ->orderBy('id','DESC')
+                ->get();
+
+      $pageCtr = 0;
+      $currentPage = 0;
+      $payload = [];
+      foreach($services as $key){
+            $members = DB::table('client_services')->where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$key->sdate)->where('group_id', $groupId)->where('client_id', $clientId)->where('id', $clientServiceId)->groupBy('client_id')->get();
+            if(count($members) > 0){
+              if($pageCtr == 0){
+                $currentPage = $pageCtr;
+              }else{
+                $currentPage = round($pageCtr/20);
+              }
+              $payload['page'] = $currentPage+1;
+              $payload['index'] = ($pageCtr)%20;
+              $payload['sdate'] = $key->sdate;
+              $payload['id'] = $key->id;
+            }
+            $pageCtr++;
+      }
+    }
+
+    return Response::json($payload);
+
+  }
+
   //$groupId, $page = 20
   public function getClientPackagesByBatch(Request $request, $groupId, $perPage = 10){
 
 
         $sort = $request->input('sort');
         $search = $request->input('search');
-
 
         $clientServices = DB::table('client_services')
           ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, id, detail, created_at, active'))
@@ -2253,11 +2272,12 @@ public function getClientPackagesByGroup($client_id, $group_id){
           ->orderBy('id','DESC')
           ->paginate($perPage);
 
+
         $ctr = 0;
         $temp = [];
         $response = $clientServices;
 
-        foreach($clientServices->items() as $s){
+     foreach($clientServices->items() as $s){
 
           $temp['detail'] = $s->detail;
           $temp['service_date'] = $s->sdate;
@@ -2274,7 +2294,6 @@ public function getClientPackagesByGroup($client_id, $group_id){
                         ->where(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y")'),$s->sdate)->where('group_id', $groupId)->where('active', 1)->where('status','!=', 'cancelled');
           $csid = $queryTotal->pluck('id');
           $queryTotal = $queryTotal->value(DB::raw("SUM(cost + charge + tip + com_agent + com_client)"));
-
 
 
           $queryTotalDiscount = DB::table('client_services as cs')
@@ -2306,7 +2325,6 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
 
           $temp['total_service_cost'] = $queryTotal - $queryTotalDiscount;
-
           $temp['total_sub'] = ($queryTotalDiscount + $queryTotalPayment) - $queryTotal;
           $temp['members'] = [];
           $temp['status_list'] = $statusList;
