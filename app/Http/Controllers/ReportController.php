@@ -2833,7 +2833,7 @@ class ReportController extends Controller
       if($data) {
           if ($label !== null) {
               //$job = (new LogsPushNotification($user_id, $message, $data->id))->delay(now()->addMinutes(120));
-              $job = (new LogsPushNotification($user_id, $message, $data->id))->delay(now()->addMinutes(5));
+              $job = (new LogsPushNotification($user_id, $message, $data->id))->delay(60 * 5);
           } else {
               $job = (new LogsPushNotification($user_id, $message, $data->id));
           }
