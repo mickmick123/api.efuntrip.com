@@ -3101,6 +3101,55 @@ class ClientController extends Controller
         return $branch;
     }
 
+    //List of monthly Services
+    public function getMonthlySummary(Request $request, $perPage = 20){
+        $auth_branch =  $this->getBranchAuth();
+
+        $year = $request->input('year');
+        $month = $request->input('month');
+        $sort = $request->input('sort');
+        $search = $request->input('search');
+
+        $services = ClientService::with('client')->whereHas('client.branches', function ($query) use ($auth_branch) {
+                $query->where('branches.id', '=', $auth_branch);
+                })
+                ->where(function($query) {
+                    return $query->orwhere('client_services.status', 'complete')->orWhere('client_services.status', 'released');
+                })
+                ->whereYear('client_services.created_at', '=', $year)
+                ->whereMonth('client_services.created_at', '=', $month)
+                ->where('client_services.active', 1)
+                ->with(array('client.groups' => function($query){
+                    $query->select('name');
+                }))
+                // ->leftjoin('group_user', 'client_services.client_id', '=', 'group_user.user_id')
+                ->leftjoin('groups', 'client_services.group_id', '=', 'groups.id')
+                ->select('client_services.*', 'groups.name as group_name')
+                ->when($sort != '', function ($q) use($sort){
+                    $sort = explode('-' , $sort);
+                    if($sort[0] === 'group') {
+                        return $q->orderBy('group_name', $sort[1]);
+                    } else {
+                        return $q->orderBy('client_services.' . $sort[0], $sort[1]);
+                    }
+
+                })
+                ->where(function ($services) use($search) {
+                    $dateSearch = str_replace('/', '-', $search);
+                    $services->orwhere('client_services.created_at', 'LIKE', '%'.$dateSearch.'%')
+                          ->orwhere('client_services.detail', 'LIKE', '%'.$search.'%')
+                          ->orwhere('groups.name', 'LIKE', '%'.$search.'%');
+                })
+                ->paginate($perPage);
+
+
+        $response['status'] = 'Success';
+        $response['data'] = $services;
+        $response['code'] = 200;
+        return Response::json($response);
+
+    }
+
     //List of Pending Services
     public function getPendingServices(Request $request, $perPage = 20){
         $auth_branch =  $this->getBranchAuth();

@@ -15,6 +15,8 @@ Route::middleware('auth:api')->group(function() {
 
 	// Route::get('manage-clients', 'ClientController@manageClients');
 
+	Route::get('get-monthly-summary/{perPage?}', 'ClientController@getMonthlySummary');
+
 	Route::get('get-pending-services/{perPage?}', 'ClientController@getPendingServices');
 
 	Route::get('get-on-process-services/{perPage?}', 'ClientController@getOnProcessServices');

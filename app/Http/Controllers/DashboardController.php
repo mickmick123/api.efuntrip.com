@@ -114,39 +114,64 @@ class DashboardController extends Controller
             $response['code'] = 422;
         } else {
             $data = [];
-            $stringJson[0]['name'] = 'Total Charge';
-            $stringJson[1]['name'] = 'Cost Spent';
             $tempData = [];
             $index = 1;
-            for ($i = 1; $i <= 12; $i++) {
-                for ($ii = 1; $ii <= 2; $ii++) {
+            if($request['month'] > 0){
+                $month =  $request['month'];
+                $year =  $request['year'];
 
-                        $month =  str_pad($i, 2, '0', STR_PAD_LEFT);
-                        $year =  $request['year'];
+                $charge = ClientService::whereYear('created_at', '=', $year)
+                              ->whereMonth('created_at', '=', $month)
+                              ->where(function ($query) {
+                                    $query->orwhere('status','complete')
+                                          ->orwhere('status','released');
+                                })
+                              ->where('active',1)
+                              ->sum('charge');
+                $cost_spent = ClientService::whereYear('created_at', '=', $year)
+                              ->whereMonth('created_at', '=', $month)
+                              ->where(function ($query) {
+                                    $query->orwhere('status','complete')
+                                          ->orwhere('status','released');
+                                })
+                              ->where('active',1)
+                              ->value(DB::raw("SUM(cost + tip)"));
 
-                    $charge = ClientService::whereYear('created_at', '=', $year)
-                                  ->whereMonth('created_at', '=', $month)
-                                  ->where(function ($query) {
-                                        $query->orwhere('status','complete')
-                                              ->orwhere('status','released');
-                                    })
-                                  ->where('active',1)
-                                  ->sum('charge');
-                    $cost_spent = ClientService::whereYear('created_at', '=', $year)
-                                  ->whereMonth('created_at', '=', $month)
-                                  ->where(function ($query) {
-                                        $query->orwhere('status','complete')
-                                              ->orwhere('status','released');
-                                    })
-                                  ->where('active',1)
-                                  ->value(DB::raw("SUM(cost + tip)"));
+                        $stringJson['charge'] = ($charge == null ? 0 : $charge);
+                        $stringJson['cost_spent'] = ($cost_spent == null ? 0 : $cost_spent);
+            }
+            else{
+                $stringJson[0]['name'] = 'Total Charge';
+                $stringJson[1]['name'] = 'Cost Spent';
+                for ($i = 1; $i <= 12; $i++) {
+                    for ($ii = 1; $ii <= 2; $ii++) {
 
-                            $stringJson[0]['result'. $i] = ($charge == null ? 0 : $charge);
-                            $stringJson[1]['result'. $i] = ($cost_spent == null ? 0 : $cost_spent);
-                    $index++;
+                            $month =  str_pad($i, 2, '0', STR_PAD_LEFT);
+                            $year =  $request['year'];
+
+                        $charge = ClientService::whereYear('created_at', '=', $year)
+                                      ->whereMonth('created_at', '=', $month)
+                                      ->where(function ($query) {
+                                            $query->orwhere('status','complete')
+                                                  ->orwhere('status','released');
+                                        })
+                                      ->where('active',1)
+                                      ->sum('charge');
+                        $cost_spent = ClientService::whereYear('created_at', '=', $year)
+                                      ->whereMonth('created_at', '=', $month)
+                                      ->where(function ($query) {
+                                            $query->orwhere('status','complete')
+                                                  ->orwhere('status','released');
+                                        })
+                                      ->where('active',1)
+                                      ->value(DB::raw("SUM(cost + tip)"));
+
+                                $stringJson[0]['result'. $i] = ($charge == null ? 0 : $charge);
+                                $stringJson[1]['result'. $i] = ($cost_spent == null ? 0 : $cost_spent);
+                        $index++;
+                    }
                 }
             }
-
             $response['status'] = 'Success';
             $response['code'] = 200;
             $response['data'] = $stringJson;
