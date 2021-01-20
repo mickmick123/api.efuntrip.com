@@ -1,8 +1,9 @@
 <?php
-
 use Illuminate\Http\Request;
 
+
 Route::get('our-services', 'ServiceController@ourServices');
+Route::get('{id}/expanded-details', 'ServiceController@expandedDetails');
 
 Route::middleware('auth:api')->group(function() {
 
@@ -19,8 +20,6 @@ Route::middleware('auth:api')->group(function() {
 	Route::delete('{id}', 'ServiceController@destroy');
 
 	Route::get('{id}/service-profiles-details', 'ServiceController@serviceProfilesDetails');
-
-	Route::get('{id}/expanded-details', 'ServiceController@expandedDetails');
 
 
 	Route::get('get-service-rate/{type}/{id}/{service_id?}', 'ServiceController@getServiceRate');
