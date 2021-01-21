@@ -39,7 +39,7 @@ class RiderEvaluationController extends Controller
             $data = new RiderEvaluation;
             $data->rider_id = $request->rider_id;
             foreach (json_decode($request->answer) as $k => $v) {
-                $data['q' . ($k + 1)] = $v;
+                $data['q' . $k] = $v;
             }
             $data->result = $request->result;
             $data->rider_income = $request->rider_income;
@@ -71,7 +71,7 @@ class RiderEvaluationController extends Controller
             $response['code'] = 422;
         } else {
             foreach (json_decode($request->answer) as $k => $v) {
-                $data['q' . ($k + 1)] = $v;
+                $data['q' . $k] = $v;
             }
             $data['result'] = $request->result;
             $data['rider_income'] = $request->rider_income;
