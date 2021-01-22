@@ -578,10 +578,10 @@ class ReportController extends Controller
 	        	'log_date' => Carbon::now()->toDateString()
           ]);
 
-		  $_data = [
-		      'log_id' => $log->id,
-		      'type' => $serviceProcedure->name
-          ];
+		  //$_data = [
+		  //    'log_id' => $log->id,
+		  //    'type' => $serviceProcedure->name
+          //];
 
             if( $report['extensions']['estimated_releasing_date'] && $serviceProcedure->name == "Filed at Immigration" ) {
                 $estimatedReleasingDate = $report['extensions']['estimated_releasing_date'];
@@ -589,8 +589,16 @@ class ReportController extends Controller
 
                 $detail .= PHP_EOL . 'For the service ['.$cs->detail.']. Estimated releasing date is ' . $estimatedReleasingDate . '.';
             }
+            $_data = [
+                'id' => $log->id,
+                'client_id' => $cs->client_id,
+                'group_id' => $cs->group_id,
+                'message' => $detail
+            ];
 
-          $this->sendPushNotification($cs->client_id, $detail, $_data);
+            app(LogController::class)->addNotif($_data, $serviceProcedure->name);
+
+            // $this->sendPushNotification($cs->client_id, $detail, $_data);
 
 	        // Document log
 	        if( $actionName == 'Filed' || $actionName == 'Released' ) {
@@ -1060,14 +1068,20 @@ class ReportController extends Controller
 				        	'label' => $label,
 				        	'log_date' => Carbon::now()->toDateString()
                         ]);
+
                         $_data = [
-                            'log_id' => $logs->id,
-                            'type' => $serviceProcedure->name
+                            'id' => $logs->id,
+                            'client_id' => $cs->client_id,
+                            'group_id' => $cs->group_id,
+                            'message' => $detail
                         ];
+
 						if($statusUponCompletion == 'complete') {
-							$this->sendPushNotification($cs->client_id, $detail, $_data, $label, $logs->id);
+                            app(LogController::class)->addNotif($_data, $serviceProcedure->name, true);
+							//$this->sendPushNotification($cs->client_id, $detail, $_data, $label, $logs->id);
 						} else {
-							$this->sendPushNotification($cs->client_id, $detail, $_data);
+                            app(LogController::class)->addNotif($_data, $serviceProcedure->name);
+							//$this->sendPushNotification($cs->client_id, $detail, $_data);
 						}
 
 					}
@@ -1135,11 +1149,19 @@ class ReportController extends Controller
 			        	'log_date' => Carbon::now()->toDateString()
               ]);
 
-              $_data = [
-                'log_id' => $_log->id,
-                'type' => $serviceProcedure->name
-              ];
-              $this->sendPushNotification($cs->client_id, $detail, $_data);
+              //$_data = [
+              //  'log_id' => $_log->id,
+              //  'type' => $serviceProcedure->name
+              //];
+              //$this->sendPushNotification($cs->client_id, $detail, $_data);
+
+                $_data = [
+                    'id' => $_log->id,
+                    'client_id' => $cs->client_id,
+                    'group_id' => $cs->group_id,
+                    'message' => $detail
+                ];
+                app(LogController::class)->addNotif($_data, $serviceProcedure->name);
 
 			        // $cs->update(['status' => $statusUponCompletion]);
               		$cs->status = $statusUponCompletion;
@@ -1265,12 +1287,20 @@ class ReportController extends Controller
                     if ($type != "Released from Immigration") {
                         $type = $serviceProcedure->name;
                     }
-                    $_data = [
-                        'log_id' => $newServiceLog->id,
-                        'type' => $type
-                    ];
+                    //$_data = [
+                    //    'log_id' => $newServiceLog->id,
+                    //    'type' => $type
+                    //];
 
-                    $this->sendPushNotification($cs->client_id, $prevLogDetail, $_data, $labelSearch, $newServiceLog->id);
+                    //$this->sendPushNotification($cs->client_id, $prevLogDetail, $_data, $labelSearch, $newServiceLog->id);
+
+                    $_data = [
+                        'id' => $newServiceLog->id,
+                        'client_id' => $cs->client_id,
+                        'group_id' => $cs->group_id,
+                        'message' => $prevLogDetail
+                    ];
+                    app(LogController::class)->addNotif($_data, $type, true);
                 }
 
 			}
@@ -1514,12 +1544,20 @@ class ReportController extends Controller
 
             //DB::table('logs_notification')->insert(['log_id' => $addLog->id, 'job_id' => 0]);
 
-            $_data = [
-                'log_id' => $log->id,
-                'type' => "Documents Received"
-            ];
+            //$_data = [
+            //    'log_id' => $log->id,
+            //    'type' => "Documents Received"
+            //];
 
-            $this->sendPushNotification($user['id'], $_detail, $_data);
+            //$this->sendPushNotification($user['id'], $_detail, $_data);
+
+            $_data = [
+                'id' => $log->id,
+                'client_id' => $user['id'],
+                'group_id' => null,
+                'message' => $_detail
+            ];
+            app(LogController::class)->addNotif($_data, "Documents Received");
 
             // document_log
             foreach( $documents as $document ) {
@@ -2124,11 +2162,15 @@ class ReportController extends Controller
                                     $serviceProcedure = ServiceProcedure::where('id', $serviceProcedID)->first();
 
                                     $_data = [
-                                        'log_id' => $docLogQuery->id,
-                                        'type' => $docLogType === 'received'?"Documents Received":$serviceProcedure->name
+                                        'id' => $docLogQuery->id,
+                                        'client_id' => $cs->client_id,
+                                        'group_id' => $cs->group_id,
+                                        'message' => $_docsDetail
                                     ];
 
-                                    $this->sendPushNotification($cs->client_id, $_docsDetail, $_data);
+                                    app(LogController::class)->addNotif($_data, $docLogType === 'received'?"Documents Received":$serviceProcedure->name);
+
+                                    //$this->sendPushNotification($cs->client_id, $_docsDetail, $_data);
 
                                     foreach($docLogData as $dlc) {
 
@@ -2272,17 +2314,23 @@ class ReportController extends Controller
                         ]);
 
                         $serviceProcedure = ServiceProcedure::where('id', $serviceProcedID)->first();
-                        $_data = [
-                            'log_id' => $_log->id,
-                            'type' => $serviceProcedure->name
-                        ];
+
                         $msgDetail = "";
                         if($_detail != null){
                             $msgDetail .= $_detail;
                         }
                         $msgDetail .= "Document Received Completed. ".$detail;
 
-                        $this->sendPushNotification($cs->client_id, $msgDetail, $_data);
+                        $_data = [
+                            'id' => $_log->id,
+                            'client_id' => $cs->client_id,
+                            'group_id' => $cs->group_id,
+                            'message' => $msgDetail
+                        ];
+
+                        app(LogController::class)->addNotif($_data, $serviceProcedure->name);
+
+                        //$this->sendPushNotification($cs->client_id, $msgDetail, $_data);
                     }
 
                 }
@@ -2831,13 +2879,12 @@ class ReportController extends Controller
 //      }
 
       if($data) {
-          $job = (new LogsPushNotification($user_id, $message, $data->id))->delay(now()->addMinutes(10));
-//          if ($label !== null) {
-//              //$job = (new LogsPushNotification($user_id, $message, $data->id))->delay(now()->addMinutes(120));
-//              $job = (new LogsPushNotification($user_id, $message, $data->id))->delay(now()->addMinutes(10));
-//          } else {
-//              $job = (new LogsPushNotification($user_id, $message, $data->id));
-//          }
+          if ($label !== null) {
+              //$job = (new LogsPushNotification($user_id, $message, $data->id))->delay(now()->addMinutes(120));
+              $job = (new LogsPushNotification($user_id, $message, $data->id))->delay(now()->addMinutes(10));
+          } else {
+              $job = (new LogsPushNotification($user_id, $message, $data->id));
+          }
 
           $jobId = $this->dispatch($job);
 

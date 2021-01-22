@@ -93,6 +93,8 @@ class MessageHelper
 
             }
 
+        } else {
+            $msg = $data["message"];
         }
 
         return $msg;
