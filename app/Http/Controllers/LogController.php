@@ -92,7 +92,7 @@ class LogController extends Controller
         $_data = $this->logsAppNotification->saveToDb($data);
 
         if ($_data) {
-            $job = (new LogsPushNotification($data['client_id'], $optional.$data['message'], $_data->id))->delay(60 * 10);
+            $job = (new LogsPushNotification($data['client_id'], $optional.$data['message'], $_data->id))->delay(now()->addMinutes(10));
             $this->dispatch($job);
         }
 
