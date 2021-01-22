@@ -11,6 +11,7 @@ use App\Group;
 use App\GroupUser;
 
 use App\LogsAppNotification;
+use App\LogsNotification;
 use App\Traits\FilterTrait;
 use App\User;
 use App\Document;
@@ -36,10 +37,12 @@ class LogController extends Controller
 {
     use FilterTrait;
 
+    protected $cModel;
     protected $logsAppNotification;
-    public function __construct(LogsAppNotification $logsAppNotification)
+    public function __construct(LogsAppNotification $logsAppNotification, LogsNotification $logsNotification)
     {
         $this->logsAppNotification = $logsAppNotification;
+        $this->cModel = $logsNotification;
     }
 
     public static function save($log_data) {
@@ -58,7 +61,7 @@ class LogController extends Controller
         }
     }
 
-    public function addNotif($log, $type)
+    public function addNotif($log, $type, $hasDelay = false)
     {
         $date = Carbon::now();
         $data = [];
@@ -92,8 +95,14 @@ class LogController extends Controller
         $_data = $this->logsAppNotification->saveToDb($data);
 
         if ($_data) {
-            $job = (new LogsPushNotification($data['client_id'], $optional.$data['message'], $_data->id))->delay(now()->addMinutes(10));
-            $this->dispatch($job);
+            $job = (new LogsPushNotification($data['client_id'], $optional.$data['message'], $_data->id));
+
+            if($hasDelay) {
+                $job->delay(now()->addMinutes(10));
+                $jobId = $this->dispatch($job);
+
+                $this->cModel->saveToDb(["log_id" => $log['id'], "job_id" => $jobId]);
+            }
         }
 
     }
