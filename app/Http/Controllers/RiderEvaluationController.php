@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\ArrayHelper;
+use App\RiderEvaluationQA;
 use App\RiderEvaluation;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -12,11 +13,59 @@ use Illuminate\Support\Facades\DB;
 
 class RiderEvaluationController extends Controller
 {
+    protected $riderEvaluationQA;
     protected $riderEvaluation;
 
-    public function __construct(RiderEvaluation $riderEvaluation)
+    public function __construct(RiderEvaluationQA $riderEvaluationQA, RiderEvaluation $riderEvaluation)
     {
+        $this->riderEvaluationQA = $riderEvaluationQA;
         $this->riderEvaluation = $riderEvaluation;
+    }
+
+    public function updateQA(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'id' => 'required',
+            'question' => 'required',
+            'choices' => 'required',
+        ]);
+        if ($validator->fails()) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;
+        } else {
+            $tempData = [];
+            $data = [];
+            foreach (json_decode($request->id, true) as $k => $v) {
+                $tempData[$k]['id'] = $v;
+            }
+            foreach (json_decode($request->question, true) as $k => $v) {
+                $tempData[$k]['question'] = $v;
+            }
+            foreach (json_decode($request->choices, true) as $k => $v) {
+                foreach ($v["id"] as $kk => $vv) {
+                    $tempData[$k]['choices'][$kk]["id"] = $vv;
+                }
+                foreach ($v["answer"] as $kk => $vv) {
+                    $tempData[$k]['choices'][$kk]["answer"] = $vv;
+                }
+                foreach ($v["score"] as $kk => $vv) {
+                    $tempData[$k]['choices'][$kk]["score"] = $vv;
+                }
+                $tempData[$k]['choices'] = json_encode($tempData[$k]['choices']);
+            }
+            foreach ($tempData as $k => $v) {
+                $data["id"] = $v["id"];
+                $data["question"] = $v["question"];
+                $data["choices"] = $v["choices"];
+                $this->riderEvaluationQA->updateById(['id' => $v["id"]], $data);
+            }
+
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+            $response['data'] = "Question & Answer succesfully updated!";
+        }
+        return Response::json($response);
     }
 
     public function addEvaluation(Request $request)
@@ -105,6 +154,16 @@ class RiderEvaluationController extends Controller
         return Response::json($response);
     }
 
+    public function getQA()
+    {
+        $data = RiderEvaluationQA::all();
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $data;
+        return Response::json($response);
+    }
+
     public function getEvaluation(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -138,11 +197,10 @@ class RiderEvaluationController extends Controller
             $response['code'] = 422;
         } else {
             $sort = $request->sort;
-            $data = RiderEvaluation::
-                where([
-                    ['rider_id', $request->rider_id],
-                    ['date', $request->date]
-                ])
+            $data = RiderEvaluation::where([
+                ['rider_id', $request->rider_id],
+                ['date', $request->date]
+            ])
                 ->when($sort != '', function ($q) use ($sort) {
                     $sort = explode('-', $sort);
                     return $q->orderBy($sort[0], $sort[1]);
