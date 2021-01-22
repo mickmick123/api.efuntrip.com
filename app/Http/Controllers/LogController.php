@@ -99,10 +99,11 @@ class LogController extends Controller
 
             if($hasDelay) {
                 $job->delay(now()->addMinutes(10));
-                $jobId = $this->dispatch($job);
-
-                $this->cModel->saveToDb(["log_id" => $log['id'], "job_id" => $jobId]);
             }
+
+            $jobId = $this->dispatch($job);
+
+            $this->cModel->saveToDb(["log_id" => $log['id'], "job_id" => $jobId]);
         }
 
     }
