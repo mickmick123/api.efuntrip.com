@@ -1,9 +1,8 @@
 <?php
 use Illuminate\Http\Request;
 
-
 Route::get('our-services', 'ServiceController@ourServices');
-Route::get('{id}', 'ServiceController@show');
+Route::get('app/{id}', 'ServiceController@show');
 
 Route::middleware('auth:api')->group(function() {
 
@@ -11,7 +10,9 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('manage-parent-services', 'ServiceController@manageParentServices');
 
-	Route::post('/', 'ServiceController@store');
+    Route::get('{id}', 'ServiceController@show');
+
+    Route::post('/', 'ServiceController@store');
 
 	Route::patch('{id}', 'ServiceController@update');
 
