@@ -1800,6 +1800,22 @@ class LogController extends Controller
             $item->remarks = '';
         }
 
+        if($item->type === "Released from Immigration") {
+            $logsNotification = LogsAppNotification::select('j.id')
+                ->where([['logs_app_notification.log_id', $logID],['logs_app_notification.type', 'Released from Immigration'],['label', '!=', 'Released from Immigration']])
+                ->leftJoin('logs', 'logs.id', 'logs_app_notification.log_id')
+                ->leftJoin('logs_notification as l', 'l.log_id', 'logs_app_notification.log_id')
+                ->leftJoin('jobs as j', 'j.id', 'l.job_id')
+                ->first();
+            $hasDelay = $logsNotification !=null? ($logsNotification->id != null ? true : false) : false;
+
+            $detail = $log->detail;
+            if($hasDelay && strpos($log->label, ", service is now complete. ") !== false){
+                $explode = explode(", service is now complete. ", $log->label);
+                $item->message = trim(str_replace($explode[1],"", $detail));
+            }
+        }
+
         return $item;
     }
 
