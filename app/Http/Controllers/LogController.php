@@ -1776,7 +1776,7 @@ class LogController extends Controller
                 $body = '';
                 foreach($logs as $l){
                     $name = User::find($l->processor_id);
-                    $body .= PHP_EOL . 'Paid service with an amount of Php' . $this->absNumber($l->amount)  . '. ' . $name['first_name'] . ' | ' . date_format(date_create($l->created_at), "M d, yy , h:i A");
+                    $body .= PHP_EOL . 'Paid service with an amount of Php' . $this->absNumber($l->amount)  . '. ' . $name['first_name'] . ' | ' . date_format(date_create($l->created_at), "M d, Y , h:i A");
 
                 }
                 $header = 'Service Name: ' . $service->detail . PHP_EOL . 'Total Payment: Php' . number_format($service->payment_amount) . PHP_EOL . 'Total Price : Php' . number_format($amt) . PHP_EOL . 'Balance : Php' . number_format($amt - $service->payment_amount) . PHP_EOL;
