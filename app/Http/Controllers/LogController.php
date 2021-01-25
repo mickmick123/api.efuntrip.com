@@ -807,7 +807,6 @@ class LogController extends Controller
     public function getAllLogs($client_service_id, Request $request) {
         $logs = Log::with('documents', 'serviceProcedure.action', 'serviceProcedure.category')->where('client_service_id',$client_service_id)->where('log_type','!=','Commission')
             ->orderBy('id','desc')->get();
-        $x = $request->has( 'app' );
         foreach( $logs as $log ) {
             $hasDelay = LogsAppNotification::select('logs_app_notification.id')
                                 ->where([['logs_app_notification.log_id', $log->id],['logs_app_notification.type', 'Released from Immigration'],['label', '!=', 'Released from Immigration']])
@@ -819,7 +818,6 @@ class LogController extends Controller
             $usr =  User::where('id',$log->processor_id)->select('first_name','last_name')->get();
             $log->processor = ($usr) ? ($usr[0]->first_name ." ".$usr[0]->last_name) : "";
             $detail = $log->detail;
-            $log->exist = $x;
             if($hasDelay && $request->has('app')){
                 if (strpos($log->label, ", service is now complete. ") !== false) {
                     $explode = explode(", service is now complete. ", $log->label);
