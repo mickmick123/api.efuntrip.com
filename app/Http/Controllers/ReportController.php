@@ -362,7 +362,7 @@ class ReportController extends Controller
 
 			if($serviceProcedure->name == "Documents Needed") {
                 $detail = "";
-            }else if($serviceProcedure->name == "Filed at Immigration"){
+            }else if($serviceProcedure->name == "Filed at Immigration" || $serviceProcedure->name == "Released from Immigration"){
                 $detail .= PHP_EOL;
             }
 			$i=1;
