@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 class RiderEvaluationController extends Controller
 {
@@ -34,7 +35,6 @@ class RiderEvaluationController extends Controller
             $response['code'] = 422;
         } else {
             $tempData = [];
-            $data = [];
             foreach (json_decode($request->id, true) as $k => $v) {
                 $tempData[$k]['id'] = $v;
             }
@@ -56,14 +56,11 @@ class RiderEvaluationController extends Controller
             $tempId = [];
             foreach ($tempData as $k => $v) {
                 $tempId[$k] = $v["id"];
-                $data["id"] = $v["id"];
-                $data["question"] = $v["question"];
-                $data["choices"] = $v["choices"];
                 $checkId = RiderEvaluationQA::where('id', $v["id"])->pluck('id');
-                if ($checkId->count() === 0) {
-                    $this->riderEvaluationQA->saveToDb($data);
+                if ($checkId->count() == 0) {
+                    DB::table('rider_evaluation_qa')->insert($v);
                 } else {
-                    $this->riderEvaluationQA->updateById(['id' => $v["id"]], $data);
+                    $this->riderEvaluationQA->updateById(['id' => $v["id"]], $v);
                 }
             }
             $deleteId = RiderEvaluationQA::pluck('id');
