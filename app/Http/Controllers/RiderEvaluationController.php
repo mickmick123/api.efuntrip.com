@@ -58,7 +58,7 @@ class RiderEvaluationController extends Controller
                 $tempId[$k] = $v["id"];
                 $checkId = RiderEvaluationQA::where('id', $v["id"])->pluck('id');
                 if ($checkId->count() == 0) {
-                    DB::table('rider_evaluation_qa')->insert($v);
+                    $this->riderEvaluationQA->saveMultipleToDb($v);
                 } else {
                     $this->riderEvaluationQA->updateById(['id' => $v["id"]], $v);
                 }
