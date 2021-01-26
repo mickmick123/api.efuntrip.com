@@ -43,7 +43,7 @@ class RiderEvaluationController extends Controller
             }
             foreach (json_decode($request->choices, true) as $k => $v) {
                 foreach ($v["id"] as $kk => $vv) {
-                    $tempData[$k]['choices'][$kk]["id"] = $vv;
+                    $tempData[$k]['choices'][$kk]["id"] = $kk + 1;
                 }
                 foreach ($v["answer"] as $kk => $vv) {
                     $tempData[$k]['choices'][$kk]["answer"] = $vv;
@@ -96,9 +96,11 @@ class RiderEvaluationController extends Controller
         } else {
             $data = new RiderEvaluation;
             $data->rider_id = $request->rider_id;
+            $answer = [];
             foreach (json_decode($request->answer) as $k => $v) {
-                $data['q' . $k] = $v;
+                $answer[$k] = $v;
             }
+            $data->answers = json_encode($answer);
             $data->result = $request->result;
             $data->rider_income = $request->rider_income;
             $data->delivery_fee = $request->delivery_fee;
@@ -128,9 +130,11 @@ class RiderEvaluationController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
+            $answer = [];
             foreach (json_decode($request->answer) as $k => $v) {
-                $data['q' . $k] = $v;
+                $answer[$k] = $v;
             }
+            $data["answers"] = json_encode($answer);
             $data['result'] = $request->result;
             $data['rider_income'] = $request->rider_income;
             $data['evaluation'] = $request->evaluation;
