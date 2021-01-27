@@ -402,12 +402,12 @@ class AppController extends Controller
         foreach($service_ids as $key => $id){
             $amt = 0;
             $cs = ClientService::findorFail($id);
-            $discount =  ClientTransaction::where('client_service_id', $id)->where('type', 'Discount')->sum('amount');
-            $amt = ($cs->charge + $cs->cost + $cs->tip + $cs->com_client + $cs->com_agent) - $discount;
-            // $amt = $amounts[$key];
-            if($cs->payment_amount != 0){
-                $amt -= $cs->payment_amount;
-            }
+            // $discount =  ClientTransaction::where('client_service_id', $id)->where('type', 'Discount')->sum('amount');
+            // $amt = ($cs->charge + $cs->cost + $cs->tip + $cs->com_client + $cs->com_agent) - $discount;
+            $amt = $amounts[$key];
+            // if($cs->payment_amount != 0){
+            //     $amt -= $cs->payment_amount;
+            // }
             $total_amount += $amt;
 
         }
@@ -447,7 +447,7 @@ class AppController extends Controller
             ]);
 
             $r = $client->request('POST',
-                'https://openapi.juancash.com/pay',
+                'https://openapi.gjob.ph/pay',
                 [
                     'json' => $data
                 ]
@@ -465,6 +465,7 @@ class AppController extends Controller
     public function updateServicePayment($qr_id) {
         $qr = QrCode::findorFail($qr_id);
         $service_ids = explode(',',$qr->service_ids);
+        $amounts = explode(',',$qr->amount);
 
         $amount = 0;
         $name = '';
@@ -483,10 +484,11 @@ class AppController extends Controller
             $type = 'Client';
         }
         //collect total amount
-        foreach($service_ids as $id){
-            $cs = ClientService::findorFail($id);
-            $discount =  ClientTransaction::where('client_service_id', $id)->where('type', 'Discount')->sum('amount');
-            $amt = ($cs->charge + $cs->cost + $cs->tip + $cs->com_client + $cs->com_agent) - $discount;
+        foreach($service_ids as $index => $id){
+            //$cs = ClientService::findorFail($id);
+            //$discount =  ClientTransaction::where('client_service_id', $id)->where('type', 'Discount')->sum('amount');
+            // $amt = ($cs->charge + $cs->cost + $cs->tip + $cs->com_client + $cs->com_agent) - $discount;
+            $amt = $amounts[$index];
             if($cs->is_full_payment == 1){
                 if($amt == $cs->payment_amount){
                     $amt = 0;
@@ -539,11 +541,12 @@ class AppController extends Controller
         LogController::save($log_data);
 
         $total = 0;
-        foreach($service_ids as $id){
+        foreach($service_ids as $index => $id){
             $cs = ClientService::findorFail($id);
             $cs_client_id = $cs->client_id;
             $discount =  ClientTransaction::where('client_service_id', $id)->where('type', 'Discount')->sum('amount');
-            $amt = ($cs->charge + $cs->cost + $cs->tip + $cs->com_client + $cs->com_agent) - $discount;
+            // $amt = ($cs->charge + $cs->cost + $cs->tip + $cs->com_client + $cs->com_agent) - $discount;
+            $amt = $amounts[$index];
             if($cs->payment_amount != 0){
                 $amt -= $cs->payment_amount;
             }
