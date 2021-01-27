@@ -485,9 +485,9 @@ class AppController extends Controller
         }
         //collect total amount
         foreach($service_ids as $index => $id){
-            //$cs = ClientService::findorFail($id);
+            $cs = ClientService::findorFail($id);
             //$discount =  ClientTransaction::where('client_service_id', $id)->where('type', 'Discount')->sum('amount');
-            // $amt = ($cs->charge + $cs->cost + $cs->tip + $cs->com_client + $cs->com_agent) - $discount;
+            //$amt = ($cs->charge + $cs->cost + $cs->tip + $cs->com_client + $cs->com_agent) - $discount;
             $amt = $amounts[$index];
             if($cs->is_full_payment == 1){
                 if($amt == $cs->payment_amount){
@@ -545,7 +545,7 @@ class AppController extends Controller
             $cs = ClientService::findorFail($id);
             $cs_client_id = $cs->client_id;
             $discount =  ClientTransaction::where('client_service_id', $id)->where('type', 'Discount')->sum('amount');
-            // $amt = ($cs->charge + $cs->cost + $cs->tip + $cs->com_client + $cs->com_agent) - $discount;
+            $full_amt = ($cs->charge + $cs->cost + $cs->tip + $cs->com_client + $cs->com_agent) - $discount;
             $amt = $amounts[$index];
             if($cs->payment_amount != 0){
                 $amt -= $cs->payment_amount;
@@ -568,9 +568,10 @@ class AppController extends Controller
                  $payment->reason = $rson;
                  $payment->save();
              }
-
+            if($full_amt == $amt){
+                $cs->is_full_payment = 1;
+            }
             $cs->payment_amount = $amt;
-            $cs->is_full_payment = 1;
             $cs->save();
 
             // save transaction logs
