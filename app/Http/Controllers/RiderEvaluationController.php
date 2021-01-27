@@ -43,7 +43,7 @@ class RiderEvaluationController extends Controller
             }
             foreach (json_decode($request->choices, true) as $k => $v) {
                 foreach ($v["id"] as $kk => $vv) {
-                    $tempData[$k]['choices'][$kk]["id"] = $kk + 1;
+                    $tempData[$k]['choices'][$kk]["id"] = $kk;
                 }
                 foreach ($v["answer"] as $kk => $vv) {
                     $tempData[$k]['choices'][$kk]["answer"] = $vv;
@@ -70,6 +70,23 @@ class RiderEvaluationController extends Controller
                 }
             }
 
+            $update = [];
+            $getEvaluation = RiderEvaluation::all();
+            $getQA = RiderEvaluationQA::all();
+            foreach ($getEvaluation as $k => $v) {
+                $scores = 0;
+                foreach (json_decode($v['answers']) as $kk => $vv) {
+                    if ($vv !== null) {
+                        $scores += (float)json_decode($getQA[$kk]['choices'])[$vv]->score;
+                    }
+                }
+                $update['result'] = $scores + 1;
+                $update['delivery_fee'] = $v['delivery_fee'];
+                $update['rider_income'] = self::riderIncome($update['result'], $v['delivery_fee']);
+                $update['evaluation'] = 100 + $update['result'];
+                $this->riderEvaluation->updateById(['id' => $v['id']], $update);
+            }
+
             $response['status'] = 'Success';
             $response['code'] = 200;
             $response['data'] = "Question & Answer succesfully updated!";
@@ -82,10 +99,8 @@ class RiderEvaluationController extends Controller
         $validator = Validator::make($request->all(), [
             'rider_id' => 'required',
             'answer' => 'required',
-            'result' => 'required',
-            'rider_income' => 'required',
+            'scores' => 'required',
             'delivery_fee' => 'required',
-            'evaluation' => 'required',
             'date' => 'required',
         ]);
 
@@ -101,10 +116,10 @@ class RiderEvaluationController extends Controller
                 $answer[$k] = $v;
             }
             $data->answers = json_encode($answer);
-            $data->result = $request->result;
-            $data->rider_income = $request->rider_income;
+            $data->result = array_sum(json_decode($request->scores)) + 1;
             $data->delivery_fee = $request->delivery_fee;
-            $data->evaluation = $request->evaluation;
+            $data->rider_income = self::riderIncome($data->result, $request->delivery_fee);
+            $data->evaluation = 100 + $data->result;
             $data->date = $request->date;
             $this->riderEvaluation->saveToDb($data->toArray());
 
@@ -120,9 +135,8 @@ class RiderEvaluationController extends Controller
         $validator = Validator::make($request->all(), [
             'id' => 'required|exists:rider_evaluation',
             'answer' => 'required',
-            'result' => 'required',
-            'rider_income' => 'required',
-            'evaluation' => 'required',
+            'scores' => 'required',
+            'delivery_fee' => 'required',
         ]);
 
         if ($validator->fails()) {
@@ -134,15 +148,18 @@ class RiderEvaluationController extends Controller
             foreach (json_decode($request->answer) as $k => $v) {
                 $answer[$k] = $v;
             }
-            $data["answers"] = json_encode($answer);
-            $data['result'] = $request->result;
-            $data['rider_income'] = $request->rider_income;
-            $data['evaluation'] = $request->evaluation;
+            $data['answers'] = json_encode($answer);
+            $data['result'] = array_sum(json_decode($request->scores)) + 1;
+            $data['delivery_fee'] = $request->delivery_fee;
+            $data['rider_income'] = self::riderIncome($data['result'], $request->delivery_fee);
+            $data['evaluation'] = 100 + $data['result'];
             $this->riderEvaluation->updateById(['id' => $request->id], $data);
 
             $response['status'] = 'Success';
             $response['code'] = 200;
             $response['data'] = "Evaluation succesfully updated!";
+            $response['data1'] = $data;
+            $response['request'] = $request->all();
         }
         return Response::json($response);
     }
@@ -378,5 +395,19 @@ class RiderEvaluationController extends Controller
         $summary['result'] = round((($summary['evaluation'] + $summary['average']) / ($summary['days'] === 0 ? 1 : $summary['days'])) / 2, 2);
 
         return ['summary' => $summary, 'data' => $data];
+    }
+
+    protected static function riderIncome($data, $fee)
+    {
+        if ($data > 0) {
+            $data = $fee;
+        } else if ($data >= -5) {
+            $data = $fee / 2;
+        } else if ($data >= -10) {
+            $data = $fee - $fee;
+        } else if ($data < -10) {
+            $data = -$fee / 2;
+        }
+        return $data;
     }
 }
