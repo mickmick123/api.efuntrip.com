@@ -1796,6 +1796,8 @@ class LogController extends Controller
             }
 
             if($item->type === "Released from Immigration") {
+                $agent = strtolower($_SERVER['HTTP_USER_AGENT']);
+
                 $logsNotification = LogsAppNotification::select('j.id')
                     ->where([['logs_app_notification.log_id', $logID],['logs_app_notification.type', 'Released from Immigration'],['label', '!=', 'Released from Immigration']])
                     ->leftJoin('logs', 'logs.id', 'logs_app_notification.log_id')
@@ -1805,7 +1807,7 @@ class LogController extends Controller
                 $hasDelay = $logsNotification !=null? ($logsNotification->id != null ? true : false) : false;
 
                 $detail = $log->detail;
-                if($hasDelay && strpos($log->label, ", service is now complete. ") !== false){
+                if($hasDelay && (stripos($agent, 'iphone') !==false || stripos($agent, 'android') !==false) && strpos($log->label, ", service is now complete. ") !== false){
                     $explode = explode(", service is now complete. ", $log->label);
                     $item->message = trim(str_replace($explode[1],"", $detail));
                 }
