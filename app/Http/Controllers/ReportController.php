@@ -360,9 +360,9 @@ class ReportController extends Controller
 				return $item['count'] > 0;
 			})->values()->toArray();
 
-			if($serviceProcedure->name == "Documents Needed") {
+			if($serviceProcedure->name == "Documents Needed" || $serviceProcedure->name == "Released from Immigration") {
                 $detail = "";
-            }else if($serviceProcedure->name == "Filed at Immigration" || $serviceProcedure->name == "Released from Immigration"){
+            }else if($serviceProcedure->name == "Filed at Immigration"){
                 $detail .= PHP_EOL;
             }
 			$i=1;
