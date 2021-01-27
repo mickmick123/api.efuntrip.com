@@ -414,7 +414,7 @@ class AppController extends Controller
         $total_amount = $total_amount / 0.975;
         $total_amount = round($total_amount, 2);
         $timestamp = (time())*1000;
-        $notifyUrl = URL::to('/').'/api/v1/app/update-service-payment/'.$qr_id;
+        $notifyUrl = 'http://api.topwyc.com/api/v1/app/update-service-payment/'.$qr_id;
         $data = array (
             "appId"  => "160152699158911",
             "mchId" => "698",
