@@ -1284,15 +1284,11 @@ class ReportController extends Controller
                 ]);
 
                 if($cs->status == "complete" || $cs->status == "released") {
+                    $hasDelay = false;
                     if ($type != "Released from Immigration") {
                         $type = $serviceProcedure->name;
+                        $hasDelay = true;
                     }
-                    //$_data = [
-                    //    'log_id' => $newServiceLog->id,
-                    //    'type' => $type
-                    //];
-
-                    //$this->sendPushNotification($cs->client_id, $prevLogDetail, $_data, $labelSearch, $newServiceLog->id);
 
                     $_data = [
                         'id' => $newServiceLog->id,
@@ -1300,7 +1296,7 @@ class ReportController extends Controller
                         'group_id' => $cs->group_id,
                         'message' => $prevLogDetail
                     ];
-                    app(LogController::class)->addNotif($_data, $type, true);
+                    app(LogController::class)->addNotif($_data, $type, $hasDelay);
                 }
 
 			}
