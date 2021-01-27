@@ -5,11 +5,11 @@ namespace App\Http\Controllers;
 use App\Helpers\ArrayHelper;
 use App\RiderEvaluationQA;
 use App\RiderEvaluation;
+use App\RiderName;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\DB;
 
 class RiderEvaluationController extends Controller
 {
@@ -247,6 +247,7 @@ class RiderEvaluationController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'year' => 'required',
+            'quarter' => 'required',
         ]);
         if ($validator->fails()) {
             $response['status'] = 'Failed';
@@ -254,27 +255,33 @@ class RiderEvaluationController extends Controller
             $response['code'] = 422;
         } else {
             $data = [];
-            $stringJson = '"id":1,"rider_id":1,"name":"Tom",';
-            $tempData = [];
-            $index = 1;
-            for ($i = 1; $i <= 12; $i++) {
-                for ($ii = 1; $ii <= 2; $ii++) {
-                    $request = [
-                        'rider_id' => 1,
-                        'month' => str_pad($i, 2, '0', STR_PAD_LEFT),
-                        'year' => $request['year'],
-                        'half_month' => $ii
-                    ];
-                    $tempData[$index] = self::getSummary($request)['summary'];
-                    foreach ($tempData[$index] as $k => $v) {
-                        if ($k === 'result') {
-                            $stringJson .= '"result' . $i . $ii . '":' . '"' . $v . '%",';
+            $riders = RiderName::all();
+            foreach ($riders as $k => $v) {
+                $stringJson = '"id":' . $v->id . ',"name":"' . $v->name . '",';
+                $tempData = [];
+                $index = 1;
+                for ($i = 1; $i <= 12; $i++) {
+                    $quarterx = ceil($i / 3);
+                    if ($request->quarter == $quarterx) {
+                        for ($ii = 1; $ii <= 2; $ii++) {
+                            $data[$k] = [
+                                'rider_id' => $v->id,
+                                'month' => str_pad($i, 2, '0', STR_PAD_LEFT),
+                                'year' => $request['year'],
+                                'half_month' => $ii
+                            ];
+                            $tempData[$index] = self::getSummary($data[$k])['summary'];
+                            foreach ($tempData[$index] as $kk => $vv) {
+                                if ($kk === 'result') {
+                                    $stringJson .= '"result' . $i . $ii . '":' . '"' . $vv . '%",';
+                                }
+                            }
+                            $index++;
                         }
                     }
-                    $index++;
                 }
+                $data[$k] = json_decode('{' . substr($stringJson, 0, -1) . '}', true);
             }
-            $data = [json_decode('{' . substr($stringJson, 0, -1) . '}', true)];
             $response['status'] = 'Success';
             $response['code'] = 200;
             $response['data'] = $data;
