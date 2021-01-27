@@ -95,10 +95,10 @@ class LogController extends Controller
         $_data = $this->logsAppNotification->saveToDb($data);
 
         if ($_data) {
-            $job = (new LogsPushNotification($data['client_id'], $optional.$data['message'], $_data->id));
-
             if($hasDelay) {
-                $job->delay(now()->addMinutes(10));
+                $job = (new LogsPushNotification($data['client_id'], $optional.$data['message'], $_data->id))->delay(now()->addMinutes(10));
+            }else {
+                $job = (new LogsPushNotification($data['client_id'], $optional.$data['message'], $_data->id));
             }
 
             $jobId = $this->dispatch($job);
@@ -819,13 +819,17 @@ class LogController extends Controller
             $log->processor = ($usr) ? ($usr[0]->first_name ." ".$usr[0]->last_name) : "";
             $detail = $log->detail;
             $agent = strtolower($_SERVER['HTTP_USER_AGENT']);
-            if($hasDelay  && (stripos($agent, 'iphone') !==false || stripos($agent, 'android') !==false) && strpos($log->label, ", service is now complete. ") !== false){
-                $explode = explode(", service is now complete. ", $log->label);
+            $label = $log->label;
+            if($hasDelay && (stripos($agent, 'windows') !==false || stripos($agent, 'mac') !==false  || stripos($agent, 'linux') ===false) && strpos($log->label, ", service is now complete. ") !== false){
+                $explode = explode(", service is now complete. ", $label);
                 $detail = str_replace($explode[1],"", $detail);
+                $label = str_replace($explode[1],"", $label);
             }
+            $log->label = $label;
             $log->detail =  ($log->detail !=='' && $log->detail !== null) ? trim($detail) : '';
-
             $log->detail_cn =  ($log->detail_cn !=='' && $log->detail_cn !== null) ? $log->detail_cn : '';
+
+            $log->agent = strpos($agent, 'linux') !== false;
         }
 
         $response['status'] = 'Success';
@@ -1797,7 +1801,6 @@ class LogController extends Controller
             }
 
             if($item->type === "Released from Immigration") {
-                $agent = strtolower($_SERVER['HTTP_USER_AGENT']);
 
                 $logsNotification = LogsAppNotification::select('j.id')
                     ->where([['logs_app_notification.log_id', $logID],['logs_app_notification.type', 'Released from Immigration'],['label', '!=', 'Released from Immigration']])
@@ -1808,7 +1811,7 @@ class LogController extends Controller
                 $hasDelay = $logsNotification !=null? ($logsNotification->id != null ? true : false) : false;
 
                 $detail = $log->detail;
-                if($hasDelay && (stripos($agent, 'iphone') !==false || stripos($agent, 'android') !==false) && strpos($log->label, ", service is now complete. ") !== false){
+                if($hasDelay  && strpos($log->label, ", service is now complete. ") !== false){
                     $explode = explode(", service is now complete. ", $log->label);
                     $item->message = trim(str_replace($explode[1],"", $detail));
                 }
