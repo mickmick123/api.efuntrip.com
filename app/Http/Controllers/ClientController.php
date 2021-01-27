@@ -2917,14 +2917,17 @@ class ClientController extends Controller
                  $response['test'] = 'Generate QR Code';
                  $amount = 0;
                  $cs_id = '';
+                 $amounts = '';
                  for($i=0; $i<count($request->payments); $i++) {
                     $amount += $request->payments[$i]['amount'];
+                    $amounts .= $request->payments[$i]['amount'].',';
                     $cs_id .= $request->payments[$i]['id'].',';
                  }
                  $qr = new QrCode;
                  $qr->client_id = $client_id;
                  $qr->group_id = null;
                  $qr->service_ids = rtrim($cs_id, ',');
+                 $qr->amount = rtrim($amounts, ',');
                  $qr->save();
 
                  $total_amount = $amount / 0.975;
@@ -4019,16 +4022,20 @@ s5n8yErWKdqOJDgF77IW5mzhlQyNioIhDsYSytD3ef9nlwcPmFVUI7lOEtMP9xAB
             $response['code'] = 422;
         }else{
             $service_ids = explode(',',$qr[0]->service_ids);
+            $amounts = explode(',',$qr[0]->amount);
             $total_amount = 0;
             $data = [];
             foreach($service_ids as $index=>$id){
                 $amt = 0;
                 $cs = ClientService::findorFail($id);
-                $discount =  ClientTransaction::where('client_service_id', $id)->where('type', 'Discount')->sum('amount');
-                $amt = ($cs->charge + $cs->cost + $cs->tip + $cs->com_client + $cs->com_agent) - $discount;
-                if($cs->payment_amount != 0){
-                    $amt -= $cs->payment_amount;
-                }
+                // $discount =  ClientTransaction::where('client_service_id', $id)->where('type', 'Discount')->sum('amount');
+                // $amt = ($cs->charge + $cs->cost + $cs->tip + $cs->com_client + $cs->com_agent) - $discount;
+                // \Log::info($cs->payment_amount);
+                // \Log::info($amounts[$index]);
+                $amt = $amounts[$index];
+                // if($cs->payment_amount != 0){
+                //     $amt -= $cs->payment_amount;
+                // }
                 $total_amount += $amt;
                 $data['service'][$index] = ['service'=>$cs->detail,'amount'=>$amt];
             }

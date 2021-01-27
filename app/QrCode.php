@@ -15,7 +15,7 @@ class QrCode extends Model
 
     protected $table = 'qr_code';
 
-    protected $fillable = [ 'client_id', 'group_id', 'service_ids'];
+    protected $fillable = [ 'client_id', 'group_id', 'service_ids', 'amount'];
 
     public static function boot(){
         parent::boot();

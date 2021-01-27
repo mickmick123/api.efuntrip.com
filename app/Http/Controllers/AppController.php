@@ -396,15 +396,18 @@ class AppController extends Controller
 
         $qr = QrCode::findorFail($qr_id);
         $service_ids = explode(',',$qr->service_ids);
+        $amounts = explode(',',$qr->amount);
         $total_amount = 0;
-        foreach($service_ids as $id){
+
+        foreach($service_ids as $key => $id){
             $amt = 0;
             $cs = ClientService::findorFail($id);
-            $discount =  ClientTransaction::where('client_service_id', $id)->where('type', 'Discount')->sum('amount');
-            $amt = ($cs->charge + $cs->cost + $cs->tip + $cs->com_client + $cs->com_agent) - $discount;
-            if($cs->payment_amount != 0){
-                $amt -= $cs->payment_amount;
-            }
+            // $discount =  ClientTransaction::where('client_service_id', $id)->where('type', 'Discount')->sum('amount');
+            // $amt = ($cs->charge + $cs->cost + $cs->tip + $cs->com_client + $cs->com_agent) - $discount;
+            $amt = $amounts[$key];
+            // if($cs->payment_amount != 0){
+            //     $amt -= $cs->payment_amount;
+            // }
             $total_amount += $amt;
 
         }

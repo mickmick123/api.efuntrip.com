@@ -5030,14 +5030,17 @@ public function getClientPackagesByGroup($client_id, $group_id){
              $response['test'] = 'Generate QR Code';
              $amount = 0;
              $cs_id = '';
+             $amounts = '';
              for($i=0; $i<count($request->payments); $i++) {
-                $amount += $request->payments[$i]['amount'];
+                $amount = $request->payments[$i]['amount'];
+                $amounts .= $request->payments[$i]['amount'].',';
                 $cs_id .= $request->payments[$i]['id'].',';
              }
              $qr = new QrCode;
              $qr->client_id = null;
              $qr->group_id = $group_id;
              $qr->service_ids = rtrim($cs_id, ',');
+             $qr->amount = rtrim($amounts, ',');
              $qr->save();
 
              $total_amount = $amount / 0.975;
