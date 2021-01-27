@@ -820,7 +820,7 @@ class LogController extends Controller
             $detail = $log->detail;
             $agent = strtolower($_SERVER['HTTP_USER_AGENT']);
             $label = $log->label;
-            if($hasDelay && (stripos($agent, 'windows') !==false || stripos($agent, 'mac') !==false  || stripos($agent, 'linux') ===false) && strpos($log->label, ", service is now complete. ") !== false){
+            if($hasDelay && !(stripos($agent, 'windows') !==false || stripos($agent, 'mac') !==false  || stripos($agent, 'linux') !==false) && strpos($log->label, ", service is now complete. ") !== false){
                 $explode = explode(", service is now complete. ", $label);
                 $detail = str_replace($explode[1],"", $detail);
                 $label = str_replace($explode[1],"", $label);
@@ -828,8 +828,6 @@ class LogController extends Controller
             $log->label = $label;
             $log->detail =  ($log->detail !=='' && $log->detail !== null) ? trim($detail) : '';
             $log->detail_cn =  ($log->detail_cn !=='' && $log->detail_cn !== null) ? $log->detail_cn : '';
-
-            $log->agent = strpos($agent, 'linux') !== false;
         }
 
         $response['status'] = 'Success';
