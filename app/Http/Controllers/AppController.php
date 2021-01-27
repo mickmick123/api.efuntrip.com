@@ -402,19 +402,19 @@ class AppController extends Controller
         foreach($service_ids as $key => $id){
             $amt = 0;
             $cs = ClientService::findorFail($id);
-            // $discount =  ClientTransaction::where('client_service_id', $id)->where('type', 'Discount')->sum('amount');
-            // $amt = ($cs->charge + $cs->cost + $cs->tip + $cs->com_client + $cs->com_agent) - $discount;
-            $amt = $amounts[$key];
-            // if($cs->payment_amount != 0){
-            //     $amt -= $cs->payment_amount;
-            // }
+            $discount =  ClientTransaction::where('client_service_id', $id)->where('type', 'Discount')->sum('amount');
+            $amt = ($cs->charge + $cs->cost + $cs->tip + $cs->com_client + $cs->com_agent) - $discount;
+            // $amt = $amounts[$key];
+            if($cs->payment_amount != 0){
+                $amt -= $cs->payment_amount;
+            }
             $total_amount += $amt;
 
         }
         $total_amount = $total_amount / 0.975;
         $total_amount = round($total_amount, 2);
         $timestamp = (time())*1000;
-        $notifyUrl = 'http://api.topwyc.com/api/v1/app/update-service-payment/'.$qr_id;
+        $notifyUrl = URL::to('/').'/api/v1/app/update-service-payment/'.$qr_id;
         $data = array (
             "appId"  => "160152699158911",
             "mchId" => "698",
