@@ -818,7 +818,8 @@ class LogController extends Controller
             $usr =  User::where('id',$log->processor_id)->select('first_name','last_name')->get();
             $log->processor = ($usr) ? ($usr[0]->first_name ." ".$usr[0]->last_name) : "";
             $detail = $log->detail;
-            if($hasDelay && $request->has('app') && strpos($log->label, ", service is now complete. ") !== false){
+            $agent = strtolower($_SERVER['HTTP_USER_AGENT']);
+            if($hasDelay  && (stripos($agent, 'iphone') !==false || stripos($agent, 'android') !==false) && strpos($log->label, ", service is now complete. ") !== false){
                 $explode = explode(", service is now complete. ", $log->label);
                 $detail = str_replace($explode[1],"", $detail);
             }
