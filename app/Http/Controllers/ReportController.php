@@ -1240,7 +1240,9 @@ class ReportController extends Controller
                                         ->where('ln.log_id', $getLog['id'])
                                         ->first();
                 $type = "";
+                $hasDelay = false;
                 if($checkLogNotif) {
+                    $hasDelay = true;
                     $type = DB::table('logs_app_notification')
                         ->where('log_id', $getLog['id'])->first()->type;
 
@@ -1284,10 +1286,8 @@ class ReportController extends Controller
                 ]);
 
                 if($cs->status == "complete" || $cs->status == "released") {
-                    $hasDelay = false;
                     if ($type != "Released from Immigration") {
                         $type = $serviceProcedure->name;
-                        $hasDelay = true;
                     }
 
                     $_data = [
