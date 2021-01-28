@@ -1231,14 +1231,17 @@ class ReportController extends Controller
 					->first();
 
 			if($getLog) {
-                // $updatedLog = Log::where('id', $getLog['id'])
-                // 		->update([
-                // 			'label' => $labelSearch
-                // 		]);
-                $checkLogNotif = DB::table('logs_notification as ln')
-                                        ->leftJoin('jobs', 'ln.job_id', '=', 'jobs.id')
-                                        ->where('ln.log_id', $getLog['id'])
-                                        ->first();
+               //$checkLogNotif = DB::table('logs_notification as ln')
+               //                         ->leftJoin('jobs', 'ln.job_id', '=', 'jobs.id')
+               //                         ->where('ln.log_id', $getLog['id'])
+               //                         ->first();
+                $check = DB::table('logs_app_notification as an')
+                    ->leftJoin('logs_notification as ln', 'an.log_id', '=', 'ln.log_id')
+                    ->leftJoin('jobs as j', 'ln.job_id', '=', 'j.id')
+                    ->where('an.log_id', $getLog['id'])
+                    ->first('j.id as job_id');
+                $checkLogNotif = $check != null ? ($check->job_id ? true : false) : false;
+
                 $type = "";
                 $hasDelay = false;
                 if($checkLogNotif) {
@@ -1246,10 +1249,10 @@ class ReportController extends Controller
                     $type = DB::table('logs_app_notification')
                         ->where('log_id', $getLog['id'])->first()->type;
 
-                    DB::table('jobs')->where('id', $checkLogNotif->job_id)->delete();
+                    DB::table('jobs')->where('id', $check->job_id)->delete();
                     DB::table('logs_notification')
                         ->where('log_id', $getLog['id'])
-                        ->where('job_id', $checkLogNotif->job_id)
+                        ->where('job_id', $check->job_id)
                         ->delete();
 
                     DB::table('logs_app_notification')
