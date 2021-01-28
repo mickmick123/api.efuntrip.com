@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Validator;
+use Mockery\Undefined;
 
 class RiderEvaluationController extends Controller
 {
@@ -28,6 +29,8 @@ class RiderEvaluationController extends Controller
             'id' => 'required',
             'question' => 'required',
             'choices' => 'required',
+            'answer_history' => 'required',
+            'choice_history' => 'required',
         ]);
         if ($validator->fails()) {
             $response['status'] = 'Failed';
@@ -57,29 +60,51 @@ class RiderEvaluationController extends Controller
             foreach ($tempData as $k => $v) {
                 $tempId[$k] = $v["id"];
                 $checkId = RiderEvaluationQA::where('id', $v["id"])->pluck('id');
+                $data['id'] = $v['id'];
+                $data['question'] = $v['question'];
+                $data['choices'] = $v['choices'];
                 if ($checkId->count() == 0) {
-                    $this->riderEvaluationQA->saveMultipleToDb($v);
+                    $this->riderEvaluationQA->saveMultipleToDb($data);
                 } else {
-                    $this->riderEvaluationQA->updateById(['id' => $v["id"]], $v);
+                    $this->riderEvaluationQA->updateById(['id' => $data["id"]], $data);
                 }
             }
-            $deleteId = RiderEvaluationQA::pluck('id');
+            $deleteId = RiderEvaluationQA::get();
+            $id = 1;
             foreach ($deleteId as $k => $v) {
-                if (!in_array($v, $tempId)) {
-                    $this->riderEvaluationQA->deleteById(['id' => $v]);
+                if (!in_array($v['id'], $tempId)) {
+                    $this->riderEvaluationQA->deleteById(['id' => $v['id']]);
+                    $id--;
                 }
+                $data['id'] = $id++;
+                $data['question'] = $v['question'];
+                $data['choices'] = $v['choices'];
+                $this->riderEvaluationQA->updateById(['id' => $v['id']], $data);
             }
 
             $update = [];
             $getEvaluation = RiderEvaluation::all();
-            $getQA = RiderEvaluationQA::all();
             foreach ($getEvaluation as $k => $v) {
                 $scores = 0;
-                foreach (json_decode($v['answers']) as $kk => $vv) {
-                    if ($vv !== null) {
-                        $scores += (float)json_decode($getQA[$kk]['choices'])[$vv]->score;
+                $answerHistory = json_decode($v['answers']);
+                foreach ($answerHistory as $kk => $vv) {
+                    if (in_array($kk, json_decode($request->choice_history))) {
+                        $answerHistory[$kk] = null;
                     }
                 }
+                foreach (json_decode($request->answer_history) as $kk => $vv) {
+                    if ($vv == 'add') {
+                        array_push($answerHistory, null);
+                    } else {
+                        $answerHistory = ArrayHelper::ArrayRemoveKey($answerHistory, $vv + 1);
+                    }
+                }
+                foreach ($answerHistory as $kk => $vv) {
+                    if ($vv !== null) {
+                        $scores += (float)json_decode(RiderEvaluationQA::where('id', $kk + 1)->get()[0]['choices'])[$vv]->score;
+                    }
+                }
+                $update['answers'] = $answerHistory;
                 $update['result'] = $scores + 1;
                 $update['delivery_fee'] = $v['delivery_fee'];
                 $update['rider_income'] = self::riderIncome($update['result'], $v['delivery_fee']);
