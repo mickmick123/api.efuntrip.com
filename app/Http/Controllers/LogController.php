@@ -86,6 +86,8 @@ class LogController extends Controller
             $log['user'] = $name[0]->name;
         } else if ($type == "Added Service") {
             $optional = "Service Added: ";
+        } else if ($type == "Documents Needed" || $type == "Released from Immigration" || $type == "Documents Received") {
+            $optional = $type.": ";
         }
 
         $data['type'] = strpos($type, 'Service Payment') !== false ? 'Service Payment' : $type;
