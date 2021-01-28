@@ -97,6 +97,7 @@ class RiderEvaluationController extends Controller
     public function addEvaluation(Request $request)
     {
         $validator = Validator::make($request->all(), [
+            'order_id' => 'required',
             'rider_id' => 'required',
             'answer' => 'required',
             'scores' => 'required',
@@ -111,6 +112,7 @@ class RiderEvaluationController extends Controller
         } else {
             $data = new RiderEvaluation;
             $data->rider_id = $request->rider_id;
+            $data->order_id = $request->order_id;
             $answer = [];
             foreach (json_decode($request->answer) as $k => $v) {
                 $answer[$k] = $v;
@@ -137,6 +139,7 @@ class RiderEvaluationController extends Controller
             'answer' => 'required',
             'scores' => 'required',
             'delivery_fee' => 'required',
+            'order_id' => 'required',
         ]);
 
         if ($validator->fails()) {
@@ -150,6 +153,7 @@ class RiderEvaluationController extends Controller
             }
             $data['answers'] = json_encode($answer);
             $data['result'] = array_sum(json_decode($request->scores)) + 1;
+            $data['order_id'] = $request->order_id;
             $data['delivery_fee'] = $request->delivery_fee;
             $data['rider_income'] = self::riderIncome($data['result'], $request->delivery_fee);
             $data['evaluation'] = 100 + $data['result'];
@@ -236,9 +240,12 @@ class RiderEvaluationController extends Controller
                     return $q->orderBy($sort[0], $sort[1]);
                 })->paginate($perPage);
 
+            $rider_name = RiderName::findorfail($request->rider_id)->name;
+
             $response['status'] = 'Success';
             $response['code'] = 200;
             $response['data'] = $data;
+            $response['rider_name'] = $rider_name;
         }
         return Response::json($response);
     }
