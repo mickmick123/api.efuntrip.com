@@ -315,6 +315,7 @@ class RiderEvaluationController extends Controller
             $response['code'] = 200;
             $response['summary'] = self::getSummary($request)['summary'];
             $response['data'] = self::getSummary($request)['data'];
+            $response['rider_name'] = RiderName::findorfail($request->rider_id)->name;;
         }
         return Response::json($response);
     }
