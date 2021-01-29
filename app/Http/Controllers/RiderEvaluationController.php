@@ -10,7 +10,6 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Validator;
-use Mockery\Undefined;
 
 class RiderEvaluationController extends Controller
 {
@@ -280,6 +279,7 @@ class RiderEvaluationController extends Controller
         $validator = Validator::make($request->all(), [
             'year' => 'required',
             'quarter' => 'required',
+            'search' => 'nullable',
         ]);
         if ($validator->fails()) {
             $response['status'] = 'Failed';
@@ -287,7 +287,7 @@ class RiderEvaluationController extends Controller
             $response['code'] = 422;
         } else {
             $data = [];
-            $riders = RiderName::all();
+            $riders = RiderName::where('name', 'like', '%' . $request->search . '%')->get();
             foreach ($riders as $k => $v) {
                 $stringJson = '"id":' . $v->id . ',"name":"' . $v->name . '",';
                 $tempData = [];
