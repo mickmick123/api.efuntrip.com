@@ -3359,16 +3359,16 @@ public function getClientPackagesByGroup($client_id, $group_id){
                 // $ewallet_refund->save();
 
                 //for financing
-                $finance = new Financing;
-                $finance->user_sn = Auth::user()->id;
-                $finance->type = "refund";
-                $finance->record_id = $servicePayment->id;
-                $finance->cat_type = "process";
-                $finance->cat_storage = 'cash';
-                $finance->cash_client_refund = $servicePayment->amount;
-                $finance->branch_id = 1;
-                $finance->trans_desc = Auth::user()->first_name.' refund to client #'.$model->client_id.' due to cancelled service';
-                $finance->save();
+                // $finance = new Financing;
+                // $finance->user_sn = Auth::user()->id;
+                // $finance->type = "refund";
+                // $finance->record_id = $servicePayment->id;
+                // $finance->cat_type = "process";
+                // $finance->cat_storage = 'cash';
+                // $finance->cash_client_refund = $servicePayment->amount;
+                // $finance->branch_id = 1;
+                // $finance->trans_desc = Auth::user()->first_name.' refund to client #'.$model->client_id.' due to cancelled service';
+                // $finance->save();
 
                 //save transaction history
                 $d = $model->created_at->format('M d, Y');
