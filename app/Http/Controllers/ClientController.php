@@ -408,7 +408,7 @@ class ClientController extends Controller
 
 		$response = $clients;
         $branch_users = BranchUser::where('branch_id',$branch)->pluck('user_id');
-        $col = User::whereIn('id',$branch_users)->sum('collectable');
+        $col = User::whereIn('id',$branch_users)->where('collectable','<',0)->sum('collectable');
         $bal = User::whereIn('id',$branch_users)->sum('balance');
         // $clients['balance'] = $bal;
 
