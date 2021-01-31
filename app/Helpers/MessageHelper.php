@@ -18,15 +18,16 @@ class MessageHelper
             } else {
                 $msg = "Your e-wallet deposit amounting to " . $self->absNumber($data['amount']) . " has been added to your account. Your new balance is " . $self->absNumber($data['balance']);
             }
-        } else if ($type == "Document Released") {
-            if (strpos($data['detail'], "client's representative ")) {
-                $receiver = explode("client's representative ", $data['label'])[1]."\n ";
-                $detail = explode('.', explode($receiver, $data['detail'])[1])[0];
-            } else {
-                $detail = explode('.', explode("client\n ", $data['detail'])[1])[0];
-            }
-            $msg = "Your documents " . $detail . " have been released.";
         }
+        //else if ($type == "Document Released") {
+        //    if (strpos($data['detail'], "client's representative ")) {
+        //        $receiver = explode("client's representative ", $data['label'])[1]."\n ";
+        //        $detail = explode('.', explode($receiver, $data['detail'])[1])[0];
+        //    } else {
+        //        $detail = explode('.', explode("client\n ", $data['detail'])[1])[0];
+        //    }
+        //    $msg = "Your documents " . $detail . " have been released.";
+        //}
         //else if ($type == "Document Received") {
         //    if (strpos($data['detail'], "client's representative ")) {
         //        $receiver = explode("client's representative ", $data['label'])[1];

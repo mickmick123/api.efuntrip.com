@@ -388,7 +388,8 @@ class ReportController extends Controller
 			$estimatedReleasingDate = $report['extensions']['estimated_releasing_date'];
 			$estimatedReleasingDate = Carbon::parse($estimatedReleasingDate)->format('F d, Y');
 
-			$detail .= ' Estimated releasing date is ' . $estimatedReleasingDate . '.';
+			// ariel 1/28/21
+			//$detail .= ' Estimated releasing date is ' . $estimatedReleasingDate . '.';
 		}
 		if( count($report['extensions']['scheduled_hearing_date_and_time']) > 0 ) {
 			$scheduledHearingDateAndTimes = $report['extensions']['scheduled_hearing_date_and_time'];
@@ -589,16 +590,7 @@ class ReportController extends Controller
 
                 $detail .= PHP_EOL . 'For the service ['.$cs->detail.']. Estimated releasing date is ' . $estimatedReleasingDate . '.';
             }
-            $_data = [
-                'id' => $log->id,
-                'client_id' => $cs->client_id,
-                'group_id' => $cs->group_id,
-                'message' => $detail
-            ];
 
-            app(LogController::class)->addNotif($_data, $serviceProcedure->name);
-
-            // $this->sendPushNotification($cs->client_id, $detail, $_data);
 
 	        // Document log
 	        if( $actionName == 'Filed' || $actionName == 'Released' ) {
@@ -642,7 +634,7 @@ class ReportController extends Controller
 						}
 	        }
 
-
+            $docX = "";
 	        // Missing documents
 	        if( $actionName != 'Filed' ) {
 	        	if( $actionName == 'Prepared' && $categoryName == 'Documents' ) {
@@ -654,55 +646,63 @@ class ReportController extends Controller
 
               $onHandDocuments = OnHandDocument::where('client_id', $cs->client_id)->get();
 
-              // $temp = [];
-              // $missingDocuments = [];
-              // foreach( $preparedDocuments as $preparedDocument ) {
-              //   foreach( $preparedDocument->clientReportDocuments as $document ) {
+               $temp = [];
+               $missingDocuments = [];
+               foreach( $preparedDocuments as $preparedDocument ) {
+                 foreach( $preparedDocument->clientReportDocuments as $document ) {
 
-              //     if( !in_array($document['document_id'], $temp)) {
-              //       $temp[] = $document['document_id'];
+                   if( !in_array($document['document_id'], $temp)) {
+                     $temp[] = $document['document_id'];
 
-              //       $reportDocumentId = $document['document_id'];
-              //       $reportCount = $document['count'];
+                     $reportDocumentId = $document['document_id'];
+                     $reportCount = $document['count'];
 
-              //       $arr = collect($onHandDocuments)->filter(function($item) use($reportDocumentId) {
-              //         return $item['document_id'] == $reportDocumentId;
-              //       })->values()->toArray();
+                     $arr = collect($onHandDocuments)->filter(function($item) use($reportDocumentId) {
+                       return $item['document_id'] == $reportDocumentId;
+                     })->values()->toArray();
 
-              //       if( count($arr) == 0 ) {
-              //         $missingDocuments[] = [
-              //           'document_id' => $reportDocumentId,
-              //           'count' => 0,
-              //           'pending_count' => $reportCount
-              //         ];
-              //       } elseif( count($arr) == 1 && $arr[0]['count'] < $reportCount ) {
-              //         $missingDocuments[] = [
-              //           'document_id' => $reportDocumentId,
-              //           'count' => 0,
-              //           'pending_count' => $reportCount - $arr[0]['count']
-              //         ];
-              //       }
-              //     }
+                     if( count($arr) == 0 ) {
+                       $missingDocuments[] = [
+                         'document_id' => $reportDocumentId,
+                         'count' => 0,
+                         'pending_count' => $reportCount
+                       ];
+                     } elseif( count($arr) == 1 && $arr[0]['count'] < $reportCount ) {
+                       $missingDocuments[] = [
+                         'document_id' => $reportDocumentId,
+                         'count' => 0,
+                         'pending_count' => $reportCount - $arr[0]['count']
+                       ];
+                     }
+                   }
 
-              //   }
-              // }
+                 }
+               }
 
-              // foreach( $missingDocuments as $missingDocument ) {
-              //   $previousOnHand = 0;
+               $i=1;
+               foreach( $missingDocuments as $missingDocument ) {
+                 $previousOnHand = 0;
 
-              //       $onHandDocument = OnHandDocument::where('client_id', $cs->client_id)
-              //           ->where('document_id', $missingDocument['document_id'])->first();
+                     $onHandDocument = OnHandDocument::where('client_id', $cs->client_id)
+                         ->where('document_id', $missingDocument['document_id'])->first();
 
-              //       if( $onHandDocument ) {
-              //         $previousOnHand = $onHandDocument->count;
-              //       }
+                     if( $onHandDocument ) {
+                       $previousOnHand = $onHandDocument->count;
+                     }
+                   $document = Document::where('id', $missingDocument['document_id'])->first();
 
-              //       $log->documents()->attach($missingDocument['document_id'], [
-              //         'count' => $missingDocument['count'],
-              //         'previous_on_hand' => $previousOnHand,
-              //         'pending_count' => $missingDocument['pending_count']
-              //       ]);
-              // }
+                   $docX .= $i.' ('.$missingDocument['pending_count'].')'. $document->title;
+
+                   if(count($missingDocuments) != $i) {
+                       $docX .= PHP_EOL;
+                   }
+                   //$log->documents()->attach($missingDocument['document_id'], [
+                   //    'count' => $missingDocument['count'],
+                   //    'previous_on_hand' => $previousOnHand,
+                   //    'pending_count' => $missingDocument['pending_count']
+                   //]);
+                   $i++;
+               }
 
 
               // Get pending documents
@@ -906,6 +906,28 @@ class ReportController extends Controller
 			        }
 	        	}
 	        }
+
+            $_detail = $detail;
+            if($cs->status =="pending" && $serviceProcedure->name == "Documents Needed"){
+                $_detail = "Documents Needed" . PHP_EOL . $detail . PHP_EOL;
+                if($docX != "") {
+                    $_detail .= "Pending Documents need to receive" . PHP_EOL . $docX . PHP_EOL;
+                }
+                $_detail .= "Service[$cs->detail]";
+            }
+
+            $_data = [
+                'id' => $log->id,
+                'client_id' => $cs->client_id,
+                'group_id' => $cs->group_id,
+                'message' => $_detail
+            ];
+
+            //if(!($cs->status =="on process" && $serviceProcedure->name == "Documents Needed")) {
+            app(LogController::class)->addNotif($_data, $serviceProcedure->name);
+            //}
+
+
 		}
 	}
 
@@ -1687,46 +1709,55 @@ class ReportController extends Controller
 
 			$groupID = ($getGroup) ? $getGroup->group_id : null;
 
-			$detail = '';
-
+			$detail = ''; $i=1;
+			$_detail = "";
 			foreach( $user['documents'] as $index => $document ) {
 				$documentTitle = Document::findOrFail($document['id'])->title;
 
 				$detail .= ' (' . $document['count'] . ')' . $documentTitle;
+				$_detail .= $i.'. (' . $document['count'] . ')' . $documentTitle . PHP_EOL;
 
 				if( $index == count($user['documents']) - 1 ) {
 					$detail .= '.';
 				} else {
 					$detail .= ', ';
 				}
+				$i++;
 			}
 
 			if($detail !== '') {
 				$detail = $action . "\n" . $detail;
 			}
 
-//			$saveLog = Log::create([
-//				'client_id' => $getUser->id,
-//				'group_id' => $groupID,
-//				'processor_id' => Auth::user()->id,
-//				'log_type' => 'Document',
-//				'detail' => $detail,
-//				'label' => $action,
-//				'log_date' => Carbon::now()->toDateString()
-//			]);
-            $addLog = new Log;
-            $addLog->client_id = $getUser->id;
-            $addLog->group_id = $groupID;
-            $addLog->processor_id = Auth::user()->id;
-            $addLog->log_type = 'Document';
-            $addLog->detail = $detail;
-            $addLog->label = $action;
-            $addLog->log_date = Carbon::now()->toDateString();
-            $addLog->save();
-            DB::table('logs_notification')->insert(['log_id' => $addLog->id, 'job_id' => 0]);
-            app(LogController::class)->addNotif($addLog,'Document Released');
+			$saveLog = Log::create([
+				'client_id' => $getUser->id,
+				'group_id' => $groupID,
+				'processor_id' => Auth::user()->id,
+				'log_type' => 'Document',
+				'detail' => $detail,
+				'label' => $action,
+				'log_date' => Carbon::now()->toDateString()
+			]);
 
-//			$this->sendPushNotification($getUser->id, $detail);
+            //$addLog = new Log;
+            //$addLog->client_id = $getUser->id;
+            //$addLog->group_id = $groupID;
+            //$addLog->processor_id = Auth::user()->id;
+            //$addLog->log_type = 'Document';
+            //$addLog->detail = $detail;
+            //$addLog->label = $action;
+            //$addLog->log_date = Carbon::now()->toDateString();
+            //$addLog->save();
+            //DB::table('logs_notification')->insert(['log_id' => $addLog->id, 'job_id' => 0]);
+
+            $_data = [
+                'id' => $saveLog->id,
+                'client_id' => $saveLog->client_id,
+                'group_id' => $saveLog->group_id,
+                'message' => "Your documents have been released ".PHP_EOL.$_detail
+            ];
+
+            app(LogController::class)->addNotif($_data,'Document Released');
 
 			// End Logs
 
@@ -1744,7 +1775,7 @@ class ReportController extends Controller
 							if($document['count'] > 0) {
 								DB::table('document_log')->insert([
 									'document_id' => $document['id'],
-									'log_id' => $addLog->id,
+									'log_id' => $saveLog->id,
 									'count' => $document['count'],
 									'pending_count' => 0,
 									'previous_on_hand' => $onHandDocument->count,
@@ -2158,16 +2189,15 @@ class ReportController extends Controller
                                         'log_date' => Carbon::now()->toDateString()
                                     ]);
 
-                                    $serviceProcedure = ServiceProcedure::where('id', $serviceProcedID)->first();
-
-                                    $_data = [
-                                        'id' => $docLogQuery->id,
-                                        'client_id' => $cs->client_id,
-                                        'group_id' => $cs->group_id,
-                                        'message' => $_docsDetail
-                                    ];
-
-                                    app(LogController::class)->addNotif($_data, $docLogType === 'received'?"Documents Received":$serviceProcedure->name);
+                                    // removed by ariel
+                                    // $serviceProcedure = ServiceProcedure::where('id', $serviceProcedID)->first();
+                                    // $_data = [
+                                    //     'id' => $docLogQuery->id,
+                                    //     'client_id' => $cs->client_id,
+                                    //     'group_id' => $cs->group_id,
+                                    //     'message' => $_docsDetail
+                                    // ];
+                                    //  app(LogController::class)->addNotif($_data, $docLogType === 'received'?"Documents Received":$serviceProcedure->name);
 
                                     //$this->sendPushNotification($cs->client_id, $_docsDetail, $_data);
 
