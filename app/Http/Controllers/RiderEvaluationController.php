@@ -417,10 +417,11 @@ class RiderEvaluationController extends Controller
                         $tempSummary['evaluation'][$i] = $evaluation['result'];
                     } else if ($ii === 4) {
                         $average += $v->evaluation;
+                        $aveOrder = $average / $orders;
                         $tempData[$index] = [
                             "date" => Carbon::parse($tempDate)->format('F d, Y'),
                             "detail" => 'Average/Order Evaluation:',
-                            "value" => $average / $orders . '%'
+                            "value" => explode('.', number_format($aveOrder, 2))[1] == '00' ? $aveOrder : number_format($aveOrder, 2) . '%'
                         ];
                         $tempSummary['average'][$i] = $average / $orders;
                     }
