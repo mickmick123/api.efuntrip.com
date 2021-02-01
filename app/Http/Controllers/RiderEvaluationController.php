@@ -121,7 +121,7 @@ class RiderEvaluationController extends Controller
     public function addEvaluation(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'order_id' => 'required',
+            // 'order_id' => 'required',
             'rider_id' => 'required',
             'answer' => 'required',
             'scores' => 'required',
@@ -163,7 +163,7 @@ class RiderEvaluationController extends Controller
             'answer' => 'required',
             'scores' => 'required',
             'delivery_fee' => 'required',
-            'order_id' => 'required',
+            // 'order_id' => 'required',
         ]);
 
         if ($validator->fails()) {
@@ -186,8 +186,6 @@ class RiderEvaluationController extends Controller
             $response['status'] = 'Success';
             $response['code'] = 200;
             $response['data'] = "Evaluation succesfully updated!";
-            $response['data1'] = $data;
-            $response['request'] = $request->all();
         }
         return Response::json($response);
     }
