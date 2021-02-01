@@ -845,7 +845,7 @@ class ReportController extends Controller
 	        }
 
             if($missingDocuments != "" && $serviceProcedure->name == "Documents Needed"){
-                $_detail = "Documents Needed" . PHP_EOL . $detail . PHP_EOL;
+                $_detail = $detail . PHP_EOL;
                 $_detail .= "Pending Documents need to receive" . PHP_EOL . $missingDocuments . PHP_EOL;
                 $_detail .= "Service[$cs->detail]";
 
