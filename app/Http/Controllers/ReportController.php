@@ -852,7 +852,7 @@ class ReportController extends Controller
                 $_data = ['id' => $log->id,'client_id' => $cs->client_id,'group_id' => $cs->group_id,'message' => $_detail];
 
                 app(LogController::class)->addNotif($_data, $serviceProcedure->name);
-            }elseif($serviceProcedure->name != "Documents Needed"){
+            }elseif($serviceProcedure->name != "Documents Needed" && $serviceProcedure->name != "Released from Immigration"){
                 $_data = ['id' => $log->id,'client_id' => $cs->client_id,'group_id' => $cs->group_id,'message' => $detail];
 
                 app(LogController::class)->addNotif($_data, $serviceProcedure->name);
@@ -2360,6 +2360,7 @@ class ReportController extends Controller
                             'group_id' => $cs->group_id,
                             'message' => $msgDetail
                         ];
+                        $_detail = "";
 
                         if($missingDocuments == "") {
                             app(LogController::class)->addNotif($_data, $serviceProcedure->name);
