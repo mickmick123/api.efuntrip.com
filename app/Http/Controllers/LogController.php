@@ -1808,10 +1808,10 @@ class LogController extends Controller
                     ->leftJoin('logs_notification as l', 'l.log_id', 'logs_app_notification.log_id')
                     ->leftJoin('jobs as j', 'j.id', 'l.job_id')
                     ->first();
-                $hasDelay = $logsNotification !=null? ($logsNotification->id != null ? true : false) : false;
+                $item->isDelaySent = $logsNotification !=null? ($logsNotification->id != null ? true : false) : false;
 
                 $detail = $log->detail;
-                if($hasDelay  && strpos($log->label, ", service is now complete. ") !== false){
+                if($item->isDelaySent  && strpos($log->label, ", service is now complete. ") !== false){
                     $explode = explode(", service is now complete. ", $log->label);
                     $item->message = trim(str_replace($explode[1],"", $detail));
                 }
