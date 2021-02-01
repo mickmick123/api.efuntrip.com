@@ -11,7 +11,7 @@ Route::post('rsa-sign', 'ClientController@rsaSign');
 
 Route::post('get-qr-data', 'ClientController@getQRData');
 
-Route::middleware('auth:api','throttle:300,1')->group(function() {
+Route::middleware('auth:api')->group(function() {
 
 	// Route::get('manage-clients', 'ClientController@manageClients');
 
