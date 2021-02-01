@@ -634,75 +634,12 @@ class ReportController extends Controller
 						}
 	        }
 
-            $docX = "";
+            $missingDocuments = "";
 	        // Missing documents
 	        if( $actionName != 'Filed' ) {
 	        	if( $actionName == 'Prepared' && $categoryName == 'Documents' ) {
-	        		$preparedDocuments = ClientReport::with('clientReportDocuments')
-                ->where('client_service_id', $cs->id)
-                ->where('service_procedure_id', $serviceProcedure->id)
-                ->orderBy('id', 'desc')
-                ->get();
 
-              $onHandDocuments = OnHandDocument::where('client_id', $cs->client_id)->get();
-
-               $temp = [];
-               $missingDocuments = [];
-               foreach( $preparedDocuments as $preparedDocument ) {
-                 foreach( $preparedDocument->clientReportDocuments as $document ) {
-
-                   if( !in_array($document['document_id'], $temp)) {
-                     $temp[] = $document['document_id'];
-
-                     $reportDocumentId = $document['document_id'];
-                     $reportCount = $document['count'];
-
-                     $arr = collect($onHandDocuments)->filter(function($item) use($reportDocumentId) {
-                       return $item['document_id'] == $reportDocumentId;
-                     })->values()->toArray();
-
-                     if( count($arr) == 0 ) {
-                       $missingDocuments[] = [
-                         'document_id' => $reportDocumentId,
-                         'count' => 0,
-                         'pending_count' => $reportCount
-                       ];
-                     } elseif( count($arr) == 1 && $arr[0]['count'] < $reportCount ) {
-                       $missingDocuments[] = [
-                         'document_id' => $reportDocumentId,
-                         'count' => 0,
-                         'pending_count' => $reportCount - $arr[0]['count']
-                       ];
-                     }
-                   }
-
-                 }
-               }
-
-               $i=1;
-               foreach( $missingDocuments as $missingDocument ) {
-                 $previousOnHand = 0;
-
-                     $onHandDocument = OnHandDocument::where('client_id', $cs->client_id)
-                         ->where('document_id', $missingDocument['document_id'])->first();
-
-                     if( $onHandDocument ) {
-                       $previousOnHand = $onHandDocument->count;
-                     }
-                   $document = Document::where('id', $missingDocument['document_id'])->first();
-
-                   $docX .= $i.' ('.$missingDocument['pending_count'].')'. $document->title;
-
-                   if(count($missingDocuments) != $i) {
-                       $docX .= PHP_EOL;
-                   }
-                   //$log->documents()->attach($missingDocument['document_id'], [
-                   //    'count' => $missingDocument['count'],
-                   //    'previous_on_hand' => $previousOnHand,
-                   //    'pending_count' => $missingDocument['pending_count']
-                   //]);
-                   $i++;
-               }
+	        		$missingDocuments = $this->getMissingDocuments($cs, $serviceProcedure->id);
 
 
               // Get pending documents
@@ -907,29 +844,93 @@ class ReportController extends Controller
 	        	}
 	        }
 
-            $_detail = $detail;
-            if($cs->status =="pending" && $serviceProcedure->name == "Documents Needed"){
+            if($missingDocuments != "" && $serviceProcedure->name == "Documents Needed"){
                 $_detail = "Documents Needed" . PHP_EOL . $detail . PHP_EOL;
-                if($docX != "") {
-                    $_detail .= "Pending Documents need to receive" . PHP_EOL . $docX . PHP_EOL;
-                }
+                $_detail .= "Pending Documents need to receive" . PHP_EOL . $missingDocuments . PHP_EOL;
                 $_detail .= "Service[$cs->detail]";
+
+                $_data = ['id' => $log->id,'client_id' => $cs->client_id,'group_id' => $cs->group_id,'message' => $_detail];
+
+                app(LogController::class)->addNotif($_data, $serviceProcedure->name);
+            }elseif($serviceProcedure->name != "Documents Needed"){
+                $_data = ['id' => $log->id,'client_id' => $cs->client_id,'group_id' => $cs->group_id,'message' => $detail];
+
+                app(LogController::class)->addNotif($_data, $serviceProcedure->name);
             }
-
-            $_data = [
-                'id' => $log->id,
-                'client_id' => $cs->client_id,
-                'group_id' => $cs->group_id,
-                'message' => $_detail
-            ];
-
-            //if(!($cs->status =="on process" && $serviceProcedure->name == "Documents Needed")) {
-            app(LogController::class)->addNotif($_data, $serviceProcedure->name);
-            //}
-
 
 		}
 	}
+
+	private function getMissingDocuments($cs, $serviceProcedureId) {
+        $preparedDocuments = ClientReport::with('clientReportDocuments')
+            ->where('client_service_id', $cs->id)
+            ->where('service_procedure_id', $serviceProcedureId)
+            ->orderBy('id', 'desc')
+            ->get();
+
+        $onHandDocuments = OnHandDocument::where('client_id', $cs->client_id)->get();
+
+        $temp = [];
+        $docX = "";
+        $missingDocuments = [];
+        foreach( $preparedDocuments as $preparedDocument ) {
+            foreach( $preparedDocument->clientReportDocuments as $document ) {
+
+                if( !in_array($document['document_id'], $temp)) {
+                    $temp[] = $document['document_id'];
+
+                    $reportDocumentId = $document['document_id'];
+                    $reportCount = $document['count'];
+
+                    $arr = collect($onHandDocuments)->filter(function($item) use($reportDocumentId) {
+                        return $item['document_id'] == $reportDocumentId;
+                    })->values()->toArray();
+
+                    if( count($arr) == 0 ) {
+                        $missingDocuments[] = [
+                            'document_id' => $reportDocumentId,
+                            'count' => 0,
+                            'pending_count' => $reportCount
+                        ];
+                    } elseif( count($arr) == 1 && $arr[0]['count'] < $reportCount ) {
+                        $missingDocuments[] = [
+                            'document_id' => $reportDocumentId,
+                            'count' => 0,
+                            'pending_count' => $reportCount - $arr[0]['count']
+                        ];
+                    }
+                }
+
+            }
+        }
+
+        $i=1;
+        foreach( $missingDocuments as $missingDocument ) {
+            $previousOnHand = 0;
+
+            $onHandDocument = OnHandDocument::where('client_id', $cs->client_id)
+                ->where('document_id', $missingDocument['document_id'])->first();
+
+            if( $onHandDocument ) {
+                $previousOnHand = $onHandDocument->count;
+            }
+            $document = Document::where('id', $missingDocument['document_id'])->first();
+
+            $docX .= $i.' ('.$missingDocument['pending_count'].')'. $document->title;
+
+            if(count($missingDocuments) != $i) {
+                $docX .= PHP_EOL;
+            }
+            //$log->documents()->attach($missingDocument['document_id'], [
+            //    'count' => $missingDocument['count'],
+            //    'previous_on_hand' => $previousOnHand,
+            //    'pending_count' => $missingDocument['pending_count']
+            //]);
+            $i++;
+        }
+
+        return $docX;
+    }
 
 	private function convertToPhotocopyDocuments($documents) {
 		$temp = [];
@@ -2284,6 +2285,7 @@ class ReportController extends Controller
 
                     if( $cs->status != $newStatus ) {
                         // $cs->update(['status' => $newStatus]);
+
                         $cs->status = $newStatus;
                         $cs->save();
 
@@ -2344,6 +2346,8 @@ class ReportController extends Controller
 
                         $serviceProcedure = ServiceProcedure::where('id', $serviceProcedID)->first();
 
+                        $missingDocuments = $this->getMissingDocuments($cs, $serviceProcedID);
+
                         $msgDetail = "";
                         if($_detail != null){
                             $msgDetail .= $_detail;
@@ -2357,7 +2361,9 @@ class ReportController extends Controller
                             'message' => $msgDetail
                         ];
 
-                        app(LogController::class)->addNotif($_data, $serviceProcedure->name);
+                        if($missingDocuments == "") {
+                            app(LogController::class)->addNotif($_data, $serviceProcedure->name);
+                        }
 
                         //$this->sendPushNotification($cs->client_id, $msgDetail, $_data);
                     }
