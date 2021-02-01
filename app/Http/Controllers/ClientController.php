@@ -399,10 +399,10 @@ class ClientController extends Controller
                 $l->created_at = Carbon::parse($l->created_at)->format('M j, Y h:i');;
             }
             // if (in_array($c->id, $colIds)){
-            //     $total_balance =  $this->getClientTotalBalance($c->id);
-            //     $col_balance =  $this->getClientTotalCollectables($c->id);
-            //     User::where('id', $c->id)
-            //         ->update(['balance' => $total_balance, 'collectable' => (($col_balance >= 0) ? 0 : $col_balance)]);
+                // $total_balance =  $this->getClientTotalBalance($c->id);
+                // $col_balance =  $this->getClientTotalCollectables($c->id);
+                // User::where('id', $c->id)
+                //     ->update(['balance' => $total_balance, 'collectable' => (($col_balance >= 0) ? 0 : $col_balance)]);
             // }
         }
 
