@@ -294,18 +294,19 @@ class RiderEvaluationController extends Controller
                     $quarterx = ceil($i / 3);
                     if ($request->quarter == $quarterx) {
                         for ($ii = 1; $ii <= 2; $ii++) {
-                            $data[$k] = [
-                                'rider_id' => $v->id,
-                                'month' => str_pad($i, 2, '0', STR_PAD_LEFT),
-                                'year' => $request['year'],
-                                'half_month' => $ii
-                            ];
-                            $tempData[$index] = self::getSummary($data[$k])['summary'];
-                            foreach ($tempData[$index] as $kk => $vv) {
-                                if ($kk === 'result') {
-                                    $stringJson .= '"result' . $i . $ii . '":' . '"' . $vv . '%",';
-                                }
-                            }
+                            // $data[$k] = [
+                            //     'rider_id' => $v->id,
+                            //     'month' => str_pad($i, 2, '0', STR_PAD_LEFT),
+                            //     'year' => $request['year'],
+                            //     'half_month' => $ii
+                            // ];
+                            // $tempData[$index] = self::getSummary($data[$k])['summary'];
+                            // foreach ($tempData[$index] as $kk => $vv) {
+                            //     if ($kk === 'result') {
+                            //         $stringJson .= '"result' . $i . $ii . '":' . '"' . $vv . '%",';
+                            //     }
+                            // }
+                            $stringJson .= '"result' . $i . $ii . '":' . '"el-icon-right",';
                             $index++;
                         }
                     }
