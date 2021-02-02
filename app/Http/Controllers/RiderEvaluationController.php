@@ -8,6 +8,7 @@ use App\RiderEvaluation;
 use App\RiderName;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Validator;
 
@@ -81,35 +82,7 @@ class RiderEvaluationController extends Controller
                 $this->riderEvaluationQA->updateById(['id' => $v['id']], $data);
             }
 
-            $update = [];
-            $getEvaluation = RiderEvaluation::all();
-            foreach ($getEvaluation as $k => $v) {
-                $scores = 0;
-                $answerHistory = json_decode($v['answers']);
-                foreach ($answerHistory as $kk => $vv) {
-                    if (in_array($kk, json_decode($request->choice_history))) {
-                        $answerHistory[$kk] = null;
-                    }
-                }
-                foreach (json_decode($request->answer_history) as $kk => $vv) {
-                    if ($vv == 'add') {
-                        array_push($answerHistory, null);
-                    } else {
-                        $answerHistory = ArrayHelper::ArrayRemoveKey($answerHistory, $vv + 1);
-                    }
-                }
-                foreach ($answerHistory as $kk => $vv) {
-                    if ($vv !== null) {
-                        $scores += (float)json_decode(RiderEvaluationQA::where('id', $kk + 1)->get()[0]['choices'])[$vv]->score;
-                    }
-                }
-                $update['answers'] = $answerHistory;
-                $update['result'] = $scores;
-                $update['delivery_fee'] = $v['delivery_fee'];
-                $update['rider_income'] = self::riderIncome($update['result'], $v['delivery_fee']);
-                $update['evaluation'] = 80 + ($update['result'] * 5);
-                $this->riderEvaluation->updateById(['id' => $v['id']], $update);
-            }
+            self::updateAllEvaluation($request->choice_history, $request->answer_history);
 
             $response['status'] = 'Success';
             $response['code'] = 200;
@@ -253,14 +226,28 @@ class RiderEvaluationController extends Controller
             $response['code'] = 422;
         } else {
             $sort = $request->sort;
-            $data = RiderEvaluation::where([
-                ['rider_id', $request->rider_id],
-                ['date', $request->date]
-            ])
+            self::updateAllEvaluation('[]', '[]');
+            $data = RiderEvaluation::select(['rider_evaluation.*', 'od.id as order_delayed', 'od.note'])
+                ->leftJoin('rider_name as rn', 'rider_evaluation.rider_id', 'rn.id')
+                ->leftJoin('order_delayed as od', 'rider_evaluation.order_id', 'od.order_id')
+                ->where([
+                    ['rider_evaluation.rider_id', $request->rider_id],
+                    ['rider_evaluation.date', $request->date]
+                ])
                 ->when($sort != '', function ($q) use ($sort) {
                     $sort = explode('-', $sort);
                     return $q->orderBy($sort[0], $sort[1]);
-                })->paginate($perPage);
+                })
+                ->orderBy('rider_evaluation.id')
+                ->paginate($perPage);
+            // $data = RiderEvaluation::where([
+            //     ['rider_id', $request->rider_id],
+            //     ['date', $request->date]
+            // ])
+            //     ->when($sort != '', function ($q) use ($sort) {
+            //         $sort = explode('-', $sort);
+            //         return $q->orderBy($sort[0], $sort[1]);
+            //     })->paginate($perPage);
 
             $rider_name = RiderName::findorfail($request->rider_id)->name;
 
@@ -435,6 +422,47 @@ class RiderEvaluationController extends Controller
         $summary['result'] = round((($summary['evaluation'] + $summary['average']) / ($summary['days'] === 0 ? 1 : $summary['days'])) / 2, 2);
 
         return ['summary' => $summary, 'data' => $data];
+    }
+
+    protected static function updateAllEvaluation($choice_history, $answer_history)
+    {
+        $update = [];
+        // $getEvaluation = RiderEvaluation::all();
+        $getEvaluation = RiderEvaluation::select(['rider_evaluation.*', 'od.id as order_delayed', 'od.note'])
+            ->leftJoin('rider_name as rn', 'rider_evaluation.rider_id', 'rn.id')
+            ->leftJoin('order_delayed as od', 'rider_evaluation.order_id', 'od.order_id')
+            ->orderBy('rider_evaluation.id')
+            ->get();
+
+        foreach ($getEvaluation as $k => $v) {
+            $scores = 0;
+            $answerHistory = json_decode($v['answers']);
+            foreach ($answerHistory as $kk => $vv) {
+                if (in_array($kk, json_decode($choice_history))) {
+                    $answerHistory[$kk] = null;
+                }
+            }
+            foreach (json_decode($answer_history) as $kk => $vv) {
+                if ($vv == 'add') {
+                    array_push($answerHistory, null);
+                } else {
+                    $answerHistory = ArrayHelper::ArrayRemoveKey($answerHistory, $vv + 1);
+                }
+            }
+            foreach ($answerHistory as $kk => $vv) {
+                if ($vv !== null) {
+                    $scores += (float)json_decode(RiderEvaluationQA::where('id', $kk + 1)->get()[0]['choices'])[$vv]->score;
+                }
+            }
+            $delayed = $v['order_delayed'] !== null ? 5 : 0;
+            $update['answers'] = $answerHistory;
+            $update['result'] = $scores;
+            $update['delivery_fee'] = $v['delivery_fee'];
+            $update['rider_income'] = self::riderIncome($update['result'], $v['delivery_fee']);
+            $update['evaluation'] = (80 + ($update['result'] * 5)) - $delayed;
+            // $this->riderEvaluation::updateById(['id' => $v['id']], $update);
+            DB::table('rider_evaluation')->where(['id' => $v['id']])->update($update);
+        }
     }
 
     protected static function riderIncome($data, $fee)
