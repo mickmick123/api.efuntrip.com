@@ -1984,6 +1984,7 @@ class ReportController extends Controller
 
                     $counter = 0;
                     $docsDetail = '';
+                    $arrDetail = [];
                     $_detail = '';
 
                     $docLogData = [];
@@ -2027,7 +2028,7 @@ class ReportController extends Controller
                                         $allRcvdDocs[$docIndex]['count'] += $clientReportDocument['count'];
                                         $docsDetail .= "\n" . '('.$clientReportDocument['count'].')' . ' '. $onHandDocuments[$index]->title;
 
-                                        $_detail .= ($index + 1).'. ('.$clientReportDocument['count'].')' . ' '. $onHandDocuments[$index]->title . PHP_EOL;
+                                        $arrDetail[] = ' ('.$clientReportDocument['count'].')' . ' '. $onHandDocuments[$index]->title;
 
                                         $pendingCount = 0;
                                         if( ($allRcvdDocs[$docIndex]['count'] - $clientReportDocument['count']) > $onHandDocuments[$index]->count ) {
@@ -2072,7 +2073,7 @@ class ReportController extends Controller
 
                                         $docsDetail .= "\n" . '('.$clientReportDocument['count'].')' . ' '. $onHandDocuments[$index]->title;
 
-                                        $_detail .= ($index + 1).'. ('.$clientReportDocument['count'].')' . ' '. $onHandDocuments[$index]->title . PHP_EOL;
+                                        $arrDetail[] = ' ('.$clientReportDocument['count'].')' . ' '. $onHandDocuments[$index]->title;
 
                                         $docLogData[] = [
                                             'document_id' => $onHandDocuments[$index]->id,
@@ -2344,6 +2345,15 @@ class ReportController extends Controller
                             'label' => $label,
                             'log_date' => Carbon::now()->toDateString()
                         ]);
+
+                        $i = 1;
+                        foreach ($arrDetail as $row){
+                            $_detail .= $i.".".$row;
+                            if(count($arrDetail) != $i){
+                                $_detail .= PHP_EOL;
+                            }
+                            $i++;
+                        }
 
                         $serviceProcedure = ServiceProcedure::where('id', $serviceProcedID)->first();
 
