@@ -104,10 +104,10 @@ class RiderEvaluationController extends Controller
                     }
                 }
                 $update['answers'] = $answerHistory;
-                $update['result'] = $scores + 1;
+                $update['result'] = $scores;
                 $update['delivery_fee'] = $v['delivery_fee'];
                 $update['rider_income'] = self::riderIncome($update['result'], $v['delivery_fee']);
-                $update['evaluation'] = 100 + $update['result'];
+                $update['evaluation'] = 80 + ($update['result'] * 5);
                 $this->riderEvaluation->updateById(['id' => $v['id']], $update);
             }
 
@@ -142,10 +142,10 @@ class RiderEvaluationController extends Controller
                 $answer[$k] = $v;
             }
             $data->answers = json_encode($answer);
-            $data->result = array_sum(json_decode($request->scores)) + 1;
+            $data->result = array_sum(json_decode($request->scores));
             $data->delivery_fee = $request->delivery_fee;
             $data->rider_income = self::riderIncome($data->result, $request->delivery_fee);
-            $data->evaluation = 100 + $data->result;
+            $data->evaluation = 80 + ($data->result * 5);
             $data->date = $request->date;
             $this->riderEvaluation->saveToDb($data->toArray());
 
@@ -176,11 +176,11 @@ class RiderEvaluationController extends Controller
                 $answer[$k] = $v;
             }
             $data['answers'] = json_encode($answer);
-            $data['result'] = array_sum(json_decode($request->scores)) + 1;
+            $data['result'] = array_sum(json_decode($request->scores));
             // $data['order_id'] = $request->order_id;
             $data['delivery_fee'] = $request->delivery_fee;
             $data['rider_income'] = self::riderIncome($data['result'], $request->delivery_fee);
-            $data['evaluation'] = 100 + $data['result'];
+            $data['evaluation'] = 80 + ($data['result'] * 5);
             $this->riderEvaluation->updateById(['id' => $request->id], $data);
 
             $response['status'] = 'Success';
