@@ -1594,6 +1594,23 @@ class InventoryController extends Controller
             $inv->updated_at = strtotime("now");
             $inv->save();
 
+            $updateSetting = json_decode($request->setting);
+            $invSetting = InventoryConsumablesSetting::where('inv_id',$request->inventory_id)->first();
+            $invSetting->length = $updateSetting->length_m;
+            $invSetting->width = $updateSetting->width_m;
+            $invSetting->height = $updateSetting->height_m;
+            $invSetting->imported_rmb_price = $updateSetting->imported_rmb_price;
+            $invSetting->shipping_fee_per_cm = $updateSetting->shipping_fee_per_cm;
+            $invSetting->rmb_rate = $updateSetting->rmb_rate;
+            $invSetting->market_price_min = $updateSetting->market_price_min;
+            $invSetting->market_price_max = $updateSetting->market_price_max;
+            $invSetting->advised_sale_price = $updateSetting->advised_sale_price;
+            $invSetting->actual_sale_price = $updateSetting->actual_sale_price;
+            $invSetting->id = $updateSetting->id;
+            $invSetting->expiration_date = $updateSetting->expiration_date;
+            $invSetting->remarks = $updateSetting->remarks;
+            $invSetting->save();
+
             $checkPurchase = InventoryConsumables::where('inventory_id',$request->inventory_id)->get()->count();
             if($checkPurchase === 0){
                 InventoryPurchaseUnit::where('inv_id',$inv->inventory_id)->delete();
@@ -1661,6 +1678,7 @@ class InventoryController extends Controller
     public function getInventory(Request $request){
         $list = Inventory::where('inventory_id',$request->inventory_id)->get(['inventory_id','description','specification']);
         foreach ($list as $k=>$v){
+            $v->setting = InventoryConsumablesSetting::where('inv_id',$v->inventory_id)->get();
             $v->purchase = InventoryPurchaseUnit::leftJoin('inventory_unit as iun','inventory_purchase_unit.unit_id','iun.unit_id')
                 ->where('inventory_purchase_unit.inv_id',$v->inventory_id)->get(['iun.name','inventory_purchase_unit.qty']);
             foreach($v->purchase as $kk=>$vv){
