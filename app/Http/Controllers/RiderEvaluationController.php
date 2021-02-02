@@ -8,21 +8,12 @@ use App\RiderEvaluation;
 use App\RiderName;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Validator;
 
 class RiderEvaluationController extends Controller
 {
-    protected $riderEvaluationQA;
-    protected $riderEvaluation;
-
-    public function __construct(RiderEvaluationQA $riderEvaluationQA, RiderEvaluation $riderEvaluation)
-    {
-        $this->riderEvaluationQA = $riderEvaluationQA;
-        $this->riderEvaluation = $riderEvaluation;
-    }
-
+    
     public function updateQA(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -56,30 +47,36 @@ class RiderEvaluationController extends Controller
                 }
                 $tempData[$k]['choices'] = json_encode($tempData[$k]['choices']);
             }
+
             $tempId = [];
             foreach ($tempData as $k => $v) {
                 $tempId[$k] = $v["id"];
                 $checkId = RiderEvaluationQA::where('id', $v["id"])->pluck('id');
-                $data['id'] = $v['id'];
-                $data['question'] = $v['question'];
-                $data['choices'] = $v['choices'];
                 if ($checkId->count() == 0) {
-                    $this->riderEvaluationQA->saveMultipleToDb($data);
+                    $data = new RiderEvaluationQA;
                 } else {
-                    $this->riderEvaluationQA->updateById(['id' => $data["id"]], $data);
+                    $data = RiderEvaluationQA::find($v['id']);
                 }
+                $data->id = $v['id'];
+                $data->question = $v['question'];
+                $data->choices = $v['choices'];
+                $data->save();
             }
             $deleteId = RiderEvaluationQA::get();
             $id = 1;
             foreach ($deleteId as $k => $v) {
                 if (!in_array($v['id'], $tempId)) {
-                    $this->riderEvaluationQA->deleteById(['id' => $v['id']]);
+                    RiderEvaluationQA::find($v['id'])->delete();
                     $id--;
                 }
-                $data['id'] = $id++;
-                $data['question'] = $v['question'];
-                $data['choices'] = $v['choices'];
-                $this->riderEvaluationQA->updateById(['id' => $v['id']], $data);
+                $data = RiderEvaluationQA::where('id', $v['id'])->first();
+                if ($data !== null) {
+                    $data->id = $id;
+                    $data->question = $v['question'];
+                    $data->choices = $v['choices'];
+                    $data->save();
+                }
+                $id++;
             }
 
             self::updateAllEvaluation($request->choice_history, $request->answer_history);
@@ -120,7 +117,7 @@ class RiderEvaluationController extends Controller
             $data->rider_income = self::riderIncome($data->result, $request->delivery_fee);
             $data->evaluation = 80 + ($data->result * 5);
             $data->date = $request->date;
-            $this->riderEvaluation->saveToDb($data->toArray());
+            $data->save();
 
             $response['status'] = 'Success';
             $response['code'] = 200;
@@ -148,13 +145,14 @@ class RiderEvaluationController extends Controller
             foreach (json_decode($request->answer) as $k => $v) {
                 $answer[$k] = $v;
             }
-            $data['answers'] = json_encode($answer);
-            $data['result'] = array_sum(json_decode($request->scores));
+            $data = RiderEvaluation::find($request->id);
+            $data->answers = json_encode($answer);
+            $data->result = array_sum(json_decode($request->scores));
             // $data['order_id'] = $request->order_id;
-            $data['delivery_fee'] = $request->delivery_fee;
-            $data['rider_income'] = self::riderIncome($data['result'], $request->delivery_fee);
-            $data['evaluation'] = 80 + ($data['result'] * 5);
-            $this->riderEvaluation->updateById(['id' => $request->id], $data);
+            $data->delivery_fee = $request->delivery_fee;
+            $data->rider_income = self::riderIncome($data['result'], $request->delivery_fee);
+            $data->evaluation = 80 + ($data['result'] * 5);
+            $data->save();
 
             $response['status'] = 'Success';
             $response['code'] = 200;
@@ -174,7 +172,7 @@ class RiderEvaluationController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
-            $this->riderEvaluation->deleteById(['id' => $request->id]);
+            RiderEvaluation::find($request->id)->delete();
 
             $response['status'] = 'Success';
             $response['code'] = 200;
@@ -216,7 +214,7 @@ class RiderEvaluationController extends Controller
     public function getEvaluationDay(Request $request, $perPage = 10)
     {
         $validator = Validator::make($request->all(), [
-            // 'rider_id' => 'required|exists:rider_evaluation',
+            'rider_id' => 'required|exists:rider_evaluation',
             'date' => 'required'
         ]);
 
@@ -240,14 +238,6 @@ class RiderEvaluationController extends Controller
                 })
                 ->orderBy('rider_evaluation.id')
                 ->paginate($perPage);
-            // $data = RiderEvaluation::where([
-            //     ['rider_id', $request->rider_id],
-            //     ['date', $request->date]
-            // ])
-            //     ->when($sort != '', function ($q) use ($sort) {
-            //         $sort = explode('-', $sort);
-            //         return $q->orderBy($sort[0], $sort[1]);
-            //     })->paginate($perPage);
 
             $rider_name = RiderName::findorfail($request->rider_id)->name;
 
@@ -426,8 +416,6 @@ class RiderEvaluationController extends Controller
 
     protected static function updateAllEvaluation($choice_history, $answer_history)
     {
-        $update = [];
-        // $getEvaluation = RiderEvaluation::all();
         $getEvaluation = RiderEvaluation::select(['rider_evaluation.*', 'od.id as order_delayed', 'od.note'])
             ->leftJoin('rider_name as rn', 'rider_evaluation.rider_id', 'rn.id')
             ->leftJoin('order_delayed as od', 'rider_evaluation.order_id', 'od.order_id')
@@ -455,13 +443,13 @@ class RiderEvaluationController extends Controller
                 }
             }
             $delayed = $v['order_delayed'] !== null ? 5 : 0;
-            $update['answers'] = $answerHistory;
-            $update['result'] = $scores;
-            $update['delivery_fee'] = $v['delivery_fee'];
-            $update['rider_income'] = self::riderIncome($update['result'], $v['delivery_fee']);
-            $update['evaluation'] = (80 + ($update['result'] * 5)) - $delayed;
-            // $this->riderEvaluation::updateById(['id' => $v['id']], $update);
-            DB::table('rider_evaluation')->where(['id' => $v['id']])->update($update);
+            $update = RiderEvaluation::find($v['id']);
+            $update->answers = $answerHistory;
+            $update->result = $scores;
+            $update->delivery_fee = $v['delivery_fee'];
+            $update->rider_income = self::riderIncome($update['result'], $v['delivery_fee']);
+            $update->evaluation = (80 + ($update['result'] * 5)) - $delayed;
+            $update->save();
         }
     }
 

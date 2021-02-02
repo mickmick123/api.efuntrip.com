@@ -2,9 +2,9 @@
 
 namespace App;
 
-use App\BaseModel;
+use Illuminate\Database\Eloquent\Model;
 
-class RiderEvaluationQA extends BaseModel
+class RiderEvaluationQA extends Model
 {
     protected $table = 'rider_evaluation_qa';
     public $timestamps = false;
