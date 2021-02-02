@@ -2364,9 +2364,9 @@ class ReportController extends Controller
                             $msgDetail .= $docLog;
                         }
                         elseif ($docLogType != null && $_detail != "") {
-                            $msgDetail .= $_detail;
+                            $msgDetail .= PHP_EOL . $_detail;
                         }
-                        $msgDetail .= "Document Received Completed. ".$detail;
+                        $msgDetail .= $detail;
 
                         $_data = [
                             'id' => $_log->id,
@@ -2376,7 +2376,7 @@ class ReportController extends Controller
                         ];
 
                         if($missingDocuments == "") {
-                            app(LogController::class)->addNotif($_data, $serviceProcedure->name);
+                            app(LogController::class)->addNotif($_data, "Documents Complete");
                         }
 
                         //$this->sendPushNotification($cs->client_id, $msgDetail, $_data);
