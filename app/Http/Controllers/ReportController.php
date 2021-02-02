@@ -1682,9 +1682,8 @@ class ReportController extends Controller
 
 	        $this->handleStandAloneOnHandDocuments($action, $user);
 
-	        $detail = $this->getDocumentDetail($user);
 	        // Documents Needed w/ push notification execution
-            $this->handleUpdateStatus($user['id'], 1, null, 'received', null, $detail);
+            $this->handleUpdateStatus($user['id'], 1, null, 'received');
 		}
 
 		$response['status'] = 'Success';
@@ -1922,7 +1921,7 @@ class ReportController extends Controller
 		return Response::json($response);
 	}
 
-	private function handleUpdateStatus($clientId, $type, $_clientServiceId = null, $docLogType = null, $dcs = null, $_detail = null) {
+	private function handleUpdateStatus($clientId, $type, $_clientServiceId = null, $docLogType = null, $dcs = null, $docLog = null) {
 		if( $type == 1 ) {
 			$status = 'pending';
 		} elseif( $type == 2 ) {
@@ -1953,7 +1952,7 @@ class ReportController extends Controller
 
 		if( count($clientReports) > 0 ) {
             $onHandDocuments = OnHandDocument::where('client_id', $clientId)->join('documents', 'on_hand_documents.document_id', '=', 'documents.id')->get();
-            //dd($onHandDocuments);
+
             $clientDocsArr = [];
             $clientArray = [];
             $allRcvdDocs = [];
@@ -1985,10 +1984,9 @@ class ReportController extends Controller
 
                     $counter = 0;
                     $docsDetail = '';
-                    $_docsDetail = '';
+                    $_detail = '';
 
                     $docLogData = [];
-
                     foreach( $clientReport['client_report_documents'] as $cli => $clientReportDocument ) {
                         $index = -1;
 
@@ -2028,6 +2026,8 @@ class ReportController extends Controller
                                     if( $allRcvdDocs[$docIndex]['count'] < $onHandDocuments[$index]->count ) {
                                         $allRcvdDocs[$docIndex]['count'] += $clientReportDocument['count'];
                                         $docsDetail .= "\n" . '('.$clientReportDocument['count'].')' . ' '. $onHandDocuments[$index]->title;
+
+                                        $_detail .= ($index + 1).'. ('.$clientReportDocument['count'].')' . ' '. $onHandDocuments[$index]->title . PHP_EOL;
 
                                         $pendingCount = 0;
                                         if( ($allRcvdDocs[$docIndex]['count'] - $clientReportDocument['count']) > $onHandDocuments[$index]->count ) {
@@ -2072,6 +2072,8 @@ class ReportController extends Controller
 
                                         $docsDetail .= "\n" . '('.$clientReportDocument['count'].')' . ' '. $onHandDocuments[$index]->title;
 
+                                        $_detail .= ($index + 1).'. ('.$clientReportDocument['count'].')' . ' '. $onHandDocuments[$index]->title . PHP_EOL;
+
                                         $docLogData[] = [
                                             'document_id' => $onHandDocuments[$index]->id,
                                             'log_id' => 0,
@@ -2113,17 +2115,16 @@ class ReportController extends Controller
 
                         if($docLogType === 'received') {
                             if($_detail !== null) {
-                                $_docsDetail = $_detail;
-
                                 $docLabel = 'Received documents from Client';
-                                $docsDetail = 'Received documents from Client:' . "\n" . $_docsDetail;
+                                $docsDetail = 'Received documents from Client:' . "\n" . $docsDetail;
+
                                 $docLogCounter++;
                             }
                         } else if($docLogType === 'generate_photocopy') {
                             if($docsDetail !== '') {
                                 $docLabel = 'Generate photocopies of Documents';
                                 $docsDetail = 'Generate photocopies of Documents:' . "\n" . $docsDetail;
-                                $_docsDetail = $docsDetail;
+
                                 $docLogCounter++;
                             }
                         } else if($docLogType === 'Prepare required documents, the following documents are needed') {
@@ -2200,7 +2201,7 @@ class ReportController extends Controller
                                     // ];
                                     //  app(LogController::class)->addNotif($_data, $docLogType === 'received'?"Documents Received":$serviceProcedure->name);
 
-                                    //$this->sendPushNotification($cs->client_id, $_docsDetail, $_data);
+                                     //$this->sendPushNotification($cs->client_id, $_docsDetail, $_data);
 
                                     foreach($docLogData as $dlc) {
 
@@ -2349,7 +2350,10 @@ class ReportController extends Controller
                         $missingDocuments = $this->getMissingDocuments($cs, $serviceProcedID);
 
                         $msgDetail = "";
-                        if($_detail != null){
+                        if($docLogType == null && $docLog != null){
+                            $msgDetail .= $docLog;
+                        }
+                        elseif ($docLogType != null && $_detail != "") {
                             $msgDetail .= $_detail;
                         }
                         $msgDetail .= "Document Received Completed. ".$detail;
@@ -2360,7 +2364,6 @@ class ReportController extends Controller
                             'group_id' => $cs->group_id,
                             'message' => $msgDetail
                         ];
-                        $_detail = "";
 
                         if($missingDocuments == "") {
                             app(LogController::class)->addNotif($_data, $serviceProcedure->name);
@@ -2368,7 +2371,6 @@ class ReportController extends Controller
 
                         //$this->sendPushNotification($cs->client_id, $msgDetail, $_data);
                     }
-
                 }
 
             }
