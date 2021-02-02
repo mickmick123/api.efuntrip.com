@@ -2364,7 +2364,7 @@ class ReportController extends Controller
                             $msgDetail .= $docLog;
                         }
                         elseif ($docLogType != null && $_detail != "") {
-                            $msgDetail .= PHP_EOL . $_detail;
+                            $msgDetail .= $_detail . PHP_EOL;
                         }
                         $msgDetail .= $detail;
 
