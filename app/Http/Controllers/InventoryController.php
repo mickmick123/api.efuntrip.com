@@ -1072,17 +1072,17 @@ class InventoryController extends Controller
                 $n->expiration_date = Carbon::parse($n->expiration_date)->format('F j, Y');
                 $n->item_volume = $n->length*$n->width*$n->height;
                 $n->import_cost = $n->imported_rmb_price * $n->rmb_rate;
-                $n->profit_min = ( $n->market_price_min - $n->import_cost ) * 100;
-                $n->profit_max = ( $n->market_price_max - $n->import_cost ) * 100;
+                $n->profit_min = $n->market_price_min - $n->import_cost;
+                $n->profit_max = $n->market_price_max - $n->import_cost;
 
                 $n->profit_rate_min = 0;
                 if($n->market_price_min!=0){
-                    $n->profit_rate_min = $n->profit_min / $n->market_price_min;
+                    $n->profit_rate_min = ( $n->profit_min / $n->market_price_min ) * 100;
                 }
 
                 $n->profit_rate_max = 0;
                 if($n->market_price_max!=0){
-                    $n->profit_rate_max = $n->profit_max / $n->market_price_max;
+                    $n->profit_rate_max = ( $n->profit_max / $n->market_price_max ) * 100;
                 }
 
                 $n->advised_profit = $n->advised_sale_price - $n->import_cost;
