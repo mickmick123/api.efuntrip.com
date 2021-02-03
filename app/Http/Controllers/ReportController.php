@@ -1937,9 +1937,11 @@ class ReportController extends Controller
 		// }
 		$clientServicesId = ClientService::where('client_id', $clientId)
 			->where('active', 1)
-			->where(function ($query)  {
-                $query->orwhere('status','pending')
-                    ->orwhere('status', 'on process');
+			->where(function ($query) use ($docLogType)  {
+                $query->orwhere('status','pending');
+                if($docLogType != "received"){
+                    $query->orwhere('status', 'on process');
+                }
             })->pluck('id')->toArray();
 
 		$clientReports = ClientReport::with('clientReportDocuments')
@@ -1949,6 +1951,7 @@ class ReportController extends Controller
 			})
 			->orderBy('id', 'desc')
 			->get();
+
 
 		if( count($clientReports) > 0 ) {
             $onHandDocuments = OnHandDocument::where('client_id', $clientId)->join('documents', 'on_hand_documents.document_id', '=', 'documents.id')->get();
@@ -1963,6 +1966,7 @@ class ReportController extends Controller
                     $clientArray[] = $clientReport;
                 }
             }
+
             $temp = [];
 
             $clientArray = collect($clientArray)->sortBy('client_service_id')->toArray();
@@ -2108,8 +2112,8 @@ class ReportController extends Controller
                         }
                     }
 
-
                     $cs = ClientService::findOrfail($clientReport['client_service_id']);
+
 
                     if($docLogType !== null) {
                         $docLogCounter = 0;
@@ -2381,8 +2385,8 @@ class ReportController extends Controller
 
                         //$this->sendPushNotification($cs->client_id, $msgDetail, $_data);
                     }
-                }
 
+                }
             }
 		}
 	}
