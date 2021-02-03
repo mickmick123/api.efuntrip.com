@@ -1939,7 +1939,7 @@ class ReportController extends Controller
 			->where('active', 1)
 			->where(function ($query) use ($docLogType)  {
                 $query->orwhere('status','pending');
-                if($docLogType != "received"){
+                if($docLogType === null){
                     $query->orwhere('status', 'on process');
                 }
             })->pluck('id')->toArray();
