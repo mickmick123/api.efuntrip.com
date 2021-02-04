@@ -639,7 +639,7 @@ class ReportController extends Controller
 	        if( $actionName != 'Filed' ) {
 	        	if( $actionName == 'Prepared' && $categoryName == 'Documents' ) {
 
-	        		$missingDocuments = $this->getMissingDocuments($cs, $serviceProcedure->id);
+	        	$missingDocuments = $this->getMissingDocuments($cs, $serviceProcedure->id);
 
 
               // Get pending documents
@@ -1937,21 +1937,38 @@ class ReportController extends Controller
 		// }
 		$clientServicesId = ClientService::where('client_id', $clientId)
 			->where('active', 1)
-			->where(function ($query) use ($docLogType)  {
-                $query->orwhere('status','pending');
-                if($docLogType === null){
-                    $query->orwhere('status', 'on process');
-                }
+			->where(function ($query)  {
+                $query->orwhere('status','pending')
+                    ->orwhere('status', 'on process');
             })->pluck('id')->toArray();
 
 		$clientReports = ClientReport::with('clientReportDocuments')
 			->whereIn('client_service_id', $clientServicesId)
 			->whereHas('serviceProcedure', function($query) {
-				$query->where('step', 1);
+				$query->latest()->where('step', 1);
 			})
 			->orderBy('id', 'desc')
 			->get();
 
+		$clientReports2 = ClientReport::with('clientReportDocuments')
+			->whereIn('client_service_id', $clientServicesId)
+			->whereHas('serviceProcedure', function($query) {
+				$query->latest()->where('step','>', 1);
+			})
+			->orderBy('id', 'desc')
+			->get();
+
+		$s1 = $clientReports->pluck('client_service_id')->toArray();
+		$s2 = $clientReports2->pluck('client_service_id')->toArray();
+        $clrep = array_diff($s1, $s2);
+		\Log::info($s1);
+		\Log::info($s2);
+		\Log::info($clrep);
+
+		$clientReports = ClientReport::with('clientReportDocuments')
+			->whereIn('client_service_id', $clrep)
+			->orderBy('id', 'desc')
+			->get();
 
 		if( count($clientReports) > 0 ) {
             $onHandDocuments = OnHandDocument::where('client_id', $clientId)->join('documents', 'on_hand_documents.document_id', '=', 'documents.id')->get();
@@ -1966,7 +1983,6 @@ class ReportController extends Controller
                     $clientArray[] = $clientReport;
                 }
             }
-
             $temp = [];
 
             $clientArray = collect($clientArray)->sortBy('client_service_id')->toArray();
@@ -2097,7 +2113,7 @@ class ReportController extends Controller
                         }
                     }
 
-                    $newStatus = 'pending';
+                    $newStatus = 'pending'; 
                     $label = 'Documents incomplete, service is now ' . $newStatus . '.';
 
                     if($docLogType !== 'Prepare required documents, the following documents are needed') {
@@ -2112,8 +2128,8 @@ class ReportController extends Controller
                         }
                     }
 
-                    $cs = ClientService::findOrfail($clientReport['client_service_id']);
 
+                    $cs = ClientService::findOrfail($clientReport['client_service_id']);
 
                     if($docLogType !== null) {
                         $docLogCounter = 0;
@@ -2369,8 +2385,10 @@ class ReportController extends Controller
                         }
                         elseif ($docLogType != null && $_detail != "") {
                             $msgDetail .= $_detail . PHP_EOL;
+                            // $msgDetail .= $_detail;
                         }
                         $msgDetail .= $detail;
+                        // $msgDetail .= "Document Received Completed. ".$detail;
 
                         $_data = [
                             'id' => $_log->id,
@@ -2380,13 +2398,14 @@ class ReportController extends Controller
                         ];
 
                         if($missingDocuments == "") {
-                            app(LogController::class)->addNotif($_data, "Documents Complete");
+                        	app(LogController::class)->addNotif($_data, "Documents Complete");
+                            // app(LogController::class)->addNotif($_data, $serviceProcedure->name);
                         }
 
                         //$this->sendPushNotification($cs->client_id, $msgDetail, $_data);
                     }
-
                 }
+
             }
 		}
 	}
@@ -2655,7 +2674,7 @@ class ReportController extends Controller
 		// 	$clientArray = [];
 		// 	$allRcvdDocs = [];
 
-		// 	foreach( $clientReports as $clientReport ) {
+		// 	foreach( $client(Reports) as $clientReport ) {
 		// 		if( !in_array($clientReport->client_service_id, $clientDocsArr) ) {
 
 		// 			array_push($clientDocsArr, $clientReport->client_service_id);
