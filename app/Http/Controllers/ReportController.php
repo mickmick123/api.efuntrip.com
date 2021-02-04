@@ -360,12 +360,7 @@ class ReportController extends Controller
 				return $item['count'] > 0;
 			})->values()->toArray();
 
-			if($serviceProcedure->name == "Documents Needed" || $serviceProcedure->name == "Released from Immigration") {
-                $detail = "";
-            }else if($serviceProcedure->name == "Filed at Immigration"){
-                $detail .= PHP_EOL;
-            }
-			$i=1;
+			$detail .= PHP_EOL; $i=1;
 			foreach( $selectedDocumentsWithCount as $index => $document ) {
 				$documentTitle = Document::findOrFail($document['id'])->title;
 
@@ -1961,9 +1956,9 @@ class ReportController extends Controller
 		$s1 = $clientReports->pluck('client_service_id')->toArray();
 		$s2 = $clientReports2->pluck('client_service_id')->toArray();
         $clrep = array_diff($s1, $s2);
-		\Log::info($s1);
-		\Log::info($s2);
-		\Log::info($clrep);
+		//\Log::info($s1);
+		//\Log::info($s2);
+		//\Log::info($clrep);
 
 		$clientReports = ClientReport::with('clientReportDocuments')
 			->whereIn('client_service_id', $clrep)
@@ -2113,7 +2108,7 @@ class ReportController extends Controller
                         }
                     }
 
-                    $newStatus = 'pending'; 
+                    $newStatus = 'pending';
                     $label = 'Documents incomplete, service is now ' . $newStatus . '.';
 
                     if($docLogType !== 'Prepare required documents, the following documents are needed') {
