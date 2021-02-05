@@ -1956,9 +1956,9 @@ class ReportController extends Controller
 		$s1 = $clientReports->pluck('client_service_id')->toArray();
 		$s2 = $clientReports2->pluck('client_service_id')->toArray();
         $clrep = array_diff($s1, $s2);
-		//\Log::info($s1);
-		//\Log::info($s2);
-		//\Log::info($clrep);
+		\Log::info($s1);
+		\Log::info($s2);
+		\Log::info($clrep);
 
 		$clientReports = ClientReport::with('clientReportDocuments')
 			->whereIn('client_service_id', $clrep)
