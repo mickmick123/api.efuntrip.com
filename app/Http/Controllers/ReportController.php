@@ -1123,7 +1123,9 @@ class ReportController extends Controller
 						$cs->tip = 0;
 					}
 					$cs->save();
-					$this->handleUpdateStatus($cs->client_id, 2, $clientService['id'], null, null, $detail);
+					if( $cs->status != $statusUponCompletion ) {
+						$this->handleUpdateStatus($cs->client_id, 2, $clientService['id'], null, null, $detail);
+					}
 					ClientController::updatePackageStatus($cs->tracking);
 				}
 			} else {
