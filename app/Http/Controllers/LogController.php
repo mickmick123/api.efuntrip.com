@@ -93,6 +93,7 @@ class LogController extends Controller
         $data['type'] = strpos($type, 'Service Payment') !== false ? 'Service Payment' : $type;
         $data['message'] = MessageHelper::MsgNotification($type, $log);
         $data['message_cn'] = "";
+        $data['created_at'] = Carbon::now();
 
         $_data = $this->logsAppNotification->saveToDb($data);
 
@@ -120,9 +121,10 @@ class LogController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
-            $read = LogsAppNotification::find($request->id);
-            $read->is_read = true;
-            $read->save();
+            $upData = array(
+                "is_read" => true,
+            );
+            $this->logsAppNotification->updateById(array("id" => $request->id), $upData);
 
             $response['status'] = 'Success';
             $response['data'] = 'Successfully Read';
