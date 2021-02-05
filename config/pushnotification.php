@@ -18,6 +18,6 @@ return [
         'certificate' => __DIR__ . '/iosCertificates/fourways_app_cert.pem',
         'passPhrase' => '123admin', //Optional
         'passFile' => '', //Optional
-        'dry_run' => true,
+        'dry_run' => false,
     ],
 ];
