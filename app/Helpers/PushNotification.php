@@ -35,7 +35,8 @@
                     'title' => $title,
                     'body' => $body
                 ],
-                'sound' => 'default'
+                'sound' => 'default',
+								'badge' => 1
             ]
         ])
         ->setDevicesToken($iosDeviceTokens)

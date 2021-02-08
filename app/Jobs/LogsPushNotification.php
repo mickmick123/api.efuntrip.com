@@ -41,11 +41,12 @@ class LogsPushNotification implements ShouldQueue
 
         $devices = DB::table('devices')->where('user_id', $this->user_id)->groupBy('device_token')->get();
 
+
         $iosToken = [];
         $androidToken = [];
         if(count($devices)) {
             foreach($devices as $device) {
-                if($device->device_type === "IOS"){
+                if($device->device_type == "IOS"){
                     array_push($iosToken, $device->device_token);
                 }else{
                     array_push($androidToken, $device->device_token);
@@ -56,6 +57,8 @@ class LogsPushNotification implements ShouldQueue
 
         if(count($iosToken) > 0) {
             $ios = new PushNotification('apn');
+
+
 
             $ios->setMessage([
                     'aps' => [
