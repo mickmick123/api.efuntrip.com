@@ -1071,7 +1071,7 @@ class InventoryController extends Controller
 
                 $n->expiration_date = Carbon::parse($n->expiration_date)->format('F j, Y');
                 $n->item_volume = $n->length*$n->width*$n->height;
-                $n->import_cost = $n->imported_rmb_price * $n->rmb_rate;
+                $n->import_cost = $n->imported_rmb_price * $n->rmb_rate + $n->shipping_fee_per_cm;
                 $n->profit_min = $n->market_price_min - $n->import_cost;
                 $n->profit_max = $n->market_price_max - $n->import_cost;
 
