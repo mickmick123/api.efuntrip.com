@@ -6,6 +6,7 @@ use App\Helpers\ArrayHelper;
 use App\RiderEvaluationQA;
 use App\RiderEvaluation;
 use App\RiderName;
+use App\OrderDelayed;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
@@ -225,9 +226,9 @@ class RiderEvaluationController extends Controller
         } else {
             $sort = $request->sort;
             self::updateAllEvaluation('[]', '[]');
-            $data = RiderEvaluation::select(['rider_evaluation.*', 'od.id as order_delayed', 'od.note'])
-                ->leftJoin('rider_name as rn', 'rider_evaluation.rider_id', 'rn.id')
-                ->leftJoin('order_delayed as od', 'rider_evaluation.order_id', 'od.order_id')
+            $data = RiderEvaluation::
+                leftJoin('rider_name as rn', 'rider_evaluation.rider_id', 'rn.id')
+                //->leftJoin('order_delayed as od', 'rider_evaluation.order_id', 'od.order_id')
                 ->where([
                     ['rider_evaluation.rider_id', $request->rider_id],
                     ['rider_evaluation.date', $request->date]
@@ -239,12 +240,13 @@ class RiderEvaluationController extends Controller
                 ->orderBy('rider_evaluation.id')
                 ->paginate($perPage);
 
-            $rider_name = RiderName::findorfail($request->rider_id)->name;
+            $rider = RiderName::findorfail($request->rider_id);
 
             $response['status'] = 'Success';
             $response['code'] = 200;
             $response['data'] = $data;
-            $response['rider_name'] = $rider_name;
+            $response['rider_name'] = $rider->name;
+            $response['shift'] = $rider->shift;
         }
         return Response::json($response);
     }
@@ -342,11 +344,22 @@ class RiderEvaluationController extends Controller
             $day = str_pad($i, 2, '0', STR_PAD_LEFT);
             $tempDate = $year . '-' . $month . '-' . $day;
             $total = RiderEvaluation::where([
-                ['rider_id', $request['rider_id']],
-                ['date', 'like', '%' . $tempDate . '%']
+                ['rider_evaluation.rider_id', $request['rider_id']],
+                ['rider_evaluation.date', 'like', '%' . $tempDate . '%']
             ])->get();
+
             $orders = 0;
             $delivery_fee = 0;
+
+            $order_ids = RiderEvaluation::where([
+                            ['rider_evaluation.date', 'like', '%' . $tempDate . '%']
+                        ])->pluck('order_id');
+            $rider = RiderName::findorfail($request['rider_id']);
+            $delayed = 0;
+            $delayed = OrderDelayed::whereIn('order_id', $order_ids)->where('riders', 'LIKE' ,'%' . $rider->name . '%')->count();
+
+            // \Log::info($delayed);
+            // $delayed *=5;
             $evaluation = ['orders' => 0, 'delivery_fee' => 0, 'extra' => 0, 'result' => 0];
             $average = 0;
             for ($ii = 1; $ii <= 4; $ii++) {
@@ -382,6 +395,8 @@ class RiderEvaluationController extends Controller
                         } else {
                             $evaluation['result'] = 100;
                         }
+                        $delayed = $delayed > 0 ? 5 : 0;
+                        $evaluation['result'] = $evaluation['result'] - $delayed;
                         $evaluation['orders'] += 1;
                         $evaluation['delivery_fee'] += $v->delivery_fee;
 
@@ -390,7 +405,7 @@ class RiderEvaluationController extends Controller
                             "detail" => 'Daily Evaluation:',
                             "value" => $evaluation['result'] . '%'
                         ];
-                        $tempSummary['evaluation'][$i] = $evaluation['result'];
+                        $tempSummary['evaluation'][$i] = $evaluation['result'] ;
                     } else if ($ii === 4) {
                         $average += $v->evaluation;
                         $aveOrder = $average / $orders;
@@ -406,6 +421,7 @@ class RiderEvaluationController extends Controller
             }
             $data = ArrayHelper::ArrayIndexFixed($tempData);
         }
+
         $summary['evaluation'] = array_sum(ArrayHelper::ArrayIndexFixed($tempSummary['evaluation']));
         $summary['average'] = array_sum(ArrayHelper::ArrayIndexFixed($tempSummary['average']));
         $summary['days'] = array_sum(ArrayHelper::ArrayIndexFixed($tempSummary['days']));
@@ -416,9 +432,8 @@ class RiderEvaluationController extends Controller
 
     protected static function updateAllEvaluation($choice_history, $answer_history)
     {
-        $getEvaluation = RiderEvaluation::select(['rider_evaluation.*', 'od.id as order_delayed', 'od.note'])
-            ->leftJoin('rider_name as rn', 'rider_evaluation.rider_id', 'rn.id')
-            ->leftJoin('order_delayed as od', 'rider_evaluation.order_id', 'od.order_id')
+        $getEvaluation = RiderEvaluation::leftJoin('rider_name as rn', 'rider_evaluation.rider_id', 'rn.id')
+            // ->leftJoin('order_delayed as od', 'rider_evaluation.order_id', 'od.order_id')
             ->orderBy('rider_evaluation.id')
             ->get();
 
@@ -448,7 +463,8 @@ class RiderEvaluationController extends Controller
             $update->result = $scores;
             $update->delivery_fee = $v['delivery_fee'];
             $update->rider_income = self::riderIncome($update['result'], $v['delivery_fee']);
-            $update->evaluation = (80 + ($update['result'] * 5)) - $delayed;
+            // $update->evaluation = (80 + ($update['result'] * 5)) - $delayed;
+            $update->evaluation = (80 + ($update['result'] * 5)) ;
             $update->save();
         }
     }
