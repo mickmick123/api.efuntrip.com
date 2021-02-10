@@ -1992,6 +1992,7 @@ class InventoryController extends Controller
                     if($k === 0){
                         $name_id = $request->user;
                         $set = 'Consumed';
+                        $icon->price = $v->price;
                         $icon->assigned_to = $request->user;
                     }elseif($k === 1){
                         $name_id = $user->id;
