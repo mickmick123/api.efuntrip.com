@@ -2051,7 +2051,7 @@ class InventoryController extends Controller
             ->leftJoin("inventory_selling_unit as su", "c.selling_id", "su.id")
             ->leftJoin("inventory_unit as iu1", "su.unit_id", "iu1.unit_id")
             ->orderBy("id", "ASC")->get();
-        $set = 0; $i = 0; $totalPrice = 0;
+        $set = 0; $i = 0; $totalPrice = 0; $totalSale = 0;
         $units = InventoryPurchaseUnit::where("inv_id", $request->inventory_id)->orderBy("id", "ASC")->get('unit_id as unitId');
         $sell = InventorySellingUnit::where("inv_id", $request->inventory_id)->orderBy("id", "ASC")->get('id');
         foreach ($units as $u) {
@@ -2065,7 +2065,14 @@ class InventoryController extends Controller
             $i++;
         }
         foreach ($list as $l){
-            $l->subTotal = $l->qty * $l->price;
+            $tPurchase = 0;
+            $tSale = 0;
+            if($l->type === 'Purchased'){
+                $tPurchase = $l->qty * $l->price;
+            }else if($l->type === 'Consumed'){
+                $tSale = $l->qty * $l->price;
+            }
+            $l->subTotal = $tPurchase + $tSale;
             $l->purchased = $l->qty;
             $l->created_at = gmdate("M j, Y", $l->created_at);
             $l->updated_at = gmdate("M j, Y", $l->updated_at);
@@ -2128,7 +2135,9 @@ class InventoryController extends Controller
                 $sellQty[$l->selling_id] = $sellQty[$l->selling_id];
             }
 
-            $totalPrice += $l->subTotal;
+            $totalPrice += $l->subTotal - $tSale;
+            $totalSale += $tSale;
+            $l->totalSale = $totalSale;
             $i++;
         }
 
@@ -2137,6 +2146,7 @@ class InventoryController extends Controller
         $response['code'] = 200;
         $response['data'] = array_reverse($data);
         $response['price'] = $totalPrice;
+        $response['sale'] = $totalSale;
 
         return Response::json($response);
     }
