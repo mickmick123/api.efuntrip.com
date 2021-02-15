@@ -1842,15 +1842,8 @@ class InventoryController extends Controller
 
     public function getPurchaseUnit(Request $request){
         if(count($request->all()) !== 0){
-            $unit = [];
-            $unitTemp = InventoryPurchaseUnit::leftJoin('inventory_unit as iun','inventory_purchase_unit.unit_id','iun.unit_id')
+            $unit = InventoryPurchaseUnit::leftJoin('inventory_unit as iun','inventory_purchase_unit.unit_id','iun.unit_id')
                 ->where('inventory_purchase_unit.inv_id',$request->inventory_id)->get();
-                foreach($unitTemp as $k=>$v){
-                    $unit[$k] = $v;
-                    if($v->last_unit_id !== 0){
-                        $unit[$k+1] = InventoryUnit::where('unit_id',$v->last_unit_id)->get()[0];
-                    }
-                }
         }else{
             $unit = InventoryUnit::orderBy('name','ASC')->get();
         }
