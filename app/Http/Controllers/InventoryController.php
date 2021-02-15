@@ -2082,7 +2082,8 @@ class InventoryController extends Controller
             $s = $l->sup_location;
             $l->sup_location = $s?$s.' ('.$l->sup_location_detail.')':'';
 
-            $l->qtyUnit = $l->qty." $l->unit";
+            //$l->qtyUnit = $l->qty." $l->unit";
+            $l->qtyUnit = self::unitFormatting($request->inventory_id, $l->qty);
             $l->qtySet = 0;
 
             if($i==0 && $l->type == "Purchased") {
@@ -2109,10 +2110,11 @@ class InventoryController extends Controller
                 }
             }
 
-            $j=0;
+            $j=0; $rUnitTotal = 0;
             foreach ($units as $u) {
                 if($l->unit_id == $u->unitId) {
-                    $rUnit[$j] = $qty[$l->unit_id]." $l->unit";
+                    //$rUnitTotal = $qty[$l->unit_id];
+                    $rUnit[$j] = self::unitFormatting($request->inventory_id, $qty[$l->unit_id]);
                 }
                 $j++;
             }
@@ -2125,7 +2127,7 @@ class InventoryController extends Controller
                 $j++;
             }
 
-            $l->remainingUnit = implode(" ", $rUnit);
+            $l->remainingUnit = trim(implode(" ", $rUnit));
             $l->remainingSet = $set;
             $l->toolTipSet = trim(implode(" ",$rSet));
 
@@ -2245,7 +2247,7 @@ class InventoryController extends Controller
     }
 
     // Unit Formatting
-    public static function unitFormat1($inventory_id, $qty){
+    public static function unitFormatting($inventory_id, $qty){
         $array_m = [];
         $unit = InventoryPurchaseUnit::where('inv_id', $inventory_id)
             ->leftJoin('inventory_unit as iunit', 'iunit.unit_id', '=', 'inventory_purchase_unit.unit_id')
@@ -2253,10 +2255,11 @@ class InventoryController extends Controller
             ->get();
         $x = 0;
         foreach ($unit as $u) {
-            $array_m[$x] = $u['content'];
+            $array_m[$x] = $u['qty'];
             $x++;
         }
         $tree = $unit->reverse();
+
         $j = 0;
         $name = [];
         foreach ($tree as $u) {
@@ -2282,7 +2285,7 @@ class InventoryController extends Controller
                 }
             }
 
-            return implode(', ', $g);
+            return implode(' | ', $g);
         }
 
         $jjj=0;
@@ -2324,7 +2327,7 @@ class InventoryController extends Controller
                 }
             }
 
-            return implode(', ', $g);
+            return implode(' | ', $g);
         }
 
         $js = 0;
@@ -2362,7 +2365,7 @@ class InventoryController extends Controller
             }
         }
 
-        return implode(', ', $g);
+        return implode(' | ', $g);
 
     }
 
