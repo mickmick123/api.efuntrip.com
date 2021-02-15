@@ -1935,6 +1935,16 @@ class InventoryController extends Controller
 
             $icon = new InventoryConsumables;
             $icon->inventory_id = $request->inventory_id;
+            $formula = InventoryPurchaseUnit::where('inv_id',$request->inventory_id)->get();
+            $start = false;
+            foreach($formula as $k=>$v){
+                if($request->unit == $v->unit_id){
+                    $start = true;
+                }
+                if($start === true){
+                    $qty *= $v->qty;
+                }
+            }
             $icon->qty = $qty;
             $icon->unit_id = $request->unit;
             $icon->price = $request->price;
