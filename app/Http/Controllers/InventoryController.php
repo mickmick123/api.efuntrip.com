@@ -1994,10 +1994,10 @@ class InventoryController extends Controller
                         $set = 'Consumed';
                         $icon->price = $v->price;
                         $icon->assigned_to = $request->user;
-                    }elseif($k === 1){
-                        $name_id = $user->id;
-                        $set = 'Converted';
-                        $icon->selling_id = $request->set_unit;
+                    // }elseif($k === 1){
+                    //     $name_id = $user->id;
+                    //     $set = 'Converted';
+                    //     $icon->selling_id = $request->set_unit;
                     }elseif($k === 2){
                         $name_id = $user->id;
                         $set = 'Wasted';
@@ -2158,7 +2158,7 @@ class InventoryController extends Controller
             ->where([["c.inventory_id", $request->inventory_id],["c.type","=","Purchased"]])
             ->groupBy('ld.loc_id')->orderBy("l.location", "ASC")->get();
         $i=0;
-        $units = InventoryPurchaseUnit::where("inv_id", $request->inventory_id)->orderBy("id", "ASC")->get(['unit_id as unitId','qty','last_unit_id']);
+        $units = InventoryPurchaseUnit::where("inv_id", $request->inventory_id)->orderBy("id", "ASC")->get(['unit_id as unitId']);
         $sell = InventorySellingUnit::where("inv_id", $request->inventory_id)->orderBy("id", "ASC")->get('id');
         foreach ($location as $l){
             $d_unit = DB::table('inventory_consumables as c')
@@ -2211,11 +2211,6 @@ class InventoryController extends Controller
                         $rUnit[$l->locId][$j] = $qty[$l->locId][$p->unit_id]." $p->unit";
                     }
                     $j++;
-                    if($u->last_unit_id !== 0){
-                        $unitName = InventoryUnit::where('unit_id',$u->last_unit_id)->get()[0]->name;
-                        $rUnit[$l->locId][$j] = $qty[$l->locId][$p->unit_id] * $u->qty." $unitName";
-                        $j++;
-                    }
                 }
                 foreach ($sell as $s) {
                     if (($p->type == "Converted" || $p->type == "Sold")) {
