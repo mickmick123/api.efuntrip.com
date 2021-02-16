@@ -1115,15 +1115,18 @@ class InventoryController extends Controller
             ->where("inventory_id", $n->inventory_id)->get();
         $i=0; $set = 0; $qty = []; $sellQty = []; $unit = []; $sold = 0; $soldQty = [];
         foreach ($units as $u) {
-            $qty[$u->unitId] = 0;
-            $wasted[$u->unitId] = 0;
-            $consumed[$u->unitId] = 0;
-            $rUnit[$i] = "";
-            $rWasted[$i] = "";
-            $rConsumed[$i] = "";
+            //$qty[$u->unitId] = 0;
+            //$wasted[$u->unitId] = 0;
+            //$consumed[$u->unitId] = 0;
+            //$rUnit[$i] = "";
+            //$rWasted[$i] = "";
+            //$rConsumed[$i] = "";
             $unit[$i] = $u->unit;
             $i++;
         }
+        $qty = 0;
+        $wasted = 0;
+        $consumed = 0;
         $n->unit = implode(" / ", $unit);
         foreach ($sell as $s) {
             $sellQty[$s->id] = 0;
@@ -1136,23 +1139,31 @@ class InventoryController extends Controller
         $n->toolTipSet = "";
         foreach ($dUnit as $p) {
             if($i==0 && $p->type == "Purchased") {
-                $qty[$p->unit_id] += $p->qty;
+                //$qty[$p->unit_id] += $p->qty;
+                $qty += $p->qty;
             }
             if($i!=0) {
                 if ($p->type == "Purchased") {
-                    $qty[$p->unit_id] += $p->qty;
+                    //$qty[$p->unit_id] += $p->qty;
+                    $qty += $p->qty;
                 }
                 if ($p->type == "Consumed" || $p->type == "Wasted" || $p->type == "Converted") {
-                    $qty[$p->unit_id] -= $p->qty;
+                    //$qty[$p->unit_id] -= $p->qty;
+                    $qty -= $p->qty;
                 }
-                $consumed[$p->unit_id] += 0;
+                //$consumed[$p->unit_id] += 0;
+                $consumed += 0;
                 if ($p->type == "Consumed") {
-                    $consumed[$p->unit_id] += $p->qty;
+                    //$consumed[$p->unit_id] += $p->qty;
+                    $consumed += $p->qty;
                 }
-                $wasted[$p->unit_id] += 0;
+                //$wasted[$p->unit_id] += 0;
+                $wasted += 0;
                 if ($p->type == "Wasted") {
-                    $wasted[$p->unit_id] += $p->qty;
+                    //$wasted[$p->unit_id] += $p->qty;
+                    $wasted += $p->qty;
                 }
+                /*
                 if ($p->type == "Converted") {
                     $cQty = self::convertToSet($n->inventory_id, $p->unit_id, $p->selling_id, $p->qty);
                     $sellQty[$p->selling_id] += $cQty;
@@ -1166,8 +1177,10 @@ class InventoryController extends Controller
                     $soldQty[$p->selling_id] += $cQty;
                     $sold += $cQty;
                 }
+                */
                 $i++;
             }
+            /*
             $j=0;
             foreach ($units as $u) {
                 if($p->unit_id == $u->unitId) {
@@ -1183,6 +1196,7 @@ class InventoryController extends Controller
                 }
                 $j++;
             }
+
             foreach ($sell as $s) {
                 if (($p->type == "Converted" || $p->type == "Sold")) {
                     $rSet[$p->selling_id] = $sellQty[$p->selling_id]." Set($p->sQty $p->sUnit)";
@@ -1191,17 +1205,22 @@ class InventoryController extends Controller
                     $rSold[$p->selling_id] = $soldQty[$p->selling_id]." Set($p->sQty $p->sUnit)";
                 }
             }
-            $n->rUnit = trim(implode(" ", $rUnit));
-            $n->rWasted = trim(implode(" ", $rWasted));
-            $n->rConsumed = trim(implode(" ", $rConsumed));
-            $n->rSet = $set;
-            $n->toolTipSet = trim(implode(" ",$rSet));
-            $n->sold = $sold;
-            $n->toolTipSold = trim(implode(" ",$rSold));
-            $qty[$p->unit_id] = $qty[$p->unit_id];
-            $wasted[$p->unit_id] = $wasted[$p->unit_id];
-            $consumed[$p->unit_id] = $consumed[$p->unit_id];
-            $set = $set;
+            */
+            $n->rUnit = self::unitFormatting($n->inventory_id, $qty);
+            $n->rWasted = self::unitFormatting($n->inventory_id, $wasted);
+            $n->rConsumed = self::unitFormatting($n->inventory_id, $consumed);
+            //$n->rUnit = trim(implode(" ", $rUnit));
+            //$n->rWasted = trim(implode(" ", $rWasted));
+            //$n->rConsumed = trim(implode(" ", $rConsumed));
+            //$n->rSet = $set;
+            //$n->toolTipSet = trim(implode(" ",$rSet));
+            //$n->sold = $sold;
+            //$n->toolTipSold = trim(implode(" ",$rSold));
+            $qty = $qty;
+            $wasted = $wasted;
+            $consumed = $consumed;
+            //$set = $set;
+            /*
             if ($p->type == "Converted" || $p->type == "Sold") {
                 $sellQty[$p->selling_id] = $sellQty[$p->selling_id];
             }
@@ -1209,6 +1228,7 @@ class InventoryController extends Controller
                 $soldQty[$p->selling_id] = $soldQty[$p->selling_id];
                 $sold = $sold;
             }
+            */
         }
     }
 
