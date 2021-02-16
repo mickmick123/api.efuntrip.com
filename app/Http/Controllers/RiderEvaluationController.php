@@ -226,8 +226,8 @@ class RiderEvaluationController extends Controller
         } else {
             $sort = $request->sort;
             self::updateAllEvaluation('[]', '[]');
-            $data = RiderEvaluation::
-                leftJoin('rider_name as rn', 'rider_evaluation.rider_id', 'rn.id')
+            $data = RiderEvaluation::select(['rider_evaluation.*'])
+                ->leftJoin('rider_name as rn', 'rider_evaluation.rider_id', 'rn.id')
                 //->leftJoin('order_delayed as od', 'rider_evaluation.order_id', 'od.order_id')
                 ->where([
                     ['rider_evaluation.rider_id', $request->rider_id],
@@ -432,7 +432,7 @@ class RiderEvaluationController extends Controller
 
     protected static function updateAllEvaluation($choice_history, $answer_history)
     {
-        $getEvaluation = RiderEvaluation::leftJoin('rider_name as rn', 'rider_evaluation.rider_id', 'rn.id')
+        $getEvaluation = RiderEvaluation::select(['rider_evaluation.*'])->leftJoin('rider_name as rn', 'rider_evaluation.rider_id', 'rn.id')
             // ->leftJoin('order_delayed as od', 'rider_evaluation.order_id', 'od.order_id')
             ->orderBy('rider_evaluation.id')
             ->get();
