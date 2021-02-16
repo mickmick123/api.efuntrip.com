@@ -1212,19 +1212,6 @@ class InventoryController extends Controller
             //$n->toolTipSet = trim(implode(" ",$rSet));
             //$n->sold = $sold;
             //$n->toolTipSold = trim(implode(" ",$rSold));
-            $qty = $qty;
-            $wasted = $wasted;
-            $consumed = $consumed;
-            //$set = $set;
-            /*
-            if ($p->type == "Converted" || $p->type == "Sold") {
-                $sellQty[$p->selling_id] = $sellQty[$p->selling_id];
-            }
-            if($p->type == "Sold"){
-                $soldQty[$p->selling_id] = $soldQty[$p->selling_id];
-                $sold = $sold;
-            }
-            */
         }
     }
 
