@@ -1151,14 +1151,10 @@ class InventoryController extends Controller
                     //$qty[$p->unit_id] -= $p->qty;
                     $qty -= $p->qty;
                 }
-                //$consumed[$p->unit_id] += 0;
-                $consumed += 0;
                 if ($p->type == "Consumed") {
                     //$consumed[$p->unit_id] += $p->qty;
                     $consumed += $p->qty;
                 }
-                //$wasted[$p->unit_id] += 0;
-                $wasted += 0;
                 if ($p->type == "Wasted") {
                     //$wasted[$p->unit_id] += $p->qty;
                     $wasted += $p->qty;
