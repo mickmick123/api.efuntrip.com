@@ -11,7 +11,8 @@ use Illuminate\Http\Request;
 
 class LocationController extends Controller
 {
-    public function getLocation(Request $request){
+    public function getLocation(Request $request)
+    {
         $loc = Location::where("type", "=", $request->type)->get();
 
         $response['status'] = 'Success';
@@ -21,15 +22,16 @@ class LocationController extends Controller
         return Response::json($response);
     }
 
-    public function getLocationDetail(Request $request){
-        if(!is_numeric($request->id)){
-            $loc = Location::where([["location", "=", $request->id],["type", "=", $request->type]])->first();
-            if($loc){
+    public function getLocationDetail(Request $request)
+    {
+        if (!is_numeric($request->id)) {
+            $loc = Location::where([["location", "=", $request->id], ["type", "=", $request->type]])->first();
+            if ($loc) {
                 $location_id = $loc->id;
-            }else{
+            } else {
                 $location_id = 0;
             }
-        }else{
+        } else {
             $location_id = $request->id;
         }
 
@@ -43,33 +45,49 @@ class LocationController extends Controller
         return Response::json($response);
     }
 
-    public function getLocationConsumable(Request $request){
+    public function getLocationConsumable(Request $request)
+    {
         $invId = InventoryConsumables::where([
-            ['type','=','Purchased'],
-            ['inventory_id',$request->inventory_id]
+            ['type', '=', 'Purchased'],
+            ['inventory_id', $request->inventory_id]
         ])->pluck('location_id');
 
-        $locId = LocationDetail::whereIn('id',$invId)->pluck('loc_id');
-        $locDet = LocationDetail::whereIn('id',$invId)->get();
-        $loc = Location::whereIn('id',$locId)->get();
-        $getRemaining = InventoryPurchaseUnit::leftJoin('inventory_unit as iun','inventory_purchase_unit.unit_id','iun.unit_id')
-            ->where('inventory_purchase_unit.inv_id',$request->inventory_id)
-            ->get(['inventory_purchase_unit.inv_id','inventory_purchase_unit.unit_id','iun.name','inventory_purchase_unit.qty']);
-        foreach($getRemaining as $k=>$v){
-            $purchased[$k] = 0;
-            $notPurchased[$k] = 0;
-            $icon = InventoryConsumables::where([['inventory_id',$v->inv_id],['unit_id',$v->unit_id]])->get();
-            foreach($icon as $kk=>$vv){
-                if($vv->type === 'Purchased'){
-                    $purchased[$k] += $vv->qty;
-                }else{
-                    $notPurchased[$k] += $vv->qty;
+        $locId = LocationDetail::whereIn('id', $invId)->pluck('loc_id');
+        $locDet = LocationDetail::whereIn('id', $invId)->get();
+        $loc = Location::whereIn('id', $locId)->get();
+        $getRemaining = InventoryPurchaseUnit::leftJoin('inventory_unit as iun', 'inventory_purchase_unit.unit_id', 'iun.unit_id')
+            ->where('inventory_purchase_unit.inv_id', $request->inventory_id)
+            ->get(['inventory_purchase_unit.inv_id', 'inventory_purchase_unit.unit_id', 'iun.name', 'inventory_purchase_unit.qty']);
+        $totalRemaining = [];
+        $unitCalculation = [];
+        foreach ($loc as $k => $v) {
+            $totalRemaining[$k] = ['loc_id' => 0, 'remaining' => 0];
+        }
+        $temp = [];
+        foreach ($loc as $k => $v) {
+            foreach ($getRemaining as $kk => $vv) {
+                $unitCalculation[$kk] = $vv->qty;
+                $purchased[$kk] = 0;
+                $notPurchased[$kk] = 0;
+                $icon = InventoryConsumables::where([['inventory_id', $vv->inv_id], ['unit_id', $vv->unit_id]])->get();
+                $temp = $icon;
+                foreach ($icon as $kkk => $vvv) {
+                    if ($v->id === $vvv->location_id) {
+                        if ($vvv->type === 'Purchased') {
+                            $purchased[$kk] += $vvv->qty;
+                        } else {
+                            $notPurchased[$kk] += $vvv->qty;
+                        }
+                    }
                 }
+                $vv->remaining = $purchased[$kk] - $notPurchased[$kk];
+                $totalRemaining[$k]['loc_id'] = $v->id;
+                $totalRemaining[$k]['remaining'] += $purchased[$kk] - $notPurchased[$kk];
             }
-            $v->remaining = $purchased[$k] - $notPurchased[$k];
         }
 
-        $data = ['location'=>$loc,'locationDetail'=>$locDet,'locationRemaining'=>$getRemaining];
+
+        $data = ['location' => $loc, 'locationDetail' => $locDet, 'unitCalculation' => $getRemaining, 'locationTotalRemaining' => $totalRemaining,'Temp'=>$temp];
 
         $response['status'] = 'Success';
         $response['code'] = 200;

@@ -2000,7 +2000,18 @@ class InventoryController extends Controller
                     $icon = new InventoryConsumables;
                     $icon->inventory_id = $request->inventory_id;
                     $icon->location_id = $request->location_id;
-                    $icon->qty = $v->qty;
+                    $qty = $v->qty;
+                    $formula = InventoryPurchaseUnit::where('inv_id',$request->inventory_id)->get();
+                    $start = false;
+                    foreach($formula as $kk=>$vv){
+                        if($v->unit == $vv->unit_id){
+                            $start = true;
+                        }
+                        if($start === true){
+                            $qty *= $vv->qty;
+                        }
+                    }
+                    $icon->qty = $qty;
                     $icon->unit_id = $v->unit;
                     $icon->reason = $v->reason;
                     if($k === 0){
