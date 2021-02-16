@@ -2074,6 +2074,7 @@ class InventoryController extends Controller
             $rSet[$s->id] = "";
             $i++;
         }
+        $rQty = 0;
         foreach ($list as $l){
             $tPurchase = 0;
             $tSale = 0;
@@ -2094,19 +2095,22 @@ class InventoryController extends Controller
 
             //$l->qtyUnit = $l->qty." $l->unit";
             $l->qtyUnit = self::unitFormatting($request->inventory_id, $l->qty);
-            $l->qtySet = 0;
+            //$l->qtySet = 0;
 
             if($i==0 && $l->type == "Purchased") {
                 $qty[$l->unit_id] += $l->qty;
+                $rQty += $l->qty;
             }
             if($i!=0) {
                 if ($l->type == "Purchased") {
                     $qty[$l->unit_id] += $l->qty;
+                    $rQty += $l->qty;
                 }
                 if ($l->type == "Consumed" || $l->type == "Wasted" || $l->type == "Converted") {
-                    $qty[$l->unit_id] -= $l->qty;
+                    $rQty -= $l->qty;
                 }
 
+                /*
                 if ($l->type == "Converted") {
                     $cQty = self::convertToSet($request->inventory_id, $l->unit_id, $l->selling_id, $l->qty);
                     $sellQty[$l->selling_id] += $cQty;
@@ -2118,12 +2122,13 @@ class InventoryController extends Controller
                     $sellQty[$l->selling_id] -= $cQty;
                     $set -= $cQty;
                 }
+                */
             }
 
-            $j=0; $rUnitTotal = 0;
+            /*
+            $j=0;
             foreach ($units as $u) {
                 if($l->unit_id == $u->unitId) {
-                    //$rUnitTotal = $qty[$l->unit_id];
                     $rUnit[$j] = self::unitFormatting($request->inventory_id, $qty[$l->unit_id]);
                 }
                 $j++;
@@ -2135,17 +2140,19 @@ class InventoryController extends Controller
                 }
 
                 $j++;
-            }
+            }*/
 
-            $l->remainingUnit = trim(implode(" ", $rUnit));
-            $l->remainingSet = $set;
-            $l->toolTipSet = trim(implode(" ",$rSet));
+            $l->remainingUnit = self::unitFormatting($request->inventory_id, $rQty);
+            //$l->remainingUnit = trim(implode(" ", $rUnit));
+            //$l->remainingSet = $set;
+            //$l->toolTipSet = trim(implode(" ",$rSet));
 
             $qty[$l->unit_id] = $qty[$l->unit_id];
-            $set = $set;
-            if ($l->type == "Converted" || $l->type == "Sold") {
-                $sellQty[$l->selling_id] = $sellQty[$l->selling_id];
-            }
+
+            //$set = $set;
+            //if ($l->type == "Converted" || $l->type == "Sold") {
+            //    $sellQty[$l->selling_id] = $sellQty[$l->selling_id];
+            //}
 
             $totalPrice += $l->subTotal - $tSale;
             $totalSale += $tSale;
@@ -2170,7 +2177,7 @@ class InventoryController extends Controller
             ->where([["c.inventory_id", $request->inventory_id],["c.type","=","Purchased"]])
             ->groupBy('ld.loc_id')->orderBy("l.location", "ASC")->get();
         $i=0;
-        $units = InventoryPurchaseUnit::where("inv_id", $request->inventory_id)->orderBy("id", "ASC")->get(['unit_id as unitId']);
+        //$units = InventoryPurchaseUnit::where("inv_id", $request->inventory_id)->orderBy("id", "ASC")->get(['unit_id as unitId']);
         $sell = InventorySellingUnit::where("inv_id", $request->inventory_id)->orderBy("id", "ASC")->get('id');
         foreach ($location as $l){
             $d_unit = DB::table('inventory_consumables as c')
@@ -2181,29 +2188,37 @@ class InventoryController extends Controller
                 ->leftJoin("inventory_selling_unit as su", "c.selling_id", "su.id")
                 ->leftJoin("inventory_unit as iu1", "su.unit_id", "iu1.unit_id")
                 ->where([["inventory_id", $request->inventory_id], ["l.id", $l->locId]])->get();
+            /*
             foreach ($units as $u) {
                 $qty[$l->locId][$u->unitId] = 0;
                 $rUnit[$l->locId][$i] = "";
                 $i++;
             }
+            */
             foreach ($sell as $s) {
                 $sellQty[$l->locId][$s->id] = 0;
                 $rSet[$l->locId][$s->id] = "";
                 $i++;
             }
             $set = 0;
+            $qty = 0;
+            $rUnit = "";
             foreach ($d_unit as $p) {
                 if($i==0 && $p->type == "Purchased") {
-                    $qty[$l->locId][$p->unit_id] += $p->qty;
+                    //$qty[$l->locId][$p->unit_id] += $p->qty;
+                    $qty += $p->qty;
                 }
                 if($i!=0) {
                     if ($p->type == "Purchased") {
-                        $qty[$l->locId][$p->unit_id] += $p->qty;
+                        //$qty[$l->locId][$p->unit_id] += $p->qty;
+                        $qty += $p->qty;
                     }
                     if ($p->type == "Consumed" || $p->type == "Wasted" || $p->type == "Converted") {
-                        $qty[$l->locId][$p->unit_id] -= $p->qty;
+                        //$qty[$l->locId][$p->unit_id] -= $p->qty;
+                        $qty -= $p->qty;
                     }
 
+                    /*
                     if ($p->type == "Converted") {
                         $cQty = self::convertToSet($request->inventory_id, $p->unit_id, $p->selling_id, $p->qty);
                         $sellQty[$l->locId][$p->selling_id] += $cQty;
@@ -2214,9 +2229,10 @@ class InventoryController extends Controller
                         $p->qtySet = $cQty;
                         $sellQty[$l->locId][$p->selling_id] -= $cQty;
                         $set -= $cQty;
-                    }
+                    } */
                 }
 
+                /*
                 $j=0;
                 foreach ($units as $u) {
                     if($p->unit_id == $u->unitId) {
@@ -2224,23 +2240,26 @@ class InventoryController extends Controller
                     }
                     $j++;
                 }
+
                 foreach ($sell as $s) {
                     if (($p->type == "Converted" || $p->type == "Sold")) {
                         $rSet[$l->locId][$p->selling_id] = $sellQty[$l->locId][$p->selling_id]." Set($p->sQty $p->sUnit)";
                     }
 
                     $j++;
-                }
+                }*/
 
-                $l->rUnit = trim(implode(" ", $rUnit[$l->locId]));
-                $l->rSet = $set;
-                $l->toolTipSet = trim(implode(" ",$rSet[$l->locId]));
+                $l->rUnit = self::unitFormatting($request->inventory_id, $qty);
+                //$l->rSet = $set;
+                //$l->toolTipSet = trim(implode(" ",$rSet[$l->locId]));
 
-                $qty[$l->locId][$p->unit_id] = $qty[$l->locId][$p->unit_id];
-                $set = $set;
+                $qty = $qty;
+                //$qty[$l->locId][$p->unit_id] = $qty[$l->locId][$p->unit_id];
+
+                /*$set = $set;
                 if ($p->type == "Converted" || $p->type == "Sold") {
                     $sellQty[$l->locId][$p->selling_id] = $sellQty[$l->locId][$p->selling_id];
-                }
+                }*/
             }
 
         }
