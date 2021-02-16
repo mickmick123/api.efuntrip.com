@@ -1203,6 +1203,7 @@ class InventoryController extends Controller
             }
             */
             $n->rUnit = self::unitFormatting($n->inventory_id, $qty);
+            $n->totalRemaining = number_format($qty) . " " . explode(" ", self::unitFormatting($n->inventory_id, 0))[1].($qty>1?"s":"");
             $n->rWasted = self::unitFormatting($n->inventory_id, $wasted);
             $n->rConsumed = self::unitFormatting($n->inventory_id, $consumed);
             //$n->rUnit = trim(implode(" ", $rUnit));
