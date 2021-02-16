@@ -2150,13 +2150,6 @@ class InventoryController extends Controller
             //$l->remainingSet = $set;
             //$l->toolTipSet = trim(implode(" ",$rSet));
 
-            $qty[$l->unit_id] = $qty[$l->unit_id];
-
-            //$set = $set;
-            //if ($l->type == "Converted" || $l->type == "Sold") {
-            //    $sellQty[$l->selling_id] = $sellQty[$l->selling_id];
-            //}
-
             $totalPrice += $l->subTotal - $tSale;
             $totalSale += $tSale;
             $l->totalSale = $totalSale;
