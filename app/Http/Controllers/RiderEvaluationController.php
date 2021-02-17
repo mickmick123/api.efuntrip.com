@@ -150,8 +150,8 @@ class RiderEvaluationController extends Controller
             $data->answers = json_encode($answer);
             $data->result = array_sum(json_decode($request->scores));
             // $data['order_id'] = $request->order_id;
-            $data->delivery_fee = $request->delivery_fee;
-            $data->rider_income = self::riderIncome($data['result'], $request->delivery_fee);
+            $data->delivery_fee = $data->delivery_fee;
+            $data->rider_income = self::riderIncome($data['result'], $data->delivery_fee);
             $data->evaluation = 80 + ($data['result'] * 5);
             $data->save();
 
@@ -461,8 +461,9 @@ class RiderEvaluationController extends Controller
             $update = RiderEvaluation::find($v['id']);
             $update->answers = $answerHistory;
             $update->result = $scores;
-            $update->delivery_fee = $v['delivery_fee'];
-            $update->rider_income = self::riderIncome($update['result'], $v['delivery_fee']);
+            // $update->delivery_fee = $v['delivery_fee'];
+            $update->delivery_fee = $update->delivery_fee;
+            $update->rider_income = self::riderIncome($update['result'], $update->delivery_fee);
             // $update->evaluation = (80 + ($update['result'] * 5)) - $delayed;
             $update->evaluation = (80 + ($update['result'] * 5)) ;
             $update->save();
