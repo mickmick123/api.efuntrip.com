@@ -212,6 +212,44 @@ class RiderEvaluationController extends Controller
         return Response::json($response);
     }
 
+    public function getDailyEvaluationDetails(Request $request)
+    {
+        $order_ids = RiderEvaluation::where([
+                            ['rider_evaluation.date', 'like', '%' . $request->date . '%']
+                        ])->pluck('order_id');
+        $rider = RiderName::findorfail($request['rider_id']);
+        $delayed = OrderDelayed::whereIn('order_id', $order_ids)->where('riders', 'LIKE' ,'%' . $rider->name . '%')->get();
+
+        $orders = RiderEvaluation::select(['rider_evaluation.*'])
+                ->leftJoin('rider_name as rn', 'rider_evaluation.rider_id', 'rn.id')
+                ->where([
+                    ['rider_evaluation.rider_id', $request->rider_id],
+                    ['rider_evaluation.date', $request->date]
+                ])
+                ->orderBy('rider_evaluation.id')
+                ->get();
+
+        $average = 0;
+        $sum_eval = $orders->sum('evaluation');
+
+        $total_order = $orders->count();
+        $total_delayed = $delayed->count();
+
+        $average = $sum_eval / $total_order;
+
+        $average = (explode('.', number_format($average, 2))[1] == '00' ? $average : number_format($average, 2));
+        
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $orders;
+        $response['total_order'] = $total_order;
+        $response['average'] = $average;
+        $response['delayed'] = $delayed;
+        $response['total_delayed'] = $total_delayed;
+
+        return Response::json($response);
+    }
+
     public function getEvaluationDay(Request $request, $perPage = 10)
     {
         $validator = Validator::make($request->all(), [
@@ -233,10 +271,10 @@ class RiderEvaluationController extends Controller
                     ['rider_evaluation.rider_id', $request->rider_id],
                     ['rider_evaluation.date', $request->date]
                 ])
-                ->when($sort != '', function ($q) use ($sort) {
-                    $sort = explode('-', $sort);
-                    return $q->orderBy($sort[0], $sort[1]);
-                })
+                // ->when($sort != '', function ($q) use ($sort) {
+                //     $sort = explode('-', $sort);
+                //     return $q->orderBy($sort[0], $sort[1]);
+                // })
                 ->orderBy('rider_evaluation.id')
                 ->paginate($perPage);
 
@@ -347,72 +385,82 @@ class RiderEvaluationController extends Controller
                 ['rider_evaluation.rider_id', $request['rider_id']],
                 ['rider_evaluation.date', 'like', '%' . $tempDate . '%']
             ])->get();
+            $average = 0;
+            $average = $total->sum('evaluation');
+
+            $delivery_fee = 0;
+            $delivery_fee = $total->sum('delivery_fee');
 
             $orders = 0;
-            $delivery_fee = 0;
+            $orders = $total->count();
 
             $order_ids = RiderEvaluation::where([
                             ['rider_evaluation.date', 'like', '%' . $tempDate . '%']
                         ])->pluck('order_id');
             $rider = RiderName::findorfail($request['rider_id']);
+            
             $delayed = 0;
             $delayed = OrderDelayed::whereIn('order_id', $order_ids)->where('riders', 'LIKE' ,'%' . $rider->name . '%')->count();
 
-            // \Log::info($delayed);
-            // $delayed *=5;
             $evaluation = ['orders' => 0, 'delivery_fee' => 0, 'extra' => 0, 'result' => 0];
-            $average = 0;
-            for ($ii = 1; $ii <= 4; $ii++) {
+            $aveOrder = 0;
+            if($orders > 0){
+                $aveOrder = $average / $orders;
+            }
+            $delayed = $delayed > 0 ? (-5 * $delayed) : 0;
+            $aveOrder = ($aveOrder + $delayed < 0 ? 0 : $aveOrder + $delayed);
+            for ($ii = 1; $ii <= 3; $ii++) {
                 foreach ($total as $v) {
                     if ($ii === 1) {
                         $tempSummary['days'][$i] = 1;
-                        $orders += 1;
+                        //$orders += 1;
                         $tempData[$index] = [
                             "date" => Carbon::parse($tempDate)->format('F d, Y'),
                             "detail" => 'Total # of Orders:',
                             "value" => $orders
                         ];
                     } else if ($ii === 2) {
-                        $delivery_fee += $v->delivery_fee;
+                        //$delivery_fee += $v->delivery_fee;
                         $tempData[$index] = [
                             "date" => Carbon::parse($tempDate)->format('F d, Y'),
                             "detail" => 'Total Delivery Fee:',
                             "value" => $delivery_fee
                         ];
-                    } else if ($ii === 3) {
-                        if ($evaluation['orders'] >= 10 || $evaluation['delivery_fee'] >= 800) {
-                            $evaluation['extra'] += 1 * 3;
-                            $evaluation['result'] = 100 + $evaluation['extra'];
-                            if ($evaluation['result'] > 105) {
-                                $evaluation['result'] = 105;
-                            }
-                        } else if ($orders < 10 && $delivery_fee < 800) {
-                            $evaluation['extra'] = (10 - $orders) * -9.5;
-                            $evaluation['result'] = 100 + $evaluation['extra'];
-                            if ($evaluation['result'] < 80) {
-                                $evaluation['result'] = 80;
-                            }
-                        } else {
-                            $evaluation['result'] = 100;
-                        }
-                        $delayed = $delayed > 0 ? 5 : 0;
-                        $evaluation['result'] = $evaluation['result'] - $delayed;
-                        $evaluation['orders'] += 1;
-                        $evaluation['delivery_fee'] += $v->delivery_fee;
+                    } 
+                    // else if ($ii === 3) {
+                    //     if ($evaluation['orders'] >= 10 || $evaluation['delivery_fee'] >= 800) {
+                    //         $evaluation['extra'] += 1 * 3;
+                    //         $evaluation['result'] = 100 + $evaluation['extra'];
+                    //         if ($evaluation['result'] > 105) {
+                    //             $evaluation['result'] = 105;
+                    //         }
+                    //     } else if ($orders < 10 && $delivery_fee < 800) {
+                    //         $evaluation['extra'] = (10 - $orders) * -9.5;
+                    //         $evaluation['result'] = 100 + $evaluation['extra'];
+                    //         if ($evaluation['result'] < 80) {
+                    //             $evaluation['result'] = 80;
+                    //         }
+                    //     } else {
+                    //         $evaluation['result'] = 100;
+                    //     }
+                    //     $delayed = $delayed > 0 ? 5 : 0;
+                    //     $evaluation['result'] = $evaluation['result'] - $delayed;
+                    //     $evaluation['orders'] += 1;
+                    //     $evaluation['delivery_fee'] += $v->delivery_fee;
+
+                    //     $tempData[$index] = [
+                    //         "date" => Carbon::parse($tempDate)->format('F d, Y'),
+                    //         "detail" => 'Daily Evaluation:',
+                    //         "value" => $evaluation['result'] . '%'
+                    //     ];
+                    //     $tempSummary['evaluation'][$i] = $evaluation['result'] ;
+                    // } 
+                    else if ($ii === 3) {
 
                         $tempData[$index] = [
                             "date" => Carbon::parse($tempDate)->format('F d, Y'),
-                            "detail" => 'Daily Evaluation:',
-                            "value" => $evaluation['result'] . '%'
-                        ];
-                        $tempSummary['evaluation'][$i] = $evaluation['result'] ;
-                    } else if ($ii === 4) {
-                        $average += $v->evaluation;
-                        $aveOrder = $average / $orders;
-                        $tempData[$index] = [
-                            "date" => Carbon::parse($tempDate)->format('F d, Y'),
-                            "detail" => 'Average/Order Evaluation:',
-                            "value" => explode('.', number_format($aveOrder, 2))[1] == '00' ? $aveOrder : number_format($aveOrder, 2) . '%'
+                            "detail" => 'Daily Evaluation (Average):',
+                            "value" => (explode('.', number_format($aveOrder, 2))[1] == '00' ? $aveOrder : number_format($aveOrder, 2)). '%'
                         ];
                         $tempSummary['average'][$i] = $average / $orders;
                     }
