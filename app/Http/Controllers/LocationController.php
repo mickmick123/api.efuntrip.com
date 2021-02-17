@@ -61,16 +61,14 @@ class LocationController extends Controller
         $totalRemaining = [];
         $unitCalculation = [];
         foreach ($loc as $k => $v) {
-            $totalRemaining[$k] = ['loc_id' => 0, 'remaining' => 0];
+            $totalRemaining[$k] = ['loc_id' => 0, 'remaining' => 0, 'consumeRemaining' => 0];
         }
-        $temp = [];
         foreach ($loc as $k => $v) {
             foreach ($getRemaining as $kk => $vv) {
                 $unitCalculation[$kk] = $vv->qty;
                 $purchased[$kk] = 0;
                 $notPurchased[$kk] = 0;
                 $icon = InventoryConsumables::where([['inventory_id', $vv->inv_id], ['unit_id', $vv->unit_id]])->get();
-                $temp = $icon;
                 foreach ($icon as $kkk => $vvv) {
                     if ($v->id === $vvv->location_id) {
                         if ($vvv->type === 'Purchased') {
@@ -83,11 +81,12 @@ class LocationController extends Controller
                 $vv->remaining = $purchased[$kk] - $notPurchased[$kk];
                 $totalRemaining[$k]['loc_id'] = $v->id;
                 $totalRemaining[$k]['remaining'] += $purchased[$kk] - $notPurchased[$kk];
+                $totalRemaining[$k]['consumeRemaining'] += $notPurchased[$kk];
             }
         }
 
 
-        $data = ['location' => $loc, 'locationDetail' => $locDet, 'unitCalculation' => $getRemaining, 'locationTotalRemaining' => $totalRemaining,'Temp'=>$temp];
+        $data = ['location' => $loc, 'locationDetail' => $locDet, 'unitCalculation' => $getRemaining, 'locationTotalRemaining' => $totalRemaining];
 
         $response['status'] = 'Success';
         $response['code'] = 200;

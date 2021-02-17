@@ -1969,6 +1969,49 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    public function deleteInventoryConsumable(Request $request){
+        InventoryConsumables::find($request->id)->delete();
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = 'Succesfully Deleted!';
+        return Response::json($response);
+    }
+
+    public function editInventoryConsumable(Request $request){
+        $data = InventoryConsumables::where('id',$request->id)->get();
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = $data;
+        return Response::json($response);
+    }
+    
+    public function updateInventoryConsumable(Request $request){
+        $data = InventoryConsumables::find($request->id);
+        $formula = InventoryPurchaseUnit::where('inv_id',$request->inventory_id)->get();
+        $qty = $request->qty;
+        $start = false;
+        foreach($formula as $k=>$v){
+            if($request->unit_id == $v->unit_id){
+                $start = true;
+            }
+            if($start === true){
+                $qty *= $v->qty;
+            }
+        }
+        $data->qty = $qty;
+        $data->price = $request->price;
+        $data->unit_id = $request->unit_id;
+        $data->reason = $request->reason;
+        $data->save();
+
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+        $response['data'] = 'Consumable has been Updated!';
+        return Response::json($response);
+    }
+
     public function getSupplier(){
         $data = InventoryConsumables::where('type','Purchased')
             ->groupBy('sup_name')
