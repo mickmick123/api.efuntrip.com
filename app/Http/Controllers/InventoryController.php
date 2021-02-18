@@ -1235,7 +1235,7 @@ class InventoryController extends Controller
             ->orderBy('a.status','DESC')
             ->orderBy('a.created_at','DESC')
             ->get();
-        $x = 1;
+        $x = count($data);
         foreach ($data as $n) {
             if($n->status === 1) {
                 $status = "Assigned";
@@ -1245,7 +1245,7 @@ class InventoryController extends Controller
                 }
             $n->status = $status;
             $n->count = $x;
-            $x++;
+            $x--;
         }
 
         $response['status'] = 'Success';
@@ -1736,29 +1736,29 @@ class InventoryController extends Controller
             $received = 0;
             $price = 0;
             foreach (json_decode($request->forms, true) as $key => $val) {
-                if($val["type".$key] == "Purchased"){
+                if($val["type"] == "Purchased"){
                     $purchased += 1;
                     if($purchased == 1){
-                        $price = $val["purchase_price".$key];
+                        $price = $val["purchase_price"];
                     }
                 }
-                if($val["type".$key] == "Received"){
+                if($val["type"] == "Received"){
                     $received += 1;
                 }
-                $location_detailId = self::location($val["location".$key], $val["location_detail".$key], 2);
+                $location_detailId = self::location($val["location"], $val["location_detail"], 2);
 
                 $data = new InventoryAssigned;
                 $data->inventory_id = $request->inventory_id;
-                $data->model = $val["model".$key];
-                $data->serial = $val["serial".$key];
-                $data->source = $val["type".$key];
-                if($val["type".$key] == "Purchased") {
-                    $data->hasOR = $val["hasOR" . $key];
-                    $data->purchase_price = $val["purchase_price" . $key];
-                }else{
-                    $data->received_id = $val["user_id" . $key];
+                $data->model = $val["model"];
+                $data->serial = $val["serial"];
+                $data->source = $val["type"];
+                if($val["type"] == "Purchased") {
+                    $data->hasOR = $val["hasOR"];
+                    $data->purchase_price = $val["purchase_price"];
                 }
-                $data->remarks = $val["remarks".$key];
+                $data->received_from = $val["received_from"];
+                $data->received_from_address = $val["received_from_address"];
+                $data->remarks = $val["remarks"];
                 $data->storage_id = $location_detailId;
                 $data->status = 2;
                 $data->created_by = $user->id;
@@ -1986,7 +1986,7 @@ class InventoryController extends Controller
         $response['data'] = $data;
         return Response::json($response);
     }
-    
+
     public function updateInventoryConsumable(Request $request){
         $data = InventoryConsumables::find($request->id);
         $formula = InventoryPurchaseUnit::where('inv_id',$request->inventory_id)->get();
