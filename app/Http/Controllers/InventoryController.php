@@ -1221,11 +1221,11 @@ class InventoryController extends Controller
         $inventory_id = intval($request->input("id"));
 
         $data = DB::table('inventory_assigned as a')
-            ->select(DB::raw('a.*, i.type as inventory_type, CONCAT(u.first_name," ",u.last_name) as assigned_to, u.id as user_id,
+            ->select(DB::raw('a.*, i.type as inventory_type,
                                 l.location as location_site, ld.location_detail, l.id as loc_site_id, CASE WHEN a.location_id =0 THEN null ELSE a.location_id END AS loc_detail_id,
                                 l1.location as storage_site, ld1.location_detail as storage_detail, l1.id as s_site_id, ld1.id as s_detail_id'))
             ->leftjoin('inventory as i', 'a.inventory_id', 'i.inventory_id')
-            ->leftJoin("users as u", "a.assigned_to", "u.id")
+            //->leftJoin("users as u", "a.assigned_to", "u.id")
             ->leftJoin("ref_location_detail as ld","a.location_id","ld.id")
             ->leftJoin("ref_location as l","ld.loc_id","l.id")
             ->leftJoin("ref_location_detail as ld1","a.storage_id","ld1.id")
@@ -1323,7 +1323,7 @@ class InventoryController extends Controller
             self::saveLogs($request->inventory_id,"Retrieved", $reason);
 
             $iUpd = InventoryAssigned::find($request->assigned_id);
-            $iUpd->assigned_to = 0;
+            $iUpd->assigned_to = null;
             $iUpd->storage_id = $location_detailId;
             $iUpd->status = 2;
             $iUpd->updated_at = $now;
@@ -1382,9 +1382,9 @@ class InventoryController extends Controller
             $data->save();
 
             //Logs
-            $name = User::where("id", $request->user_id)->first();
+            //$name = User::where("id", $request->user_id)->first();
             $user = Auth::user();
-            $reason = "$user->first_name assigned 1 $request->item_name to $name->first_name $name->last_name ($location, $location_detail)";
+            $reason = "$user->first_name assigned 1 $request->item_name to $data->assigned_to ($location, $location_detail)";
             self::saveLogs($request->inventory_id,"Assigned", $reason);
 
             $response['status'] = 'Success';
@@ -1710,13 +1710,34 @@ class InventoryController extends Controller
                 ->orwhere('name', 'employee');
         })->pluck("id");
 
-        $users = User::select('id', 'first_name', 'last_name')->where('password','!=',null)
+        $users = User::select(DB::raw("CONCAT(first_name, ' ', last_name) as name"))->where('password','!=',null)
             ->whereHas('roles', function ($query) use ($role_ids) {
                 $query->where('roles.id', '=', $role_ids);
-            })->get();
+            })->get()->toArray();
+
+        $received = InventoryAssigned::select('received_from as name')
+            ->whereNotIn('received_from', [null, 0, 1])
+            ->groupBy('received_from');
+        $assigned = InventoryAssigned::select('assigned_to as name')
+            ->whereNotIn('received_from', [null, 0, 1])
+            ->groupBy('assigned_to');
+
+        $customs = $received->union($assigned)->orderBy('name')->get()->toArray();
+
+        foreach ($users as $key => $user) {
+            foreach ($customs as $custom){
+                if ($user['name'] == $custom['name']) {
+                    unset($users[$key]);
+                }
+            }
+        }
+
+        $array = array_merge($users, $customs);
+
+        sort($array);
 
         $response['status'] = 'Success';
-        $response['data'] = $users;
+        $response['data'] = $array;
         $response['code'] = 200;
         return Response::json($response);
     }
