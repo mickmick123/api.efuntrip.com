@@ -225,6 +225,7 @@ class InventoryController extends Controller
             }
             $inv->description = $request->description;
             $inv->specification = $request->specification;
+            $inv->has_serial = $request->has_serial;
             $inv->type = $request->type;
             $inv->created_at = strtotime("now");
             $inv->updated_at = strtotime("now");
