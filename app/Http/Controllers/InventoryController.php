@@ -581,7 +581,7 @@ class InventoryController extends Controller
             DB::raw("(inventory.name) AS name,
                 (co.name) AS company,
                 CASE WHEN inventory.type!='Consumables' THEN
-                    (SELECT COUNT(id) FROM inventory_assigned a WHERE a.inventory_id = inventory.inventory_id AND a.status !=3)
+                    (SELECT SUM(qty) FROM inventory_assigned a WHERE a.inventory_id = inventory.inventory_id AND a.status !=3)
                 END AS total_asset"),
             'datetime' => function ($query) {
                 $query->select(DB::raw("FROM_UNIXTIME(created_at, '%m/%d/%Y %H:%i:%s') AS datatime"))
@@ -939,7 +939,7 @@ class InventoryController extends Controller
             ->select(DB::raw('
                 co.name as company_name, inventory.*,
                 CASE WHEN inventory.type!="Consumables" THEN
-                    (SELECT COUNT(id) FROM inventory_assigned a WHERE a.inventory_id = inventory.inventory_id AND a.status !=3)
+                    (SELECT SUM(qty) FROM inventory_assigned a WHERE a.inventory_id = inventory.inventory_id AND a.status !=3)
                 END AS qty
             '))
             ->leftjoin('company as co', 'inventory.company_id', 'co.company_id')
@@ -1340,12 +1340,12 @@ class InventoryController extends Controller
     public function assignInventory(Request $request){
         $rules = [
             'inventory_id' => 'required',
-            'assigned_id' => 'required',
-            'user_id' => 'required',
-            'loc_site_id' => 'required',
-            'loc_detail_id' => 'required',
-            'model' => 'nullable',
-            'serial' => 'nullable'
+            'id' => 'required',
+            'assign_to' => 'required_if:'.$request->title.',==,Assign Item',
+            'location' => 'required',
+            'location_detail' => 'required',
+            //'model' => 'nullable',
+            //'serial' => 'nullable'
         ];
         $messages = [
             'required' => 'This field is required.'
@@ -1358,34 +1358,63 @@ class InventoryController extends Controller
             $response['errors'] = $validator->errors();
             $response['code'] = 422;
         } else {
-            if(!is_numeric($request->loc_site_id)){
-                $location = $request->loc_site_id;
-                $location_detail = $request->loc_detail_id;
-            }else{
-                $location = Location::where("id", $request->loc_site_id)->first()->location;
-                if(!is_numeric($request->loc_detail_id)){
-                    $location_detail = $request->loc_detail_id;
-                }else{
-                    $location_detail = LocationDetail::where("id", $request->loc_detail_id)->first()->location_detail;
-                }
-            }
-            $location_detailId = self::location($request->loc_site_id, $request->loc_detail_id);
-
-            $data = InventoryAssigned::find($request->assigned_id);
-            $data->inventory_id = $request->inventory_id;
-            $data->assigned_to = $request->user_id;
-            $data->location_id = $location_detailId;
-            $data->status = 1;
-            $data->model = $request->model;
-            $data->serial = $request->serial;
-            $data->updated_at = strtotime("now");
-            $data->save();
-
-            //Logs
-            //$name = User::where("id", $request->user_id)->first();
             $user = Auth::user();
-            $reason = "$user->first_name assigned 1 $request->item_name to $data->assigned_to ($location, $location_detail)";
-            self::saveLogs($request->inventory_id,"Assigned", $reason);
+            if($request->title == "Assign Item") {
+                if (!is_numeric($request->location)) {
+                    $location = $request->location;
+                    $location_detail = $request->location_detail;
+                } else {
+                    $location = Location::where("id", $request->location)->first()->location;
+                    if (!is_numeric($request->location_detail)) {
+                        $location_detail = $request->location_detail;
+                    } else {
+                        $location_detail = LocationDetail::where("id", $request->location_detail)->first()->location_detail;
+                    }
+                }
+                $location_detailId = self::location($request->location, $request->location_detail);
+                $remaining = InventoryAssigned::where("id", $request->id)->first()->qty;
+
+                $data = $request->hasSerial === 1 ? InventoryAssigned::find($request->id) : ($remaining == $request->qty ? InventoryAssigned::find($request->id) : new InventoryAssigned);
+                $data->inventory_id = $request->inventory_id;
+                $data->assigned_to = $request->assign_to;
+                $data->location_id = $location_detailId;
+                if ($request->hasSerial === 0) {
+                    $data->qty = $request->qty;
+                }
+                if ($request->hasSerial === 0 && $remaining != $request->qty) {
+                    $uDate = InventoryAssigned::find($request->id);
+                    $uDate->qty = $remaining - $request->qty;
+                    $uDate->updated_at = strtotime("now");
+                    $uDate->save();
+                }
+                $data->model = $request->model;
+                $data->status = 1;
+                $data->updated_at = strtotime("now");
+                $data->save();
+
+                //Logs
+                //$name = User::where("id", $request->user_id)->first();
+                $reason = "$user->first_name assigned 1 $request->item_name to $data->assigned_to ($location, $location_detail)";
+                self::saveLogs($request->inventory_id, "Assigned", $reason);
+            }
+            else
+            {
+                $location_detailId = self::location($request->location, $request->location_detail);
+
+                $inv = InventoryAssigned::find($request->id);
+
+                if($request->isAssigned != null) {
+                    $inv->assigned_to = $request->assign_to;
+                    $inv->location_id = $location_detailId;
+                }else{
+                    $inv->location_id = $location_detailId;
+                }
+                $inv->model = $request->model;
+                $inv->serial = $request->serial;
+                $inv->updated_by = $user->id;
+                $inv->updated_at = strtotime("now");
+                $inv->save();
+            }
 
             $response['status'] = 'Success';
             $response['code'] = 200;
@@ -1443,23 +1472,24 @@ class InventoryController extends Controller
             ->leftjoin("ref_location_detail as ld", "a.storage_id", "ld.id")
             ->leftjoin("ref_location as l", "ld.loc_id", "l.id")
             ->where("a.inventory_id", $request->inventory_id)
+            ->where("l.location", "!=", null)
             ->groupBy('ld.loc_id')
             ->orderBy("l.location", "ASC")
             ->get();
-        $total_qty = InventoryAssigned::select(DB::raw('COUNT(inventory_assigned.id) as total_qty'))
+        $total_qty = InventoryAssigned::select(DB::raw('SUM(inventory_assigned.qty) as total_qty'))
             ->where("inventory_id", $request->inventory_id)
             ->whereIn("status", [1,2])
             ->groupBy('inventory_id')
             ->pluck('total_qty');
         $total_qty = count($total_qty)>0?$total_qty[0]:0;
-        $assigned = InventoryAssigned::select(DB::raw('COUNT(inventory_assigned.id) as remaining'))
+        $assigned = InventoryAssigned::select(DB::raw('SUM(inventory_assigned.qty) as remaining'))
             ->where([["inventory_id", $request->inventory_id],["status", 1]])
             ->groupBy('inventory_id')
             ->pluck('remaining');
         $assigned = count($assigned)>0?$assigned[0]:0;
 
         foreach ($location as $n) {
-            $remaining = InventoryAssigned::select(DB::raw('COUNT(inventory_assigned.id) as remaining'))
+            $remaining = InventoryAssigned::select(DB::raw('SUM(inventory_assigned.qty) as remaining'))
                 ->leftjoin("ref_location_detail as ld", "inventory_assigned.storage_id", "ld.id")
                 ->where([["inventory_id", $request->inventory_id],["ld.loc_id","=",$n->id],["status", 2]])
                 ->groupBy('location_id')
@@ -1756,46 +1786,56 @@ class InventoryController extends Controller
             $purchased = 0;
             $received = 0;
             $price = 0;
-            foreach (json_decode($request->forms, true) as $key => $val) {
-                if($val["type"] == "Purchased"){
-                    $purchased += 1;
-                    if($purchased == 1){
-                        $price = $val["purchase_price"];
-                    }
-                }
-                if($val["type"] == "Received"){
-                    $received += 1;
-                }
-                $location_detailId = self::location($val["location"], $val["location_detail"], 2);
+            $qty = 0;
+            $hasSerial = Inventory::where("inventory_id", $request->inventory_id)->first()->has_serial;
 
-                $data = new InventoryAssigned;
-                $data->inventory_id = $request->inventory_id;
-                $data->model = $val["model"];
-                $data->serial = $val["serial"];
-                $data->source = $val["type"];
-                if($val["type"] == "Purchased") {
-                    $data->hasOR = $val["hasOR"];
-                    $data->purchase_price = $val["purchase_price"];
+            foreach (json_decode($request->forms, true) as $key => $val) {
+                $qty = 1;
+                if($hasSerial){
+                    $qty = $val["qty"];
                 }
-                $data->received_from = $val["received_from"];
-                $data->received_from_address = $val["received_from_address"];
-                $data->remarks = $val["remarks"];
-                $data->storage_id = $location_detailId;
-                $data->status = 2;
-                $data->created_by = $user->id;
-                $data->updated_by = $user->id;
-                $data->created_at = strtotime("now");
-                $data->updated_at = strtotime("now");
-                $data->save();
+                for($i=0; $i<$qty; $i++){
+                    if($val["type"] == "Purchased"){
+                        $purchased += 1;
+                        if($purchased == 1){
+                            $price = $val["purchase_price"];
+                        }
+                    }
+                    if($val["type"] == "Received"){
+                        $received += 1;
+                    }
+                    $location_detailId = self::location($val["location"], $val["location_detail"], 2);
+
+                    $data = new InventoryAssigned;
+                    $data->inventory_id = $request->inventory_id;
+                    $data->model = $val["model"];
+                    $data->qty = $hasSerial?1:$val["qty"];
+                    $data->source = $val["type"];
+                    if($val["type"] == "Purchased") {
+                        $data->hasOR = $val["hasOR"];
+                        $data->purchase_price = $val["purchase_price"];
+                    }
+                    $data->received_from = $val["received_from"];
+                    $data->received_from_address = $val["received_from_address"];
+                    $data->remarks = $val["remarks"];
+                    $data->storage_id = $location_detailId;
+                    $data->status = 2;
+                    $data->created_by = $user->id;
+                    $data->updated_by = $user->id;
+                    $data->created_at = strtotime("now");
+                    $data->updated_at = strtotime("now");
+                    $data->save();
+                }
+
             }
 
             //Logs
             if($purchased>0) {
-                $reason = "$user->first_name purchased $purchased $request->item_name with the price of Php$price.";
+                $reason = "$user->first_name purchased $qty $request->item_name with the price of Php$price.";
                 self::saveLogs($request->inventory_id,"Stored",$reason);
             }
             if($received>0) {
-                $reason = "$user->first_name received $received $request->item_name";
+                $reason = "$user->first_name received $qty $request->item_name";
                 self::saveLogs($request->inventory_id,"Stored",$reason);
             }
 
