@@ -1410,6 +1410,9 @@ class InventoryController extends Controller
                 }else{
                     $inv->storage_id = $location_detailId;
                 }
+                if ($request->hasSerial === 0) {
+                    $inv->qty = $request->qty;
+                }
                 $inv->model = $request->model;
                 $inv->serial = $request->serial;
                 $inv->updated_by = $user->id;
