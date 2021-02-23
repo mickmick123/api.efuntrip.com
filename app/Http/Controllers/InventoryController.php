@@ -1408,7 +1408,7 @@ class InventoryController extends Controller
                     $inv->assigned_to = $request->assign_to;
                     $inv->location_id = $location_detailId;
                 }else{
-                    $inv->location_id = $location_detailId;
+                    $inv->storage_id = $location_detailId;
                 }
                 $inv->model = $request->model;
                 $inv->serial = $request->serial;
