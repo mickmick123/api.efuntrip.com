@@ -11,6 +11,10 @@ use Illuminate\Http\Request;
 
 class LocationController extends Controller
 {
+    /*
+        http://localhost:8082/#/inventory/list/{inventory_id}
+        It will show the location as per its type
+    */
     public function getLocation(Request $request)
     {
         $loc = Location::where("type", "=", $request->type)->get();
@@ -22,6 +26,10 @@ class LocationController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/inventory/list/{inventory_id}
+        It will show the location detail once the location is selected and its type
+    */
     public function getLocationDetail(Request $request)
     {
         if (!is_numeric($request->id)) {
@@ -45,6 +53,11 @@ class LocationController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/inventory/list/{inventory_id}
+        It will Show the Location and Location Detail then the Current remaing of last unit
+        for every location of the selected Inventory
+    */
     public function getLocationConsumable(Request $request)
     {
         $invId = InventoryConsumables::where([

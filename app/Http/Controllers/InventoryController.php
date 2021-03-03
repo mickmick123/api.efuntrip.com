@@ -51,6 +51,11 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/inventory/list
+        When clicking the Add Category and Add Item Profile buttons.
+        It will show the Tree of parent Companies to its nested Categories
+    */
     public function getTreeCategory(Request $request){
         if(in_array($request->company_id,[null,0])){
             $com = Company::orderBy('name','ASC')->get();
@@ -107,6 +112,11 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/inventory/list
+        When you search an Category, you will see the Move button,
+        once you click it then you will see the list of categories.
+    */
     public function getCompanyCategory(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -140,6 +150,10 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/inventory/list
+        Update the position of the category within Parent and Child
+    */
     public function moveInventoryCategory(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -164,6 +178,12 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/inventory/list
+        When you Add an Item Profile it will check the unit to prevent the duplication of the Units
+        $loop = false == Properties; true == Consumables;
+        $withId = false == no ID at the result; true == have ID at the result;
+    */
     protected static function checkUnit($data, $loop = false, $withId = false){
         if($loop === true){
             $units = [];
@@ -199,6 +219,12 @@ class InventoryController extends Controller
         }
     }
 
+    /*
+        http://localhost:8082/#/inventory/list
+        Once you clicked the Add Item Profile Button and
+        clicked the one category it will show you the form
+        then once you finish fillup everything it will save.
+    */
     public function addInventory(Request $request){
         $validator = Validator::make($request->all(), [
             'company_id' => 'required',
@@ -304,6 +330,12 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/inventory/list
+        Once you clicked the Add Category Button and
+        click the Company or Category as parent it will add a new
+        child to its parent
+    */
     public function addInventoryCategory(Request $request){
         $validator = Validator::make($request->all(), [
             'company_id' => 'required',
@@ -345,6 +377,12 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/inventory/list/{inventory_id}
+        The type of Inventory should be Properties
+        Once you click the Edit Button,
+        You can now update what you add before.
+    */
     public function editInventory(Request $request){
         $validator = Validator::make($request->all(), [
             'inventory_id' => 'required',
@@ -388,6 +426,11 @@ class InventoryController extends Controller
     }
 
 
+    /*
+        http://localhost:8082/#/inventory/list
+        Once you Search a Category on Search Bar,
+        you will see the Edit Button then you can now update it.
+    */
     public function editInventoryCategory(Request $request){
         $validator = Validator::make($request->all(), [
             'category_id' => 'required',
@@ -412,6 +455,11 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/inventory/list/{inventory_id}
+        It's either the type is Properties or Consumable,
+        You will see the Delete Button and it will deleted once you click yes.
+    */
     public function deleteInventory(Request $request){
         $validator = Validator::make($request->all(), [
             'inventory_id' => 'required|exists:inventory',
@@ -438,6 +486,11 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/inventory/list
+        Once you search at Search bar it's either Company or Categoies
+        It will show you the list of affected Child Category and Inventory for deletion
+    */
     public function getCompanyCategoryInventory(Request $request){
         $com = DB::table('company')
             ->where('company_id',$request->company_id)->get();
@@ -458,6 +511,11 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/inventory/list
+        Once you search at Search bar the category
+        It will show you the list of affected Child Category and Inventory for deletion
+    */
     public function getCategoryInventory(Request $request){
         $categ = InventoryParentCategory::where('category_id', $request->category_id)->where('company_id', $request->company_id)->first()->getAllChildren()->pluck('category_id');
         $categoryList = DB::table('inventory_category')
@@ -480,6 +538,11 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/inventory/list
+        once you see the list of Company or Categories.
+        It will delete it once you confirm yes.
+    */
     public function deleteInventoryCategory(Request $request){
         $categ = InventoryParentCategory::where('category_id', $request->category_id)->where('company_id', $request->company_id)->first()->getAllChildren()->pluck('category_id');
 
@@ -1614,6 +1677,12 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/inventory/list/{inventory_id}
+        The type of Inventory should be Consumables
+        Once you click the Edit Button,
+        You can now update what you add before.
+    */
     public function updateItemProfileConsumable(Request $request){
         $validator = Validator::make($request->all(), [
             'inventory_id' => 'required',
@@ -1713,6 +1782,12 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/inventory/list/{inventory_id}
+        The type of Inventory should be Consumables
+        Once you click the Edit Button,
+        It will fill up every input fields to its original information
+    */
     public function getInventory(Request $request){
         $list = Inventory::where('inventory_id',$request->inventory_id)->get(['inventory_id','description','specification']);
         foreach ($list as $k=>$v){
@@ -1909,6 +1984,12 @@ class InventoryController extends Controller
         $log->save();
     }
 
+    /*
+        http://localhost:8082/#/inventory/list/{inventory_id}
+        The type of Inventory should be Consumables
+        Once you click the Edit Button,
+        It will fill up the data table of Purchase
+    */
     public function getPurchaseUnit(Request $request){
         if(count($request->all()) !== 0){
             $unit = InventoryPurchaseUnit::leftJoin('inventory_unit as iun','inventory_purchase_unit.unit_id','iun.unit_id')
@@ -1924,6 +2005,12 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/inventory/list/{inventory_id}
+        The type of Inventory should be Consumables
+        Once you click the Edit Button,
+        It will fill up the data table of Selling
+    */
     public function getSellingUnit(Request $request){
         $unit = InventorySellingUnit::leftJoin('inventory_unit as iun','inventory_selling_unit.unit_id','iun.unit_id')
             ->where('inventory_selling_unit.inv_id',$request->inventory_id)->get();
@@ -1949,6 +2036,12 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/inventory/list/{inventory_id}
+        The type of Inventory should be Consumables
+        Once you click the Add More Button and after you finish fill it up
+        then it will save.
+    */
     public function addInventoryConsumable(Request $request){
         $validator = Validator::make($request->all(), [
             'inventory_id' => 'required',
@@ -2034,6 +2127,11 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/inventory/list/{inventory_id}
+        After you add a quantity of the unit you will see the data below.
+        When you click the Trash Bin icon it will delete that row instant.
+    */
     public function deleteInventoryConsumable(Request $request){
         InventoryConsumables::find($request->id)->delete();
 
@@ -2043,6 +2141,11 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/inventory/list/{inventory_id}
+        After you add a quantity of the unit you will see the data below.
+        When you click the Pencil icon it fill up every fields to its original data.
+    */
     public function editInventoryConsumable(Request $request){
         $data = InventoryConsumables::where('id',$request->id)->get();
 
@@ -2052,6 +2155,12 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/inventory/list/{inventory_id}
+        After you add a quantity of the unit you will see the data below.
+        After you finish to change the data,
+        once you confirm it then the row will be updated
+    */
     public function updateInventoryConsumable(Request $request){
         $data = InventoryConsumables::find($request->id);
         $formula = InventoryPurchaseUnit::where('inv_id',$request->inventory_id)->get();
@@ -2077,6 +2186,12 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/inventory/list/{inventory_id}
+        Once you click the Add More you will see the Supplier Information
+        When you have already added a Supplier before once you click the input field
+        it will show you the list of Supplier name
+    */
     public function getSupplier(){
         $data = InventoryConsumables::where('type','Purchased')
             ->groupBy('sup_name')
@@ -2090,6 +2205,11 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/inventory/list/{inventory_id}
+        Once you click the Consume Button and after fill up everything
+        then you can now save it
+    */
     public function addInventoryConsume(Request $request){
         $validator = Validator::make($request->all(), [
             'inventory_id' => 'required',

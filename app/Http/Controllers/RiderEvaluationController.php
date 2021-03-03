@@ -15,6 +15,11 @@ use Illuminate\Support\Facades\Validator;
 class RiderEvaluationController extends Controller
 {
     
+    /*
+        http://localhost:8082/#/rider-evaluation
+        Once you click the Question & Answer Editor button
+        You can now fill it up and after that you can now save it.
+    */
     public function updateQA(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -89,6 +94,12 @@ class RiderEvaluationController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/rider-evaluation/{rider_id}/{month}/{halfMonth}/{year}
+        halfMonth = day<=15=1; day>=16=2;
+        Once you click the Rider Evaluation Form button it will show you the form.
+        Click the radio button and start the survey then save.
+    */
     public function addEvaluation(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -127,6 +138,12 @@ class RiderEvaluationController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/rider-evaluation/{rider_id}/{month}/{halfMonth}/{year}
+        halfMonth = day<=15=1; day>=16=2;
+        Once you click the Edit button it will show you the form.
+        Click the radio button and start the survey then save.
+    */
     public function updateEvaluation(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -162,6 +179,11 @@ class RiderEvaluationController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/rider-evaluation/{rider_id}/{month}/{halfMonth}/{year}
+        halfMonth = day<=15=1; day>=16=2;
+        Once you click the Delete button it will deleted that row in instant.
+    */
     public function deleteEvaluation(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -182,6 +204,11 @@ class RiderEvaluationController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/rider-evaluation
+        Once you click the Question & Answer Editor button
+        It will fill up input fields when its have existed data.
+    */
     public function getQA()
     {
         $data = RiderEvaluationQA::all();
@@ -192,6 +219,12 @@ class RiderEvaluationController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/rider-evaluation/{rider_id}/{month}/{halfMonth}/{year}
+        halfMonth = day<=15=1; day>=16=2;
+        Once you click the Edit button it will show you the form.
+        Tt will fill up automatic the original data of the survey.
+    */
     public function getEvaluation(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -250,6 +283,12 @@ class RiderEvaluationController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/rider-evaluation/{rider_id}/{month}/{halfMonth}/{year}
+        halfMonth = day<=15=1; day>=16=2;
+        Once you Pick Available Days
+        It will fill up the datatable.
+    */
     public function getEvaluationDay(Request $request, $perPage = 10)
     {
         $validator = Validator::make($request->all(), [
@@ -289,6 +328,10 @@ class RiderEvaluationController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/rider-evaluation
+        It will fill up the datatable
+    */
     public function getEvaluationMonth(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -338,6 +381,12 @@ class RiderEvaluationController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/rider-evaluation/{rider_id}/{month}/{halfMonth}/{year}
+        halfMonth = day<=15=1; day>=16=2;
+        Once you click the Summary Evaluation Button
+        You will see the everyday score and in the half month score.
+    */
     public function getSummaryEvaluationHalfMonth(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -361,6 +410,11 @@ class RiderEvaluationController extends Controller
         return Response::json($response);
     }
 
+    /*
+        http://localhost:8082/#/rider-summary-half-month/{rider_id}/{month}/{halfMonth}/{year}
+        halfMonth = day<=15=1; day>=16=2;
+        This is the calculation of the Summary
+    */
     protected static function getSummary($request)
     {
         $data = [];
@@ -478,6 +532,14 @@ class RiderEvaluationController extends Controller
         return ['summary' => $summary, 'data' => $data];
     }
 
+    /*
+        http://localhost:8082/#/rider-evaluation
+        When updating the Question it will global update
+
+        http://localhost:8082/#/rider-evaluation/{rider_id}/{month}/{halfMonth}/{year}
+        halfMonth = day<=15=1; day>=16=2;
+        when updating the Evaluation it will trigger on change
+    */
     protected static function updateAllEvaluation($choice_history, $answer_history)
     {
         $getEvaluation = RiderEvaluation::select(['rider_evaluation.*'])->leftJoin('rider_name as rn', 'rider_evaluation.rider_id', 'rn.id')
@@ -518,6 +580,9 @@ class RiderEvaluationController extends Controller
         }
     }
 
+    /*
+        formula of riderIncome
+    */
     protected static function riderIncome($data, $fee)
     {
         if ($data > 0) {
