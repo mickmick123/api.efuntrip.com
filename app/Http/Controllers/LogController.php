@@ -61,6 +61,9 @@ class LogController extends Controller
         }
     }
 
+    /**
+     * @Description global function used for notification adding and execution
+    */
     public function addNotif($log, $type, $hasDelay = false)
     {
         $date = Carbon::now();
@@ -111,6 +114,19 @@ class LogController extends Controller
 
     }
 
+    /**
+     * @api {POST} read-notif
+     * @apiHeader {String}  Authorization - Credential token
+     * @apiParam  {Integer} id
+     * @apiDescription Read Notification
+     * @apiSuccessExample {json} Success-Response:
+     * HTTP/1.1 200 OK
+     * {
+        "status":"Success",
+        "data":"Successfully Read",
+        "code":200
+     }
+     */
     public function readNotif(Request $request){
         $validator = Validator::make($request->all(), [
             'id' => 'required|exists:logs_app_notification',
@@ -174,6 +190,32 @@ class LogController extends Controller
 //        return Response::json($response);
 //    }
 
+    /**
+     * @api {POST} get-notif-by-id
+     * @apiHeader {String}  Authorization - Credential token
+     * @apiParam  {Integer} id
+     * @apiDescription List down the notification details of specific Id
+     * @apiSuccessExample {json} Success-Response:
+     * HTTP/1.1 200 OK
+     * {
+        "status": "Success",
+        "data": {
+            "id": 3,
+            "log_id": "a:1:{i:0;i:17242;}",
+            "client_id": 16121,
+            "group_id": null,
+            "type": "Added Service",
+            "message": "9G Working Visa Conversion with AEP - 1 Year",
+            "message_cn": "",
+            "is_read": 1,
+            "created_at": "2021-01-11 12:19:17",
+            "user": {...},
+            "logs": {...},
+            "remarks": ""
+        },
+        "code": 200
+    }
+    */
     public function getNotificationById(Request $request) {
         $validator = Validator::make($request->all(), [
             'id' => 'required|exists:logs_app_notification',

@@ -636,6 +636,12 @@ class InventoryController extends Controller
         }
     }
 
+    /**
+     * @api /get-newly-added/{$perPage}
+     * @apiParam sort Array
+     * @apiParam search String
+     * @apiDescription Get the latest Stored, Updated, Assigned, Disposed
+    */
     public function getNewlyAdded(Request $request, $perPage = 10)
     {
         $sort = $request->sort;
@@ -804,6 +810,65 @@ class InventoryController extends Controller
         return $category;
     }
 
+    /**
+     * @api /list
+     * @apiParam q {String}
+     * @apiParam company_id {Integer}
+     * @apiParam category_id {Integer}
+     * @apiParam page {Integer}
+     * @apiParam limit {Integer}
+     * @apiParam sort {Array}
+     * @apiDescription List all inventories
+     * @apiSuccessExample {json} Success-Response:
+     * HTTP/1.1 200 OK
+     * {
+        "status": "Success",
+        "code": 200,
+        "category": [
+            {
+                "company_id": 1,
+                "name": "Company 1",
+                "name_chinese": null,
+                "created_at": 1603198430,
+                "updated_at": 1603198430,
+                "isCompany": true
+            }
+        ],
+        "data": {
+            "totalNum": 10,
+            "currPage": 1,
+            "list": [
+                {
+                    "company_name": "Test",
+                    "inventory_id": 10,
+                    "company_id": 3,
+                    "category_id": 13,
+                    "name": "1",
+                    "name_chinese": null,
+                    "inventory_img": null,
+                    "description": "1",
+                    "specification": null,
+                    "type": "Consumables",
+                    "status": 1,
+                    "created_at": "February 16, 2021",
+                    "updated_at": "February 16, 2021",
+                    "qty": null,
+                    "item_name": "Consumables",
+                    "path": "Consumables",
+                    "unit": "Truck / Box / Bottle",
+                    "rUnit": "5 Trucks | 96 Boxs",
+                    "rSet": 0,
+                    "toolTipSet": "",
+                    "totalRemaining": "14,304 Bottles",
+                    "rWasted": "2 Boxs | 22 Bottles",
+                    "rConsumed": "1 Truck | 1 Box | 2 Bottles"
+                }
+            ],
+            "pageSize": 1,
+            "totalPage": 10
+        }
+    }
+    */
     public function list(Request $request)
     {
         $name = $request->input("q", "");
@@ -1068,6 +1133,64 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /**
+     * @api /item/{id}
+     * @apiParam id {Integer}
+     * @apiDescription Show specific item profile (Property or Consumables)
+     * @apiSuccessExample {json} Success-Response:
+     * HTTP/1.1 200 OK
+    {
+        "status": "Success",
+        "code": 200,
+        "data": [
+            {
+                "company_name": "Test",
+                "inventory_id": 2,
+                "company_id": 3,
+                "category_id": 14,
+                "name": "Chair",
+                "name_chinese": null,
+                "inventory_img": null,
+                "description": "Office Chair",
+                "specification": null,
+                "type": "Property",
+                "status": 1,
+                "created_at": "October 20, 2020",
+                "updated_at": "October 20, 2020",
+                "setting_id": null,
+                "inv_id": null,
+                "length": null,
+                "width": null,
+                "height": null,
+                "imported_rmb_price": null,
+                "shipping_fee_per_cm": null,
+                "rmb_rate": null,
+                "market_price_min": null,
+                "market_price_max": null,
+                "advised_sale_price": null,
+                "actual_sale_price": null,
+                "id": null,
+                "expiration_date": null,
+                "remarks": null,
+                "units": [
+                    {
+                        "id": 4,
+                        "inv_id": 2,
+                        "unit_id": 5,
+                        "qty": "0.00",
+                        "last_unit_id": 0,
+                        "parent_id": 0,
+                        "name": "Piece",
+                        "created_at": 1603198894,
+                        "updated_at": 1603198894
+                    }
+                ],
+            "item_name": "Properties",
+            "path": "Properties"
+            }
+        ]
+    }
+    */
     public function show($id){
         $list = DB::table('inventory as i')
             ->select(DB::raw('co.name as company_name, i.*, cs.*'))
@@ -1280,6 +1403,51 @@ class InventoryController extends Controller
         }
     }
 
+    /**
+     * @api /list-assigned
+     * @apiParam id {Integer}
+     * @apiDescription Show all data in specific item
+     * @apiSuccessExample {json} Success-Response:
+     * HTTP/1.1 200 OK
+    {
+        "status": "Success",
+        "code": 200,
+        "data": [
+            {
+                "id": 1,
+                "inventory_id": 2,
+                "assigned_to": "0",
+                "model": "123",
+                "serial": "123##",
+                "qty": 0,
+                "source": "Purchased",
+                "received_from": null,
+                "received_from_address": null,
+                "purchase_price": "1000.00",
+                "date_purchased": 0,
+                "hasOR": 0,
+                "storage_id": 3,
+                "location_id": null,
+                "status": "Storage",
+                "remarks": "",
+                "created_by": 1,
+                "updated_by": 1,
+                "created_at": 1603198973,
+                "updated_at": 1603198973,
+                "inventory_type": "Property",
+                "location_site": null,
+                "location_detail": null,
+                "loc_site_id": null,
+                "loc_detail_id": null,
+                "storage_site": "Manila",
+                "storage_detail": "Market",
+                "s_site_id": 3,
+                "s_detail_id": 3,
+                "count": 1
+            }
+        ]
+    }
+     */
     public function listAssigned(Request $request)
     {
         $inventory_id = intval($request->input("id"));
@@ -1318,6 +1486,10 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /**
+     * @api /edit-assigned-item
+     * @apiDescription Edit Assigned item
+    */
     public function editAssignedItem(Request $request)
     {
         $rules = [
@@ -1364,6 +1536,10 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /**
+     * @api /retrieve-inventory
+     * @apiDescription Retrieve Item from employee
+    */
     public function retrieveInventory(Request $request) {
         $validator = Validator::make($request->all(), [
             'assigned_id' => 'required',
@@ -1401,6 +1577,10 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /**
+     * @api /assign-inventory
+     * @apiDescription Assign item to employee
+    */
     public function assignInventory(Request $request){
         $rules = [
             'inventory_id' => 'required',
@@ -1533,6 +1713,28 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /**
+     * @api {GET} /list-location
+     * @apiParam inventory_id {Integer}
+     * @apiDescription Get total qty, assigned and total remaining per location
+     * @apiSuccessExample {json} Success-Response:
+     * HTTP/1.1 200 OK
+    {
+        "status": "Success",
+        "code": 200,
+        "data": {
+            "qty": "1",
+            "assigned": 0,
+            "location": [
+                {
+                    "location": "Manila",
+                    "id": 3,
+                    "remaining": "1"
+                }
+            ]
+        }
+    }
+    */
     public function locationList(Request $request){
         $location = DB::table("inventory_assigned as a")
             ->select(DB::raw('l.location, l.id'))
@@ -1597,6 +1799,19 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /**
+     * @api {POST} /disposed-inventory
+     * @apiParam assigned_id {Integer}
+     * @apiParam inventory_id {Integer}
+     * @apiDescription Disposed Inventory
+     * @apiSuccessExample {json} Success-Response:
+     * HTTP/1.1 200 OK
+     {
+        "status": "Success",
+        "code": 200,
+        "data": []
+    }
+    */
     public function disposedInventory(Request $request) {
         $validator = Validator::make($request->all(), [
             'assigned_id' => 'required',
@@ -1629,6 +1844,14 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /**
+     * @api {POST} /transfer-inventory
+     * @apiParam assigned_id {Integer}
+     * @apiParam inventory_id {Integer}
+     * @apiParam loc_site_id {String}
+     * @apiParam loc_detail_id {String}
+     * @apiDescription transfer Item from one location to another
+    */
     public function transferInventory(Request $request) {
         $validator = Validator::make($request->all(), [
             'assigned_id' => 'required',
@@ -1812,6 +2035,10 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /**
+     * @api {GET} /get-users-list
+     * @apiDescription Merge users from table users and inventory_assigned (received_from & assigned_to)
+    */
     public function getUsersList() {
         $role_ids = Role::where( function ($query) {
             $query->orwhere('name', 'master')
@@ -1828,7 +2055,7 @@ class InventoryController extends Controller
             ->whereNotIn('received_from', [null, 0, 1])
             ->groupBy('received_from');
         $assigned = InventoryAssigned::select('assigned_to as name')
-            ->whereNotIn('received_from', [null, 0, 1])
+            ->whereNotIn('assigned_to', [null, 0, 1])
             ->groupBy('assigned_to');
 
         $customs = $received->union($assigned)->orderBy('name')->get()->toArray();
@@ -1851,6 +2078,10 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /**
+     * @api {POST} /add-more-item
+     * @apiDescription Add more item in specific inventory profile
+    */
     public function addMoreItem(Request $request){
         $validator = Validator::make($request->all(), [
             'inventory_id' => 'required'
@@ -2287,6 +2518,54 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
+    /**
+     * @api {GET} /list-inventory-consumable
+     * @apiParam inventory_id {Integer}
+     * @apiDescription Get data from inventory_consumables
+     * @apiSuccessExample {json} Success-Response:
+     * HTTP/1.1 200 OK
+    {
+        "status": "Success",
+        "code": 200,
+        "data": [
+            {
+                "id": 5,
+                "inventory_id": 1,
+                "assigned_to": null,
+                "order_id": null,
+                "qty": 1,
+                "unit_id": 1,
+                "selling_id": 3,
+                "price": "0.00",
+                "location_id": 1,
+                "sup_name": "",
+                "sup_location_id": null,
+                "reason": "test",
+                "type": "Converted",
+                "created_by": 15923,
+                "created_at": "Oct 21, 2020",
+                "updated_at": "Oct 21, 2020",
+                "location": "Malate",
+                "location_detail": "Mart",
+                "storageId": 1,
+                "operator": "Joshua Sardido",
+                "who": null,
+                "sup_location": "",
+                "sup_location_detail": null,
+                "unit": "Truck",
+                "sUnit": "Box",
+                "sQty": "3.00",
+                "subTotal": 0,
+                "purchased": 1,
+                "qtyUnit": "1 Bottle",
+                "remainingUnit": "7 Boxs | 20 Bottles",
+                "totalSale": 0
+            }
+        ],
+        "price": 110000,
+        "sale": 0
+    }
+    */
     public function getInventoryConsumable(Request $request){
         $list = DB::table('inventory_consumables as c')
             ->select(DB::raw("c.*, l.location, ld.location_detail, l.id as storageId,
@@ -2506,7 +2785,9 @@ class InventoryController extends Controller
         return Response::json($response);
     }
 
-    // Unit Formatting
+    /**
+     * @Description Unit Formatting
+    */
     public static function unitFormatting($inventory_id, $qty){
         $array_m = [];
         $unit = InventoryPurchaseUnit::where('inv_id', $inventory_id)
