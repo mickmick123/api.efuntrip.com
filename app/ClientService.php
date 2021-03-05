@@ -10,23 +10,33 @@ use App\Http\Controllers\ClientController;
 
 use App\User;
 use App\Group;
+use Carbon\Carbon;
 
 class ClientService extends Model
 {
 
     protected $table = 'client_services';
-
+    public $timestamps = false;
     protected $fillable = ['client_id', 'group_id', 'service_id', 'detail', 'cost', 'charge', 'month', 'tip', 'com_client', 'com_agent', 'client_com_id', 'agent_com_id', 'status', 'remarks', 'tracking', 'active', 'extend', 'checked'];
 
     public static function boot() {
         parent::boot();
 
         static::created(function ($model) {
+            ClientService::where('id', $model->id)->update([
+                    'created_at' => Carbon::now(),
+                    'updated_at' => Carbon::now()
+                ]);
             static::updateBalanceAndCollectables($model->client_id, $model->group_id);
         });
 
         self::updated(function($model) {
             $original = $model->getOriginal();
+            if(($original['status'] != 'complete' && $original['status'] != 'released') && ($model->status == 'complete' || $model->status == 'released')){
+                ClientService::where('id', $model->id)->update([
+                    'updated_at' => Carbon::now()
+                ]);
+            }
             GroupController::createRefund($model,$original);
             GroupController::createOrDeleteCommission($model,$original);
             static::updateBalanceAndCollectables($model->client_id, $model->group_id, $original);

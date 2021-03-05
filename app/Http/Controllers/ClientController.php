@@ -3119,8 +3119,8 @@ class ClientController extends Controller
                 ->where(function($query) {
                     return $query->orwhere('client_services.status', 'complete')->orWhere('client_services.status', 'released');
                 })
-                ->whereYear('client_services.created_at', '=', $year)
-                ->whereMonth('client_services.created_at', '=', $month)
+                ->whereYear('client_services.updated_at', '=', $year)
+                ->whereMonth('client_services.updated_at', '=', $month)
                 ->where('client_services.active', 1)
                 ->with(array('client.groups' => function($query){
                     $query->select('name');
@@ -3139,7 +3139,7 @@ class ClientController extends Controller
                 })
                 ->where(function ($services) use($search) {
                     $dateSearch = str_replace('/', '-', $search);
-                    $services->orwhere('client_services.created_at', 'LIKE', '%'.$dateSearch.'%')
+                    $services->orwhere('client_services.updated_at', 'LIKE', '%'.$dateSearch.'%')
                           ->orwhere('client_services.detail', 'LIKE', '%'.$search.'%')
                           ->orwhere('groups.name', 'LIKE', '%'.$search.'%');
                 })

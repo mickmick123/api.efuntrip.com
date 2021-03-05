@@ -120,16 +120,16 @@ class DashboardController extends Controller
                 $month =  $request['month'];
                 $year =  $request['year'];
 
-                $charge = ClientService::whereYear('created_at', '=', $year)
-                              ->whereMonth('created_at', '=', $month)
+                $charge = ClientService::whereYear('updated_at', '=', $year)
+                              ->whereMonth('updated_at', '=', $month)
                               ->where(function ($query) {
                                     $query->orwhere('status','complete')
                                           ->orwhere('status','released');
                                 })
                               ->where('active',1)
                               ->sum('charge');
-                $cost_spent = ClientService::whereYear('created_at', '=', $year)
-                              ->whereMonth('created_at', '=', $month)
+                $cost_spent = ClientService::whereYear('updated_at', '=', $year)
+                              ->whereMonth('updated_at', '=', $month)
                               ->where(function ($query) {
                                     $query->orwhere('status','complete')
                                           ->orwhere('status','released');
@@ -149,16 +149,16 @@ class DashboardController extends Controller
                             $month =  str_pad($i, 2, '0', STR_PAD_LEFT);
                             $year =  $request['year'];
 
-                        $charge = ClientService::whereYear('created_at', '=', $year)
-                                      ->whereMonth('created_at', '=', $month)
+                        $charge = ClientService::whereYear('updated_at', '=', $year)
+                                      ->whereMonth('updated_at', '=', $month)
                                       ->where(function ($query) {
                                             $query->orwhere('status','complete')
                                                   ->orwhere('status','released');
                                         })
                                       ->where('active',1)
                                       ->sum('charge');
-                        $cost_spent = ClientService::whereYear('created_at', '=', $year)
-                                      ->whereMonth('created_at', '=', $month)
+                        $cost_spent = ClientService::whereYear('updated_at', '=', $year)
+                                      ->whereMonth('updated_at', '=', $month)
                                       ->where(function ($query) {
                                             $query->orwhere('status','complete')
                                                   ->orwhere('status','released');
