@@ -1451,6 +1451,12 @@ class InventoryController extends Controller
     public function listAssigned(Request $request)
     {
         $inventory_id = intval($request->input("id"));
+        $search = trim($request->input("search", ""));
+
+        $getWhere = array();
+        if($search != ""){
+            $getWhere[] = ["assigned_to", 'LIKE', "%".$search."%"];
+        }
 
         $data = DB::table('inventory_assigned as a')
             ->select(DB::raw('a.*, i.type as inventory_type,
@@ -1463,6 +1469,8 @@ class InventoryController extends Controller
             ->leftJoin("ref_location_detail as ld1","a.storage_id","ld1.id")
             ->leftJoin("ref_location as l1","ld1.loc_id","l1.id")
             ->where("a.inventory_id", "=", $inventory_id)
+            ->where("a.qty", "!=", 0)
+            ->where($getWhere)
             ->whereIn("a.status", [1,2])
             ->orderBy('a.status','DESC')
             ->orderBy('a.created_at','DESC')
@@ -1477,6 +1485,9 @@ class InventoryController extends Controller
                 }
             $n->status = $status;
             $n->count = $x;
+            if($n->from_id != null) {
+                $n->remaining = InventoryAssigned::where('id', $n->from_id)->first()->qty;
+            }
             $x--;
         }
 
@@ -1579,7 +1590,7 @@ class InventoryController extends Controller
 
     /**
      * @api /assign-inventory
-     * @apiDescription Assign item to employee
+     * @apiDescription can assign item to employee and edit item
     */
     public function assignInventory(Request $request){
         $rules = [
@@ -1616,18 +1627,21 @@ class InventoryController extends Controller
                     }
                 }
                 $location_detailId = self::location($request->location, $request->location_detail);
-                $remaining = InventoryAssigned::where("id", $request->id)->first()->qty;
 
-                $data = $request->hasSerial === 1 ? InventoryAssigned::find($request->id) : ($remaining == $request->qty ? InventoryAssigned::find($request->id) : new InventoryAssigned);
+                //$data = $request->hasSerial === 1 ? InventoryAssigned::find($request->id) : ($remaining == $request->qty ? InventoryAssigned::find($request->id) : new InventoryAssigned);
+                $data = new InventoryAssigned;
                 $data->inventory_id = $request->inventory_id;
                 $data->assigned_to = $request->assign_to;
                 $data->location_id = $location_detailId;
+                $data->from_id = InventoryAssigned::where('id', $request->id)->first()->id;
                 if ($request->hasSerial === 0) {
                     $data->qty = $request->qty;
                 }
-                if ($request->hasSerial === 0 && $remaining != $request->qty) {
+                if ($request->hasSerial === 0) {
                     $uDate = InventoryAssigned::find($request->id);
-                    $uDate->qty = $remaining - $request->qty;
+                    $qty = InventoryAssigned::where("id", $request->id)->first()->qty;
+
+                    $uDate->qty = $qty - $request->qty;
                     $uDate->updated_at = strtotime("now");
                     $uDate->save();
                 }
@@ -1655,6 +1669,24 @@ class InventoryController extends Controller
                 }
                 if ($request->hasSerial === 0) {
                     $inv->qty = $request->qty;
+
+                    $hist = InventoryAssigned::where('id', $request->id)->first();
+
+                    $qty = InventoryAssigned::where("id", $request->id)->first()->qty;
+                    $remaining = InventoryAssigned::where("id", $hist->from_id)->first()->qty;
+
+                    if($qty > $request->qty){
+                        $remaining = $remaining + ($qty - $request->qty);
+                    }else
+                    if($qty < $request->qty){
+                        $remaining = $remaining - ($request->qty - $qty);
+                    }
+
+                    $uDate = InventoryAssigned::find($hist->from_id);
+                    //$uDate->qty = $hist->qty - $request->qty;
+                    $uDate->qty = $remaining;
+                    $uDate->updated_at = strtotime("now");
+                    $uDate->save();
                 }
                 $inv->model = $request->model;
                 $inv->serial = $request->serial;
@@ -2096,15 +2128,17 @@ class InventoryController extends Controller
             $purchased = 0;
             $received = 0;
             $price = 0;
-            $qty = 0;
+            $histQty = 0;
             $hasSerial = Inventory::where("inventory_id", $request->inventory_id)->first()->has_serial;
 
             foreach (json_decode($request->forms, true) as $key => $val) {
-                $qty = 1;
+                $x = 1;
                 if($hasSerial){
-                    $qty = $val["qty"];
+                    $x = $val["qty"];
                 }
-                for($i=0; $i<$qty; $i++){
+                for($i=0; $i<$x; $i++){
+                    $qty = $hasSerial?1:$val["qty"];
+                    $histQty += $qty;
                     if($val["type"] == "Purchased"){
                         $purchased += 1;
                         if($purchased == 1){
@@ -2119,7 +2153,7 @@ class InventoryController extends Controller
                     $data = new InventoryAssigned;
                     $data->inventory_id = $request->inventory_id;
                     $data->model = $val["model"];
-                    $data->qty = $hasSerial?1:$val["qty"];
+                    $data->qty = $qty;
                     $data->source = $val["type"];
                     if($val["type"] == "Purchased") {
                         $data->hasOR = $val["hasOR"];
@@ -2141,11 +2175,11 @@ class InventoryController extends Controller
 
             //Logs
             if($purchased>0) {
-                $reason = "$user->first_name purchased $qty $request->item_name with the price of Php$price.";
+                $reason = "$user->first_name purchased $histQty $request->item_name with the price of Php$price.";
                 self::saveLogs($request->inventory_id,"Stored",$reason);
             }
             if($received>0) {
-                $reason = "$user->first_name received $qty $request->item_name";
+                $reason = "$user->first_name received $histQty $request->item_name";
                 self::saveLogs($request->inventory_id,"Stored",$reason);
             }
 
