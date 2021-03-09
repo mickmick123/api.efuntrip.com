@@ -1221,6 +1221,9 @@ class InventoryController extends Controller
                     $j++;
                 }
             }
+
+            $n->total_cost = InventoryAssigned::where('inventory_id', $id)->sum('purchase_price');
+
             if($n->type == "Consumables") {
                 $i=0;
                 foreach ($n->units as $u){
