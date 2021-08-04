@@ -29,6 +29,8 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('get-clients-groups/{id}', 'ClientController@getClientGroups');
 
+	Route::get('get-clients-group-services/{id}/{group_id}', 'ClientController@getClientGroupServices');
+
   Route::get('search', 'ClientController@clientSearch');
 
 	Route::get('search-com', 'ClientController@searchCom');

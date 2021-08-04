@@ -1647,6 +1647,40 @@ class ClientController extends Controller
         return Response::json($response);
     }
 
+    public function getClientGroupServices($id,$gid) {
+        //$groups = ClientService::where('client_id',$id)->where('group_id',$gid)->orderBy('id','DESC')->get();
+
+        $services = DB::table('client_services as cs')
+                ->select(DB::raw('DISTINCT ct.client_service_id, cs.*, ct.amount as discount_amount,ct.reason as discount_reason, cp.reason as payment_reason, s.parent_id, s.form_id'))
+                ->leftJoin(DB::raw('(select * from client_transactions) as ct'), function($join){
+                    $join->on('ct.client_service_id', '=', 'cs.id');
+                    $join->where('ct.type','=','Discount');
+                })
+                ->leftJoin(DB::raw('(select * from client_transactions) as cp'), function($join){
+                    $join->on('cp.client_service_id', '=', 'cs.id');
+                    $join->where('cp.type','=','Payment');
+                })
+                ->leftjoin(DB::raw('(select * from services) as s'),'s.id','=','cs.service_id')
+                ->where('cs.client_id',$id)
+                ->when($gid != '', function ($q) use($gid){
+                    if($gid == 0) {
+                        return $q->where('cs.group_id','>',$gid);
+                    } else {
+                        return $q->where('cs.group_id',$gid);
+                    }
+
+                })
+                // ->where('cs.group_id',$gid)
+                ->orderBy('cs.id', 'desc')
+                ->get();
+
+        $response['status'] = 'Success';
+        $response['data'] = $services;
+        $response['code'] = 200;
+
+        return Response::json($response);
+    }
+
 
     public function addClientService(Request $request) {
         $validator = Validator::make($request->all(), [
