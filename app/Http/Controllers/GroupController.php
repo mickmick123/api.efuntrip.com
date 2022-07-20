@@ -41,6 +41,7 @@ use Maatwebsite\Excel\Facades\Excel;
 //User Defined
 use App\Exports\ByServiceExport;
 use App\Exports\ByMemberExport;
+use App\Exports\ServiceByClient;
 use App\Exports\ByBatchExport;
 use App\Exports\TransactionsExport;
 use App\Exports\ServicesExport;
@@ -3664,6 +3665,11 @@ public function getClientPackagesByGroup($client_id, $group_id){
     }
 
 
+    // public function getClientServiceSummary(Request $request) {
+    //     $export = new ServiceByClient($request->id, 'EN', $request->data['services'], $request->data['user']);
+    //     return Excel::download($export, 'xxxx.xlsx');
+    // }
+
     public function getGroupSummary(Request $request){
 
 
@@ -4294,7 +4300,10 @@ public function getServicesByClient(Request $request, $client_id) {
     $clientServices = DB::table('client_services')
        ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, cost, charge, tip, is_full_payment, payment_amount, com_client, com_agent, status, remarks, tracking, active, extend, created_at'))
        ->where('client_id',$client_id)->orderBy('created_at','DESC')->get();
-    return Response::json($clientServices);
+
+    $export = new ServiceByClient($request->id, 'EN', $clientServices);
+    return Excel::download($export, 'xxxx.xlsx');
+    // return Response::json($clientServices);
 }
 
  public function getByService(Request $request, $id, $page = 20){
