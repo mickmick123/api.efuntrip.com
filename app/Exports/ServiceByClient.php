@@ -21,14 +21,15 @@ use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use DB, Response;
 use DateTime;
 
-class ServiceByClient implements FromView, WithEvents, ShouldAutoSize
+class ServicesExport implements FromView, WithEvents, ShouldAutoSize
 {
 
-  public function __construct(string $lang, array $services, array $user)
-
+  public function __construct(int $id, string $lang, array $data)
+  {
+      $this->id = $id;
       $this->lang = $lang;
-      $this->services = $services;
-      $this->user = $user;
+      $this->services = [];
+      $this->data = $data;
   }
 
   public function registerEvents(): array
@@ -38,26 +39,16 @@ class ServiceByClient implements FromView, WithEvents, ShouldAutoSize
 
           BeforeExport::class => function(BeforeExport $event) {
             $event->writer->getProperties()->setCreator('4ways')
-                ->setTitle("Group By Members")
+                ->setTitle("Transaction History")
                 ->setSubject("Office 2007 XLSX Test Document");
 
           },
 
-          AfterSheet::class    => function(AfterSheet $event) {
+          AfterSheet::class => function(AfterSheet $event) {
 
               $sheet = $event->sheet->getDelegate();
               $sheet->getColumnDimension('A')->setAutoSize(false);
               $sheet->getColumnDimension('A')->setWidth(25);
-
-              $sheet->getColumnDimension('C')->setAutoSize(false);
-              $sheet->getColumnDimension('C')->setWidth(20);
-
-              $sheet->getColumnDimension('D')->setAutoSize(false);
-              $sheet->getColumnDimension('D')->setWidth(15);
-
-              $sheet->getColumnDimension('E')->setAutoSize(false);
-              $sheet->getColumnDimension('E')->setWidth(15);
-
           },
       ];
   }
@@ -118,7 +109,6 @@ class ServiceByClient implements FromView, WithEvents, ShouldAutoSize
         if($s == 'pending'){
             $stat=  '待办';
         }
-        
         if($s == 'released'){
             $stat = '已发行';
         }
@@ -145,67 +135,50 @@ class ServiceByClient implements FromView, WithEvents, ShouldAutoSize
         return $dtype;
   }
 
+
+  public function services(){
+    $response = $this->data;
+    return $response;
+
+  }
+
+
+
   public function view(): View
   {
 
     $lang = [];
-    //  $group_summary = ($lang == 'EN' ? 'Group Summary' : '总结报告');
 
     if($this->lang === 'EN'){
-        $lang['_date'] = 'Date';
-        $lang['_service'] = 'Service';
-        $lang['_status'] = 'Status';
-        $lang['_charge'] = 'Charge';
-        $lang['_group_total'] = 'Group Total Cost';
-        $lang['_group_summary'] = 'Group Summary';
-        $lang['_member_subtotal'] = '-- Member Subtotal --';
-        $lang['_total_deposit'] = 'Total Deposit : ';
-        $lang['_total_cost'] = 'Total Cost : ';
-        $lang['_total_promo'] = 'Total Promo : ';
-        $lang['_total_refund'] = 'Total Refund : ';
-        $lang['_total_balance'] = 'Total Balance : ';
-        $lang['_total_collectables'] = 'Total Collectables : ';
-        $lang['_total_complete_cost'] = 'Total Complete Cost : ';
-        $lang['_transcation_history'] = 'Transactions History : ';
-        $lang['_amount'] = 'Amount';
-        $lang['_type'] = 'Type';
-        $lang['_deposit'] = 'Deposit';
-        $lang['_payment'] = 'Payment';
-        $lang['_discount'] = 'Discount';
-        $lang['_service_sub'] = 'Service Sub Total';
+        $lang['_date_time'] = 'Date and Time';
+        $lang['_load'] = 'Load';
+        $lang['_client_name'] = 'Client Name';
+        $lang['_service_name'] = 'Service Name';
+        $lang['_amount_paid'] = 'Amount Paid';
+        $lang['_sub_total'] = 'Sub Total';
+        $lang['_previous_balance'] = 'Previous Balance';
+        $lang['_current_balance'] = 'Current Balance';
+        $lang['_operator'] = 'Operator';
+        $lang['_source'] = 'Source';
     }else{
-        $lang['_date'] = '建立日期';
-        $lang['_service'] = '服务';
-        $lang['_status'] = '状态';
-        $lang['_charge'] = '收费';
-        $lang['_group_total'] = '总余额' ;
-        $lang['_group_summary'] = '总结报告';
-        $lang['_member_subtotal'] = '-- 成员小计 --';
-        $lang['_total_deposit'] = '总已付款 : ';
-        $lang['_total_cost'] = '总花费 : ';
-        $lang['_total_promo'] = '总促销 : ';
-        $lang['_total_refund'] = '总退款 : ';
-        $lang['_total_balance'] = '总余额 : ';
-        $lang['_total_collectables'] = '总应收款 : ';
-        $lang['_total_complete_cost'] = '总服务费 : ';
-        $lang['_transcation_history'] = '交易记录 : ';
-        $lang['_amount'] = '共计';
-        $lang['_type'] = '类型';
-        $lang['_deposit'] = '预存款';
-        $lang['_payment'] = '付款';
-        $lang['_service_sub'] = '服务小计';
-        $lang['_discount'] = '折扣';
+        $lang['_date_time'] = 'Date and Time';
+        $lang['_load'] = 'Load';
+        $lang['_client_name'] = 'Client Name';
+        $lang['_service_name'] = 'Service Name';
+        $lang['_amount_paid'] = 'Amount Paid';
+        $lang['_sub_total'] = 'Sub Total';
+        $lang['_previous_balance'] = 'Previous Balance';
+        $lang['_current_balance'] = 'Current Balance';
+        $lang['_operator'] = 'Operator';
+        $lang['_source'] = 'Source';
     }
 
 
-    //   $data = $this->members($this->id);
+      $services = $this->services();
 
-    //   $transactions = $this->transactions($this->id);
-
-      return view('export.user', [
-        'services' => $this->services,
-        'user' => $this->user,
-        'lang' => $lang
+      return view('export.services', [
+          'services' => $services,
+          'lang' => $lang
       ]);
   }
 
