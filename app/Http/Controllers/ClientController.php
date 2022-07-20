@@ -205,7 +205,7 @@ class ClientController extends Controller
         }
 
         $clients = DB::table('users as u')
-            ->select(DB::raw('u.id, u.first_name, u.last_name, concat(u.first_name, " ", u.last_name) as full_name, u.risk, u.balance, u.collectable,
+            ->select(DB::raw('u.id, u.passport, u.first_name, u.last_name, concat(u.first_name, " ", u.last_name) as full_name, u.risk, u.balance, u.collectable,
                 (
                     (IFNULL(transactions.total_deposit, 0) + IFNULL(transactions.total_payment, 0) + IFNULL(transactions.total_discount,0))
                     -
