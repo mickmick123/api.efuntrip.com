@@ -4292,7 +4292,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
 public function getServicesByClient(Request $request, $client_id) {
     $clientServices = DB::table('client_services')
-       ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, cost, charge, tip, is_full_paument, payment_amount, com_client, com_agent, status, remarks, tracking, active, extend, created_at'))
+       ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, cost, charge, tip, is_full_payment, payment_amount, com_client, com_agent, status, remarks, tracking, active, extend, created_at'))
        ->where('client_id',$client_id)->orderBy('created_at','DESC')->get();
     return Response::json($clientServices);
 }
