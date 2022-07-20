@@ -24,7 +24,7 @@ use DateTime;
 class ServiceByClient implements FromView, WithEvents, ShouldAutoSize
 {
 
-  public function __construct( string $lang, array $services, array $user)
+  public function __construct(string $lang, array $services, array $user)
 
       $this->lang = $lang;
       $this->services = $services;
