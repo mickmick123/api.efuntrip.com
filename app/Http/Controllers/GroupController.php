@@ -4295,7 +4295,7 @@ public function getServicesByClient(Request $request, $client_id) {
     //    ->select(DB::raw('date_format(STR_TO_DATE(created_at, "%Y-%m-%d"),"%m/%d/%Y") as sdate, service_id, id, detail, created_at'))
     //    ->where('client_id',$client_id)->orderBy('created_at','DESC')
     // return Response::json($clientServices);
-    return Response::json($client_id)
+    return Response::json($client_id);
 }
 
  public function getByService(Request $request, $id, $page = 20){
