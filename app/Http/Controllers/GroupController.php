@@ -45,6 +45,7 @@ use App\Exports\ServiceByClient;
 use App\Exports\ByBatchExport;
 use App\Exports\TransactionsExport;
 use App\Exports\ServicesExport;
+use App\Exports\UsersExportServices;
 
 use Status;
 use PDF;
@@ -3666,8 +3667,27 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
 
     public function getClientServiceSummary(Request $request) {
-        $export = new ServiceByClient($request->user['id'], $request->lang, $request->user['services'], $request);
-        return Excel::download($export, 'xxxx.xlsx');
+        // $export = new ServiceByClient($request->user['id'], $request->lang, $request->user['services'], $request);
+        // return Excel::download($export, 'xxxx.xlsx');
+        $users = [
+            [
+                'id' => 1,
+                'name' => 'Hardik',
+                'email' => 'hardik@gmail.com'
+            ],
+            [
+                'id' => 2,
+                'name' => 'Vimal',
+                'email' => 'vimal@gmail.com'
+            ],
+            [
+                'id' => 3,
+                'name' => 'Harshad',
+                'email' => 'harshad@gmail.com'
+            ]
+        ];
+          
+        return Excel::download(new UsersExportServices($users), 'xxxx.xlsx');
     }
 
     public function getGroupSummary(Request $request){
