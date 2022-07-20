@@ -21,7 +21,7 @@ use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use DB, Response;
 use DateTime;
 
-class ServicesExport implements FromView, WithEvents, ShouldAutoSize
+class ServiceByClient implements FromView, WithEvents, ShouldAutoSize
 {
 
   public function __construct(int $id, string $lang, array $data)
