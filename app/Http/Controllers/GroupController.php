@@ -3666,8 +3666,8 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
 
     public function getClientServiceSummary(Request $request) {
-        $export = new ServiceByClient('EN', $request->data['services'], $request->data['user']);
-        return Excel::download($export, 'xxxx.xlsx');
+        // $export = new ServiceByClient('EN', $request->data['services'], $request->data['user']);
+        return Excel::download({}, 'xxxx.xlsx');
     }
 
     public function getGroupSummary(Request $request){
