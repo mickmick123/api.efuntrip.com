@@ -78,6 +78,8 @@ use Illuminate\Http\Request;
 
 	Route::get('client-services-by-id/{client_id}', 'GroupController@getServicesByClient');
 
+	Route::get('client-services-by-id-excel', 'GroupController@getClientServiceSummary');
+	
 	Route::post('transfer', 'GroupController@transfer');
 	Route::post('transfer-member', 'GroupController@transferMember');
 

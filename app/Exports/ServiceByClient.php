@@ -24,11 +24,11 @@ use DateTime;
 class ServiceByClient implements FromView, WithEvents, ShouldAutoSize
 {
 
-  public function __construct( string $lang, array $services)
+  public function __construct( string $lang, array $services, array $user)
 
       $this->lang = $lang;
       $this->services = $services;
-    //   $this->user = $user;
+      $this->user = $user;
   }
 
   public function registerEvents(): array
@@ -204,7 +204,7 @@ class ServiceByClient implements FromView, WithEvents, ShouldAutoSize
 
       return view('export.user', [
         'services' => $this->services,
-        // 'user' => $this->user,
+        'user' => $this->user,
         'lang' => $lang
       ]);
   }
