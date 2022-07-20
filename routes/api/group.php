@@ -55,6 +55,7 @@ use Illuminate\Http\Request;
 
 	//Export Excel
 	Route::get('byservice/{group_id}/{page?}', 'GroupController@getByService');
+	Route::get('clientbyservice/{client_id}', 'GroupController@getServicesByClient');
 	Route::get('bybatch/{group_id}/{page?}', 'GroupController@getByBatch');
 	Route::get('group-members/{id}/{page?}', 'GroupController@getMembers');
 
@@ -74,6 +75,8 @@ use Illuminate\Http\Request;
 	Route::post('delete-member', 'GroupController@deleteMember');
 
 	Route::post('client-services', 'GroupController@getClientServices');
+
+	Route::get('client-services-by-id/{client_id}', 'GroupController@getServicesByClient');
 
 	Route::post('transfer', 'GroupController@transfer');
 	Route::post('transfer-member', 'GroupController@transferMember');
