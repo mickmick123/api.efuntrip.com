@@ -137,7 +137,11 @@ class ServiceByClient implements FromView, WithEvents, ShouldAutoSize
 
 
   public function services(){
-    $response = $this->data;
+    // $response = $this->data;
+       $temp['total_service'] = '1';
+       $temp['total_service_cost'] = '2';
+       $temp['service_count'] = '3';
+       $response[0] = $temp;
     return $response;
 
   }
