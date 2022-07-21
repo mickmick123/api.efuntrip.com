@@ -3673,14 +3673,14 @@ public function getClientPackagesByGroup($client_id, $group_id){
         $ctx = 0;
         foreach($request->user['services'] as $u){
             $tempParent = [
-                'Service Date' => $u->sdate,
-                'Detail' => $u->detail,
-                'Tracking' => $u->tracking,
-                'Cost' => $u->cost,
-                'Charge' => $u->charge,
-                'Tip' => $u->tip,
-                'Status' => $u->status,
-                'Remarks' => $u->remarks
+                'Service Date' => $u['sdate'],
+                'Detail' => $u['detail'],
+                'Tracking' => $u['tracking'],
+                'Cost' => $u['cost'],
+                'Charge' => $u['charge'],
+                'Tip' => $u['tip'],
+                'Status' => $u['status'],
+                'Remarks' => $u['remarks']
             ];
             $services[$ctx] = $tempParent;
             $ctx++;
