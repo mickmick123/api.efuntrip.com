@@ -24,11 +24,8 @@ use DateTime;
 class ServiceByClient implements FromView, WithEvents, ShouldAutoSize
 {
 
-  public function __construct(int $id, string $lang, array $data)
+  public function __construct(array $data)
   {
-      $this->id = $id;
-      $this->lang = $lang;
-      $this->services = [];
       $this->data = $data;
   }
 
@@ -53,136 +50,11 @@ class ServiceByClient implements FromView, WithEvents, ShouldAutoSize
       ];
   }
 
-  private function DateChinese($date){
-        $d = explode(" ",strtolower($date));
-        switch($d[0]){
-            case "jan":
-                return "一月"." ".$d[1];
-                break;
-            case "feb":
-                return "二月"." ".$d[1];
-                break;
-            case "mar":
-                return "三月"." ".$d[1];
-                break;
-            case "apr":
-                return "四月"." ".$d[1];
-                break;
-            case "may":
-                return "五月"." ".$d[1];
-                break;
-            case "jun":
-                return "六月"." ".$d[1];
-                break;
-            case "jul":
-                return "七月"." ".$d[1];
-                break;
-            case "aug":
-                return "八月"." ".$d[1];
-                break;
-            case "sep":
-                return "九月"." ".$d[1];
-                break;
-            case "oct":
-                return "十月"." ".$d[1];
-                break;
-            case "nov":
-                return "十一月"." ".$d[1];
-                break;
-            case "dec":
-                return "十二月"." ".$d[1];
-                break;
-            default:
-                return $date;
-        }
-  }
-
-  private function statusChinese($status){
-        $s = strtolower(trim($status," "));
-        $stat = '';
-        if($s == 'complete'){
-            $stat = '已完成';
-        }
-        if($s == 'on process'){
-            $stat = '办理中';
-        }
-        if($s == 'pending'){
-            $stat=  '待办';
-        }
-        if($s == 'released'){
-            $stat = '已发行';
-        }
-
-        return $stat;
-  }
-
-  private function typeChinese($type){
-        $s = strtolower(trim($type," "));
-        $dtype = '';
-
-        if($s == 'deposit'){
-            $dtype = '预存款';
-        }
-        if($s == 'discount'){
-            $dtype = '折扣';
-        }
-        if($s == 'payment'){
-            $dtype = '已付款';
-        }
-        if($s == 'refund'){
-            $dtype = '退款';
-        }
-        return $dtype;
-  }
-
-
-  public function services(){
-    // $response = $this->data;
-       $temp['total_service'] = '1';
-       $temp['total_service_cost'] = '2';
-       $temp['service_count'] = '3';
-       $response[0] = $temp;
-    return $response;
-
-  }
-
-
-
   public function view(): View
   {
 
-    $lang = [];
-
-    if($this->lang === 'EN'){
-        $lang['_date_time'] = 'Date and Time';
-        $lang['_load'] = 'Load';
-        $lang['_client_name'] = 'Client Name';
-        $lang['_service_name'] = 'Service Name';
-        $lang['_amount_paid'] = 'Amount Paid';
-        $lang['_sub_total'] = 'Sub Total';
-        $lang['_previous_balance'] = 'Previous Balance';
-        $lang['_current_balance'] = 'Current Balance';
-        $lang['_operator'] = 'Operator';
-        $lang['_source'] = 'Source';
-    }else{
-        $lang['_date_time'] = 'Date and Time';
-        $lang['_load'] = 'Load';
-        $lang['_client_name'] = 'Client Name';
-        $lang['_service_name'] = 'Service Name';
-        $lang['_amount_paid'] = 'Amount Paid';
-        $lang['_sub_total'] = 'Sub Total';
-        $lang['_previous_balance'] = 'Previous Balance';
-        $lang['_current_balance'] = 'Current Balance';
-        $lang['_operator'] = 'Operator';
-        $lang['_source'] = 'Source';
-    }
-
-
-      $services = $this->services();
-
-      return view('export.services', [
-          'services' => $services,
-          'lang' => $lang
+      return view('export.client_services', [
+          'userdata' => $this->data,
       ]);
   }
 

@@ -3669,24 +3669,23 @@ public function getClientPackagesByGroup($client_id, $group_id){
     public function getClientServiceSummary(Request $request) {
         // $export = new ServiceByClient($request->user['id'], $request->lang, $request->user['services'], $request);
         // return Excel::download($export, 'xxxx.xlsx');
-        $services = [];
-        $ctx = 0;
-        foreach($request->user['services'] as $u){
-            $tempParent = [
-                'Service Date' => $u['sdate'],
-                'Detail' => $u['detail'],
-                'Tracking' => $u['tracking'],
-                'Cost' => $u['cost'],
-                'Charge' => $u['charge'],
-                'Tip' => $u['tip'],
-                'Status' => $u['status'],
-                'Remarks' => $u['remarks']
-            ];
-            $services[$ctx] = $tempParent;
-            $ctx++;
-        }
-          
-        return Excel::download(new UsersExportServices($services), 'xxxx.xlsx');
+        // $services = [];
+        // $ctx = 0;
+        // foreach($request->user['services'] as $u){
+        //     $tempParent = [
+        //         'Service Date' => $u['sdate'],
+        //         'Detail' => $u['detail'],
+        //         'Tracking' => $u['tracking'],
+        //         'Cost' => $u['cost'],
+        //         'Charge' => $u['charge'],
+        //         'Tip' => $u['tip'],
+        //         'Status' => $u['status'],
+        //         'Remarks' => $u['remarks']
+        //     ];
+        //     $services[$ctx] = $tempParent;
+        //     $ctx++;
+        // }
+        return Excel::download(new ServiceByClient($request->user), 'xxxx.xlsx');
     }
 
     public function getGroupSummary(Request $request){
