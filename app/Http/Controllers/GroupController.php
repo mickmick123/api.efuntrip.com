@@ -3669,25 +3669,24 @@ public function getClientPackagesByGroup($client_id, $group_id){
     public function getClientServiceSummary(Request $request) {
         // $export = new ServiceByClient($request->user['id'], $request->lang, $request->user['services'], $request);
         // return Excel::download($export, 'xxxx.xlsx');
-        $users = [
-            [
-                'id' => 1,
-                'name' => 'Hardik',
-                'email' => 'hardik@gmail.com'
-            ],
-            [
-                'id' => 2,
-                'name' => 'Vimal',
-                'email' => 'vimal@gmail.com'
-            ],
-            [
-                'id' => 3,
-                'name' => 'Harshad',
-                'email' => 'harshad@gmail.com'
-            ]
-        ];
+        $services = [];
+        $ctx = 0;
+        foreach($request->user['services'] as $u){
+            $tempParent = [
+                'Service Date' => $u->sdate,
+                'Detail' => $u->detail,
+                'Tracking' => $u->tracking,
+                'Cost' => $u->cost,
+                'Charge' => $u->charge,
+                'Tip' => $u->tip,
+                'Status' => $u->status,
+                'Remarks' => $u->remarks
+            ];
+            $services[$ctx] = $tempParent;
+            $ctx++;
+        }
           
-        return Excel::download(new UsersExportServices($users), 'xxxx.xlsx');
+        return Excel::download(new UsersExportServices($services), 'xxxx.xlsx');
     }
 
     public function getGroupSummary(Request $request){

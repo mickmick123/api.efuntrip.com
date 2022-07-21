@@ -37,9 +37,14 @@ class UsersExportServices implements FromCollection, WithHeadings
     public function headings() :array
     {
         return [
-            'ID',
-            'Name',
-            'Email',
+            'Service Date',
+            'Detail',
+            'Tracking',
+            'Cost',
+            'Charge',
+            'Tip',
+            'Status',
+            'Remarks'
         ];
     }
 }
