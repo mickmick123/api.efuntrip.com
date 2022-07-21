@@ -1,3 +1,46 @@
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta charset="utf-8">
+<meta charset="UTF-8">
+<style type="tet/css">
+
+@font-face {
+   font-family: SimHei;
+   src: url('{{base_path().'/public/assets/'}}fonts/simhei.ttf') format('truetype');
+}
+
+* {
+  font-family: SimHei !important;
+}
+
+.header-text {
+   font-size: 16px;
+   font-family: Bahnschrift, Arial, Helvetica, sans-serif !important;
+   src: url('{{base_path().'/public/assets/'}}fonts/BAHNSCHRIFT.ttf') format('truetype');
+   font-weight: "bold";
+   text-align: center;
+}
+</style>
+</head>
+<body>
+<table>
+    <tr>
+        <td style="text-align:center; background-color:#63b8d5">Client:</td>
+        <td><b>{{ $userdata['full_name'] }}</b></td>
+        <td></td>
+        <td></td>
+        <td style="text-align:center; background-color:#63b8d5">Passport:</td>
+        <td><b>{{ $userdata['passport'] }}</b></td>
+    </tr>
+    <tr>
+        <td style="text-align:center; background-color:#63b8d5">Balance:</td>
+        <td><b>{{ $userdata['balance'] }}</b></td>
+        <td></td>
+        <td></td>
+        <td style="text-align:center; background-color:#63b8d5">Collectable:</td>
+        <td><b>{{ $userdata['collectable'] }}</b></td>
+    </tr>
+</table>
 <table>
     <thead>
     <tr>
@@ -28,3 +71,4 @@
 
     </tbody>
 </table>
+</body>
