@@ -1439,7 +1439,7 @@ class ClientController extends Controller
                 })
                 ->leftjoin(DB::raw('(select * from services) as s'), function($join){
                     $join->on('s.id','=','cs.service_id');
-                    $join->whereNull('s.deleted_at');
+                    // $join->whereNull('s.deleted_at');
                 })
                 ->leftjoin(DB::raw('(select * from users) as u'),'u.id','=','cs.client_id')
                 ->where('cs.client_id',$id)
@@ -1468,7 +1468,7 @@ class ClientController extends Controller
                 })
                 ->leftjoin(DB::raw('(select * from services) as s'), function($join){
                     $join->on('s.id','=','cs.service_id');
-                    $join->whereNull('s.deleted_at');
+                    // $join->whereNull('s.deleted_at');
                 })
                 ->leftjoin(DB::raw('(select * from users) as u'),'u.id','=','cs.client_id')
                 ->where('cs.client_id',$id)->where('cs.tracking',$tracking)
