@@ -1430,12 +1430,12 @@ class ClientController extends Controller
                 ->leftJoin(DB::raw('(select * from client_transactions) as ct'), function($join){
                     $join->on('ct.client_service_id', '=', 'cs.id');
                     $join->where('ct.type','=','Discount');
-                    $join->where('ct.deleted_at','=','');
+                    $join->whereNull('ct.deleted_at');
                 })
                 ->leftJoin(DB::raw('(select * from client_transactions) as cp'), function($join){
                     $join->on('cp.client_service_id', '=', 'cs.id');
                     $join->where('cp.type','=','Payment');
-                    $join->where('cp.deleted_at','=','');
+                    $join->whereNull('cp.deleted_at');
                 })
                 ->leftjoin(DB::raw('(select * from services) as s'),'s.id','=','cs.service_id')
                 ->leftjoin(DB::raw('(select * from users) as u'),'u.id','=','cs.client_id')
@@ -1456,10 +1456,12 @@ class ClientController extends Controller
                 ->leftJoin(DB::raw('(select * from client_transactions) as ct'), function($join){
                     $join->on('ct.client_service_id', '=', 'cs.id');
                     $join->where('ct.type','=','Discount');
+                    $join->whereNull('ct.deleted_at');
                 })
                 ->leftJoin(DB::raw('(select * from client_transactions) as cp'), function($join){
                     $join->on('cp.client_service_id', '=', 'cs.id');
                     $join->where('cp.type','=','Payment');
+                    $join->whereNull('cp.deleted_at');
                 })
                 ->leftjoin(DB::raw('(select * from services) as s'),'s.id','=','cs.service_id')
                 ->leftjoin(DB::raw('(select * from users) as u'),'u.id','=','cs.client_id')
