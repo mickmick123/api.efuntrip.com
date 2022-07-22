@@ -25,7 +25,9 @@
 <body>
 <table>
     <tr>
-        <td colspan="8" style="text-align: center; display: flex; align-items: center; justify-content: center"><img style="margin-left: 200px" src="{{base_path().'/public/images/head.jpg'}}" alt="heading" /></td>
+        <td colspan="2"></td>
+        <td colspan="4" ><img src="{{base_path().'/public/images/head.jpg'}}" alt="heading" /></td>
+        <td colspan="2"></td>
     </tr>
 </table>
 <table>
