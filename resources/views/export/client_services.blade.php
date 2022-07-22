@@ -25,6 +25,11 @@
 <body>
 <table>
     <tr>
+        <td colspan="13"><img src="{{base_path().'/public/images/head.jpg'}}" alt="heading" /></td>
+    </tr>
+</table>
+<table>
+    <tr>
         <td style="text-align:center; background-color:#63b8d5">Client:</td>
         <td><b>{{ $userdata['full_name'] }}</b></td>
         <td></td>
