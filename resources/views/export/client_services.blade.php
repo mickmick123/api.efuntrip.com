@@ -25,9 +25,9 @@
 <body>
 <table>
     <tr>
-        <td colspan="2"></td>
+        <td></td>
         <td colspan="4" ><img src="{{base_path().'/public/images/head.jpg'}}" alt="heading" /></td>
-        <td colspan="2"></td>
+        <td colspan="3"></td>
     </tr>
 </table>
 <table>
