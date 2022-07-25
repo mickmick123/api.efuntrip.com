@@ -1,4 +1,11 @@
 <table>
+    <tr>
+        <td colspan="2" ></td>
+        <td colspan="4" ><img src="{{base_path().'/public/images/head.jpg'}}" alt="heading" /></td>
+        <td colspan="2" ></td>
+    </tr>
+</table>
+<table>
     <thead>
     <tr>
         <th colspan="5" style="text-align:center; background-color:#63b8d5; column-width: 500px;"><b>{{ $lang['_servic_name'] }}</b></th>
