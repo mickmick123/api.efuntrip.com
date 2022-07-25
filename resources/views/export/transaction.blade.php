@@ -1,4 +1,11 @@
 <table>
+    <tr>
+        <td colspan="3" ></td>
+        <td colspan="4" ><img src="{{base_path().'/public/images/head.jpg'}}" alt="heading" /></td>
+        <td colspan="3" ></td>
+    </tr>
+</table>
+<table>
     <thead>
     <tr>
         <th style="text-align:center; background-color:#63b8d5;"><b>{{ $lang['_date_time'] }}</b></th>
