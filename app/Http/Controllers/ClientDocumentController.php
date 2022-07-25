@@ -152,25 +152,25 @@ class ClientDocumentController extends Controller
 
             $path = 'client-documents/' . $documentType->name . '/'.$item['file_path'];
 
-            $checkDuplicate = ClientDocument::where('client_id',$item['client_id'])
-                                ->where('client_document_type_id',$item['client_document_type_id'])
-                                ->where('file_path',$path)
-                                ->where('issued_at',$item['issued_at'])
-                                ->when($expired_at != '', function ($q) use($expired_at){
-                                    return $q->where('expired_at',$expired_at);
-                                })
-                                ->count();
+            // $checkDuplicate = ClientDocument::where('client_id',$item['client_id'])
+            //                     ->where('client_document_type_id',$item['client_document_type_id'])
+            //                     ->where('file_path',$path)
+            //                     ->where('issued_at',$item['issued_at'])
+            //                     ->when($expired_at != '', function ($q) use($expired_at){
+            //                         return $q->where('expired_at',$expired_at);
+            //                     })
+            //                     ->count();
 
-            if($checkDuplicate > 0) {
-                ClientDocument::where('client_id',$item['client_id'])
-                                ->where('client_document_type_id',$item['client_document_type_id'])
-                                ->where('file_path',$path)
-                                ->where('issued_at',$item['issued_at'])
-                                ->when($expired_at != '', function ($q) use($expired_at){
-                                    return $q->where('expired_at',$expired_at);
-                                })
-                                ->delete();
-            }
+            // if($checkDuplicate > 0) {
+            //     ClientDocument::where('client_id',$item['client_id'])
+            //                     ->where('client_document_type_id',$item['client_document_type_id'])
+            //                     ->where('file_path',$path)
+            //                     ->where('issued_at',$item['issued_at'])
+            //                     ->when($expired_at != '', function ($q) use($expired_at){
+            //                         return $q->where('expired_at',$expired_at);
+            //                     })
+            //                     ->delete();
+            // }
 
             ClientDocument::create([
                 'client_id' => $item['client_id'],
