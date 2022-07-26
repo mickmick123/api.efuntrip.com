@@ -17,7 +17,7 @@ class ClientService extends Model
 
     protected $table = 'client_services';
     public $timestamps = false;
-    protected $fillable = ['client_id', 'group_id', 'service_id', 'detail', 'cost', 'charge', 'month', 'tip', 'com_client', 'com_agent', 'client_com_id', 'agent_com_id', 'status', 'remarks', 'tracking', 'active', 'extend', 'checked'];
+    protected $fillable = ['client_id', 'group_id', 'service_id', 'detail', 'cost', 'charge', 'month', 'tip', 'com_client', 'com_agent', 'client_com_id', 'agent_com_id', 'status', 'remarks', 'tracking', 'active', 'extend', 'checked', 'payment_amount', 'is_full_payment'];
 
     public static function boot() {
         parent::boot();

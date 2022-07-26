@@ -11,6 +11,8 @@ use App\ClientServicePoints;
 
 use App\ClientTransaction;
 
+use App\PaymentHistory;
+
 use App\ClientEWallet;
 
 use App\ContactNumber;
@@ -1415,6 +1417,46 @@ class ClientController extends Controller
 
         return Response::json($response);
 	}
+
+    public function getPaymentHistory($id) {
+        $services = DB::table('payment_history')
+        ->where('service_id', '=', $id)
+        ->orderBy('id', 'asc')
+        ->get();
+        $response['status'] = 'Success';
+        $response['data'] = $services;
+        $response['code'] = 200;
+
+        return Response::json($response);
+    }
+
+    public function undoPayment(Request $request) {
+        $service = $request->all();
+        $rson = 'Undo the amount Php'.$service['amount'].' - '.Auth::user()->first_name.' ('.date('Y-m-d H:i:s').')<br><br>';
+        $ph = PaymentHistory::where('id', $service['id'])->first();
+        $ph->update([
+            'status' => 'inactive'
+        ]);
+
+        $ct = ClientTransaction::where("client_service_id",$service['service_id'])->first();
+        $new_amount = floatval($ct['amount'])-$service['amount'];
+        $ct->update([
+            'amount' => (string)$new_amount,
+            'reason' => $rson
+        ]);
+
+        $cs = ClientService::findorfail($service['service_id']);
+        $cs->update([
+            'payment_amount' => (string)$new_amount,
+            'is_full_payment' => 0
+        ]);
+        
+        $response['status'] = 'Success';
+        $response['code'] = 200;
+
+        return Response::json($response);
+    }
+
 
     public function getClientServices($id, $tracking = 0) {
         if($tracking == 0 && strlen($tracking) == 1){
@@ -2903,6 +2945,14 @@ class ClientController extends Controller
                          $service->is_full_payment = 1;
                      }
                      $service->save();
+
+                     $history = new PaymentHistory;
+                     $history->service_id = $cs_id;
+                     $history->log = $rson;
+                     $history->amount = $amount;
+                     $history->type = $paymode;
+                     $history->status = 'active';
+                     $history->save();
 
                      // save transaction logs
                      $detail = 'Paid an amount of Php '.$amount.'.';

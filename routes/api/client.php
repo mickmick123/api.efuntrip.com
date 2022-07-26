@@ -47,6 +47,8 @@ Route::middleware('auth:api')->group(function() {
 	Route::post('add-client-fund', 'ClientController@addClientFunds');
 
 	Route::post('add-client-payment', 'ClientController@addClientPayment');
+	
+	Route::post('undo-payment', 'ClientController@undoPayment');
 
 	Route::post('add-client-package', 'ClientController@addClientPackage');
 
@@ -86,7 +88,7 @@ Route::middleware('auth:api')->group(function() {
 	Route::get('{id}', 'ClientController@show');
 
 	Route::get('get-clients-services/{id}/{tracking?}', 'ClientController@getClientServices');
-
+	Route::get('get-payment-hostory/{id}', 'ClientController@getPaymentHistory');
     Route::post('add-clients-remark', 'ClientController@addClientsRemark');
 
     Route::get('get-clients-remarks/{client_id}', 'ClientController@getClientsRemarks');
