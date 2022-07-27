@@ -1450,7 +1450,14 @@ class ClientController extends Controller
             'payment_amount' => (string)$new_amount,
             'is_full_payment' => 0
         ]);
-        
+
+        // if($service['type'] === 'Ewallet') {
+        //     $cw = ClientEWallet::where('client_id', $cs['client_id']).first();
+        //     $new_amount = floatval($cw['amount']) + $service['amount'];
+        //     $cw->update([
+        //         'amount' => (string)$new_amount
+        //     ]);
+        // }
         $response['status'] = 'Success';
         $response['code'] = 200;
 
