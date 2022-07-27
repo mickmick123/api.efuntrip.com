@@ -54,6 +54,7 @@ class UserController extends Controller
             }
 
             $count = 0;
+
         	if( $user ) {
                 foreach($user as $u){
                     $client = User::findorFail($u->id);

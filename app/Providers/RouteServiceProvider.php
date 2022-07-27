@@ -58,6 +58,8 @@ class RouteServiceProvider extends ServiceProvider
 
             $this->mapClientRoutes();
 
+            $this->mapFuntripRoutes();
+
             $this->mapCountryRoutes();
 
             $this->mapDashboardRoutes();
@@ -206,6 +208,14 @@ class RouteServiceProvider extends ServiceProvider
                  ->middleware('api')
                  ->namespace($this->namespace)
                  ->group(base_path('routes/api/client.php'));
+        }
+
+        protected function mapFuntripRoutes()
+        {
+            Route::prefix('api/v1/funtrip')
+                 ->middleware('api')
+                 ->namespace($this->namespace)
+                 ->group(base_path('routes/api/funtrip.php'));
         }
 
         protected function mapCountryRoutes()
