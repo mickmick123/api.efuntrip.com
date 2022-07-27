@@ -15,6 +15,7 @@ class FuntripController extends Controller
         $fp->package_name = $request->package_name;
         $fp->package_price = $request->package_price;
         $fp->package_url = $request->package_url;
+        $fp->package_description = $request->package_description;
         $fp->save();
         
         $response['status'] = 'Success';
@@ -38,7 +39,8 @@ class FuntripController extends Controller
         $fp->update([
             'package_name' => $request->package_name,
             'package_price' => $request->package_price,
-            'package_url' => $request->package_url
+            'package_url' => $request->package_url,
+            'package_description' => $request->package_description
         ]);
         $response['status'] = 'Success';
 		$response['data'] = [];
