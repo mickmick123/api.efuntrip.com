@@ -2942,7 +2942,6 @@ public function getClientPackagesByGroup($client_id, $group_id){
               $note = $author;
           }
 
-
           $srv = ClientService::findOrFail($clientService->id);
           $oldstatus = $srv->status;
           $oldactive = $srv->active;
@@ -3178,6 +3177,10 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
             LogController::save($log_data);
         }
+        //update remarks
+        ClientService::where('id', $clientService->id)->update([
+        'remarks' => $request->remarks
+        ]);
      }
 
      $response['status'] = 'Success';
@@ -3667,24 +3670,7 @@ public function getClientPackagesByGroup($client_id, $group_id){
 
 
     public function getClientServiceSummary(Request $request) {
-        // $export = new ServiceByClient($request->user['id'], $request->lang, $request->user['services'], $request);
-        // return Excel::download($export, 'xxxx.xlsx');
-        // $services = [];
-        // $ctx = 0;
-        // foreach($request->user['services'] as $u){
-        //     $tempParent = [
-        //         'Service Date' => $u['sdate'],
-        //         'Detail' => $u['detail'],
-        //         'Tracking' => $u['tracking'],
-        //         'Cost' => $u['cost'],
-        //         'Charge' => $u['charge'],
-        //         'Tip' => $u['tip'],
-        //         'Status' => $u['status'],
-        //         'Remarks' => $u['remarks']
-        //     ];
-        //     $services[$ctx] = $tempParent;
-        //     $ctx++;
-        // }
+
         return Excel::download(new ServiceByClient($request->user), 'xxxx.xlsx');
     }
 
