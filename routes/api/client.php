@@ -7,6 +7,10 @@ Route::get('get-all-users', 'ClientController@getAllUsers');
 
 Route::get('get-contact-type', 'ClientController@getContactType');
 
+Route::get('get-contact-type-list', 'ClientController@getContactTypeList');
+
+Route::post('add-contact-type-list', 'ClientController@addContactTypeList');
+
 Route::post('rsa-sign', 'ClientController@rsaSign');
 
 Route::post('get-qr-data', 'ClientController@getQRData');

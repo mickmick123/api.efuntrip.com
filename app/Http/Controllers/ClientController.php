@@ -56,7 +56,7 @@ use App\Jobs\LogsPushNotification;
 
 use Illuminate\Support\Facades\URL;
 use phpseclib\Crypt\RSA;
-
+use Illuminate\Support\Facades\Schema;
 
 class ClientController extends Controller
 {
@@ -847,6 +847,25 @@ class ClientController extends Controller
         return Response::json($response);
     }
 
+    public function getContactTypeList() {
+        if (!Schema::hasTable('contact_type_list')) {
+            Schema::create('contact_type_list', function (Blueprint $table) {
+                $table->increments('id');
+                $table->string('name');
+                $table->timestamps();
+            });
+        }
+    }
+
+    public function addContactTypeList() {
+        if (!Schema::hasTable('contact_type_list')) {
+            Schema::create('contact_type_list', function (Blueprint $table) {
+                $table->increments('id');
+                $table->string('name');
+                $table->timestamps();
+            });
+        }
+    }
 
     public function getContactType() {
         $type = DB::select(DB::raw('SHOW COLUMNS FROM contact_alternate WHERE Field = "type"'))[0]->Type;
