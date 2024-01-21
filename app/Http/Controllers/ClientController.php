@@ -882,6 +882,15 @@ class ClientController extends Controller
                     $table->timestamps();
                 });
             }
+
+            $type = DB::select(DB::raw('Select * FROM contact_type_list'))->where('name', '=', $request->name);
+            if ($type !== null) {
+                $response['status'] = 'Failed';
+                $response['error'] = "Data already exist";
+                $response['code'] = 422;
+                return Response::json($response);
+            }
+
             $contact_list = new ContactTypeList;
             $contact_list->name = $request->name;
             $contact_list->save();
