@@ -883,8 +883,8 @@ class ClientController extends Controller
                 });
             }
 
-            $type = DB::select(DB::raw('Select * FROM contact_type_list'))->where('name', $request->name);
-            if ($type !== null) {
+            $type = DB::select(DB::raw('Select * FROM contact_type_list'))->where('name', $request->name)->count();
+            if ($type > 0) {
                 $response['status'] = 'Failed';
                 $response['error'] = "Data already exist";
                 $response['code'] = 422;
