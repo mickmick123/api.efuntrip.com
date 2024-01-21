@@ -40,6 +40,7 @@ use App\Updates;
 
 use App\Log;
 
+use App\ContactTypeList;
 use App\User;
 use App\Order;
 use App\OrderDetails;
@@ -848,23 +849,55 @@ class ClientController extends Controller
     }
 
     public function getContactTypeList() {
-        if (!Schema::hasTable('contact_type_list')) {
-            Schema::create('contact_type_list', function ($table) {
-                $table->increments('id');
-                $table->string('name');
-                $table->timestamps();
-            });
+        try {
+            if (!Schema::hasTable('contact_type_list')) {
+                Schema::create('contact_type_list', function ($table) {
+                    $table->increments('id');
+                    $table->string('name');
+                    $table->timestamps();
+                });
+            }
+
+            $type = DB::select(DB::raw('Select * FROM contact_type_list'));
+            $response['status'] = 'Success';
+            $response['data'] =  $type;
+            $response['code'] = 200;
+
+            return Response::json($response);
+        } catch (Exception $e) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $e;
+            $response['code'] = 422;
+
+            return Response::json($response);
         }
     }
 
     public function addContactTypeList(Request $request) {
-        if (!Schema::hasTable('contact_type_list')) {
-            Schema::create('contact_type_list', function ($table) {
-                $table->increments('id');
-                $table->string('name');
-                $table->timestamps();
-            });
+        try {
+            if (!Schema::hasTable('contact_type_list')) {
+                Schema::create('contact_type_list', function ($table) {
+                    $table->increments('id');
+                    $table->string('name');
+                    $table->timestamps();
+                });
+            }
+            $contact_list = new ContactTypeList;
+            $contact_list->name = $request->name;
+            $contact_list->save();
+
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+
+            return Response::json($response);
+        } catch (Exception $e) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $e;
+            $response['code'] = 422;
+
+            return Response::json($response);
         }
+       
     }
 
     public function getContactType() {
