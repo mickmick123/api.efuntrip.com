@@ -857,7 +857,7 @@ class ClientController extends Controller
         }
     }
 
-    public function addContactTypeList() {
+    public function addContactTypeList(Request $request) {
         if (!Schema::hasTable('contact_type_list')) {
             Schema::create('contact_type_list', function (Blueprint $table) {
                 $table->increments('id');
