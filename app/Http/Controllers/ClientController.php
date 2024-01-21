@@ -849,7 +849,7 @@ class ClientController extends Controller
 
     public function getContactTypeList() {
         if (!Schema::hasTable('contact_type_list')) {
-            Schema::create('contact_type_list', function (Blueprint $table) {
+            Schema::create('contact_type_list', function ($table) {
                 $table->increments('id');
                 $table->string('name');
                 $table->timestamps();
@@ -859,7 +859,7 @@ class ClientController extends Controller
 
     public function addContactTypeList(Request $request) {
         if (!Schema::hasTable('contact_type_list')) {
-            Schema::create('contact_type_list', function (Blueprint $table) {
+            Schema::create('contact_type_list', function ($table) {
                 $table->increments('id');
                 $table->string('name');
                 $table->timestamps();
