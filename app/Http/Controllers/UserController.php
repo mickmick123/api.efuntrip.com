@@ -63,6 +63,7 @@ class UserController extends Controller
             ]);
             $response['status'] = 'Success';
         	$response['code'] = 200;
+            return Response::json($response);
         } catch (Exception $e) {
             $response['status'] = 'Failed';
             $response['errors'] = $e;
