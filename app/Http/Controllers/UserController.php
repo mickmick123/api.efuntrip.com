@@ -37,7 +37,7 @@ class UserController extends Controller
             $u->password = bcrypt($request->password);
             $u->save();
             $u->branches()->attach(1);
-            $u->roles()->attach(2);
+            // $u->roles()->attach(4);
             $response['status'] = 'Success';
         	$response['code'] = 200;
         }
