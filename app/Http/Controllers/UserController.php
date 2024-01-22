@@ -36,8 +36,17 @@ class UserController extends Controller
             $u->email = $request->email;
             $u->password = bcrypt($request->password);
             $u->save();
+
+            $count = Role::where('name', 'inactive')->count();
+            if($count == 0) {
+                $r = new Role;
+                $r->id = 5;
+                $r->name = 'internal';
+                $r->label = 'Internal';
+                $r->save();
+            }
             $u->branches()->attach(1);
-            // $u->roles()->attach(4);
+            $u->roles()->attach(5);
             $response['status'] = 'Success';
         	$response['code'] = 200;
         }
