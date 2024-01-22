@@ -54,6 +54,24 @@ class UserController extends Controller
         return Response::json($response);
     }
 
+
+    public function changePassword(Request $request) {
+        try {
+            $user = User::findorfail($request->id);
+            $user->update([
+                'password' => bcrypt($request->password)
+            ]);
+            $response['status'] = 'Success';
+        	$response['code'] = 200;
+        } catch (Exception $e) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $e;
+            $response['code'] = 422;
+
+            return Response::json($response);
+        }
+    }
+
     public function updateUserRoles(Request $request) {
         try {
             $user = User::findorfail($request->id);

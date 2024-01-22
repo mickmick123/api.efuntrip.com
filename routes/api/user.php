@@ -9,6 +9,7 @@ Route::middleware('auth:api')->group(function() {
 
 	Route::get('internal-users', 'UserController@getInternalUsers');
 
+	Route::post('change-password', 'UserController@changePassword');
 	Route::post('update-user-roles', 'UserController@updateUserRoles');
 
 	Route::get('user-information', 'UserController@userInformation');
