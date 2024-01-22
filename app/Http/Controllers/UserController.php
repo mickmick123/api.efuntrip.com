@@ -53,6 +53,7 @@ class UserController extends Controller
 
         return Response::json($response);
     }
+
 	public function login(Request $request) {
 		$validator = Validator::make($request->all(), [ 
             'email' => 'required',
@@ -94,7 +95,7 @@ class UserController extends Controller
         	if( $user ) {
                 foreach($user as $u){
                     $client = User::findorFail($u->id);
-            		if( Hash::check($request->password, $u->password) && ($client->hasRole('cpanel-admin') || $client->hasRole('master') || $client->hasRole('employee'))) {
+            		if( Hash::check($request->password, $u->password) && ($client->hasRole('internal'))) {
             			if( $request->source == 'mobile' ) {
             				Device::updateOrCreate(
             					['user_id' => $u->id, 'device_type' => $request->device_type, 'device_token' => $request->device_token],
