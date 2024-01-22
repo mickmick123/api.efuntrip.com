@@ -181,7 +181,7 @@ class UserController extends Controller
 
     public function getInternalUsers() {
         $user = User::with('branches')->whereHas(
-            'role_user', function($q){
+            'roles', function($q){
                 $q->where('role_id', 5);
             }
         )->get();
