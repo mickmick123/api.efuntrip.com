@@ -873,6 +873,20 @@ class ClientController extends Controller
         }
     }
 
+    public function deleteContactTypeList(Request $request) {
+        try {
+            $type = DB::table('contact_type_list')->where('id', $request->id)->delete()
+            $response['status'] = 'Success';
+            $response['code'] = 200;
+
+            return Response::json($response);
+        } catch (Exception $e) {
+            $response['status'] = 'Failed';
+            $response['error'] = "Error to delete this item";
+            $response['code'] = 422;
+            return Response::json($response);
+        }
+    }
     public function addContactTypeList(Request $request) {
         try {
             if (!Schema::hasTable('contact_type_list')) {

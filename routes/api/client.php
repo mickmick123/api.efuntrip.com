@@ -10,6 +10,7 @@ Route::get('get-contact-type', 'ClientController@getContactType');
 Route::get('get-contact-type-list', 'ClientController@getContactTypeList');
 
 Route::post('add-contact-type-list', 'ClientController@addContactTypeList');
+Route::post('delete-contact-type-list', 'ClientController@deleteContactTypeList');
 
 Route::post('rsa-sign', 'ClientController@rsaSign');
 
