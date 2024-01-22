@@ -179,4 +179,18 @@ class UserController extends Controller
 		return Response::json($response);
 	}
 
+    public function getInternalUsers() {
+        $user = User::with('branches')->get();
+
+        // $roles = RoleUser::where('user_id', $user->id)->pluck('role_id');
+        // $perm = PermissionRole::whereIn('role_id',$roles)->groupBy('permission_id')->pluck('permission_id');
+        // $permissions = Permission::whereIn('id',$perm)->pluck('name');
+        // $user->permissions = $permissions;
+		$response['status'] = 'Success';
+		$response['data'] = $user;
+		$response['code'] = 200;
+
+		return Response::json($response);
+	}
+
 }
