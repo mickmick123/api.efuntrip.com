@@ -16,7 +16,31 @@ use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
-    
+    public function addUser(Request $request) {
+        $validator = Validator::make($request->all(), [ 
+            'first_name' => 'required',
+            'last_name' => 'required',
+            'email' => 'required',
+            'password' => 'required'
+        ]);
+
+        if($validator->fails()) {       
+            $response['status'] = 'Failed';
+            $response['errors'] = $validator->errors();
+            $response['code'] = 422;   
+        } else {
+            $u = new User;
+            $u->first_name = $request->first_name;
+            $u->middle_name = ($request->middle_name) ? $request->middle_name : null;
+            $u->last_name = $request->last_name;
+            $u->password = bcrypt($request->password);
+            $u->save();
+            $u->branches()->attach(1);
+            $u->roles()->attach(2);
+            $response['status'] = 'Success';
+        	$response['code'] = 200;
+        }
+    }
 	public function login(Request $request) {
 		$validator = Validator::make($request->all(), [ 
             'email' => 'required',
