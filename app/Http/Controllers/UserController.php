@@ -40,6 +40,8 @@ class UserController extends Controller
             $response['status'] = 'Success';
         	$response['code'] = 200;
         }
+
+        return Response::json($response);
     }
 	public function login(Request $request) {
 		$validator = Validator::make($request->all(), [ 
