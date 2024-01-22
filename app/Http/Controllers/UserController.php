@@ -33,6 +33,7 @@ class UserController extends Controller
             $u->first_name = $request->first_name;
             $u->middle_name = ($request->middle_name) ? $request->middle_name : null;
             $u->last_name = $request->last_name;
+            $u->email = $request->email;
             $u->password = bcrypt($request->password);
             $u->save();
             $u->branches()->attach(1);
