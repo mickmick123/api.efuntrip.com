@@ -54,6 +54,27 @@ class UserController extends Controller
         return Response::json($response);
     }
 
+    public function updateUserRoles(Request $request) {
+        try {
+            $user = User::findorfail($request->id);
+            $user->roles()->detach();
+            if($request->admin == true) {
+                $user->roles()->attach(1);
+            }
+            if($request->employee == true) {
+                $user->roles()->attach(4);
+            }
+            $response['status'] = 'Success';
+        	$response['code'] = 200;
+        } catch (Exception $e) {
+            $response['status'] = 'Failed';
+            $response['errors'] = $e;
+            $response['code'] = 422;
+
+            return Response::json($response);
+        }
+    }
+
 	public function login(Request $request) {
 		$validator = Validator::make($request->all(), [ 
             'email' => 'required',
