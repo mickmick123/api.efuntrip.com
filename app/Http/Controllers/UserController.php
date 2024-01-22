@@ -95,7 +95,7 @@ class UserController extends Controller
         	if( $user ) {
                 foreach($user as $u){
                     $client = User::findorFail($u->id);
-            		if( Hash::check($request->password, $u->password) && ($client->hasRole('internal'))) {
+            		if( Hash::check($request->password, $u->password) && ($client->hasRole('internal') && ($client->hasRole('employee') || $client->hasRole('master')))) {
             			if( $request->source == 'mobile' ) {
             				Device::updateOrCreate(
             					['user_id' => $u->id, 'device_type' => $request->device_type, 'device_token' => $request->device_token],
