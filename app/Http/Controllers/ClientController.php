@@ -875,7 +875,7 @@ class ClientController extends Controller
 
     public function deleteContactTypeList(Request $request) {
         try {
-            $type = DB::table('contact_type_list')->where('id', $request->id)->delete()
+            $type = DB::table('contact_type_list')->where('id', $request->id)->delete();
             $response['status'] = 'Success';
             $response['code'] = 200;
 
