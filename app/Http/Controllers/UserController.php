@@ -186,7 +186,7 @@ class UserController extends Controller
 	}
 
 	public function userInformation() {
-        $user = User::with('branches')->findorfail(Auth::user()->id);
+        $user = User::with('branches')->with('roles')->findorfail(Auth::user()->id);
 
         $roles = RoleUser::where('user_id', $user->id)->pluck('role_id');
         $perm = PermissionRole::whereIn('role_id',$roles)->groupBy('permission_id')->pluck('permission_id');
