@@ -58,6 +58,7 @@ class UserController extends Controller
         try {
             $user = User::findorfail($request->id);
             $user->roles()->detach();
+            $user->roles()->attach(5);
             if($request->admin == true) {
                 $user->roles()->attach(1);
             }
