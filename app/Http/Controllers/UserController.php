@@ -180,7 +180,11 @@ class UserController extends Controller
 	}
 
     public function getInternalUsers() {
-        $user = User::with('branches')->get();
+        $user = User::with('branches')->whereHas(
+            'role_user', function($q){
+                $q->where('role_id', 5);
+            }
+        )->get();
 
         // $roles = RoleUser::where('user_id', $user->id)->pluck('role_id');
         // $perm = PermissionRole::whereIn('role_id',$roles)->groupBy('permission_id')->pluck('permission_id');
