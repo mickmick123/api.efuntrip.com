@@ -37,13 +37,16 @@ class UserController extends Controller
             $u->password = bcrypt($request->password);
             $u->save();
 
-            $count = Role::where('name', 'inactive')->count();
+            $count = Role::where('name', 'internal')->count();
             if($count == 0) {
-                $r = new Role;
-                $r->id = 5;
-                $r->name = 'internal';
-                $r->label = 'Internal';
-                $r->save();
+                try {
+                    $r = new Role;
+                    $r->id = 5;
+                    $r->name = 'internal';
+                    $r->label = 'Internal';
+                    $r->save();
+                } catch (Exception $e) {}
+               
             }
             $u->branches()->attach(1);
             $u->roles()->attach(5);
